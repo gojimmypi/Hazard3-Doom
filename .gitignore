@@ -1,0 +1,20 @@
+# Generated outputs
+/build/
+
+# Doom data files are not source code and must not be committed
+/wads/*.wad
+/wads/*.WAD
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Visual Studio / VisualGDB per-user state
+.vs/
+*.user
+*.suo
+
+# Editor and OS files
+*.log
+*.DS_Store
+*~

@@ -1,0 +1,116 @@
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SRC_DIR="${ROOT_DIR}/src"
+DOOM_DIR="${ROOT_DIR}/doom"
+BUILD_DIR="${HAZARD3_BUILD_DIR:-${ROOT_DIR}/build}"
+TOOLCHAIN_PREFIX="${TOOLCHAIN_PREFIX:-/opt/riscv/bin/riscv32-unknown-elf-}"
+CC="${TOOLCHAIN_PREFIX}gcc"
+OUTPUT_ELF="${BUILD_DIR}/hazard3-test.elf"
+OUTPUT_MAP="${BUILD_DIR}/hazard3-test.map"
+
+# Run shellcheck to ensure this is a good script.
+# Specify the executable shell checker you want to use:
+MY_SHELLCHECK="shellcheck"
+
+# Check if the executable is available in the PATH
+if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
+    # Run your command here
+    shellcheck "$0" || exit 1
+else
+    echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
+fi
+
+require_tool()
+{
+    local tool="$1"
+
+    if [[ "${tool}" == */* ]]; then
+        [[ -x "${tool}" ]] || {
+            echo "Missing required executable: ${tool}" >&2
+            exit 1
+        }
+    else
+        command -v "${tool}" >/dev/null 2>&1 || {
+            echo "Missing required tool: ${tool}" >&2
+            exit 1
+        }
+    fi
+}
+
+require_file()
+{
+    local path="$1"
+
+    [[ -f "${path}" ]] || {
+        echo "Missing required file: ${path}" >&2
+        exit 1
+    }
+}
+
+memory_profile="${HAZARD3_MEMORY_PROFILE:-64m}"
+case "${memory_profile}" in
+64m)
+    memory_profile_flags=()
+    ;;
+32m)
+    memory_profile_flags=(-DHAZARD3_SDRAM_32MB)
+    ;;
+*)
+    echo "Unsupported HAZARD3_MEMORY_PROFILE: ${memory_profile} (use 64m or 32m)" >&2
+    exit 1
+    ;;
+esac
+
+system_clock_hz="${HAZARD3_SYS_CLK_HZ:-50000000}"
+case "${system_clock_hz}" in
+25000000|50000000)
+    ;;
+*)
+    echo "Unsupported HAZARD3_SYS_CLK_HZ: ${system_clock_hz} (use 25000000 or 50000000)" >&2
+    exit 1
+    ;;
+esac
+
+require_tool "${CC}"
+require_file "${SRC_DIR}/start.S"
+require_file "${SRC_DIR}/main.c"
+require_file "${SRC_DIR}/link.ld"
+
+mkdir -p "${BUILD_DIR}"
+
+system_clock_flags=("-DHAZARD3_SYS_CLK_HZ=${system_clock_hz}u")
+
+printf 'Hazard3 SDRAM profile: %s
+' "${memory_profile}"
+printf 'Hazard3 system clock: %s Hz
+' "${system_clock_hz}"
+printf 'Monitor output: %s
+' "${OUTPUT_ELF}"
+
+"${CC}" \
+    -march=rv32imc_zicsr_zifencei_zba_zbb_zbs \
+    -mabi=ilp32 \
+    -O2 \
+    -fomit-frame-pointer \
+    -g3 \
+    -ffreestanding \
+    -fno-builtin \
+    -nostdlib \
+    -nostartfiles \
+    -Wl,-T,"${SRC_DIR}/link.ld" \
+    -Wl,-Map,"${OUTPUT_MAP}" \
+    -I"${ROOT_DIR}" \
+    -I"${DOOM_DIR}" \
+    "${memory_profile_flags[@]}" \
+    "${system_clock_flags[@]}" \
+    "${SRC_DIR}/start.S" \
+    "${SRC_DIR}/main.c" \
+    "${DOOM_DIR}/doom_image_loader.c" \
+    "${DOOM_DIR}/doom_wad_loader.c" \
+    "${DOOM_DIR}/doom_port_smoke.c" \
+    "${DOOM_DIR}/sdram_exec_test.c" \
+    "${DOOM_DIR}/sdram_exec_payload.S" \
+    -o "${OUTPUT_ELF}"
