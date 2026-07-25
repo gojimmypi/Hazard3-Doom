@@ -3,7 +3,12 @@
   <ConfigurationName>Debug</ConfigurationName>
   <Project xsi:type="com.visualgdb.project.windows">
     <CustomSourceDirectories>
-      <Directories />
+      <Directories>
+        <SourceDirMappingEntry>
+          <RemoteDir>$(ProjectDir)../</RemoteDir>
+          <LocalDir>$(ProjectDir)..\</LocalDir>
+        </SourceDirMappingEntry>
+      </Directories>
       <PathStyle>MinGWUnixSlash</PathStyle>
     </CustomSourceDirectories>
     <AutoProgramSPIFFSPartition>true</AutoProgramSPIFFSPartition>
@@ -75,8 +80,10 @@
       <GDBPreStartupCommands>
         <string>set remote interrupt-on-connect off</string>
         <string>set remotetimeout 30</string>
-        <string>set substitute-path /mnt/c/temp/Hazard3-Doom C:/temp/Hazard3-Doom</string>
-        <string>source C:/temp/Hazard3-Doom/scripts/hazard3-debug.gdb</string>
+        <!-- Just in case the pre-compiled binaries are copied from the /bin/ directory, perform som subsitutions: -->
+        <string>set substitute-path /home/gojimmypi/Hazard3-Doom &quot;$(ProjectDir.forwardslashes)/..&quot;</string>
+        <string>set substitute-path /mnt/c/temp/Hazard3-Doom &quot;$(ProjectDir.forwardslashes)/..&quot;</string>
+        <string>source $(ProjectDir.forwardslashes)/../scripts/hazard3-debug.gdb</string>
       </GDBPreStartupCommands>
       <GDBStartupCommands>
         <string>hazard3-start</string>
@@ -120,7 +127,7 @@
       <EnableAbsolutePathReporting>true</EnableAbsolutePathReporting>
     </AdditionalGDBSettings>
     <LaunchGDBSettings xsi:type="GDBLaunchParametersCustom">
-      <GDBExe>C:\temp\Hazard3-Doom\bin\gdb\riscv-none-elf-gdb.exe</GDBExe>
+      <GDBExe>$(ProjectDir)\..\bin\gdb\riscv-none-elf-gdb.exe</GDBExe>
       <GDBEnvironment>
         <Records>
           <Record>
@@ -130,7 +137,7 @@
         </Records>
         <EnvironmentSetupFiles />
       </GDBEnvironment>
-      <GDBArguments>--interpreter mi --args "C:/temp/Hazard3-Doom/build/hazard3-test.elf"</GDBArguments>
+      <GDBArguments>--interpreter mi --args &quot;$(ProjectDir.forwardslashes)/../build/hazard3-test.elf&quot;</GDBArguments>
       <SessionStartMode>NoAutoStart</SessionStartMode>
       <GDBServerSettings>
         <SendCtrlCToGDBServer>false</SendCtrlCToGDBServer>
@@ -141,9 +148,9 @@
       </GDBServerSettings>
       <GDBServerCommand>
         <SkipWhenRunningCommandList>false</SkipWhenRunningCommandList>
-        <Command>C:\temp\Hazard3-Doom\bin\openocd.exe</Command>
-        <Arguments>-d2 -f "C:/temp/Hazard3-Doom/third_party/Hazard3/example_soc/ulx3s-openocd.cfg"</Arguments>
-        <WorkingDirectory>C:\temp\Hazard3-Doom</WorkingDirectory>
+        <Command>$(ProjectDir)\..\bin\openocd.exe</Command>
+        <Arguments>-d2 -f &quot;$(ProjectDir.forwardslashes)/../third_party/Hazard3/example_soc/ulx3s-openocd.cfg&quot;</Arguments>
+        <WorkingDirectory>$(ProjectDir)\..</WorkingDirectory>
         <BackgroundMode xsi:nil="true" />
       </GDBServerCommand>
       <TargetSelectionCommand>-target-select extended-remote localhost:3333</TargetSelectionCommand>
