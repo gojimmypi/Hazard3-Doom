@@ -13,15 +13,14 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  XPM_VERSION: "0.23.2"
-  RISCV_TOOLCHAIN_PACKAGE: "@xpack-dev-tools/riscv-none-elf-gcc@15.2.0-1.1"
+  PYTHON_VERSION: "3.12"
   TOOLCHAIN_PREFIX: riscv-none-elf-
   OSS_CAD_SUITE_VERSION: "2026-07-20"
 
 jobs:
   build:
     name: ${{ matrix.name }}
-    runs-on: ubuntu-24.04
+    runs-on: windows-2022
     timeout-minutes: 150
     strategy:
       fail-fast: false
@@ -43,13 +42,32 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Install build prerequisites
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache the RISC-V toolchain
+        uses: actions/cache@v5
+        with:
+          path: bin/riscv-gcc
+          key: ${{ runner.os }}-xpack-riscv-gcc-${{ hashFiles('scripts/setup-xpack-riscv-gcc.cmd') }}
+
+      - name: Install the RISC-V toolchain
+        shell: cmd
+        run: call scripts\setup-xpack-riscv-gcc.cmd
+
+      - name: Add the RISC-V toolchain to PATH
+        shell: pwsh
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends \
-              make \
-              patch \
-              shellcheck
+          $toolchainBin = Join-Path $env:GITHUB_WORKSPACE "bin\riscv-gcc\bin"
+          $gcc = Join-Path $toolchainBin "riscv-none-elf-gcc.exe"
+
+          if (-not (Test-Path -LiteralPath $gcc)) {
+              throw "RISC-V GCC was not installed at $gcc"
+          }
+
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value $toolchainBin
 
       - name: Set up the pinned OSS CAD Suite
         uses: YosysHQ/setup-oss-cad-suite@v4
@@ -57,34 +75,18 @@ jobs:
           version: ${{ env.OSS_CAD_SUITE_VERSION }}
           github-token: ${{ github.token }}
 
-      - name: Cache the RISC-V toolchain
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cache/xPacks
-            ~/.local/xPacks
-          key: ${{ runner.os }}-riscv-none-elf-${{ env.RISCV_TOOLCHAIN_PACKAGE }}
-
-      - name: Install the pinned RISC-V toolchain
+      - name: Show tool versions
         shell: bash
         run: |
-          tool_root="${RUNNER_TEMP}/riscv-none-elf-gcc"
-          mkdir -p "${tool_root}"
-          cd "${tool_root}"
-          npm init --yes >/dev/null
-          npx --yes "xpm@${XPM_VERSION}" install \
-              "${RISCV_TOOLCHAIN_PACKAGE}" \
-              --verbose
-          echo "${tool_root}/xpacks/.bin" >> "${GITHUB_PATH}"
-
-      - name: Show tool versions
-        run: |
+          make --version
           yosys --version
           nextpnr-ecp5 --version
           printf 'ecppack: %s\n' "$(command -v ecppack)"
           riscv-none-elf-gcc --version
+          python3 --version
 
       - name: Initialize required submodules
+        shell: bash
         run: ./scripts/setup-submodules.sh
 
       - name: Build complete board image
