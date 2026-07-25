@@ -4,12 +4,9 @@ This repository contains the standalone monitor firmware, loadable Doom image,
 UART upload tools, Hazard3-specific DoomGeneric port, and board build wrappers
 used by the ULX3S and ULX4M Doom projects.
 
-It is intentionally separate from upstream
-[Wren6991/Hazard3](https://github.com/Wren6991/Hazard3). The compatible
-hardware is maintained on the [`ulx-doom` branch of the `ulx3s/Hazard3`
-fork](https://github.com/ulx3s/Hazard3/tree/ulx-doom) and consumed as a pinned
-submodule under `third_party/Hazard3`. The Doom application and monitor remain
-owned by this repository.
+This `Hazard3-Doom` is intentionally separate from upstream [Wren6991/Hazard3](https://github.com/Wren6991/Hazard3). 
+The compatible hardware is maintained on the [ulx-doom branch of the ulx3s/Hazard3 fork](https://github.com/ulx3s/Hazard3/tree/ulx-doom) 
+and consumed as a pinned submodule under `third_party/Hazard3`. The Doom application and monitor remain owned by this repository.
 
 See the Quick Start and overview: https://ulx3s.github.io/ulx-doom/
 
