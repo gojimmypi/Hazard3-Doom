@@ -1,0 +1,69 @@
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+
+rem Resolve the repository root from this script's location.
+set "SCRIPT_DIR=%~dp0"
+for %%I in ("%SCRIPT_DIR%..") do set "ROOT_DIR=%%~fI"
+
+echo Repository root: "%ROOT_DIR%"
+
+if exist "%ROOT_DIR%\build\hazard3-test.bit" (
+    set "SOURCE_BITSTREAM=%ROOT_DIR%\build\hazard3-test.bit"
+
+    echo.
+    echo Using locally built FPGA bitstream:
+    echo   "!SOURCE_BITSTREAM!"
+    echo.
+) else (
+    if exist "%ROOT_DIR%\bin\fpga_ulx3s_hdmi_doom.bit" (
+        set "SOURCE_BITSTREAM=%ROOT_DIR%\bin\fpga_ulx3s_hdmi_doom.bit"
+
+        echo.
+        echo WARNING: Using prebuilt FPGA bitstream:
+        echo   "!SOURCE_BITSTREAM!"
+        echo.
+    ) else (
+        >&2 echo.
+        >&2 echo ERROR: No FPGA bitstream was found.
+        >&2 echo.
+        >&2 echo Checked:
+        >&2 echo   "%ROOT_DIR%\build\hazard3-test.bit"
+        >&2 echo   "%ROOT_DIR%\bin\fpga_ulx3s_hdmi_doom.bit"
+        >&2 echo.
+        goto ERROR_EXIT
+    )
+)
+
+if not exist "%ROOT_DIR%\bin\fujprog-v48-win64.exe" (
+    >&2 echo.
+    >&2 echo ERROR: fujprog was not found:
+    >&2 echo   "%ROOT_DIR%\bin\fujprog-v48-win64.exe"
+    >&2 echo.
+    goto ERROR_EXIT
+)
+
+echo Loading FPGA bitstream:
+echo   "!SOURCE_BITSTREAM!"
+echo.
+
+"%ROOT_DIR%\bin\fujprog-v48-win64.exe" "!SOURCE_BITSTREAM!"
+set "FUJPROG_EXIT=!ERRORLEVEL!"
+
+if not "!FUJPROG_EXIT!"=="0" (
+    >&2 echo.
+    >&2 echo ERROR: fujprog failed with exit code !FUJPROG_EXIT!.
+    >&2 echo.
+    >&2 echo Suggested resolution:
+    >&2 echo   1. Confirm the ULX3S is powered and connected by USB.
+    >&2 echo   2. Close OpenOCD, openFPGALoader, or other software using the FTDI interface.
+    >&2 echo   3. Disconnect and reconnect the ULX3S USB cable, then try again.
+    >&2 echo.
+    exit /b !FUJPROG_EXIT!
+)
+
+echo.
+echo Done.
+exit /b 0
+
+:ERROR_EXIT
+exit /b 1
