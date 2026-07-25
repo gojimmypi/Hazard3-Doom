@@ -11,6 +11,8 @@ fork](https://github.com/ulx3s/Hazard3/tree/ulx-doom) and consumed as a pinned
 submodule under `third_party/Hazard3`. The Doom application and monitor remain
 owned by this repository.
 
+See the Quick Start and overview: https://ulx3s.github.io/ulx-doom/
+
 ## Repository scope
 
 Included here:
@@ -18,15 +20,15 @@ Included here:
 - the resident Hazard3 monitor and UART image/WAD loaders;
 - the linked Doom image and its monitor ABI;
 - the ULX3S/ULX4M memory profiles and indexed HDMI software interface;
-- host-side Python upload tools;
-- VisualGDB settings for the monitor ELF;
-- pinned Hazard3 and DoomGeneric submodules;
+- host-side Python upload tools: `doom/upload-doom-image.py` and `doom/upload-wad.py`;
+- [VisualGDB settings](./VisualGDB/) for building monitor ELF and JTAG debugging in Windows;
+- pinned Hazard3 and DoomGeneric submodules in [./third_party/](./third_party/);
 - ULX3S and ULX4M-LD board build wrappers;
-- the Hazard3-specific DoomGeneric patch.
+- the Hazard3-specific [DoomGeneric patch](./doom/patches/);
+- prebuilt FPGA bitstreams in [./bin/](./bin/);
 
 Not included here:
 
-- prebuilt FPGA bitstreams;
 - the RISC-V or FPGA toolchains;
 - a Doom IWAD.
 
@@ -38,15 +40,16 @@ SDRAM path, and the indexed HDMI presentation registers.
 
 ```text
 Hazard3-Doom/
-|-- src/                    resident monitor entry point, linker script, and main
-|-- doom/                   Doom port, image/WAD protocols, and host uploaders
-|-- scripts/                monitor, board, load, and submodule scripts
-|-- VisualGDB/              Visual Studio + VisualGDB project settings
-|-- third_party/Hazard3/    pinned Hazard3 hardware submodule
+|-- bin/                     Windows executables, prebuilt FPGA bitstreams, and prebuilt Doom image.
+|-- src/                     resident monitor entry point, linker script, and main
+|-- doom/                    Doom port, image/WAD protocols, and host uploaders
+|-- scripts/                 monitor, board, load, and submodule scripts
+|-- VisualGDB/               Visual Studio + VisualGDB project settings
+|-- third_party/Hazard3/     pinned Hazard3 hardware submodule
 |-- third_party/doomgeneric/ pinned DoomGeneric source submodule
-|-- docs/                   ownership and upstream contribution notes
-|-- wads/                   local IWAD location (WAD files are ignored by Git)
-`-- build/                  all generated outputs (ignored by Git)
+|-- docs/                    ownership and upstream contribution notes
+|-- wads/                    local IWAD location (WAD files are ignored by Git)
+`-- build/                   all generated outputs (ignored by Git)
 ```
 
 ## Prerequisites
@@ -364,11 +367,7 @@ Sound remains stubbed in this milestone.
 
 ## VisualGDB
 
-The checked-in VisualGDB settings assume the repository is cloned at:
-
-```text
-C:\workspace\Hazard3-Doom
-```
+For Windows users, the VisualGDB project settings are included under `VisualGDB/`.
 
 The target ELF is `build/hazard3-test.elf`. The GDB startup helper is
 `scripts/hazard3-debug.gdb`. Per-user `.user` files are intentionally excluded.
