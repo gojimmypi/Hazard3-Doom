@@ -1,7 +1,10 @@
 [submodule "third_party/doomgeneric"]
 	path = third_party/doomgeneric
 	url = https://github.com/ozkl/doomgeneric.git
+	update = checkout
+
 [submodule "third_party/Hazard3"]
 	path = third_party/Hazard3
 	url = https://github.com/ulx3s/Hazard3.git
 	branch = ulx-doom
+	update = checkout
