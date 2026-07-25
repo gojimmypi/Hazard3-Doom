@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - dev
   pull_request:
   workflow_dispatch:
 
@@ -17,8 +16,6 @@ concurrency:
 
 env:
   PYTHON_VERSION: "3.12"
-  XPM_VERSION: "0.23.2"
-  RISCV_TOOLCHAIN_PACKAGE: "@xpack-dev-tools/riscv-none-elf-gcc@15.2.0-1.1"
   TOOLCHAIN_PREFIX: riscv-none-elf-
 
 jobs:
@@ -76,7 +73,7 @@ jobs:
   riscv-builds:
     name: RISC-V monitor and Doom builds
     needs: quality
-    runs-on: ubuntu-24.04
+    runs-on: windows-2022
     timeout-minutes: 45
 
     steps:
@@ -91,42 +88,37 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install build prerequisites
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends \
-              make \
-              patch \
-              shellcheck
-
       - name: Cache the RISC-V toolchain
         uses: actions/cache@v5
         with:
-          path: |
-            ~/.cache/xPacks
-            ~/.local/xPacks
-          key: ${{ runner.os }}-riscv-none-elf-${{ env.RISCV_TOOLCHAIN_PACKAGE }}
+          path: bin/riscv-gcc
+          key: ${{ runner.os }}-xpack-riscv-gcc-${{ hashFiles('scripts/setup-xpack-riscv-gcc.cmd') }}
 
-      - name: Install the pinned RISC-V toolchain
-        shell: bash
+      - name: Install the RISC-V toolchain
+        shell: cmd
+        run: call scripts\setup-xpack-riscv-gcc.cmd
+
+      - name: Add the RISC-V toolchain to PATH
+        shell: pwsh
         run: |
-          tool_root="${RUNNER_TEMP}/riscv-none-elf-gcc"
-          mkdir -p "${tool_root}"
-          cd "${tool_root}"
-          npm init --yes >/dev/null
-          npx --yes "xpm@${XPM_VERSION}" install \
-              "${RISCV_TOOLCHAIN_PACKAGE}" \
-              --verbose
-          echo "${tool_root}/xpacks/.bin" >> "${GITHUB_PATH}"
+          $toolchainBin = Join-Path $env:GITHUB_WORKSPACE "bin\riscv-gcc\bin"
+          $gcc = Join-Path $toolchainBin "riscv-none-elf-gcc.exe"
+
+          if (-not (Test-Path -LiteralPath $gcc)) {
+              throw "RISC-V GCC was not installed at $gcc"
+          }
+
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value $toolchainBin
 
       - name: Show tool versions
+        shell: bash
         run: |
           riscv-none-elf-gcc --version
           riscv-none-elf-size --version
-          python --version
-          shellcheck --version
+          python3 --version
 
       - name: Initialize required submodules
+        shell: bash
         run: ./scripts/setup-submodules.sh
 
       - name: Verify required submodule revisions
@@ -209,6 +201,7 @@ jobs:
           done
 
       - name: Run Doom object-size probe
+        shell: bash
         run: |
           HAZARD3_SIZE_BUILD_DIR=build/ci/doom-size-probe \
           HAZARD3_MEMORY_PROFILE=64m \
