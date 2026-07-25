@@ -1,4 +1,4 @@
-name: fpga-gojimmypi
+name: tt-fpga-ulx
 
 # This is a modified fpga workflow that adds ULX3S ECP5 support
 #
