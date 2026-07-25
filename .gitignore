@@ -18,3 +18,12 @@ __pycache__/
 *.log
 *.DS_Store
 *~
+
+/**/.visualgdb/
+
+/**/*.bak
+/**/*.zip
+
+# The RISC-V 440+ MB download expands to 1.5+ GB
+# See install: ./scripts/setup-xpack-riscv-gcc.cmd
+/bin/riscv-gcc
