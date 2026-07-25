@@ -1,0 +1,237 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  XPM_VERSION: "0.23.2"
+  RISCV_TOOLCHAIN_PACKAGE: "@xpack-dev-tools/riscv-none-elf-gcc@15.2.0-1.1"
+  TOOLCHAIN_PREFIX: riscv-none-elf-
+
+jobs:
+  quality:
+    name: Scripts and host tools
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install script checks
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends shellcheck
+
+      - name: Check shell scripts
+        shell: bash
+        run: |
+          mapfile -d '' scripts < <(
+              git ls-files -z -- 'scripts/*.sh' 'doom/*.sh'
+          )
+          if (( ${#scripts[@]} == 0 )); then
+              echo "No shell scripts found." >&2
+              exit 1
+          fi
+          shellcheck -x "${scripts[@]}"
+
+      - name: Check executable permissions
+        shell: bash
+        run: |
+          status=0
+          while IFS= read -r -d '' script; do
+              if [[ ! -x "${script}" ]]; then
+                  echo "::error file=${script}::Shell script is not executable"
+                  status=1
+              fi
+          done < <(git ls-files -z -- 'scripts/*.sh' 'doom/*.sh')
+          exit "${status}"
+
+      - name: Check Python syntax
+        run: python -m compileall -q doom tests
+
+      - name: Run host-tool tests
+        run: python -m unittest discover -s tests -v
+
+  riscv-builds:
+    name: RISC-V monitor and Doom builds
+    needs: quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+              make \
+              patch \
+              shellcheck
+
+      - name: Cache the RISC-V toolchain
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/xPacks
+            ~/.local/xPacks
+          key: ${{ runner.os }}-riscv-none-elf-${{ env.RISCV_TOOLCHAIN_PACKAGE }}
+
+      - name: Install the pinned RISC-V toolchain
+        shell: bash
+        run: |
+          tool_root="${RUNNER_TEMP}/riscv-none-elf-gcc"
+          mkdir -p "${tool_root}"
+          cd "${tool_root}"
+          npm init --yes >/dev/null
+          npx --yes "xpm@${XPM_VERSION}" install \
+              "${RISCV_TOOLCHAIN_PACKAGE}" \
+              --verbose
+          echo "${tool_root}/xpacks/.bin" >> "${GITHUB_PATH}"
+
+      - name: Show tool versions
+        run: |
+          riscv-none-elf-gcc --version
+          riscv-none-elf-size --version
+          python --version
+          shellcheck --version
+
+      - name: Initialize required submodules
+        run: ./scripts/setup-submodules.sh
+
+      - name: Verify required submodule revisions
+        shell: bash
+        run: |
+          status="$({
+              git submodule status -- \
+                  third_party/doomgeneric \
+                  third_party/Hazard3
+              git -C third_party/Hazard3 submodule status -- \
+                  scripts \
+                  example_soc/libfpga
+          })"
+          printf '%s\n' "${status}"
+          if grep -Eq '^[+-U]' <<< "${status}"; then
+              echo "A required submodule is missing or not at the recorded revision." >&2
+              exit 1
+          fi
+
+      - name: Build monitor configurations
+        shell: bash
+        run: |
+          for profile in 64m 32m; do
+              for clock_hz in 50000000 25000000; do
+                  build_dir="build/ci/monitor-${profile}-${clock_hz}"
+                  HAZARD3_BUILD_DIR="${build_dir}" \
+                  HAZARD3_MEMORY_PROFILE="${profile}" \
+                  HAZARD3_SYS_CLK_HZ="${clock_hz}" \
+                      ./scripts/build.sh
+
+                  elf="${build_dir}/hazard3-test.elf"
+                  test -s "${elf}"
+                  riscv-none-elf-readelf --file-header "${elf}"
+                  riscv-none-elf-size "${elf}"
+              done
+          done
+
+      - name: Build Doom image configurations
+        shell: bash
+        run: |
+          for profile in 64m 32m; do
+              build_dir="build/ci/doom-${profile}"
+              HAZARD3_DOOM_BUILD_DIR="${build_dir}" \
+              HAZARD3_MEMORY_PROFILE="${profile}" \
+                  ./doom/build-doom-image.sh
+
+              elf="${build_dir}/hazard3-doom.elf"
+              image="${build_dir}/hazard3-doom.h3d"
+              test -s "${elf}"
+              test -s "${image}"
+              riscv-none-elf-readelf --file-header "${elf}"
+              riscv-none-elf-size "${elf}"
+
+              python3 - "${image}" <<'PY'
+          import pathlib
+          import struct
+          import sys
+          import zlib
+
+          image_path = pathlib.Path(sys.argv[1])
+          package = image_path.read_bytes()
+          if len(package) < 64:
+              raise SystemExit(f"{image_path}: package is shorter than its header")
+
+          words = struct.unpack("<16I", package[:64])
+          payload = package[64:]
+          if words[0] != 0x31443348:
+              raise SystemExit(f"{image_path}: bad H3D magic")
+          if words[1] != 64:
+              raise SystemExit(f"{image_path}: unsupported header size")
+          if words[5] != len(payload):
+              raise SystemExit(f"{image_path}: payload length mismatch")
+          if (zlib.crc32(payload) & 0xFFFFFFFF) != words[9]:
+              raise SystemExit(f"{image_path}: payload CRC32 mismatch")
+          print(
+              f"Validated {image_path}: payload={len(payload)} bytes, "
+              f"CRC32=0x{words[9]:08x}"
+          )
+          PY
+          done
+
+      - name: Run Doom object-size probe
+        run: |
+          HAZARD3_SIZE_BUILD_DIR=build/ci/doom-size-probe \
+          HAZARD3_MEMORY_PROFILE=64m \
+              ./doom/build-size-probe.sh
+
+      - name: Verify builds did not modify submodules
+        shell: bash
+        run: |
+          for repository in third_party/doomgeneric third_party/Hazard3; do
+              changes="$(git -C "${repository}" status --porcelain --untracked-files=all)"
+              if [[ -n "${changes}" ]]; then
+                  printf 'Unexpected changes in %s:\n%s\n' "${repository}" "${changes}" >&2
+                  exit 1
+              fi
+          done
+
+      - name: Upload RISC-V build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: riscv-builds-${{ github.sha }}
+          path: |
+            build/ci/**/*.elf
+            build/ci/**/*.map
+            build/ci/**/*.h3d
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0

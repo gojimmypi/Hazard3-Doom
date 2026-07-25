@@ -1,0 +1,117 @@
+name: FPGA builds
+
+on:
+  schedule:
+    - cron: "23 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fpga-builds-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  XPM_VERSION: "0.23.2"
+  RISCV_TOOLCHAIN_PACKAGE: "@xpack-dev-tools/riscv-none-elf-gcc@15.2.0-1.1"
+  TOOLCHAIN_PREFIX: riscv-none-elf-
+  OSS_CAD_SUITE_VERSION: "2026-07-20"
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ULX3S 85F
+            board: ulx3s-85f
+            command: ./scripts/build-ulx3s-doom.sh
+            bitstream: build/ulx3s/fpga_ulx3s.bit
+          - name: ULX4M-LD 85F
+            board: ulx4m-ld-85f
+            command: ./scripts/build-ulx4m-ld-doom.sh
+            bitstream: build/ulx4m-ld/fpga_ulx4m_ld.bit
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+              make \
+              patch \
+              shellcheck
+
+      - name: Set up the pinned OSS CAD Suite
+        uses: YosysHQ/setup-oss-cad-suite@v4
+        with:
+          version: ${{ env.OSS_CAD_SUITE_VERSION }}
+          github-token: ${{ github.token }}
+
+      - name: Cache the RISC-V toolchain
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/xPacks
+            ~/.local/xPacks
+          key: ${{ runner.os }}-riscv-none-elf-${{ env.RISCV_TOOLCHAIN_PACKAGE }}
+
+      - name: Install the pinned RISC-V toolchain
+        shell: bash
+        run: |
+          tool_root="${RUNNER_TEMP}/riscv-none-elf-gcc"
+          mkdir -p "${tool_root}"
+          cd "${tool_root}"
+          npm init --yes >/dev/null
+          npx --yes "xpm@${XPM_VERSION}" install \
+              "${RISCV_TOOLCHAIN_PACKAGE}" \
+              --verbose
+          echo "${tool_root}/xpacks/.bin" >> "${GITHUB_PATH}"
+
+      - name: Show tool versions
+        run: |
+          yosys --version
+          nextpnr-ecp5 --version
+          printf 'ecppack: %s\n' "$(command -v ecppack)"
+          riscv-none-elf-gcc --version
+
+      - name: Initialize required submodules
+        run: ./scripts/setup-submodules.sh
+
+      - name: Build complete board image
+        shell: bash
+        run: |
+          # Produce a fresh P&R result. Timing logs remain artifacts for review;
+          # known timing misses do not hide synthesis, packaging, or integration failures.
+          FORCE_BITSTREAM_REBUILD=1 \
+          ALLOW_TIMING_FAILURE=1 \
+              ${{ matrix.command }}
+          test -s "${{ matrix.bitstream }}"
+          test -s build/hazard3-test.elf
+          test -s build/doom-image/hazard3-doom.h3d
+
+      - name: Upload board artifacts and timing logs
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.board }}-${{ github.sha }}
+          path: |
+            ${{ matrix.bitstream }}
+            build/hazard3-test.elf
+            build/hazard3-test.map
+            build/doom-image/hazard3-doom.elf
+            build/doom-image/hazard3-doom.map
+            build/doom-image/hazard3-doom.h3d
+            third_party/Hazard3/example_soc/synth/synth.log
+            third_party/Hazard3/example_soc/synth/pnr.log
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
