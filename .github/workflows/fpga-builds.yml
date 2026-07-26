@@ -13,7 +13,6 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PYTHON_VERSION: "3.12"
   TOOLCHAIN_PREFIX: riscv-none-elf-
   OSS_CAD_SUITE_VERSION: "2026-07-20"
 
@@ -42,16 +41,23 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
       - name: Cache the RISC-V toolchain
         uses: actions/cache@v5
         with:
           path: bin/riscv-gcc
           key: ${{ runner.os }}-xpack-riscv-gcc-${{ hashFiles('scripts/setup-xpack-riscv-gcc.cmd') }}
+
+      - name: Remove an incomplete cached toolchain
+        shell: pwsh
+        run: |
+          $installRoot = Join-Path $env:GITHUB_WORKSPACE "bin\riscv-gcc"
+          $gcc = Join-Path $installRoot "bin\riscv-none-elf-gcc.exe"
+
+          if ((Test-Path -LiteralPath $installRoot) -and
+              -not (Test-Path -LiteralPath $gcc)) {
+              Write-Warning "Removing incomplete cached toolchain: $installRoot"
+              Remove-Item -LiteralPath $installRoot -Recurse -Force
+          }
 
       - name: Install the RISC-V toolchain
         shell: cmd
@@ -69,11 +75,21 @@ jobs:
 
           Add-Content -LiteralPath $env:GITHUB_PATH -Value $toolchainBin
 
+      - name: Install GNU Make
+        shell: pwsh
+        run: |
+          if (-not (Get-Command make.exe -ErrorAction SilentlyContinue)) {
+              choco install make --yes --no-progress
+          }
+
+          make --version
+
       - name: Set up the pinned OSS CAD Suite
         uses: YosysHQ/setup-oss-cad-suite@v4
         with:
           version: ${{ env.OSS_CAD_SUITE_VERSION }}
           github-token: ${{ github.token }}
+          python-override: true
 
       - name: Show tool versions
         shell: bash
@@ -97,11 +113,13 @@ jobs:
           FORCE_BITSTREAM_REBUILD=1 \
           ALLOW_TIMING_FAILURE=1 \
               ${{ matrix.command }}
+
           test -s "${{ matrix.bitstream }}"
           test -s build/hazard3-test.elf
           test -s build/doom-image/hazard3-doom.h3d
 
       - name: Upload board artifacts and timing logs
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.board }}-${{ github.sha }}
@@ -114,6 +132,6 @@ jobs:
             build/doom-image/hazard3-doom.h3d
             third_party/Hazard3/example_soc/synth/synth.log
             third_party/Hazard3/example_soc/synth/pnr.log
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
           compression-level: 0

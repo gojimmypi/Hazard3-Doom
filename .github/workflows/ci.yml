@@ -4,7 +4,11 @@ on:
   push:
     branches:
       - main
+      - dev
   pull_request:
+    branches:
+      - main
+      - dev
   workflow_dispatch:
 
 permissions:
@@ -88,11 +92,36 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Provide python3 for Bash scripts
+        shell: pwsh
+        run: |
+          $python = (Get-Command python.exe -ErrorAction Stop).Source
+          $pythonDirectory = Split-Path -Parent $python
+          $python3 = Join-Path $pythonDirectory "python3.exe"
+
+          if (-not (Test-Path -LiteralPath $python3)) {
+              Copy-Item -LiteralPath $python -Destination $python3
+          }
+
+          & $python3 --version
+
       - name: Cache the RISC-V toolchain
         uses: actions/cache@v5
         with:
           path: bin/riscv-gcc
           key: ${{ runner.os }}-xpack-riscv-gcc-${{ hashFiles('scripts/setup-xpack-riscv-gcc.cmd') }}
+
+      - name: Remove an incomplete cached toolchain
+        shell: pwsh
+        run: |
+          $installRoot = Join-Path $env:GITHUB_WORKSPACE "bin\riscv-gcc"
+          $gcc = Join-Path $installRoot "bin\riscv-none-elf-gcc.exe"
+
+          if ((Test-Path -LiteralPath $installRoot) -and
+              -not (Test-Path -LiteralPath $gcc)) {
+              Write-Warning "Removing incomplete cached toolchain: $installRoot"
+              Remove-Item -LiteralPath $installRoot -Recurse -Force
+          }
 
       - name: Install the RISC-V toolchain
         shell: cmd
@@ -219,6 +248,7 @@ jobs:
           done
 
       - name: Upload RISC-V build artifacts
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: riscv-builds-${{ github.sha }}
@@ -226,6 +256,6 @@ jobs:
             build/ci/**/*.elf
             build/ci/**/*.map
             build/ci/**/*.h3d
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
           compression-level: 0
