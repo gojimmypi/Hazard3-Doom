@@ -15,7 +15,7 @@ project:
   uses_vapwr: false     # Set to true if your project uses the second analog power supply (VAPWR) in addition to VDPWR (3.3V)
 
   # Your top module name must start with "tt_um_". Make it unique by including your github username:
-  top_module:  "tt_um_example"
+  top_module:  "tt_um_ulx3s_example"
 
   # List your project's source files here. Source files must be in ./src and you must list each source file separately, one per line:
   source_files:
