@@ -23,3 +23,5 @@ module tt_um_example (
 );
 
 endmodule
+
+`default_nettype wire
