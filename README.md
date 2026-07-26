@@ -1,3 +1,7 @@
+[![CI](https://github.com/ulx3s/Hazard3-Doom/actions/workflows/ci.yml/badge.svg)](https://github.com/ulx3s/Hazard3-Doom/actions/workflows/ci.yml)
+[![Check Verilog default_nettype](https://github.com/ulx3s/Hazard3-Doom/actions/workflows/check-nettype.yaml/badge.svg)](https://github.com/ulx3s/Hazard3-Doom/actions/workflows/check-nettype.yaml)
+[![fpga-gojimmypi](https://github.com/ulx3s/Hazard3-Doom/actions/workflows/tt-fpga-ulx.yaml/badge.svg)](https://github.com/ulx3s/Hazard3-Doom/actions/workflows/tt-fpga-ulx.yaml)
+
 # Hazard3-Doom for ULX3S and ULX4M
 
 This repository contains the standalone monitor firmware, loadable Doom image,
@@ -369,6 +373,14 @@ For Windows users, the VisualGDB project settings are included under `VisualGDB/
 The target ELF is `build/hazard3-test.elf`. The GDB startup helper is
 `scripts/hazard3-debug.gdb`. Per-user `.user` files are intentionally excluded.
 
+## Tiny Tapeout
+
+These files are includes only for testing the Tiny Tapeout workflows:
+
+- `info.yml`
+- `src/config.json`
+- `src/project.v`
+ 
 ## Licensing and WAD files
 
 DoomGeneric is licensed under GPL-2.0 and is included as a pinned submodule.
