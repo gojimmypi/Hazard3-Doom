@@ -5,7 +5,11 @@
 
 `default_nettype none
 
-module tt_um_example (
+// TinyTapeout FPGA smoke-test design for the Hazard3-Doom repository.
+//
+// This module intentionally tests the TinyTapeout FPGA wrapper and tool flow;
+// the full Hazard3-Doom SoC is built by the dedicated ULX3S/ULX4M workflows.
+module tt_um_ulx3s_example (
 `ifdef OTHER_SHUTTLKE
     input  wire       VGND,
     input  wire       VDPWR,    // 3.3v core power supply
@@ -21,6 +25,28 @@ module tt_um_example (
     input  wire       clk,      // clock
     input  wire       rst_n     // reset_n - low to reset
 );
+
+    // Use visible counter bits so the low output nibble blinks at a human-
+    // observable rate over the normal TinyTapeout FPGA clock range.
+    reg [25:0] counter;
+
+    always @(posedge clk) begin
+        if (!rst_n) begin
+            counter <= 26'd0;
+        end else if (ena) begin
+            counter <= counter + 26'd1;
+        end
+    end
+
+    // 0xD identifies this as the Hazard3-Doom TinyTapeout smoke image.
+    assign uo_out = {4'hD, counter[25:22]};
+
+    // Do not drive the bidirectional TinyTapeout pins in this smoke test.
+    assign uio_out = 8'h00;
+    assign uio_oe  = 8'h00;
+
+    // Keep otherwise-unused standard TinyTapeout inputs intentional.
+    wire _unused = &{ui_in, uio_in, 1'b0};
 
 endmodule
 
