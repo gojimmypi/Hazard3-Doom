@@ -56,9 +56,13 @@ if not "%GDB_RESULT%"=="0" (
     >&2 echo.
     >&2 echo Firmware load failed.
     >&2 echo Make sure OpenOCD is running and listening on localhost:3333.
-    >&2 echo Start OpenOCD, then run this script again.
+    >&2 echo Start OpenOCD in a dedicated windows, then run this script again.
     >&2 echo.
     pause
 )
+
+echo Done.
+echo Check HDMI display for test pattern.
+echo Connect to UART to upload Doom executable.
 
 exit /b %GDB_RESULT%
