@@ -62,7 +62,7 @@ jobs:
           status=0
           while IFS= read -r -d '' script; do
               if [[ ! -x "${script}" ]]; then
-                  echo "::error file=${script}::Shell script is not executable"
+                  echo "::error file=${script}::Shell script is not executable: ${script}"
                   status=1
               fi
           done < <(git ls-files -z -- 'scripts/*.sh' 'doom/*.sh')
