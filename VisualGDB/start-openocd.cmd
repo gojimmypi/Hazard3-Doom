@@ -16,7 +16,7 @@ if /i "%~1"=="/nopause" set "PAUSE_BEFORE_EXIT=0"
 for %%I in ("%REPO%") do set "REPO=%%~fI"
 
 set "OPENOCD=%REPO%\bin\openocd.exe"
-set "OPENOCD_CFG=%REPO%\third_party\Hazard3\example_soc\ulx3s-openocd.cfg"
+set "OPENOCD_CFG=%REPO%\openocd\ulx3s-openocd-doom.cfg"
 
 call :port_is_listening
 if not errorlevel 1 (

@@ -149,7 +149,7 @@
       <GDBServerCommand>
         <SkipWhenRunningCommandList>false</SkipWhenRunningCommandList>
         <Command>$(ProjectDir)\..\bin\openocd.exe</Command>
-        <Arguments>-d2 -f &quot;$(ProjectDir.forwardslashes)/../third_party/Hazard3/example_soc/ulx3s-openocd.cfg&quot;</Arguments>
+        <Arguments>-d2 -f &quot;$(ProjectDir.forwardslashes)/../openocd/ulx3s-openocd-doom.cfg&quot;</Arguments>
         <WorkingDirectory>$(ProjectDir)\..</WorkingDirectory>
         <BackgroundMode xsi:nil="true" />
       </GDBServerCommand>

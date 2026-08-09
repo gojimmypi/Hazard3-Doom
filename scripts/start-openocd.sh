@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Starts a listening OpenOCD server using ulx3s-openocd.cfg.
+# Starts a listening OpenOCD server using ulx3s-openocd-doom.cfg.
 
 set -euo pipefail
 
@@ -15,7 +15,7 @@ else
     OPENOCD="${ROOT_DIR}/bin/openocd.exe"
 fi
 
-OPENOCD_CONFIG="${ROOT_DIR}/third_party/Hazard3/example_soc/ulx3s-openocd.cfg"
+OPENOCD_CONFIG="${ROOT_DIR}/openocd/ulx3s-openocd-doom.cfg"
 
 if [[ ! -f "${OPENOCD}" ]]; then
     printf 'ERROR: OpenOCD not found:\n  %s\n' "${OPENOCD}" >&2
@@ -28,7 +28,23 @@ if [[ ! -f "${OPENOCD_CONFIG}" ]]; then
     exit 1
 fi
 
-printf 'Repository root:\n  %s\n\n' "${ROOT_DIR}"
+# A native Windows OpenOCD executable cannot open WSL paths such as
+# /mnt/c/workspace/.... Convert the configuration filename to Windows syntax
+# when invoking an .exe from WSL. Native Linux OpenOCD keeps the POSIX path.
+OPENOCD_CONFIG_ARG="${OPENOCD_CONFIG}"
+if [[ "${OPENOCD,,}" == *.exe ]]; then
+    if ! command -v wslpath >/dev/null 2>&1; then
+        printf 'ERROR: wslpath is required when using Windows OpenOCD:\n  %s\n' \
+            "${OPENOCD}" >&2
+        exit 1
+    fi
+
+    # Convert config to DOS path
+    OPENOCD_CONFIG_ARG="$(wslpath -w "${OPENOCD_CONFIG}")"
+fi
+
+printf 'Repository root:\n   %s\n\n' "${ROOT_DIR}"
+printf 'Using config:\n      %s\n\n' "${OPENOCD_CONFIG_ARG}"
 printf 'Starting OpenOCD:\n  %s\n\n' "${OPENOCD}"
 
-exec "${OPENOCD}" -d2 -f "${OPENOCD_CONFIG}"
+exec "${OPENOCD}" -d2 -f "${OPENOCD_CONFIG_ARG}"

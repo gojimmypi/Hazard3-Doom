@@ -158,7 +158,7 @@ Run OpenOCD in a separate terminal and leave it running:
 
 ```bash
 ./bin/openocd.exe -d2 \
-    -f ./third_party/Hazard3/example_soc/ulx3s-openocd.cfg
+    -f ./openocd/ulx3s-openocd.cfg
 ```
 
 A normal connection should include output similar to:
