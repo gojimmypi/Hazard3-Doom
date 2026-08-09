@@ -15,10 +15,14 @@ COREMARK_DIR="${COREMARK_DIR:-${HAZARD3_ROOT}/test/sim/coremark/dist}"
 TOOLCHAIN_PREFIX="${TOOLCHAIN_PREFIX:-/opt/riscv/bin/riscv32-unknown-elf-}"
 CC="${TOOLCHAIN_PREFIX}gcc"
 SIZE="${TOOLCHAIN_PREFIX}size"
+READELF="${TOOLCHAIN_PREFIX}readelf"
+OBJDUMP="${TOOLCHAIN_PREFIX}objdump"
 PROFILE="${COREMARK_BUILD_PROFILE:-baseline}"
 ITERATIONS="${COREMARK_ITERATIONS:-3000}"
 SYSTEM_CLOCK_HZ="${HAZARD3_SYS_CLK_HZ:-50000000}"
 BUILD_DIR="${HAZARD3_COREMARK_BUILD_DIR:-${ROOT_DIR}/build/coremark/${PROFILE}}"
+SOURCE_CHECKER="${PORT_DIR}/check_coremark_sources.py"
+ELF_ANALYZER="${PORT_DIR}/analyze_elf.py"
 
 require_tool()
 {
@@ -76,6 +80,10 @@ esac
 
 require_tool "${CC}"
 require_tool "${SIZE}"
+require_tool "${READELF}"
+require_tool "${OBJDUMP}"
+require_tool python3
+require_tool git
 for file in \
     core_list_join.c \
     core_main.c \
@@ -85,15 +93,30 @@ for file in \
     coremark.h; do
     require_file "${COREMARK_DIR}/${file}"
 done
-for file in core_portme.c core_portme.h ee_printf.c start.S link.ld; do
+for file in \
+    core_portme.c \
+    core_portme.h \
+    ee_printf.c \
+    start.S \
+    link.ld \
+    check_coremark_sources.py \
+    analyze_elf.py; do
     require_file "${PORT_DIR}/${file}"
 done
 
 mkdir -p "${BUILD_DIR}"
+SOURCE_INTEGRITY_JSON="${BUILD_DIR}/source-integrity.json"
+python3 "${SOURCE_CHECKER}" \
+    --hazard3-root "${HAZARD3_ROOT}" \
+    --coremark-dir "${COREMARK_DIR}" \
+    --json "${SOURCE_INTEGRITY_JSON}"
 
-common_flags=(
+arch_flags=(
     -march=rv32imc_zicsr_zifencei_zba_zbb_zbs
     -mabi=ilp32
+)
+common_flags=(
+    "${arch_flags[@]}"
     "${optimization_flags[@]}"
     -g3
     -ffreestanding
@@ -125,12 +148,37 @@ sources=(
     "${COREMARK_DIR}/core_util.c"
 )
 
+hazard3_commit="$(git -C "${HAZARD3_ROOT}" rev-parse HEAD)"
+hazard3_doom_commit="unknown"
+if git -C "${ROOT_DIR}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    hazard3_doom_commit="$(git -C "${ROOT_DIR}" rev-parse HEAD)"
+fi
+compiler_version="$("${CC}" --version)"
+compiler_version="${compiler_version%%$'\n'*}"
+cat > "${BUILD_DIR}/build-info.txt" <<EOF_INFO
+profile=${PROFILE}
+iterations=${ITERATIONS}
+clock_hz=${SYSTEM_CLOCK_HZ}
+hazard3_commit=${hazard3_commit}
+hazard3_doom_commit=${hazard3_doom_commit}
+compiler=${compiler_version}
+compiler_flags=${flags_str}
+memory=linker-defined internal SRAM (code/data/stack)
+EOF_INFO
+
+EXPECTED_ISA_OBJECT="${BUILD_DIR}/expected-isa.o"
+printf 'void coremark_expected_isa(void) {}\n' | \
+    "${CC}" "${arch_flags[@]}" -ffreestanding -fno-builtin -c -x c - \
+        -o "${EXPECTED_ISA_OBJECT}"
+
 build_one()
 {
     local run_name="$1"
     local run_define="$2"
     local output_elf="${BUILD_DIR}/coremark-${run_name}.elf"
     local output_map="${BUILD_DIR}/coremark-${run_name}.map"
+    local output_isa_json="${BUILD_DIR}/coremark-${run_name}.isa.json"
+    local output_isa_text="${BUILD_DIR}/coremark-${run_name}.isa.txt"
 
     printf 'Building CoreMark %-11s profile=%s iterations=%s clock=%s Hz\n' \
         "${run_name}" "${PROFILE}" "${ITERATIONS}" "${SYSTEM_CLOCK_HZ}"
@@ -144,6 +192,13 @@ build_one()
         -lgcc \
         -o "${output_elf}"
     "${SIZE}" "${output_elf}"
+    python3 "${ELF_ANALYZER}" \
+        --elf "${output_elf}" \
+        --readelf "${READELF}" \
+        --objdump "${OBJDUMP}" \
+        --json "${output_isa_json}" \
+        --text "${output_isa_text}" \
+        --expected-arch-object "${EXPECTED_ISA_OBJECT}"
     printf 'CoreMark ELF: %s\n' "${output_elf}"
 }
 

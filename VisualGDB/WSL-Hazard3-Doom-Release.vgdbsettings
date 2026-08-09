@@ -7,7 +7,7 @@
       <PathStyle>MinGWUnixSlash</PathStyle>
     </CustomSourceDirectories>
     <AutoProgramSPIFFSPartition>true</AutoProgramSPIFFSPartition>
-    <MainSourceDirectory>$(ProjectDir)\..\</MainSourceDirectory>
+    <MainSourceDirectory>$(ProjectDir)..\</MainSourceDirectory>
   </Project>
   <Build xsi:type="com.visualgdb.build.custom">
     <BuildLogMode xsi:nil="true" />
@@ -16,34 +16,14 @@
         <Revision>0</Revision>
       </Version>
     </ToolchainID>
-    <BuildCommand>
-      <SkipWhenRunningCommandList>false</SkipWhenRunningCommandList>
-      <Command>cmd.exe</Command>
-      <Arguments>/d /c call "$(ProjectDir)\..\scripts\build-xpack.cmd" build 64m 50000000</Arguments>
-      <WorkingDirectory>$(ProjectDir)\..</WorkingDirectory>
-      <BackgroundMode xsi:nil="true" />
-    </BuildCommand>
-    <CleanCommand>
-      <SkipWhenRunningCommandList>false</SkipWhenRunningCommandList>
-      <Command>cmd.exe</Command>
-      <Arguments>/d /c call "$(ProjectDir)\..\scripts\build-xpack.cmd" clean 64m 50000000</Arguments>
-      <WorkingDirectory>$(ProjectDir)\..</WorkingDirectory>
-      <BackgroundMode xsi:nil="true" />
-    </CleanCommand>
-    <MainBuildDirectory>$(ProjectDir)\..</MainBuildDirectory>
-    <AbsoluteTargetPath>$(ProjectDir)\..\build\hazard3-test.elf</AbsoluteTargetPath>
-    <AutoUpdateMakefiles>false</AutoUpdateMakefiles>
+    <MainBuildDirectory>$(SourceDir)</MainBuildDirectory>
+    <AbsoluteTargetPath>C:\workspace\Hazard3-Doom\build\hazard3-test.elf</AbsoluteTargetPath>
+    <AutoUpdateMakefiles>true</AutoUpdateMakefiles>
   </Build>
   <CustomBuild>
     <PreSyncActions />
-    <PreBuildActions />
-    <PostBuildActions />
-    <PreCleanActions />
-    <PostCleanActions />
   </CustomBuild>
   <CustomDebug>
-    <PreDebugActions />
-    <PostDebugActions />
     <DebugStopActions />
     <BreakMode>Default</BreakMode>
   </CustomDebug>
@@ -52,7 +32,6 @@
     <ShowMessageAfterExecuting>true</ShowMessageAfterExecuting>
   </CustomShortcuts>
   <UserDefinedVariables />
-  <ImportedPropertySheets />
   <CodeSense>
     <Enabled>Unknown</Enabled>
     <ExtraSettings>
@@ -65,8 +44,6 @@
       <Enabled>false</Enabled>
     </CodeAnalyzerSettings>
   </CodeSense>
-  <Configurations />
-  <ProgramArgumentsSuggestions />
   <Debug xsi:type="com.visualgdb.debug.remote">
     <AdditionalStartupCommands />
     <AdditionalGDBSettings>

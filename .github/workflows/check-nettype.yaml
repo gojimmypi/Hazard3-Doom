@@ -1,0 +1,22 @@
+name: Check Verilog default_nettype
+
+on:
+    push:
+    pull_request:
+
+jobs:
+    check-nettype:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Check .v files for default_nettype rules
+              shell: bash
+              run: |
+                echo "Running check-nettype.sh to verify default_nettype rules in .v files..."
+
+                chmod +x scripts/check-nettype.sh
+
+                scripts/check-nettype.sh

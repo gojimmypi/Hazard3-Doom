@@ -15,7 +15,7 @@
 #endif
 #define COMPILER_VERSION "GCC " __VERSION__
 #define COMPILER_FLAGS FLAGS_STR
-#define MEM_LOCATION "STACK"
+#define MEM_LOCATION "Code/data/stack in linker-defined internal SRAM"
 
 typedef int16_t ee_s16;
 typedef uint16_t ee_u16;
@@ -23,13 +23,14 @@ typedef int32_t ee_s32;
 typedef double ee_f32;
 typedef uint8_t ee_u8;
 typedef uint32_t ee_u32;
+typedef uint64_t ee_u64;
 typedef uintptr_t ee_ptr_int;
 typedef size_t ee_size_t;
 
 #define align_mem(x) (void *)(4u + (((ee_ptr_int)(x) - 1u) & ~(ee_ptr_int)3u))
 
-#define CORETIMETYPE ee_u32
-typedef ee_u32 CORE_TICKS;
+#define CORETIMETYPE ee_u64
+typedef ee_u64 CORE_TICKS;
 
 #define SEED_METHOD SEED_VOLATILE
 #define MEM_METHOD MEM_STACK

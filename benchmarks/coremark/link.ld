@@ -22,6 +22,7 @@ SECTIONS
     {
         *(.text*)
         *(.rodata*)
+        *(.coremark_diag.text*)
     } > RAM :text
 
     .data :
@@ -44,7 +45,10 @@ SECTIONS
 
     . = ALIGN(16);
     __image_end = .;
-    __stack_top = ORIGIN(RAM) + LENGTH(RAM);
+    __ram_origin = ORIGIN(RAM);
+    __ram_length = LENGTH(RAM);
+    __ram_end = ORIGIN(RAM) + LENGTH(RAM);
+    __stack_top = __ram_end;
 
     /DISCARD/ :
     {

@@ -1,0 +1,137 @@
+name: FPGA builds
+
+on:
+  schedule:
+    - cron: "23 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fpga-builds-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TOOLCHAIN_PREFIX: riscv-none-elf-
+  OSS_CAD_SUITE_VERSION: "2026-07-20"
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: windows-2022
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ULX3S 85F
+            board: ulx3s-85f
+            command: ./scripts/build-ulx3s-doom.sh
+            bitstream: build/ulx3s/fpga_ulx3s.bit
+          - name: ULX4M-LD 85F
+            board: ulx4m-ld-85f
+            command: ./scripts/build-ulx4m-ld-doom.sh
+            bitstream: build/ulx4m-ld/fpga_ulx4m_ld.bit
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Cache the RISC-V toolchain
+        uses: actions/cache@v5
+        with:
+          path: bin/riscv-gcc
+          key: ${{ runner.os }}-xpack-riscv-gcc-${{ hashFiles('scripts/setup-xpack-riscv-gcc.cmd') }}
+
+      - name: Remove an incomplete cached toolchain
+        shell: pwsh
+        run: |
+          $installRoot = Join-Path $env:GITHUB_WORKSPACE "bin\riscv-gcc"
+          $gcc = Join-Path $installRoot "bin\riscv-none-elf-gcc.exe"
+
+          if ((Test-Path -LiteralPath $installRoot) -and
+              -not (Test-Path -LiteralPath $gcc)) {
+              Write-Warning "Removing incomplete cached toolchain: $installRoot"
+              Remove-Item -LiteralPath $installRoot -Recurse -Force
+          }
+
+      - name: Install the RISC-V toolchain
+        shell: cmd
+        run: call scripts\setup-xpack-riscv-gcc.cmd
+
+      - name: Add the RISC-V toolchain to PATH
+        shell: pwsh
+        run: |
+          $toolchainBin = Join-Path $env:GITHUB_WORKSPACE "bin\riscv-gcc\bin"
+          $gcc = Join-Path $toolchainBin "riscv-none-elf-gcc.exe"
+
+          if (-not (Test-Path -LiteralPath $gcc)) {
+              throw "RISC-V GCC was not installed at $gcc"
+          }
+
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value $toolchainBin
+
+      - name: Install GNU Make
+        shell: pwsh
+        run: |
+          if (-not (Get-Command make.exe -ErrorAction SilentlyContinue)) {
+              choco install make --yes --no-progress
+          }
+
+          make --version
+
+      - name: Set up the pinned OSS CAD Suite
+        uses: YosysHQ/setup-oss-cad-suite@v4
+        with:
+          version: ${{ env.OSS_CAD_SUITE_VERSION }}
+          github-token: ${{ github.token }}
+          python-override: true
+
+      - name: Show tool versions
+        shell: bash
+        run: |
+          make --version
+          yosys --version
+          nextpnr-ecp5 --version
+          printf 'ecppack: %s\n' "$(command -v ecppack)"
+          riscv-none-elf-gcc --version
+          python3 --version
+
+      - name: Initialize required submodules
+        shell: bash
+        run: ./scripts/setup-submodules.sh
+
+      - name: Build complete board image
+        shell: bash
+        run: |
+          # Produce a fresh P&R result. Timing logs remain artifacts for review;
+          # known timing misses do not hide synthesis, packaging, or integration failures.
+          FORCE_BITSTREAM_REBUILD=1 \
+          ALLOW_TIMING_FAILURE=1 \
+              ${{ matrix.command }}
+
+          test -s "${{ matrix.bitstream }}"
+          test -s build/hazard3-test.elf
+          test -s build/doom-image/hazard3-doom.h3d
+
+      - name: Upload board artifacts and timing logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.board }}-${{ github.sha }}
+          path: |
+            ${{ matrix.bitstream }}
+            build/hazard3-test.elf
+            build/hazard3-test.map
+            build/doom-image/hazard3-doom.elf
+            build/doom-image/hazard3-doom.map
+            build/doom-image/hazard3-doom.h3d
+            third_party/Hazard3/example_soc/synth/synth.log
+            third_party/Hazard3/example_soc/synth/pnr.log
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0

@@ -1,0 +1,14 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Win32" />
+  </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Solution Items/src/">
+    <File Path="../src/link.ld" />
+    <File Path="../src/main.c" />
+    <File Path="../src/start.S" />
+  </Folder>
+  <Project Path="Hazard3-Doom.vcxproj" Id="b0aba019-04a3-3861-18d4-f07eebb38436" />
+</Solution>

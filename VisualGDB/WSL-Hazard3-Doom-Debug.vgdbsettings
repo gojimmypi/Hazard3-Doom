@@ -1,43 +1,66 @@
 <?xml version="1.0"?>
 <VisualGDBProjectSettings2 xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <ConfigurationName>Debug</ConfigurationName>
-  <Project xsi:type="com.visualgdb.project.windows">
+  <Project xsi:type="com.visualgdb.project.linux">
     <CustomSourceDirectories>
-      <Directories>
-        <SourceDirMappingEntry>
-          <RemoteDir>$(ProjectDir)../</RemoteDir>
-          <LocalDir>$(ProjectDir)..\</LocalDir>
-        </SourceDirMappingEntry>
-      </Directories>
-      <PathStyle>MinGWUnixSlash</PathStyle>
+      <Directories />
+      <PathStyle>Unknown</PathStyle>
     </CustomSourceDirectories>
     <AutoProgramSPIFFSPartition>true</AutoProgramSPIFFSPartition>
-    <MainSourceDirectory>$(ProjectDir)\..\</MainSourceDirectory>
+    <BuildHost>
+      <HostName>localhost-lxss</HostName>
+      <Transport>LinuxSubsystem</Transport>
+    </BuildHost>
+    <MountInfo>
+      <Mode>UserProvidedMount</Mode>
+      <RemoteHost>
+        <HostName>localhost-lxss</HostName>
+        <Transport>LinuxSubsystem</Transport>
+      </RemoteHost>
+      <LocalDirectory>$(ProjectDir)</LocalDirectory>
+      <RemoteDirectory>/mnt/$(ProjectDirUnixStyle)</RemoteDirectory>
+      <SuppressPathChangeWarnings>false</SuppressPathChangeWarnings>
+    </MountInfo>
+    <AllowChangingHostForMainCommands>true</AllowChangingHostForMainCommands>
+    <SkipBuildIfNoSourceFilesChanged>false</SkipBuildIfNoSourceFilesChanged>
+    <IgnoreFileTransferErrors>false</IgnoreFileTransferErrors>
+    <RemoveRemoteDirectoryOnClean>false</RemoveRemoteDirectoryOnClean>
+    <SkipDeploymentTests>false</SkipDeploymentTests>
+    <MainSourceDirectoryForLocalBuilds>$(ProjectDir)..\</MainSourceDirectoryForLocalBuilds>
   </Project>
   <Build xsi:type="com.visualgdb.build.custom">
     <BuildLogMode xsi:nil="true" />
     <ToolchainID>
+      <ID>com.sysprogs.toolchain.default-gcc</ID>
       <Version>
         <Revision>0</Revision>
       </Version>
     </ToolchainID>
     <BuildCommand>
       <SkipWhenRunningCommandList>false</SkipWhenRunningCommandList>
-      <Command>cmd.exe</Command>
-      <Arguments>/d /c call "$(ProjectDir)\..\scripts\build-xpack.cmd" build 64m 50000000</Arguments>
-      <WorkingDirectory>$(ProjectDir)\..</WorkingDirectory>
+      <RemoteHost>
+        <HostName>BuildMachine</HostName>
+        <Transport>BuiltinShortcut</Transport>
+      </RemoteHost>
+      <Command>/bin/true</Command>
+      <Arguments>CONFIG=DEBUG</Arguments>
+      <WorkingDirectory>$(BuildDir)</WorkingDirectory>
       <BackgroundMode xsi:nil="true" />
     </BuildCommand>
     <CleanCommand>
       <SkipWhenRunningCommandList>false</SkipWhenRunningCommandList>
-      <Command>cmd.exe</Command>
-      <Arguments>/d /c call "$(ProjectDir)\..\scripts\build-xpack.cmd" clean 64m 50000000</Arguments>
-      <WorkingDirectory>$(ProjectDir)\..</WorkingDirectory>
+      <RemoteHost>
+        <HostName>BuildMachine</HostName>
+        <Transport>BuiltinShortcut</Transport>
+      </RemoteHost>
+      <Command>/bin/true</Command>
+      <Arguments>clean CONFIG=DEBUG</Arguments>
+      <WorkingDirectory>$(BuildDir)</WorkingDirectory>
       <BackgroundMode xsi:nil="true" />
     </CleanCommand>
-    <MainBuildDirectory>$(ProjectDir)\..</MainBuildDirectory>
-    <AbsoluteTargetPath>$(ProjectDir)\..\build\hazard3-test.elf</AbsoluteTargetPath>
-    <AutoUpdateMakefiles>false</AutoUpdateMakefiles>
+    <MainBuildDirectory>$(SourceDir)/..</MainBuildDirectory>
+    <AbsoluteTargetPath>$(SourceDir)/../build/hazard3-test.elf</AbsoluteTargetPath>
+    <AutoUpdateMakefiles>true</AutoUpdateMakefiles>
   </Build>
   <CustomBuild>
     <PreSyncActions />
@@ -47,10 +70,30 @@
     <PostCleanActions />
   </CustomBuild>
   <CustomDebug>
-    <PreDebugActions />
+    <PreDebugActions>
+      <CustomActionBase xsi:type="CommandLineAction">
+        <SkipWhenRunningCommandList>false</SkipWhenRunningCommandList>
+        <RemoteHost>
+          <HostName>BuildMachine</HostName>
+          <Transport>BuiltinShortcut</Transport>
+        </RemoteHost>
+        <Command>/bin/bash</Command>
+        <Arguments>-lc 'test -f "$(SourceDir)/../build/hazard3-test.elf" || { echo "ERROR: build/hazard3-test.elf is missing. Run ./scripts/build.sh first." &gt;&amp;2; exit 1; }'</Arguments>
+        <WorkingDirectory>$(SourceDir)/..</WorkingDirectory>
+        <BackgroundMode>false</BackgroundMode>
+      </CustomActionBase>
+    </PreDebugActions>
     <PostDebugActions />
     <DebugStopActions />
     <BreakMode>Default</BreakMode>
+    <CustomBreakCommand>
+      <SkipWhenRunningCommandList>false</SkipWhenRunningCommandList>
+      <RemoteHost>
+        <HostName>BuildMachine</HostName>
+        <Transport>BuiltinShortcut</Transport>
+      </RemoteHost>
+      <BackgroundMode xsi:nil="true" />
+    </CustomBreakCommand>
   </CustomDebug>
   <SmartTerminalSettings>
     <Environments />
@@ -80,10 +123,7 @@
       <GDBPreStartupCommands>
         <string>set remote interrupt-on-connect off</string>
         <string>set remotetimeout 30</string>
-        <!-- Just in case the pre-compiled binaries are copied from the /bin/ directory, perform som subsitutions: -->
-        <string>set substitute-path /home/gojimmypi/Hazard3-Doom &quot;$(ProjectDir.forwardslashes)/..&quot;</string>
-        <string>set substitute-path /mnt/c/temp/Hazard3-Doom &quot;$(ProjectDir.forwardslashes)/..&quot;</string>
-        <string>source $(ProjectDir.forwardslashes)/../scripts/hazard3-debug.gdb</string>
+        <string>source $(SourceDir)/../scripts/hazard3-debug.gdb</string>
       </GDBPreStartupCommands>
       <GDBStartupCommands>
         <string>hazard3-start</string>
@@ -127,7 +167,7 @@
       <EnableAbsolutePathReporting>true</EnableAbsolutePathReporting>
     </AdditionalGDBSettings>
     <LaunchGDBSettings xsi:type="GDBLaunchParametersCustom">
-      <GDBExe>$(ProjectDir)\..\bin\gdb\riscv-none-elf-gdb.exe</GDBExe>
+      <GDBExe>/opt/riscv/bin/riscv32-unknown-elf-gdb</GDBExe>
       <GDBEnvironment>
         <Records>
           <Record>
@@ -137,22 +177,8 @@
         </Records>
         <EnvironmentSetupFiles />
       </GDBEnvironment>
-      <GDBArguments>--interpreter mi --args &quot;$(ProjectDir.forwardslashes)/../build/hazard3-test.elf&quot;</GDBArguments>
+      <GDBArguments>--interpreter mi --args "$(TargetPath)"</GDBArguments>
       <SessionStartMode>NoAutoStart</SessionStartMode>
-      <GDBServerSettings>
-        <SendCtrlCToGDBServer>false</SendCtrlCToGDBServer>
-        <PortGroupIndexInStartedRegex>0</PortGroupIndexInStartedRegex>
-        <StartTimeout>15000</StartTimeout>
-        <ExitTimeout>3000</ExitTimeout>
-        <TerminateGDBServerOnExit>true</TerminateGDBServerOnExit>
-      </GDBServerSettings>
-      <GDBServerCommand>
-        <SkipWhenRunningCommandList>false</SkipWhenRunningCommandList>
-        <Command>$(ProjectDir)\..\bin\openocd.exe</Command>
-        <Arguments>-d2 -f &quot;$(ProjectDir.forwardslashes)/../openocd/ulx3s-openocd-doom.cfg&quot;</Arguments>
-        <WorkingDirectory>$(ProjectDir)\..</WorkingDirectory>
-        <BackgroundMode xsi:nil="true" />
-      </GDBServerCommand>
       <TargetSelectionCommand>-target-select extended-remote localhost:3333</TargetSelectionCommand>
       <AttachPID>0</AttachPID>
     </LaunchGDBSettings>
