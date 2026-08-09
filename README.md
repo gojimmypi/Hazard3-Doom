@@ -41,6 +41,7 @@ SDRAM path, and the indexed HDMI presentation registers.
 
 ```text
 Hazard3-Doom/
+|-- benchmarks/coremark      Hazard3 ULX3S specific CoreMark port
 |-- bin/                     Windows executables, prebuilt FPGA bitstreams, and prebuilt Doom image.
 |-- src/                     resident monitor entry point, linker script, and main
 |-- doom/                    Doom port, image/WAD protocols, and host uploaders
@@ -88,6 +89,15 @@ For an existing checkout:
 ./scripts/setup-submodules.sh
 ```
 
+or manually re-initialize submodules:
+
+```bash
+git fetch
+git pull
+git submodule sync --recursive
+git submodule update --init --recursive
+```
+
 The compatibility command below initializes only DoomGeneric:
 
 ```bash
@@ -99,11 +109,11 @@ applied to a temporary source copy under `build/`.
 
 ## Board profiles
 
-| Board | Memory profile | System clock |
-|---|---:|---:|
-| ULX3S 85F | `64m` | 50 MHz |
-| ULX4M-LD 85F | `64m` | 50 MHz |
-| ULX4M-LS 85F | `32m` | 50 MHz |
+| Board       | Memory profile | System clock |
+|-------------|---------------:|-------------:|
+| ULX3S 85F    |    `64m`      |       50 MHz |
+| ULX4M-LD 85F |    `64m`      |       50 MHz |
+| ULX4M-LS 85F |    `32m`      |       50 MHz |
 
 The `64m` profile is the default. The profile used for the monitor, Doom image,
 and WAD uploader must match.
