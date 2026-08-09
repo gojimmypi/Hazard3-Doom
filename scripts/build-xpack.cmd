@@ -26,7 +26,8 @@ for %%I in ("%~dp0..") do set "ROOT_DIR=%%~fI"
 set "SRC_DIR=%ROOT_DIR%\src"
 set "DOOM_DIR=%ROOT_DIR%\doom"
 set "BUILD_DIR=%ROOT_DIR%\build"
-set "TOOLCHAIN_BIN=%ROOT_DIR%\bin\riscv-gcc\bin"
+set "TOOLCHAIN_ROOT=%ROOT_DIR%\bin\riscv-gcc"
+set "TOOLCHAIN_BIN=%TOOLCHAIN_ROOT%\bin"
 
 set "CC=%TOOLCHAIN_BIN%\riscv-none-elf-gcc.exe"
 set "SIZE=%TOOLCHAIN_BIN%\riscv-none-elf-size.exe"
@@ -62,7 +63,7 @@ echo Use 50000000 or 25000000.
 exit /b 2
 
 :clock_ok
-call :require_file "%CC%"
+call :require_toolchain
 if errorlevel 1 exit /b 1
 
 call :require_file "%SRC_DIR%\start.S"
@@ -192,6 +193,63 @@ if exist "%OUTPUT_MAP%" (
 
 echo Clean complete.
 exit /b 0
+
+:require_toolchain
+if not exist "%TOOLCHAIN_ROOT%\" goto :toolchain_missing
+if not exist "%CC%" goto :toolchain_incomplete
+
+"%CC%" --version >nul 2>&1
+if errorlevel 1 goto :toolchain_unusable
+exit /b 0
+
+:toolchain_missing
+echo.
+echo ERROR: Hazard3-Doom RISC-V toolchain is not installed.
+echo.
+echo Expected compiler:
+echo   %CC%
+echo.
+echo Install the pinned xPack RISC-V GCC toolchain from the repository root:
+echo.
+echo   scripts\setup-xpack-riscv-gcc.cmd
+echo.
+echo Then rebuild the project in Visual Studio.
+echo The toolchain will be installed locally under:
+echo   %TOOLCHAIN_ROOT%
+echo.
+exit /b 1
+
+:toolchain_incomplete
+echo.
+echo ERROR: Hazard3-Doom RISC-V toolchain installation is incomplete.
+echo.
+echo Toolchain directory exists, but the compiler is missing:
+echo   %CC%
+echo.
+echo Remove or rename this directory:
+echo   %TOOLCHAIN_ROOT%
+echo.
+echo Then reinstall from the repository root with:
+echo   scripts\setup-xpack-riscv-gcc.cmd
+echo.
+exit /b 1
+
+:toolchain_unusable
+echo.
+echo ERROR: Hazard3-Doom RISC-V compiler was found, but could not run.
+echo.
+echo Compiler:
+echo   %CC%
+echo.
+echo Run this command from a Command Prompt for the detailed error:
+echo   "%CC%" --version
+echo.
+echo If the installation is damaged, remove or rename:
+echo   %TOOLCHAIN_ROOT%
+echo and reinstall with:
+echo   scripts\setup-xpack-riscv-gcc.cmd
+echo.
+exit /b 1
 
 :require_file
 if exist "%~1" exit /b 0
