@@ -31,9 +31,9 @@ timestamps. Set `FORCE_BITSTREAM_REBUILD=1` to run synthesis and nextpnr again.
 ## Programming and Debugging
 
 - `hazard3-debug.gdb` - Provides GDB commands for connecting to and debugging Hazard3 through OpenOCD.
-- `load_firmware.bat` - Loads and starts the monitor firmware through GDB and OpenOCD on Windows.
-- `load_firmware.sh` - Loads and starts the monitor firmware through GDB and OpenOCD on Linux or WSL.
-- `load_fpga_bitstream.bat` - Programs the FPGA with a generated or prebuilt bitstream on Windows.
+- `load-firmware.bat` - Loads and starts the monitor firmware through GDB and OpenOCD on Windows.
+- `load-firmware.sh` - Loads and starts the monitor firmware through GDB and OpenOCD on Linux or WSL.
+- `load-fpga-bitstream.bat` - Programs the FPGA with a generated or prebuilt bitstream on Windows.
 - `start-openocd.bat` - Starts the OpenOCD server with the repository configuration on Windows.
 - `start-openocd.sh` - Starts the OpenOCD server with the repository configuration on Linux or WSL.
 

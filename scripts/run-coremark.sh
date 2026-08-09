@@ -63,14 +63,14 @@ run_one()
     if [[ -z "${SERIAL_PORT}" ]]; then
         printf 'Loading %s\n' "${elf}"
         printf 'Capture the 115200 8N1 UART output in your terminal.\n'
-        "${SCRIPT_DIR}/load_firmware.sh" "${elf}"
+        "${SCRIPT_DIR}/load-firmware.sh" "${elf}"
         return 0
     fi
 
     python3 "${PORT_DIR}/run_coremark.py" \
         --elf "${elf}" \
         --port "${SERIAL_PORT}" \
-        --loader "${SCRIPT_DIR}/load_firmware.sh" \
+        --loader "${SCRIPT_DIR}/load-firmware.sh" \
         --clock-hz "${SYSTEM_CLOCK_HZ}" \
         --isa-json "${isa_json}" \
         --source-integrity-json "${SOURCE_INTEGRITY_JSON}" \

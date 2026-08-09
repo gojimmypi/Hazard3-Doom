@@ -211,13 +211,13 @@ Keep OpenOCD running on `localhost:3333` and disconnect VisualGDB before using
 the batch loader:
 
 ```bash
-./scripts/load_firmware.sh
+./scripts/load-firmware.sh
 ```
 
 An explicit ELF path may be supplied as the first argument:
 
 ```bash
-./scripts/load_firmware.sh /path/to/hazard3-test.elf
+./scripts/load-firmware.sh /path/to/hazard3-test.elf
 ```
 
 The loader halts the target, loads and compares the ELF sections, sets `_start`,
