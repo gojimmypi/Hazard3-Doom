@@ -29,8 +29,10 @@
 
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-readonly REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+readonly REPO_ROOT
 
 readonly CC="${CC:-/opt/riscv/bin/riscv32-unknown-elf-gcc}"
 readonly READELF="${READELF:-/opt/riscv/bin/riscv32-unknown-elf-readelf}"
@@ -52,7 +54,6 @@ if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
 else
     echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
 fi
-
 
 usage() {
     cat <<EOF_USAGE
@@ -258,12 +259,13 @@ esac
 
 readonly MAP_FILE="${1:-${DEFAULT_MAP_FILE}}"
 if [[ $# -ge 2 ]]; then
-    readonly ELF_FILE="$2"
+    ELF_FILE="$2"
 elif [[ $# -eq 1 ]]; then
-    readonly ELF_FILE="$(derive_elf_file "${MAP_FILE}")"
+    ELF_FILE="$(derive_elf_file "${MAP_FILE}")"
 else
-    readonly ELF_FILE="${DEFAULT_ELF_FILE}"
+    ELF_FILE="${DEFAULT_ELF_FILE}"
 fi
+readonly ELF_FILE
 
 require_tool "${CC}"
 require_tool "${READELF}"
@@ -276,14 +278,22 @@ ABI_NAME="$(option_value "${ABI}" '-mabi=')" ||
 readonly MARCH
 readonly ABI_NAME
 readonly BASE_MARCH="${MARCH%%_*}"
-readonly MULTILIBS="$("${CC}" -print-multi-lib)"
-readonly MULTI_DIR="$("${CC}" "${ARCH}" "${ABI}" -print-multi-directory)"
-readonly LIBGCC="$("${CC}" "${ARCH}" "${ABI}" -print-libgcc-file-name)"
-readonly GCC_VERSION="$("${CC}" -dumpfullversion -dumpversion)"
-readonly GCC_TARGET="$("${CC}" -dumpmachine)"
-readonly REQUESTED_EXTENSIONS="$(extensions_for_arch "${MARCH}" | sort -u)"
-readonly EFFECTIVE_REQUESTED_EXTENSIONS="$(effective_extensions "${REQUESTED_EXTENSIONS}" | sort -u)"
-readonly GCC_VERBOSE="$("${CC}" -v 2>&1 || true)"
+MULTILIBS="$("${CC}" -print-multi-lib)"
+readonly MULTILIBS
+MULTI_DIR="$("${CC}" "${ARCH}" "${ABI}" -print-multi-directory)"
+readonly MULTI_DIR
+LIBGCC="$("${CC}" "${ARCH}" "${ABI}" -print-libgcc-file-name)"
+readonly LIBGCC
+GCC_VERSION="$("${CC}" -dumpfullversion -dumpversion)"
+readonly GCC_VERSION
+GCC_TARGET="$("${CC}" -dumpmachine)"
+readonly GCC_TARGET
+REQUESTED_EXTENSIONS="$(extensions_for_arch "${MARCH}" | sort -u)"
+readonly REQUESTED_EXTENSIONS
+EFFECTIVE_REQUESTED_EXTENSIONS="$(effective_extensions "${REQUESTED_EXTENSIONS}" | sort -u)"
+readonly EFFECTIVE_REQUESTED_EXTENSIONS
+GCC_VERBOSE="$("${CC}" -v 2>&1 || true)"
+readonly GCC_VERBOSE
 GCC_CONFIG_ISA_SPEC=''
 if [[ "${GCC_VERBOSE}" =~ --with-isa-spec=([^[:space:]]+) ]]; then
     GCC_CONFIG_ISA_SPEC="${BASH_REMATCH[1]}"
