@@ -41,6 +41,19 @@ readonly DEFAULT_ELF_FILE="${REPO_ROOT}/build/coremark/baseline/coremark-perform
 
 WARNING_COUNT=0
 
+# Run shellcheck to ensure this is a good script.
+# Specify the executable shell checker you want to use:
+MY_SHELLCHECK="shellcheck"
+
+# Check if the executable is available in the PATH
+if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
+    # Run your command here
+    shellcheck "$0" || exit 1
+else
+    echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
+fi
+
+
 usage() {
     cat <<EOF_USAGE
 Usage: ${0##*/} [MAP_FILE [ELF_FILE]]
