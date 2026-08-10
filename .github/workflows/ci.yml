@@ -106,7 +106,7 @@ jobs:
           & $python3 --version
 
       - name: Cache the RISC-V toolchain
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: bin/riscv-gcc
           key: ${{ runner.os }}-xpack-riscv-gcc-${{ hashFiles('scripts/setup-xpack-riscv-gcc.cmd') }}
