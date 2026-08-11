@@ -74,6 +74,158 @@ jobs:
       - name: Run host-tool tests
         run: python -m unittest discover -s tests -v
 
+  wsl-vs-project:
+    name: WSL Visual Studio project
+    needs: quality
+    runs-on: windows-2022
+    timeout-minutes: 30
+    env:
+      TOOLCHAIN_PREFIX: riscv64-unknown-elf-
+      WSLENV: TOOLCHAIN_PREFIX
+      WSL_DISTRO: Hazard3-CI
+      WSL_ROOTFS_URL: https://cloud-images.ubuntu.com/wsl/releases/24.04/20240423/ubuntu-noble-wsl-amd64-wsl.rootfs.tar.gz
+      WSL_ROOTFS_SHA256: 8251e27ffff381a4af5f41dcb94d867de3e0d9774a9241908ab34555d99315ea
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate WSL Visual Studio project metadata
+        shell: pwsh
+        run: .\.github\scripts\check-wsl-visualgdb.ps1
+
+      - name: Import Ubuntu under WSL1
+        shell: pwsh
+        run: |
+          $rootfs = Join-Path $env:RUNNER_TEMP "ubuntu-noble-wsl-amd64-wsl.rootfs.tar.gz"
+          $installDirectory = Join-Path $env:RUNNER_TEMP $env:WSL_DISTRO
+
+          Write-Host "Downloading Canonical Ubuntu 24.04 WSL rootfs..."
+          curl.exe --fail --location --retry 3 --output $rootfs $env:WSL_ROOTFS_URL
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to download the Ubuntu WSL rootfs."
+          }
+
+          $actualHash = (Get-FileHash -LiteralPath $rootfs -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -ne $env:WSL_ROOTFS_SHA256) {
+              throw "Ubuntu WSL rootfs SHA256 mismatch. Expected $env:WSL_ROOTFS_SHA256, got $actualHash."
+          }
+
+          New-Item -ItemType Directory -Force -Path $installDirectory | Out-Null
+
+          # Avoid the Microsoft Store/catalog installation path on the hosted
+          # Windows Server runner. Import Canonical's WSL rootfs directly and
+          # request WSL1 explicitly.
+          wsl.exe --import $env:WSL_DISTRO $installDirectory $rootfs --version 1
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to import $env:WSL_DISTRO under WSL1."
+          }
+
+          Remove-Item -LiteralPath $rootfs -Force
+
+          wsl.exe --set-default $env:WSL_DISTRO
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to set $env:WSL_DISTRO as the default WSL distribution."
+          }
+
+          # Imported distributions default to root, which is exactly what this
+          # ephemeral CI environment needs for package installation.
+          wsl.exe -d $env:WSL_DISTRO -u root -- /bin/true
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to initialize $env:WSL_DISTRO."
+          }
+
+          wsl.exe --list --verbose
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to list WSL distributions."
+          }
+
+      - name: Install WSL build dependencies
+        shell: pwsh
+        run: |
+          wsl.exe -d $env:WSL_DISTRO -u root -- bash -lc `
+              "export DEBIAN_FRONTEND=noninteractive; apt-get update && apt-get install --yes --no-install-recommends binutils-riscv64-unknown-elf gcc-riscv64-unknown-elf git make python3 ca-certificates"
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to install the WSL build dependencies."
+          }
+
+      - name: Show WSL and RISC-V toolchain versions
+        shell: pwsh
+        run: |
+          wsl.exe -d $env:WSL_DISTRO -- bash -lc 'uname -a'
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to run uname inside WSL."
+          }
+
+          wsl.exe -d $env:WSL_DISTRO -- bash -lc 'printf "TOOLCHAIN_PREFIX=%s\n" "${TOOLCHAIN_PREFIX}"'
+          if ($LASTEXITCODE -ne 0) {
+              throw "TOOLCHAIN_PREFIX was not available inside WSL."
+          }
+
+          wsl.exe -d $env:WSL_DISTRO -- riscv64-unknown-elf-gcc --version
+          if ($LASTEXITCODE -ne 0) {
+              throw "RISC-V GCC was not available inside WSL."
+          }
+
+          wsl.exe -d $env:WSL_DISTRO -- bash -lc 'printf "int x;\n" | riscv64-unknown-elf-gcc -march=rv32imc_zicsr_zifencei_zba_zbb_zbs -mabi=ilp32 -x c -c -o /tmp/hazard3-isa-probe.o -'
+          if ($LASTEXITCODE -ne 0) {
+              throw "WSL RISC-V GCC does not support the Hazard3 ISA flags."
+          }
+
+      - name: Build through the Visual Studio WSL bridge
+        shell: cmd
+        run: call VisualGDB\build-wsl.cmd build
+
+      - name: Verify WSL build output
+        shell: pwsh
+        run: |
+          $elf = Join-Path $env:GITHUB_WORKSPACE "build\hazard3-test.elf"
+          if (-not (Test-Path -LiteralPath $elf -PathType Leaf)) {
+              throw "WSL build did not create $elf"
+          }
+          if ((Get-Item -LiteralPath $elf).Length -eq 0) {
+              throw "WSL build created an empty ELF: $elf"
+          }
+          Get-Item -LiteralPath $elf | Format-List FullName, Length, LastWriteTimeUtc
+
+      - name: Clean through the Visual Studio WSL bridge
+        shell: cmd
+        run: call VisualGDB\build-wsl.cmd clean
+
+      - name: Verify WSL clean output
+        shell: pwsh
+        run: |
+          foreach ($path in @(
+              "build\hazard3-test.elf",
+              "build\hazard3-test.map"
+          )) {
+              if (Test-Path -LiteralPath $path) {
+                  throw "WSL clean left generated output behind: $path"
+              }
+          }
+
+      - name: Rebuild through the Visual Studio WSL bridge
+        shell: cmd
+        run: call VisualGDB\build-wsl.cmd rebuild
+
+      - name: Verify WSL rebuild output
+        shell: pwsh
+        run: |
+          Push-Location $env:GITHUB_WORKSPACE
+          try {
+              wsl.exe -d $env:WSL_DISTRO -- bash -c `
+                  'test -s build/hazard3-test.elf && test -s build/hazard3-test.map && riscv64-unknown-elf-readelf --file-header build/hazard3-test.elf && riscv64-unknown-elf-size build/hazard3-test.elf'
+              if ($LASTEXITCODE -ne 0) {
+                  throw "WSL rebuild output validation failed."
+              }
+          }
+          finally {
+              Pop-Location
+          }
+
   riscv-builds:
     name: RISC-V monitor and Doom builds
     needs: quality

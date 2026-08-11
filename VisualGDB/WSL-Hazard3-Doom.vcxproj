@@ -15,6 +15,12 @@
     <ProjectGuid>{B0ABA019-04A3-3861-18D4-F07EEBB38436}</ProjectGuid>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
+    <ConfigurationType>Makefile</ConfigurationType>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -28,10 +34,39 @@
     <GNUToolchainPrefix />
     <GNUCompilerType>GCC</GNUCompilerType>
     <ConfigurationType>Makefile</ConfigurationType>
+    <NMakeBuildCommandLine>cmd.exe /d /c call &quot;$(ProjectDir)build-wsl.cmd&quot; build</NMakeBuildCommandLine>
+    <NMakeCleanCommandLine>cmd.exe /d /c call &quot;$(ProjectDir)build-wsl.cmd&quot; clean</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>cmd.exe /d /c call &quot;$(ProjectDir)build-wsl.cmd&quot; rebuild</NMakeReBuildCommandLine>
+    <NMakeOutput>$(ProjectDir)..\build\hazard3-test.elf</NMakeOutput>
+    <NMakeIncludeSearchPath>$(ProjectDir)..;$(ProjectDir)..\src;$(ProjectDir)..\doom;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakePreprocessorDefinitions>HAZARD3_SYS_CLK_HZ=50000000u;__riscv=1;__riscv_xlen=32;__riscv_float_abi_soft=1;__riscv_compressed=1;__VisualGDB_CFG_Debug;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
   </PropertyGroup>
-  <ItemDefinitionGroup>
-  </ItemDefinitionGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
+    <RemoteBuildHost>localhost-lxss</RemoteBuildHost>
+    <ToolchainID>com.sysprogs.toolchain.default-gcc</ToolchainID>
+    <ToolchainVersion />
+    <GNUToolchainPrefix />
+    <GNUCompilerType>GCC</GNUCompilerType>
+    <ConfigurationType>Makefile</ConfigurationType>
+    <NMakeBuildCommandLine>cmd.exe /d /c call &quot;$(ProjectDir)build-wsl.cmd&quot; build</NMakeBuildCommandLine>
+    <NMakeCleanCommandLine>cmd.exe /d /c call &quot;$(ProjectDir)build-wsl.cmd&quot; clean</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>cmd.exe /d /c call &quot;$(ProjectDir)build-wsl.cmd&quot; rebuild</NMakeReBuildCommandLine>
+    <NMakeOutput>$(ProjectDir)..\build\hazard3-test.elf</NMakeOutput>
+    <NMakeIncludeSearchPath>$(ProjectDir)..;$(ProjectDir)..\src;$(ProjectDir)..\doom;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakePreprocessorDefinitions>HAZARD3_SYS_CLK_HZ=50000000u;__riscv=1;__riscv_xlen=32;__riscv_float_abi_soft=1;__riscv_compressed=1;__VisualGDB_CFG_Release;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+  </PropertyGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\main.c" />
+    <ClCompile Include="..\doom\doom_image_loader.c" />
+    <ClCompile Include="..\doom\doom_wad_loader.c" />
+    <ClCompile Include="..\doom\doom_port_smoke.c" />
+    <ClCompile Include="..\doom\sdram_exec_test.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\start.S" />
+    <None Include="..\doom\sdram_exec_payload.S" />
+    <None Include="..\src\link.ld" />
+    <None Include="build-wsl.cmd" />
     <None Include="WSL-Hazard3-Doom-Debug.vgdbsettings" />
     <None Include="WSL-Hazard3-Doom-Release.vgdbsettings" />
   </ItemGroup>

@@ -25,14 +25,30 @@ echo ERROR: Unknown action "%ACTION%". Use build, clean, or rebuild. 1>&2
 exit /b 2
 
 :build
-wsl.exe --cd "%ROOT%" --exec /bin/bash ./scripts/build.sh
-exit /b %ERRORLEVEL%
+call :enter_root
+if errorlevel 1 exit /b %ERRORLEVEL%
+wsl.exe --exec /bin/bash ./scripts/build.sh
+set "RESULT=%ERRORLEVEL%"
+popd
+exit /b %RESULT%
 
 :clean
-wsl.exe --cd "%ROOT%" --exec /bin/bash -c "rm -f -- ./build/hazard3-test.elf ./build/hazard3-test.map"
-exit /b %ERRORLEVEL%
+call :enter_root
+if errorlevel 1 exit /b %ERRORLEVEL%
+wsl.exe --exec /bin/bash -c "rm -f -- ./build/hazard3-test.elf ./build/hazard3-test.map"
+set "RESULT=%ERRORLEVEL%"
+popd
+exit /b %RESULT%
 
 :rebuild
 call :clean
 if errorlevel 1 exit /b %ERRORLEVEL%
 goto build
+
+:enter_root
+pushd "%ROOT%" >nul
+if errorlevel 1 (
+    echo ERROR: Could not change to repository root "%ROOT%". 1>&2
+    exit /b 1
+)
+exit /b 0
