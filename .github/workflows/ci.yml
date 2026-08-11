@@ -1,14 +1,12 @@
-name: CI
+name: Software CI
 
 on:
   push:
-    branches:
-      - main
-      - dev
+    branches: [ '*' ]
+
   pull_request:
-    branches:
-      - main
-      - dev
+    branches: [ '*' ]
+
   workflow_dispatch:
 
 permissions:
@@ -24,7 +22,7 @@ env:
 
 jobs:
   quality:
-    name: Scripts and host tools
+    name: Quality checks
     runs-on: ubuntu-24.04
     timeout-minutes: 10
 
@@ -74,8 +72,74 @@ jobs:
       - name: Run host-tool tests
         run: python -m unittest discover -s tests -v
 
-  wsl-vs-project:
-    name: WSL Visual Studio project
+  visual-studio-windows:
+    name: Visual Studio native Windows validation
+    needs: quality
+    runs-on: windows-2022
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      # VisualGDB is intentionally not installed on hosted CI runners. Validate
+      # the native project/settings contract, then ask the installed Microsoft
+      # build system to load and evaluate both project configurations.
+      - name: Validate native Windows Visual Studio project metadata
+        shell: pwsh
+        run: .\.github\scripts\check-windows-visualgdb.ps1
+
+      - name: Locate MSBuild
+        shell: pwsh
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
+          if (-not (Test-Path -LiteralPath $vswhere -PathType Leaf)) {
+              throw "vswhere.exe was not found at $vswhere"
+          }
+
+          $msbuild = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild `
+              -find "MSBuild\**\Bin\MSBuild.exe" | Select-Object -First 1
+          if (-not $msbuild) {
+              throw "MSBuild.exe was not found in the installed Visual Studio instance."
+          }
+
+          Write-Host "Using MSBuild: $msbuild"
+          "MSBUILD_EXE=$msbuild" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Evaluate native Windows project with MSBuild
+        shell: pwsh
+        run: |
+          # The repository project targets a newer Visual Studio toolset than
+          # windows-2022 provides. /pp only loads/evaluates the project; use the
+          # runner's v143 toolset for that evaluation. The metadata validator
+          # above independently verifies the toolset declared by the project.
+          foreach ($configuration in @("Debug", "Release")) {
+              $output = Join-Path $env:RUNNER_TEMP "Hazard3-Doom-$configuration.preprocessed.xml"
+
+              & $env:MSBUILD_EXE `
+                  "VisualGDB\Hazard3-Doom.vcxproj" `
+                  /nologo `
+                  "/pp:$output" `
+                  "/p:Configuration=$configuration" `
+                  /p:Platform=Win32 `
+                  /p:PlatformToolset=v143
+
+              if ($LASTEXITCODE -ne 0) {
+                  throw "MSBuild failed to evaluate the native $configuration project configuration."
+              }
+              if (-not (Test-Path -LiteralPath $output -PathType Leaf)) {
+                  throw "MSBuild did not create the preprocessed $configuration project."
+              }
+              if ((Get-Item -LiteralPath $output).Length -eq 0) {
+                  throw "MSBuild created an empty preprocessed $configuration project."
+              }
+          }
+
+  visual-studio-wsl:
+    name: Visual Studio WSL build
     needs: quality
     runs-on: windows-2022
     timeout-minutes: 30
@@ -226,8 +290,8 @@ jobs:
               Pop-Location
           }
 
-  riscv-builds:
-    name: RISC-V monitor and Doom builds
+  windows-cli-builds:
+    name: Windows command-line build paths
     needs: quality
     runs-on: windows-2022
     timeout-minutes: 45
@@ -244,7 +308,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Provide python3 for Bash scripts
+      - name: "Git Bash: Provide python3"
         shell: pwsh
         run: |
           $python = (Get-Command python.exe -ErrorAction Stop).Source
@@ -291,18 +355,39 @@ jobs:
 
           Add-Content -LiteralPath $env:GITHUB_PATH -Value $toolchainBin
 
-      - name: Show tool versions
+      - name: "CMD: Build monitor"
+        shell: cmd
+        run: call scripts\build-xpack.cmd rebuild 64m 50000000
+
+      - name: "CMD: Validate monitor"
+        shell: cmd
+        run: |
+          if not exist build\hazard3-test.elf (
+              echo ERROR: Native CMD build did not create build\hazard3-test.elf
+              exit /b 1
+          )
+          if not exist build\hazard3-test.map (
+              echo ERROR: Native CMD build did not create build\hazard3-test.map
+              exit /b 1
+          )
+          for %%F in (build\hazard3-test.elf build\hazard3-test.map) do if %%~zF EQU 0 (
+              echo ERROR: Native CMD build created an empty file: %%F
+              exit /b 1
+          )
+          bin\riscv-gcc\bin\riscv-none-elf-size.exe build\hazard3-test.elf
+
+      - name: "Git Bash: Show tool versions"
         shell: bash
         run: |
           riscv-none-elf-gcc --version
           riscv-none-elf-size --version
           python3 --version
 
-      - name: Initialize required submodules
+      - name: "Git Bash: Initialize required submodules"
         shell: bash
         run: ./scripts/setup-submodules.sh
 
-      - name: Verify required submodule revisions
+      - name: "Git Bash: Verify required submodule revisions"
         shell: bash
         run: |
           status="$({
@@ -319,7 +404,7 @@ jobs:
               exit 1
           fi
 
-      - name: Build monitor configurations
+      - name: "Git Bash: Build monitor configurations"
         shell: bash
         run: |
           for profile in 64m 32m; do
@@ -337,7 +422,7 @@ jobs:
               done
           done
 
-      - name: Build Doom image configurations
+      - name: "Git Bash: Build Doom image configurations"
         shell: bash
         run: |
           for profile in 64m 32m; do
@@ -381,14 +466,14 @@ jobs:
           PY
           done
 
-      - name: Run Doom object-size probe
+      - name: "Git Bash: Run Doom object-size probe"
         shell: bash
         run: |
           HAZARD3_SIZE_BUILD_DIR=build/ci/doom-size-probe \
           HAZARD3_MEMORY_PROFILE=64m \
               ./doom/build-size-probe.sh
 
-      - name: Verify builds did not modify submodules
+      - name: "Git Bash: Verify builds did not modify submodules"
         shell: bash
         run: |
           for repository in third_party/doomgeneric third_party/Hazard3; do
@@ -399,11 +484,11 @@ jobs:
               fi
           done
 
-      - name: Upload RISC-V build artifacts
+      - name: Upload Git Bash build artifacts
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: riscv-builds-${{ github.sha }}
+          name: windows-bash-builds-${{ github.sha }}
           path: |
             build/ci/**/*.elf
             build/ci/**/*.map
