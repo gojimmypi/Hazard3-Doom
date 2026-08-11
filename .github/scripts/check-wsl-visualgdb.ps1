@@ -37,6 +37,33 @@ $visualGdbDirectory = Join-Path $repoRoot 'VisualGDB'
 $projectPath = Join-Path $visualGdbDirectory 'WSL-Hazard3-Doom.vcxproj'
 $solutionPath = Join-Path $visualGdbDirectory 'WSL-Hazard3-Doom.slnx'
 $buildScriptPath = Join-Path $visualGdbDirectory 'build-wsl.cmd'
+$attributesPath = Join-Path $repoRoot '.gitattributes'
+
+# The WSL bridge executes repository shell scripts from a Windows checkout.
+# Force them to remain LF; otherwise Bash reads CRLF tokens such as
+# "pipefail`r" and fails before the build starts.
+Assert-True (Test-Path -LiteralPath $attributesPath -PathType Leaf) `
+    "Required line-ending policy is missing: $attributesPath"
+
+$attributesText = Get-Content -LiteralPath $attributesPath -Raw
+Assert-True ([bool]($attributesText -match '(?m)^\*\.sh\s+text\s+eol=lf\s*$')) `
+    '.gitattributes must contain: *.sh text eol=lf'
+
+$shellFiles = @(& git -C $repoRoot ls-files -- '*.sh')
+if ($LASTEXITCODE -ne 0) {
+    throw 'Failed to enumerate tracked shell scripts with git ls-files.'
+}
+
+foreach ($relativePath in $shellFiles) {
+    $shellPath = Join-Path $repoRoot $relativePath
+    if (-not (Test-Path -LiteralPath $shellPath -PathType Leaf)) {
+        continue
+    }
+
+    $bytes = [System.IO.File]::ReadAllBytes($shellPath)
+    Assert-True (-not ($bytes -contains 13)) `
+        "Tracked shell script contains CR bytes after checkout: $relativePath. Check .gitattributes."
+}
 
 foreach ($requiredPath in @($projectPath, $solutionPath, $buildScriptPath)) {
     Assert-True (Test-Path -LiteralPath $requiredPath -PathType Leaf) `
