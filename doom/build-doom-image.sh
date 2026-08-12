@@ -85,15 +85,20 @@ for source in "${PORT_SOURCES[@]}"; do
     require_file "${SCRIPT_DIR}/${source}"
 done
 
-# Object and output files are overwritten in place. The prepared DoomGeneric
-# tree is verified and reused, so a build never recursively removes an
-# environment-selected directory.
+# Object and output files are overwritten in place. Normal builds prepare a
+# fresh verified DoomGeneric copy. Specialized builds may provide an already
+# prepared source directory via HAZARD3_DOOM_PREPARED_SOURCE.
 mkdir -p "${BUILD_DIR}"
 
-DOOMGENERIC_DIR="$(
-    DOOMGENERIC_ROOT="${DOOMGENERIC_ROOT}" \
-        "${PREPARE_DOOMGENERIC}" "${BUILD_DIR}/doomgeneric-source"
-)"
+if [[ -n "${HAZARD3_DOOM_PREPARED_SOURCE:-}" ]]; then
+    DOOMGENERIC_DIR="$(cd "${HAZARD3_DOOM_PREPARED_SOURCE}" && pwd)"
+    printf 'Using pre-prepared DoomGeneric source: %s\n' "${DOOMGENERIC_DIR}"
+else
+    DOOMGENERIC_DIR="$(
+        DOOMGENERIC_ROOT="${DOOMGENERIC_ROOT}" \
+            "${PREPARE_DOOMGENERIC}" "${BUILD_DIR}/doomgeneric-source"
+    )"
+fi
 
 require_file "${DOOMGENERIC_DIR}/doomgeneric.c"
 require_file "${DOOMGENERIC_DIR}/doomgeneric.h"
