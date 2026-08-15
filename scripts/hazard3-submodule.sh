@@ -8,10 +8,14 @@ set -euo pipefail
 #   ./scripts/hazard3-submodule.sh diff
 #   ./scripts/hazard3-submodule.sh restore
 #
+# "status" reports both Hazard3 and DoomGeneric submodules.
+# "diff" and "restore" operate on Hazard3.
+#
 # "restore" checks third_party/Hazard3 out at the gitlink recorded by the
 # current Hazard3-Doom HEAD and updates its nested submodules.
 
 SUBMODULE_PATH="third_party/Hazard3"
+DOOMGENERIC_PATH="third_party/doomgeneric"
 
 # Run shellcheck to ensure this is a good script.
 # Specify the executable shell checker you want to use:
@@ -19,7 +23,6 @@ MY_SHELLCHECK="shellcheck"
 
 # Check if the executable is available in the PATH
 if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
-    # Run your command here
     shellcheck "$0" || exit 1
 else
     echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
@@ -53,28 +56,35 @@ find_root()
     exit 1
 }
 
-get_pinned_commit()
+get_pinned_commit_for_path()
 {
+    local submodule_path="$1"
     local mode type commit path
 
     read -r mode type commit path < <(
-        git -C "${ROOT_DIR}" ls-tree HEAD -- "${SUBMODULE_PATH}"
+        git -C "${ROOT_DIR}" ls-tree HEAD -- "${submodule_path}"
     )
 
     if [[ "${mode:-}" != "160000" || "${type:-}" != "commit" || -z "${commit:-}" ]]; then
-        echo "${SUBMODULE_PATH} is not a submodule gitlink in Hazard3-Doom HEAD." >&2
+        echo "${submodule_path} is not a submodule gitlink in Hazard3-Doom HEAD." >&2
         exit 1
     fi
 
     printf '%s\n' "${commit}"
 }
 
+get_pinned_commit()
+{
+    get_pinned_commit_for_path "${SUBMODULE_PATH}"
+}
+
 get_submodule_name()
 {
+    local submodule_path="$1"
     local key path name
 
     while read -r key path; do
-        if [[ "${path}" == "${SUBMODULE_PATH}" ]]; then
+        if [[ "${path}" == "${submodule_path}" ]]; then
             name="${key#submodule.}"
             name="${name%.path}"
             printf '%s\n' "${name}"
@@ -85,15 +95,16 @@ get_submodule_name()
             --get-regexp '^submodule\..*\.path$'
     )
 
-    echo "Unable to find ${SUBMODULE_PATH} in .gitmodules." >&2
+    echo "Unable to find ${submodule_path} in .gitmodules." >&2
     exit 1
 }
 
 get_submodule_url()
 {
+    local submodule_path="$1"
     local name
 
-    name="$(get_submodule_name)"
+    name="$(get_submodule_name "${submodule_path}")"
 
     git -C "${ROOT_DIR}" config -f .gitmodules \
         --get "submodule.${name}.url"
@@ -103,16 +114,25 @@ get_origin_url()
 {
     local repo="$1"
 
-    git -C "${repo}" remote get-url origin 2>/dev/null || printf '%s\n' "(no origin remote)"
+    git -C "${repo}" remote get-url origin 2>/dev/null ||
+        printf '%s\n' "(no origin remote)"
+}
+
+ensure_submodule_initialized()
+{
+    local submodule_path="$1"
+    local submodule_root="${ROOT_DIR}/${submodule_path}"
+
+    if git -C "${submodule_root}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        return
+    fi
+
+    git -C "${ROOT_DIR}" submodule update --init -- "${submodule_path}"
 }
 
 ensure_hazard3_initialized()
 {
-    if git -C "${HAZARD3_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        return
-    fi
-
-    git -C "${ROOT_DIR}" submodule update --init -- "${SUBMODULE_PATH}"
+    ensure_submodule_initialized "${SUBMODULE_PATH}"
 }
 
 check_hazard3_clean()
@@ -133,30 +153,53 @@ check_hazard3_clean()
     fi
 }
 
+show_submodule_status()
+{
+    local label="$1"
+    local submodule_path="$2"
+    local submodule_root="${ROOT_DIR}/${submodule_path}"
+    local pinned current origin source
+
+    ensure_submodule_initialized "${submodule_path}"
+
+    pinned="$(get_pinned_commit_for_path "${submodule_path}")"
+    current="$(git -C "${submodule_root}" rev-parse HEAD)"
+    origin="$(get_origin_url "${submodule_root}")"
+    source="$(get_submodule_url "${submodule_path}")"
+
+    printf '%s:\n' "${label}"
+    printf '  Pinned commit      : %s\n' "${pinned}"
+    printf '  Current commit     : %s\n' "${current}"
+    printf '  Origin             : %s\n' "${origin}"
+    printf '  Submodule source   : %s\n' "${source}"
+
+    if [[ "${current}" == "${pinned}" ]]; then
+        echo "  State              : matches Hazard3-Doom gitlink"
+    else
+        echo "  State              : differs from Hazard3-Doom gitlink"
+    fi
+}
+
 show_status()
 {
-    local pinned current source superproject_origin hazard3_origin
+    local superproject_origin
 
-    pinned="$(get_pinned_commit)"
-    current="$(git -C "${HAZARD3_ROOT}" rev-parse HEAD)"
-    source="$(get_submodule_url)"
     superproject_origin="$(get_origin_url "${ROOT_DIR}")"
-    hazard3_origin="$(get_origin_url "${HAZARD3_ROOT}")"
 
     printf 'Hazard3-Doom branch : %s\n' "$(git -C "${ROOT_DIR}" branch --show-current)"
     printf 'Hazard3-Doom origin : %s\n' "${superproject_origin}"
-    printf 'Pinned Hazard3      : %s\n' "${pinned}"
-    printf 'Current Hazard3     : %s\n' "${current}"
-    printf 'Hazard3 origin      : %s\n' "${hazard3_origin}"
-    printf 'Submodule source    : %s\n' "${source}"
-    if [[ "${current}" == "${pinned}" ]]; then
-        echo "State               : matches Hazard3-Doom gitlink"
-    else
-        echo "State               : differs from Hazard3-Doom gitlink"
-    fi
 
     echo
-    git -C "${ROOT_DIR}" status --short -- "${SUBMODULE_PATH}"
+    show_submodule_status "Hazard3" "${SUBMODULE_PATH}"
+
+    echo
+    show_submodule_status "DoomGeneric" "${DOOMGENERIC_PATH}"
+
+    echo
+    echo "Hazard3-Doom submodule status:"
+    git -C "${ROOT_DIR}" status --short -- \
+        "${SUBMODULE_PATH}" \
+        "${DOOMGENERIC_PATH}"
 }
 
 show_diff()
@@ -235,8 +278,8 @@ usage()
     cat <<USAGE
 Usage: $(basename "$0") {status|diff|restore}
 
-  status   Show the Hazard3-Doom gitlink, current Hazard3 checkout, and source
-  diff     Show the submodule-pointer difference and local Hazard3 changes
+  status   Show Hazard3-Doom and its Hazard3/DoomGeneric submodule state
+  diff     Show the Hazard3 submodule-pointer difference and local changes
   restore  Restore Hazard3 to the gitlink recorded by Hazard3-Doom HEAD
 USAGE
 }
@@ -248,7 +291,6 @@ HAZARD3_ROOT="${ROOT_DIR}/${SUBMODULE_PATH}"
 
 case "${1:-}" in
     status)
-        ensure_hazard3_initialized
         show_status
         ;;
     diff)
