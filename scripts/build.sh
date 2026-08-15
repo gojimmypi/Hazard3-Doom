@@ -77,7 +77,11 @@ esac
 require_tool "${CC}"
 require_file "${SRC_DIR}/start.S"
 require_file "${SRC_DIR}/main.c"
+require_file "${SRC_DIR}/sao_console.c"
+require_file "${SRC_DIR}/sao_console.h"
 require_file "${SRC_DIR}/link.ld"
+require_file "${DOOM_DIR}/hazard3_sao.c"
+require_file "${DOOM_DIR}/hazard3_sao.h"
 
 mkdir -p "${BUILD_DIR}"
 
@@ -108,6 +112,8 @@ printf 'Monitor output: %s
     "${system_clock_flags[@]}" \
     "${SRC_DIR}/start.S" \
     "${SRC_DIR}/main.c" \
+    "${SRC_DIR}/sao_console.c" \
+    "${DOOM_DIR}/hazard3_sao.c" \
     "${DOOM_DIR}/doom_image_loader.c" \
     "${DOOM_DIR}/doom_wad_loader.c" \
     "${DOOM_DIR}/doom_port_smoke.c" \

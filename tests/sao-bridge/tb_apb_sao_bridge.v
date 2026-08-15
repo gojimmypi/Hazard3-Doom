@@ -1,0 +1,176 @@
+`timescale 1ns/1ps
+`default_nettype none
+
+module tb_apb_sao_bridge;
+
+reg clk = 1'b0;
+reg rst_n = 1'b0;
+always #10 clk = ~clk; // 50 MHz
+
+reg psel = 1'b0;
+reg penable = 1'b0;
+reg pwrite = 1'b0;
+reg [15:0] paddr = 16'd0;
+reg [31:0] pwdata = 32'd0;
+wire [31:0] prdata;
+wire pready;
+wire pslverr;
+
+wire master_sda_low;
+wire master_scl_low;
+reg slave_sda_low = 1'b0;
+reg slave_scl_low = 1'b0;
+wire sda_line = master_sda_low || slave_sda_low ? 1'b0 : 1'b1;
+wire scl_line = master_scl_low || slave_scl_low ? 1'b0 : 1'b1;
+
+reg gpio1_i = 1'b0;
+reg gpio2_i = 1'b1;
+wire gpio1_o;
+wire gpio1_oe;
+wire gpio2_o;
+wire gpio2_oe;
+
+apb_sao_bridge #(
+    .CLK_DIV_RESET(16'd4),
+    .TIMEOUT_RESET(32'd64)
+) dut (
+    .clk(clk),
+    .rst_n(rst_n),
+    .apbs_psel(psel),
+    .apbs_penable(penable),
+    .apbs_pwrite(pwrite),
+    .apbs_paddr(paddr),
+    .apbs_pwdata(pwdata),
+    .apbs_prdata(prdata),
+    .apbs_pready(pready),
+    .apbs_pslverr(pslverr),
+    .sao_sda_i(sda_line),
+    .sao_scl_i(scl_line),
+    .sao_sda_drive_low(master_sda_low),
+    .sao_scl_drive_low(master_scl_low),
+    .sao_gpio1_i(gpio1_i),
+    .sao_gpio1_o(gpio1_o),
+    .sao_gpio1_oe(gpio1_oe),
+    .sao_gpio2_i(gpio2_i),
+    .sao_gpio2_o(gpio2_o),
+    .sao_gpio2_oe(gpio2_oe)
+);
+
+task apb_write;
+    input [15:0] address;
+    input [31:0] data;
+    begin
+        @(posedge clk);
+        psel <= 1'b1;
+        penable <= 1'b0;
+        pwrite <= 1'b1;
+        paddr <= address;
+        pwdata <= data;
+        @(posedge clk);
+        penable <= 1'b1;
+        @(posedge clk);
+        psel <= 1'b0;
+        penable <= 1'b0;
+        pwrite <= 1'b0;
+    end
+endtask
+
+task apb_read;
+    input [15:0] address;
+    output [31:0] data;
+    begin
+        @(posedge clk);
+        psel <= 1'b1;
+        penable <= 1'b0;
+        pwrite <= 1'b0;
+        paddr <= address;
+        @(posedge clk);
+        penable <= 1'b1;
+        #1 data = prdata;
+        @(posedge clk);
+        psel <= 1'b0;
+        penable <= 1'b0;
+    end
+endtask
+
+task wait_done;
+    reg [31:0] status;
+    integer n;
+    begin : wait_loop
+        for (n = 0; n < 1000; n = n + 1) begin
+            apb_read(16'h9004, status);
+            if (!status[0] && status[1]) begin
+                disable wait_loop;
+            end
+        end
+        $display("ERROR: command did not complete");
+        $finish;
+    end
+endtask
+
+reg [31:0] value;
+
+initial begin
+    $dumpfile("tb_apb_sao_bridge.vcd");
+    $dumpvars(0, tb_apb_sao_bridge);
+
+    repeat (4) @(posedge clk);
+    rst_n <= 1'b1;
+    repeat (4) @(posedge clk);
+
+    apb_read(16'h9020, value);
+    if (value !== 32'h53414f31) begin
+        $display("ERROR: ID register %08x", value);
+        $finish;
+    end
+
+    apb_write(16'h9018, 32'h0000000b); // GPIO1 out=1/oe=1, GPIO2 out=0/oe=1
+    if (!gpio1_oe || !gpio1_o || !gpio2_oe || gpio2_o) begin
+        $display("ERROR: GPIO control");
+        $finish;
+    end
+
+    apb_write(16'h9000, 32'd1); // START
+    wait_done();
+    apb_read(16'h9004, value);
+    if (!value[6]) begin
+        $display("ERROR: bus_active not set after START");
+        $finish;
+    end
+
+    // Force SDA low so the slave ACKs the byte.
+    slave_sda_low <= 1'b1;
+    apb_write(16'h9008, 32'h000000a8);
+    apb_write(16'h9000, 32'd3); // WRITE
+    wait_done();
+    apb_read(16'h9004, value);
+    if (!value[2]) begin
+        $display("ERROR: ACK not observed");
+        $finish;
+    end
+    slave_sda_low <= 1'b0;
+
+    apb_write(16'h9000, 32'd2); // STOP
+    wait_done();
+    apb_read(16'h9004, value);
+    if (value[6]) begin
+        $display("ERROR: bus_active still set after STOP");
+        $finish;
+    end
+
+    // Exercise recovery with an idle bus.
+    apb_write(16'h9000, 32'd6);
+    wait_done();
+    apb_read(16'h9004, value);
+    if (!value[11]) begin
+        $display("ERROR: recovery did not report success");
+        $finish;
+    end
+
+    $display("PASS: tb_apb_sao_bridge");
+    $finish;
+end
+
+endmodule
+
+`default_nettype wire

@@ -8,6 +8,7 @@
 #include "doom/hazard3_platform.h"
 #include "doom/hazard3_video.h"
 #include "doom/sdram_exec_test.h"
+#include "sao_console.h"
 
 #define UART_BASE       0x40004000u
 
@@ -296,6 +297,7 @@ static void console_print_help(void)
     uart_puts("  z       reset heap; invalidates every heap pointer\r\n");
     uart_puts("  s       status\r\n");
     uart_puts("  v       version\r\n");
+    hazard3_sao_console_print_help();
     uart_puts("Other characters are echoed.\r\n");
     uart_puts("> ");
 }
@@ -1602,6 +1604,16 @@ static void console_poll(void)
     uint8_t received;
 
     while (uart_getc_nonblocking(&received)) {
+        int sao_console_result = hazard3_sao_console_feed(received);
+
+        if (sao_console_result == HAZARD3_SAO_CONSOLE_CONSUMED) {
+            continue;
+        }
+        if (sao_console_result == HAZARD3_SAO_CONSOLE_STATUS) {
+            console_print_status();
+            continue;
+        }
+
         switch (received) {
         case '\r':
         case '\n':
@@ -1893,6 +1905,7 @@ int main(void)
     sdram_heap_init();
     uart_init();
     timer_init();
+    hazard3_sao_console_init(uart_putc, uart_puts, HAZARD3_SYS_CLK_HZ);
     console_init();
 
     uart_puts("External memory initialization: waiting up to 5 seconds...\r\n");

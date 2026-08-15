@@ -72,7 +72,19 @@ if errorlevel 1 exit /b 1
 call :require_file "%SRC_DIR%\main.c"
 if errorlevel 1 exit /b 1
 
+call :require_file "%SRC_DIR%\sao_console.c"
+if errorlevel 1 exit /b 1
+
+call :require_file "%SRC_DIR%\sao_console.h"
+if errorlevel 1 exit /b 1
+
 call :require_file "%SRC_DIR%\link.ld"
+if errorlevel 1 exit /b 1
+
+call :require_file "%DOOM_DIR%\hazard3_sao.c"
+if errorlevel 1 exit /b 1
+
+call :require_file "%DOOM_DIR%\hazard3_sao.h"
 if errorlevel 1 exit /b 1
 
 call :require_file "%DOOM_DIR%\doom_image_loader.c"
@@ -131,6 +143,8 @@ if errorlevel 1 (
     -DHAZARD3_SYS_CLK_HZ=%SYSTEM_CLOCK_HZ%u ^
     "%SRC_DIR%\start.S" ^
     "%SRC_DIR%\main.c" ^
+    "%SRC_DIR%\sao_console.c" ^
+    "%DOOM_DIR%\hazard3_sao.c" ^
     "%DOOM_DIR%\doom_image_loader.c" ^
     "%DOOM_DIR%\doom_wad_loader.c" ^
     "%DOOM_DIR%\doom_port_smoke.c" ^

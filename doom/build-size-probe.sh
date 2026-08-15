@@ -63,6 +63,7 @@ source "${SCRIPT_DIR}/doom_sources.sh"
 
 PORT_SOURCES=(
     doomgeneric_hazard3.c
+    hazard3_sao.c
     hazard3_newlib.c
     hazard3_platform_image.c
     doom_image_main.c
