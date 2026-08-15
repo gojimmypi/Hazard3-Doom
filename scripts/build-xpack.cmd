@@ -30,9 +30,11 @@ set "TOOLCHAIN_ROOT=%ROOT_DIR%\bin\riscv-gcc"
 set "TOOLCHAIN_BIN=%TOOLCHAIN_ROOT%\bin"
 
 set "CC=%TOOLCHAIN_BIN%\riscv-none-elf-gcc.exe"
+set "OBJCOPY=%TOOLCHAIN_BIN%\riscv-none-elf-objcopy.exe"
 set "SIZE=%TOOLCHAIN_BIN%\riscv-none-elf-size.exe"
 set "OUTPUT_ELF=%BUILD_DIR%\hazard3-test.elf"
 set "OUTPUT_MAP=%BUILD_DIR%\hazard3-test.map"
+set "OUTPUT_BIN=%BUILD_DIR%\hazard3-test.bin"
 
 if /i "%ACTION%"=="build" goto :validate
 if /i "%ACTION%"=="clean" goto :clean_only
@@ -76,6 +78,19 @@ call :require_file "%SRC_DIR%\sao_console.c"
 if errorlevel 1 exit /b 1
 
 call :require_file "%SRC_DIR%\sao_console.h"
+if errorlevel 1 exit /b 1
+
+call :require_file "%SRC_DIR%\sd_spi.c"
+if errorlevel 1 exit /b 1
+call :require_file "%SRC_DIR%\sd_spi.h"
+if errorlevel 1 exit /b 1
+call :require_file "%SRC_DIR%\fat_ro.c"
+if errorlevel 1 exit /b 1
+call :require_file "%SRC_DIR%\fat_ro.h"
+if errorlevel 1 exit /b 1
+call :require_file "%SRC_DIR%\sd_boot.c"
+if errorlevel 1 exit /b 1
+call :require_file "%SRC_DIR%\sd_boot.h"
 if errorlevel 1 exit /b 1
 
 call :require_file "%SRC_DIR%\link.ld"
@@ -128,7 +143,9 @@ if errorlevel 1 (
 "%CC%" ^
     -march=rv32imc_zicsr_zifencei_zba_zbb_zbs ^
     -mabi=ilp32 ^
-    -O2 ^
+    -Os ^
+    -ffunction-sections ^
+    -fdata-sections ^
     -fomit-frame-pointer ^
     -g3 ^
     -ffreestanding ^
@@ -136,6 +153,7 @@ if errorlevel 1 (
     -nostdlib ^
     -nostartfiles ^
     -Wl,-T,"%SRC_DIR%\link.ld" ^
+    -Wl,--gc-sections ^
     -Wl,-Map,"%OUTPUT_MAP%" ^
     -I"%ROOT_DIR%" ^
     -I"%DOOM_DIR%" ^
@@ -143,6 +161,9 @@ if errorlevel 1 (
     -DHAZARD3_SYS_CLK_HZ=%SYSTEM_CLOCK_HZ%u ^
     "%SRC_DIR%\start.S" ^
     "%SRC_DIR%\main.c" ^
+    "%SRC_DIR%\sd_spi.c" ^
+    "%SRC_DIR%\fat_ro.c" ^
+    "%SRC_DIR%\sd_boot.c" ^
     "%SRC_DIR%\sao_console.c" ^
     "%DOOM_DIR%\hazard3_sao.c" ^
     "%DOOM_DIR%\doom_image_loader.c" ^
@@ -167,6 +188,13 @@ if not exist "%OUTPUT_ELF%" (
     exit /b 1
 )
 
+"%OBJCOPY%" -O binary "%OUTPUT_ELF%" "%OUTPUT_BIN%"
+if errorlevel 1 (
+    echo ERROR: objcopy failed to create:
+    echo   %OUTPUT_BIN%
+    exit /b 1
+)
+
 echo.
 if exist "%SIZE%" (
     "%SIZE%" "%OUTPUT_ELF%"
@@ -176,6 +204,7 @@ if exist "%SIZE%" (
 echo Build complete:
 echo   %OUTPUT_ELF%
 echo   %OUTPUT_MAP%
+echo   %OUTPUT_BIN%
 exit /b 0
 
 :rebuild
@@ -192,6 +221,7 @@ exit /b %ERRORLEVEL%
 echo Cleaning native monitor outputs...
 if exist "%OUTPUT_ELF%" del /f /q "%OUTPUT_ELF%"
 if exist "%OUTPUT_MAP%" del /f /q "%OUTPUT_MAP%"
+if exist "%OUTPUT_BIN%" del /f /q "%OUTPUT_BIN%"
 
 if exist "%OUTPUT_ELF%" (
     echo ERROR: Could not remove:
@@ -205,12 +235,19 @@ if exist "%OUTPUT_MAP%" (
     exit /b 1
 )
 
+if exist "%OUTPUT_BIN%" (
+    echo ERROR: Could not remove:
+    echo   %OUTPUT_BIN%
+    exit /b 1
+)
+
 echo Clean complete.
 exit /b 0
 
 :require_toolchain
 if not exist "%TOOLCHAIN_ROOT%\" goto :toolchain_missing
 if not exist "%CC%" goto :toolchain_incomplete
+if not exist "%OBJCOPY%" goto :toolchain_incomplete
 
 "%CC%" --version >nul 2>&1
 if errorlevel 1 goto :toolchain_unusable
