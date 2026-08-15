@@ -3,7 +3,12 @@
 
 #include <stdint.h>
 
+typedef int (*doom_image_stream_read_fn)(void* context, void* buffer,
+    uint32_t byte_count);
+
 int doom_image_loader_receive(void);
+int doom_image_loader_load_stream(doom_image_stream_read_fn read_fn,
+    void* context);
 int doom_image_loader_launch(void);
 void doom_image_loader_invalidate(void);
 void doom_image_loader_print_status(void);

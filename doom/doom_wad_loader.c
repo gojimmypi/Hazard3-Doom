@@ -28,6 +28,15 @@ static uint32_t crc32_update(uint32_t crc, uint8_t value)
     return crc;
 }
 
+static uint32_t crc32_memory(const volatile uint8_t* bytes, uint32_t byte_count)
+{
+    uint32_t crc = 0xffffffffu;
+    for (uint32_t i = 0u; i < byte_count; ++i) {
+        crc = crc32_update(crc, bytes[i]);
+    }
+    return crc ^ 0xffffffffu;
+}
+
 static uint32_t read_le32(const volatile uint8_t* bytes)
 {
     return (uint32_t)bytes[0] |
@@ -263,6 +272,95 @@ int doom_wad_loader_receive(void)
     hazard3_console_put_hex32(last_lump_count);
     hazard3_console_puts(" directory=");
     hazard3_console_put_hex32(last_directory_offset);
+    hazard3_console_puts("\r\n");
+    return 1;
+}
+
+
+int doom_wad_loader_load_raw_stream(const char* file_name, uint32_t wad_bytes,
+    doom_wad_stream_read_fn read_fn, void* context)
+{
+    hazard3_doom_wad_header_t header;
+    volatile uint8_t* destination;
+    uint32_t start_ticks;
+    uint32_t crc;
+    uint32_t lump_count;
+    uint32_t directory_offset;
+    uint32_t name_length = 0u;
+
+    if (file_name == (const char*)0 || read_fn == (doom_wad_stream_read_fn)0 ||
+        wad_bytes < WAD_HEADER_BYTES ||
+        wad_bytes > HAZARD3_DOOM_WAD_LIMIT - HAZARD3_DOOM_WAD_BASE) {
+        return 0;
+    }
+    while (name_length < HAZARD3_DOOM_WAD_NAME_BYTES - 1u &&
+        file_name[name_length] != '\0') {
+        header.file_name[name_length] = file_name[name_length];
+        ++name_length;
+    }
+    header.file_name[name_length] = '\0';
+    if (!wad_name_is_valid(header.file_name)) {
+        return 0;
+    }
+
+    ++receive_run_count;
+    wad_loaded = 0u;
+    last_crc_actual = 0u;
+    last_crc_expected = 0u;
+    last_lump_count = 0u;
+    last_directory_offset = 0u;
+    start_ticks = hazard3_ticks_ms();
+
+    header.magic = HAZARD3_DOOM_WAD_MAGIC;
+    header.header_bytes = HAZARD3_DOOM_WAD_HEADER_BYTES;
+    header.format_version = HAZARD3_DOOM_WAD_FORMAT_VERSION;
+    header.flags = HAZARD3_DOOM_WAD_FLAG_CRC32;
+    header.load_address = HAZARD3_DOOM_WAD_BASE;
+    header.wad_bytes = wad_bytes;
+    header.reserved0 = 0u;
+    header.reserved[0] = 0u;
+    header.reserved[1] = 0u;
+    header.reserved[2] = 0u;
+    header.reserved[3] = 0u;
+
+    destination = (volatile uint8_t*)(uintptr_t)header.load_address;
+    hazard3_console_puts("H3W SD DATA name=");
+    print_name(header.file_name);
+    hazard3_console_puts(" bytes=");
+    hazard3_console_put_hex32(wad_bytes);
+    hazard3_console_puts("\r\n");
+
+    if (!read_fn(context, (void*)(uintptr_t)header.load_address, wad_bytes)) {
+        ++receive_failure_count;
+        last_receive_elapsed_ms = hazard3_ticks_ms() - start_ticks;
+        hazard3_console_puts("H3W ERROR SD payload read\r\n");
+        return 0;
+    }
+    hazard3_memory_barrier();
+    crc = crc32_memory(destination, wad_bytes);
+    header.payload_crc32 = crc;
+    last_crc_expected = crc;
+    last_crc_actual = crc;
+
+    if (!payload_is_valid(destination, wad_bytes, &lump_count,
+        &directory_offset)) {
+        ++receive_failure_count;
+        last_receive_elapsed_ms = hazard3_ticks_ms() - start_ticks;
+        hazard3_console_puts("H3W ERROR invalid IWAD structure\r\n");
+        return 0;
+    }
+
+    copy_header(&loaded_header, &header);
+    last_lump_count = lump_count;
+    last_directory_offset = directory_offset;
+    wad_loaded = 1u;
+    last_receive_elapsed_ms = hazard3_ticks_ms() - start_ticks;
+    hazard3_console_puts("H3W SD OK elapsed_ms=");
+    hazard3_console_put_hex32(last_receive_elapsed_ms);
+    hazard3_console_puts(" crc32=");
+    hazard3_console_put_hex32(crc);
+    hazard3_console_puts(" lumps=");
+    hazard3_console_put_hex32(lump_count);
     hazard3_console_puts("\r\n");
     return 1;
 }

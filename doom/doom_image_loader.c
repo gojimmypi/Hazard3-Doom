@@ -378,6 +378,90 @@ int doom_image_loader_receive(void)
     return 1;
 }
 
+
+int doom_image_loader_load_stream(doom_image_stream_read_fn read_fn,
+    void* context)
+{
+    hazard3_doom_image_header_t header;
+    volatile uint8_t* destination;
+    uint32_t start_ticks;
+    uint32_t crc;
+
+    if (read_fn == (doom_image_stream_read_fn)0) {
+        return 0;
+    }
+
+    ++receive_run_count;
+    image_loaded = 0u;
+    image_restart_ready = 0u;
+    image_backup_address = 0u;
+    image_backup_crc = 0u;
+    image_restore_count = 0u;
+    last_crc_actual = 0u;
+    last_crc_expected = 0u;
+    start_ticks = hazard3_ticks_ms();
+
+    hazard3_console_puts("\r\nH3L SD header\r\n");
+    if (!read_fn(context, &header, sizeof(header))) {
+        ++receive_failure_count;
+        last_receive_elapsed_ms = hazard3_ticks_ms() - start_ticks;
+        hazard3_console_puts("H3L ERROR SD header read\r\n");
+        return 0;
+    }
+    if (!header_is_valid(&header)) {
+        ++receive_failure_count;
+        last_receive_elapsed_ms = hazard3_ticks_ms() - start_ticks;
+        hazard3_console_puts("H3L ERROR invalid header\r\n");
+        print_header_summary(&header);
+        return 0;
+    }
+    print_header_summary(&header);
+    destination = (volatile uint8_t*)(uintptr_t)header.load_address;
+    if (!read_fn(context, (void*)(uintptr_t)header.load_address,
+        header.image_bytes)) {
+        ++receive_failure_count;
+        last_receive_elapsed_ms = hazard3_ticks_ms() - start_ticks;
+        hazard3_console_puts("H3L ERROR SD payload read\r\n");
+        return 0;
+    }
+
+    hazard3_memory_barrier();
+    crc = crc32_memory(destination, header.image_bytes);
+    last_crc_expected = header.payload_crc32;
+    last_crc_actual = crc;
+    if (crc != header.payload_crc32) {
+        ++receive_failure_count;
+        last_receive_elapsed_ms = hazard3_ticks_ms() - start_ticks;
+        hazard3_console_puts("H3L ERROR CRC expected=");
+        hazard3_console_put_hex32(header.payload_crc32);
+        hazard3_console_puts(" actual=");
+        hazard3_console_put_hex32(crc);
+        hazard3_console_puts("\r\n");
+        return 0;
+    }
+
+    copy_header(&loaded_header, &header);
+    if (!prepare_image_backup(&header)) {
+        ++receive_failure_count;
+        last_receive_elapsed_ms = hazard3_ticks_ms() - start_ticks;
+        hazard3_console_puts("H3L ERROR could not create verified restart image\r\n");
+        return 0;
+    }
+    if (!restore_image_from_backup()) {
+        ++receive_failure_count;
+        last_receive_elapsed_ms = hazard3_ticks_ms() - start_ticks;
+        hazard3_console_puts("H3L ERROR could not verify restored image\r\n");
+        return 0;
+    }
+
+    image_loaded = 1u;
+    last_receive_elapsed_ms = hazard3_ticks_ms() - start_ticks;
+    hazard3_console_puts("H3L SD OK elapsed_ms=");
+    hazard3_console_put_hex32(last_receive_elapsed_ms);
+    hazard3_console_puts("\r\n");
+    return 1;
+}
+
 int doom_image_loader_launch(void)
 {
     typedef int32_t (*doom_entry_fn_t)(const hazard3_monitor_services_t* services);
