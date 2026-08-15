@@ -13,6 +13,18 @@ set -euo pipefail
 
 SUBMODULE_PATH="third_party/Hazard3"
 
+# Run shellcheck to ensure this is a good script.
+# Specify the executable shell checker you want to use:
+MY_SHELLCHECK="shellcheck"
+
+# Check if the executable is available in the PATH
+if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
+    # Run your command here
+    shellcheck "$0" || exit 1
+else
+    echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
+fi
+
 require_tool()
 {
     command -v "$1" >/dev/null 2>&1 || {
@@ -87,6 +99,13 @@ get_submodule_url()
         --get "submodule.${name}.url"
 }
 
+get_origin_url()
+{
+    local repo="$1"
+
+    git -C "${repo}" remote get-url origin 2>/dev/null || printf '%s\n' "(no origin remote)"
+}
+
 ensure_hazard3_initialized()
 {
     if git -C "${HAZARD3_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -116,17 +135,20 @@ check_hazard3_clean()
 
 show_status()
 {
-    local pinned current source
+    local pinned current source superproject_origin hazard3_origin
 
     pinned="$(get_pinned_commit)"
     current="$(git -C "${HAZARD3_ROOT}" rev-parse HEAD)"
     source="$(get_submodule_url)"
+    superproject_origin="$(get_origin_url "${ROOT_DIR}")"
+    hazard3_origin="$(get_origin_url "${HAZARD3_ROOT}")"
 
     printf 'Hazard3-Doom branch : %s\n' "$(git -C "${ROOT_DIR}" branch --show-current)"
+    printf 'Hazard3-Doom origin : %s\n' "${superproject_origin}"
     printf 'Pinned Hazard3      : %s\n' "${pinned}"
     printf 'Current Hazard3     : %s\n' "${current}"
+    printf 'Hazard3 origin      : %s\n' "${hazard3_origin}"
     printf 'Submodule source    : %s\n' "${source}"
-
     if [[ "${current}" == "${pinned}" ]]; then
         echo "State               : matches Hazard3-Doom gitlink"
     else
