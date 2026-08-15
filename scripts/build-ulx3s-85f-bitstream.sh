@@ -79,9 +79,12 @@ esac
 
 require_tool stat
 if [[ -s "${BITSTREAM_OUTPUT}" && "${FORCE_BITSTREAM_REBUILD}" == 0 ]]; then
-    printf 'Reusing existing ULX3S 85F bitstream; nextpnr was not run.\n'
-    stat -c '  %n (modified %y, %s bytes)' -- "${BITSTREAM_OUTPUT}"
+    printf '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n'
+    printf 'Reusing existing ULX3S 85F bitstream in %s\n' "${BITSTREAM_OUTPUT}"
+    printf 'nextpnr was not run!!!\n'
+    stat -c 'bitstream:  %n (modified %y, %s bytes)' -- "${BITSTREAM_OUTPUT}"
     printf 'Set FORCE_BITSTREAM_REBUILD=1 to rebuild it.\n'
+    printf '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n'
     exit 0
 fi
 
