@@ -264,6 +264,11 @@ Its generated objects are placed under `build/doom-size-probe/`.
 
 ## Upload the Doom image and IWAD
 
+**NOTE:** If Doom is _already_ running, connect to the UART with a serial terminal 
+such as putty and press `Ctrl-X` to exit to monitor program that will listen 
+for a new upload. See also the [return-to-monitor.py](./scripts/return-to-monitor.py) 
+and [restart-from-monitor.py](./scripts/restart-from-monitor.py) scripts.
+
 Close PuTTY or any other program that owns the UART port.
 
 Upload the executable image without launching it:
