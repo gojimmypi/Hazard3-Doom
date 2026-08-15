@@ -29,6 +29,11 @@ wire gpio1_o;
 wire gpio1_oe;
 wire gpio2_o;
 wire gpio2_oe;
+wire i2c_busy;
+wire i2c_bus_active;
+reg i2c_enable = 1'b1;
+reg esp_owner = 1'b0;
+reg esp_request = 1'b0;
 
 apb_sao_bridge #(
     .CLK_DIV_RESET(16'd4),
@@ -53,7 +58,12 @@ apb_sao_bridge #(
     .sao_gpio1_oe(gpio1_oe),
     .sao_gpio2_i(gpio2_i),
     .sao_gpio2_o(gpio2_o),
-    .sao_gpio2_oe(gpio2_oe)
+    .sao_gpio2_oe(gpio2_oe),
+    .i2c_enable(i2c_enable),
+    .i2c_busy(i2c_busy),
+    .i2c_bus_active(i2c_bus_active),
+    .esp_owner(esp_owner),
+    .esp_request(esp_request)
 );
 
 task apb_write;
@@ -123,6 +133,45 @@ initial begin
         $display("ERROR: ID register %08x", value);
         $finish;
     end
+
+    apb_read(16'h9024, value);
+    if (value !== 32'h00020100) begin
+        $display("ERROR: VERSION register %08x", value);
+        $finish;
+    end
+
+    apb_read(16'h9028, value);
+    if (value !== 32'd0) begin
+        $display("ERROR: OWNER register %08x", value);
+        $finish;
+    end
+
+    esp_request <= 1'b1;
+    esp_owner <= 1'b1;
+    repeat (2) @(posedge clk);
+    apb_read(16'h9028, value);
+    if (value[1:0] !== 2'b11) begin
+        $display("ERROR: OWNER/request visibility %08x", value);
+        $finish;
+    end
+    apb_read(16'h9004, value);
+    if (value[13:12] !== 2'b11) begin
+        $display("ERROR: STATUS owner/request visibility %08x", value);
+        $finish;
+    end
+    esp_request <= 1'b0;
+    esp_owner <= 1'b0;
+    repeat (2) @(posedge clk);
+
+    // Arbitration disables new Hazard3 I2C commands without changing APB.
+    i2c_enable <= 1'b0;
+    apb_write(16'h9000, 32'd1); // START must be rejected
+    apb_read(16'h9004, value);
+    if (!value[5] || value[0]) begin
+        $display("ERROR: disabled I2C command was not rejected %08x", value);
+        $finish;
+    end
+    i2c_enable <= 1'b1;
 
     apb_write(16'h9018, 32'h0000000b); // GPIO1 out=1/oe=1, GPIO2 out=0/oe=1
     if (!gpio1_oe || !gpio1_o || !gpio2_oe || gpio2_o) begin
