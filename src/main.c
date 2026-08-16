@@ -8,6 +8,8 @@
 #include "doom/hazard3_platform.h"
 #include "doom/hazard3_video.h"
 #include "doom/sdram_exec_test.h"
+#include "sao_console.h"
+#include "sd_boot.h"
 
 #define UART_BASE       0x40004000u
 
@@ -292,10 +294,13 @@ static void console_print_help(void)
     uart_puts("  l       receive a packaged Doom image over UART\r\n");
     uart_puts("  w       receive an IWAD into reserved SDRAM\r\n");
     uart_puts("  j       launch/restart the validated Doom image and IWAD\r\n");
+    uart_puts("  b       load DOOM.H3D + DOOM1.WAD from micro-SD and launch\r\n");
+    uart_puts("  c       micro-SD/FAT boot status\r\n");
     uart_puts("  f       rewrite/present the 320x200 RGB332 HDMI test frame\r\n");
     uart_puts("  z       reset heap; invalidates every heap pointer\r\n");
     uart_puts("  s       status\r\n");
     uart_puts("  v       version\r\n");
+    hazard3_sao_console_print_help();
     uart_puts("Other characters are echoed.\r\n");
     uart_puts("> ");
 }
@@ -1602,6 +1607,16 @@ static void console_poll(void)
     uint8_t received;
 
     while (uart_getc_nonblocking(&received)) {
+        int sao_console_result = hazard3_sao_console_feed(received);
+
+        if (sao_console_result == HAZARD3_SAO_CONSOLE_CONSUMED) {
+            continue;
+        }
+        if (sao_console_result == HAZARD3_SAO_CONSOLE_STATUS) {
+            console_print_status();
+            continue;
+        }
+
         switch (received) {
         case '\r':
         case '\n':
@@ -1698,6 +1713,20 @@ static void console_poll(void)
                 "the IWAD upload")) {
                 (void)doom_wad_loader_receive();
             }
+            uart_puts("> ");
+            break;
+
+        case 'b':
+        case 'B':
+            if (external_memory_require_ready("the micro-SD Doom boot")) {
+                (void)hazard3_sd_boot(1);
+            }
+            uart_puts("> ");
+            break;
+
+        case 'c':
+        case 'C':
+            hazard3_sd_boot_print_status();
             uart_puts("> ");
             break;
 
@@ -1882,7 +1911,7 @@ static void console_init(void)
     uart_put_hex32(HAZARD3_VIDEO_BASE);
     uart_puts("\r\n");
     uart_puts("HDMI: 1024x600 full-panel scale, direct block-RAM double buffer\r\n");
-    uart_puts("Doom: l=load image, w=load IWAD, j=launch\r\n");
+    uart_puts("Doom: l=UART image, w=UART IWAD, j=launch, b=SD boot\r\n");
 }
 
 int main(void)
@@ -1893,6 +1922,7 @@ int main(void)
     sdram_heap_init();
     uart_init();
     timer_init();
+    hazard3_sao_console_init(uart_putc, uart_puts, HAZARD3_SYS_CLK_HZ);
     console_init();
 
     uart_puts("External memory initialization: waiting up to 5 seconds...\r\n");
@@ -1902,6 +1932,10 @@ int main(void)
             SDRAM_QUICK_TEST_BYTES,
             "SDRAM boot quick test");
         video_write_test_pattern();
+        if (is_ulx3s_build(HAZARD3_VIDEO_FPGA_BUILD_ID)) {
+            uart_puts("ULX3S cold boot: trying micro-SD...\r\n");
+            (void)hazard3_sd_boot(1);
+        }
     } else {
         uart_puts("External memory initialization: TIMEOUT\r\n");
         uart_puts(

@@ -1,2 +1,3 @@
-# Shell scripts must remain executable by Bash when checked out on Windows.
+# Shell scripts must stay LF when the repository is checked out on Windows.
+# WSL/Bash interprets CRLF in lines such as "set -euo pipefail" as "pipefail\r".
 *.sh text eol=lf

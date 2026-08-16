@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""Send the 'j' to a running Hazard3-Doom instance and release the UART."""
+
+from __future__ import annotations
+
+import argparse
+import time
+
+import serial
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Run Hazard3-Doom from monitor with 'j' command."
+    )
+    parser.add_argument("--port", default="/dev/ttyS7")
+    parser.add_argument("--baud", type=int, default=115200)
+    parser.add_argument(
+        "--wait",
+        type=float,
+        default=0.35,
+        help="seconds to wait for monitor output after 'j' command (default: 0.35)",
+    )
+    args = parser.parse_args()
+
+    print(f"Opening {args.port} at {args.baud}")
+    with serial.Serial(args.port, args.baud, timeout=0.15) as uart:
+        print("Sending 'j' command (0x6a)...")
+        uart.write(b"\x6a")
+        uart.flush()
+        deadline = time.monotonic() + max(args.wait, 0.0)
+        chunks: list[bytes] = []
+        while time.monotonic() < deadline:
+            data = uart.read(4096)
+            if data:
+                chunks.append(data)
+            else:
+                time.sleep(0.02)
+
+    if chunks:
+        print("--- UART response ---")
+        print(b"".join(chunks).decode("ascii", errors="replace"), end="")
+        print("--- end response ---")
+    else:
+        print("No UART response received; 'j' command was still transmitted. Is Doom already running?")
+    print("UART released.")
+
+
+if __name__ == "__main__":
+    main()

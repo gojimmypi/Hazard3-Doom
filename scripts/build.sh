@@ -8,8 +8,10 @@ DOOM_DIR="${ROOT_DIR}/doom"
 BUILD_DIR="${HAZARD3_BUILD_DIR:-${ROOT_DIR}/build}"
 TOOLCHAIN_PREFIX="${TOOLCHAIN_PREFIX:-/opt/riscv/bin/riscv32-unknown-elf-}"
 CC="${TOOLCHAIN_PREFIX}gcc"
+OBJCOPY="${TOOLCHAIN_PREFIX}objcopy"
 OUTPUT_ELF="${BUILD_DIR}/hazard3-test.elf"
 OUTPUT_MAP="${BUILD_DIR}/hazard3-test.map"
+OUTPUT_BIN="${BUILD_DIR}/hazard3-test.bin"
 
 # Run shellcheck to ensure this is a good script.
 # Specify the executable shell checker you want to use:
@@ -75,9 +77,20 @@ case "${system_clock_hz}" in
 esac
 
 require_tool "${CC}"
+require_tool "${OBJCOPY}"
 require_file "${SRC_DIR}/start.S"
 require_file "${SRC_DIR}/main.c"
+require_file "${SRC_DIR}/sao_console.c"
+require_file "${SRC_DIR}/sao_console.h"
+require_file "${SRC_DIR}/sd_spi.c"
+require_file "${SRC_DIR}/sd_spi.h"
+require_file "${SRC_DIR}/fat_ro.c"
+require_file "${SRC_DIR}/fat_ro.h"
+require_file "${SRC_DIR}/sd_boot.c"
+require_file "${SRC_DIR}/sd_boot.h"
 require_file "${SRC_DIR}/link.ld"
+require_file "${DOOM_DIR}/hazard3_sao.c"
+require_file "${DOOM_DIR}/hazard3_sao.h"
 
 mkdir -p "${BUILD_DIR}"
 
@@ -93,7 +106,9 @@ printf 'Monitor output: %s
 "${CC}" \
     -march=rv32imc_zicsr_zifencei_zba_zbb_zbs \
     -mabi=ilp32 \
-    -O2 \
+    -Os \
+    -ffunction-sections \
+    -fdata-sections \
     -fomit-frame-pointer \
     -g3 \
     -ffreestanding \
@@ -101,6 +116,7 @@ printf 'Monitor output: %s
     -nostdlib \
     -nostartfiles \
     -Wl,-T,"${SRC_DIR}/link.ld" \
+    -Wl,--gc-sections \
     -Wl,-Map,"${OUTPUT_MAP}" \
     -I"${ROOT_DIR}" \
     -I"${DOOM_DIR}" \
@@ -108,9 +124,17 @@ printf 'Monitor output: %s
     "${system_clock_flags[@]}" \
     "${SRC_DIR}/start.S" \
     "${SRC_DIR}/main.c" \
+    "${SRC_DIR}/sd_spi.c" \
+    "${SRC_DIR}/fat_ro.c" \
+    "${SRC_DIR}/sd_boot.c" \
+    "${SRC_DIR}/sao_console.c" \
+    "${DOOM_DIR}/hazard3_sao.c" \
     "${DOOM_DIR}/doom_image_loader.c" \
     "${DOOM_DIR}/doom_wad_loader.c" \
     "${DOOM_DIR}/doom_port_smoke.c" \
     "${DOOM_DIR}/sdram_exec_test.c" \
     "${DOOM_DIR}/sdram_exec_payload.S" \
     -o "${OUTPUT_ELF}"
+
+"${OBJCOPY}" -O binary "${OUTPUT_ELF}" "${OUTPUT_BIN}"
+printf 'Monitor binary: %s\n' "${OUTPUT_BIN}"

@@ -11,6 +11,8 @@ Hazard3-Doom ULX3S and ULX4M-LD targets.
 Existing nonempty FPGA bitstreams are reused and displayed with their modification
 timestamps. Set `FORCE_BITSTREAM_REBUILD=1` to run synthesis and nextpnr again.
 
+See the full Quick Start overview at https://ulx3s.github.io/ulx-doom/  
+
 ## Build Scripts
 
 - `build.sh` - Builds the shared Hazard3 monitor firmware.
@@ -42,6 +44,30 @@ timestamps. Set `FORCE_BITSTREAM_REBUILD=1` to run synthesis and nextpnr again.
 - `check_submodules.bat` - Reports the current and expected Git submodule revisions on Windows.
 - `check-nettype.sh` - Checks Verilog sources for consistent `default_nettype` directives.
 - `full-clean.sh` - Removes generated ULX3S, ULX4M-LD, monitor, and Doom build outputs.
+
+## Supercon Helpers
+
+The normal Hazard3-Doom build remains normal. The Supercon demo uses a separate,
+explicit noncombat image and one canonical WAD source.
+
+- `build-doom-noncombat.sh` - builds `build/doom-image-noncombat/hazard3-doom.h3d` with 200% armor, zero ammo, no pistol ownership, no weapon/fist overlay, and Fire disabled.
+- `apply-doom-noncombat.py` - internal transform used only on the generated DoomGeneric build copy.
+- `build-supercon10-wad.py` - verifies the fixed-heading PWAD and merges it with local `wads/DOOM1.WAD` into `wads/SUPERCON10.WAD`.
+- `return-to-monitor.py` - sends Ctrl-X over UART and releases the serial port.
+- `cleanup-supercon-dev.py` - dry-run cleanup for exact obsolete files from earlier iterations; add `--apply` only after reviewing the list.
+
+From the repository root:
+
+```bash
+./scripts/build-doom-noncombat.sh
+./scripts/build-supercon10-wad.py
+
+./scripts/return-to-monitor.py --port /dev/ttyS7
+./doom/upload-doom-image.py ./build/doom-image-noncombat/hazard3-doom.h3d --port /dev/ttyS7
+./doom/upload-wad.py ./wads/SUPERCON10.WAD --port /dev/ttyS7 --launch
+```
+
+The normal Doom image still builds to `build/doom-image/hazard3-doom.h3d`.
 
 ## Documentation
 

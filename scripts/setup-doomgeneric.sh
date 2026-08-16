@@ -3,7 +3,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-PATCH_FILE="${PATCH_FILE:-${ROOT_DIR}/doom/patches/doomgeneric-hazard3-shared-screenbuffer.patch}"
 DEFAULT_DOOMGENERIC_ROOT="${ROOT_DIR}/third_party/doomgeneric"
 DOOMGENERIC_ROOT="${DOOMGENERIC_ROOT:-${DEFAULT_DOOMGENERIC_ROOT}}"
 
@@ -14,7 +13,7 @@ MY_SHELLCHECK="shellcheck"
 # Check if the executable is available in the PATH
 if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
     # Run your command here
-    shellcheck "$0" || exit 1
+    shellcheck -x -P "${SCRIPT_DIR}" "$0" || exit 1
 else
     echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
 fi
@@ -42,7 +41,6 @@ require_file()
 }
 
 require_tool git
-require_file "${PATCH_FILE}"
 
 if [[ "${DOOMGENERIC_ROOT}" == "${DEFAULT_DOOMGENERIC_ROOT}" ]]; then
     git -C "${ROOT_DIR}" submodule update --init -- \
@@ -70,9 +68,9 @@ require_file "${DOOMGENERIC_ROOT}/doomgeneric/i_video.h"
 if [[ -n "$(git -C "${DOOMGENERIC_ROOT}" status --porcelain \
     --untracked-files=all -- doomgeneric)" ]]; then
     echo "DoomGeneric source tree has local changes: ${DOOMGENERIC_ROOT}/doomgeneric" >&2
-    echo "Builds patch a temporary copy; restore the submodule before building." >&2
+    echo "Restore the submodule to the pinned commit before building." >&2
     exit 1
 fi
 
 printf 'DoomGeneric submodule ready at %s\n' "${current_commit}"
-printf 'The Hazard3 patch is applied only to a temporary build copy.\n'
+printf 'Hazard3 DoomGeneric changes are committed in the pinned fork.\n'
