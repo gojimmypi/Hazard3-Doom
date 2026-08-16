@@ -1,5 +1,6 @@
-`timescale 1ns/1ps
 `default_nettype none
+
+`timescale 1ns/1ps
 
 module tb_apb_sao_bridge;
 
