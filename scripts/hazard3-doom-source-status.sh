@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+#
+# File: scripts/scripts/hazard3-doom-source-status.sh
+
+
 set -euo pipefail
 
 # Hazard3 Doom repository/fork/branch status report.
