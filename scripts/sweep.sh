@@ -24,8 +24,8 @@ mkdir -p "${ULX3S_SEED_SWEEP_DIR}"
 # The cold-boot FPGA netlist includes the resident monitor EBR image. Build
 # that image once before sweeping seeds so every P&R run uses the same netlist.
 MONITOR_BUILD_DIR="${REPO_ROOT}/build/monitor/ulx3s-64m"
-MONITOR_BIN="${MONITOR_BUILD_DIR}/hazard3-test.bin"
-BOOT_HEX="${HAZARD3_ROOT}/example_soc/soc/hazard3_boot.hex"
+MONITOR_BIN="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.bin"
+BOOT_HEX="${HAZARD3_ROOT}/example_soc/soc/hazard3-boot-monitor.hex"
 
 HAZARD3_BUILD_DIR="${MONITOR_BUILD_DIR}" \
 HAZARD3_MEMORY_PROFILE=64m \

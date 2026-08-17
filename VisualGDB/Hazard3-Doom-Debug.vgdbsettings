@@ -36,7 +36,7 @@
       <BackgroundMode xsi:nil="true" />
     </CleanCommand>
     <MainBuildDirectory>$(ProjectDir)\..</MainBuildDirectory>
-    <AbsoluteTargetPath>$(ProjectDir)\..\build\hazard3-test.elf</AbsoluteTargetPath>
+    <AbsoluteTargetPath>$(ProjectDir)\..\build\hazard3-boot-monitor.elf</AbsoluteTargetPath>
     <AutoUpdateMakefiles>false</AutoUpdateMakefiles>
   </Build>
   <CustomBuild>
@@ -137,7 +137,7 @@
         </Records>
         <EnvironmentSetupFiles />
       </GDBEnvironment>
-      <GDBArguments>--interpreter mi --args &quot;$(ProjectDir.forwardslashes)/../build/hazard3-test.elf&quot;</GDBArguments>
+      <GDBArguments>--interpreter mi --args &quot;$(ProjectDir.forwardslashes)/../build/hazard3-boot-monitor.elf&quot;</GDBArguments>
       <SessionStartMode>NoAutoStart</SessionStartMode>
       <GDBServerSettings>
         <SendCtrlCToGDBServer>false</SendCtrlCToGDBServer>

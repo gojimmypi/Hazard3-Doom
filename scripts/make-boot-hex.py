@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+#
+# File: scripts/make-boot-hex.py
+#
+# See submodule Hazard3 for sram readmemh
+#
 """Convert the resident monitor binary to 32-bit little-endian readmemh data."""
 
 from __future__ import annotations

@@ -7,8 +7,8 @@ for %%I in ("%SCRIPT_DIR%..") do set "ROOT_DIR=%%~fI"
 
 echo Repository root: "%ROOT_DIR%"
 
-if exist "%ROOT_DIR%\build\hazard3-test.bit" (
-    set "SOURCE_BITSTREAM=%ROOT_DIR%\build\hazard3-test.bit"
+if exist "%ROOT_DIR%\build\hazard3-boot-monitor.bit" (
+    set "SOURCE_BITSTREAM=%ROOT_DIR%\build\hazard3-boot-monitor.bit"
 
     echo.
     echo Using locally built FPGA bitstream:
@@ -27,7 +27,7 @@ if exist "%ROOT_DIR%\build\hazard3-test.bit" (
         >&2 echo ERROR: No FPGA bitstream was found.
         >&2 echo.
         >&2 echo Checked:
-        >&2 echo   "%ROOT_DIR%\build\hazard3-test.bit"
+        >&2 echo   "%ROOT_DIR%\build\hazard3-boot-monitor.bit"
         >&2 echo   "%ROOT_DIR%\bin\fpga_ulx3s_hdmi_doom.bit"
         >&2 echo.
         goto ERROR_EXIT

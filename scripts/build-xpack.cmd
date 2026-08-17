@@ -32,9 +32,9 @@ set "TOOLCHAIN_BIN=%TOOLCHAIN_ROOT%\bin"
 set "CC=%TOOLCHAIN_BIN%\riscv-none-elf-gcc.exe"
 set "OBJCOPY=%TOOLCHAIN_BIN%\riscv-none-elf-objcopy.exe"
 set "SIZE=%TOOLCHAIN_BIN%\riscv-none-elf-size.exe"
-set "OUTPUT_ELF=%BUILD_DIR%\hazard3-test.elf"
-set "OUTPUT_MAP=%BUILD_DIR%\hazard3-test.map"
-set "OUTPUT_BIN=%BUILD_DIR%\hazard3-test.bin"
+set "OUTPUT_ELF=%BUILD_DIR%\hazard3-boot-monitor.elf"
+set "OUTPUT_MAP=%BUILD_DIR%\hazard3-boot-monitor.map"
+set "OUTPUT_BIN=%BUILD_DIR%\hazard3-boot-monitor.bin"
 
 if /i "%ACTION%"=="build" goto :validate
 if /i "%ACTION%"=="clean" goto :clean_only

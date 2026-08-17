@@ -13,7 +13,7 @@ if not exist "%GDB%" if exist "%LOCAL_GDB%" set "GDB=%LOCAL_GDB%"
 
 rem Use the first argument as the ELF path, or use the default build output.
 if "%~1"=="" (
-    set "ELF=%ROOT_DIR%\build\hazard3-test.elf"
+    set "ELF=%ROOT_DIR%\build\hazard3-boot-monitor.elf"
 ) else (
     set "ELF=%~1"
 )
@@ -25,7 +25,7 @@ if not exist "%GDB%" (
 
 if not exist "%ELF%" (
     >&2 echo Missing firmware ELF: %ELF%
-    >&2 echo Expected the firmware at: %ROOT_DIR%\build\hazard3-test.elf or specify the prebuilt image in ./bin/ directory.
+    >&2 echo Expected the firmware at: %ROOT_DIR%\build\hazard3-boot-monitor.elf or specify the prebuilt image in ./bin/ directory.
     exit /b 1
 )
 

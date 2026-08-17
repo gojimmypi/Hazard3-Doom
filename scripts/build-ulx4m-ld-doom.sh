@@ -10,7 +10,7 @@ MONITOR_BUILD_DIR="${HAZARD3_BUILD_DIR:-${ROOT_DIR}/build}"
 DOOM_BUILD_DIR="${HAZARD3_DOOM_BUILD_DIR:-${ROOT_DIR}/build/doom-image}"
 FPGA_SOURCE="${SYNTH_DIR}/fpga_ulx4m_ld.bit"
 FPGA_OUTPUT="${BOARD_BUILD_DIR}/fpga_ulx4m_ld.bit"
-MONITOR_OUTPUT="${MONITOR_BUILD_DIR}/hazard3-test.elf"
+MONITOR_OUTPUT="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.elf"
 DOOM_OUTPUT="${DOOM_BUILD_DIR}/hazard3-doom.h3d"
 LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM/generated"
 

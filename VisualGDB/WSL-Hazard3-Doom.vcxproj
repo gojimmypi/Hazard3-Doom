@@ -37,7 +37,7 @@
     <NMakeBuildCommandLine>cmd.exe /d /c call &quot;$(ProjectDir)build-wsl.cmd&quot; build</NMakeBuildCommandLine>
     <NMakeCleanCommandLine>cmd.exe /d /c call &quot;$(ProjectDir)build-wsl.cmd&quot; clean</NMakeCleanCommandLine>
     <NMakeReBuildCommandLine>cmd.exe /d /c call &quot;$(ProjectDir)build-wsl.cmd&quot; rebuild</NMakeReBuildCommandLine>
-    <NMakeOutput>$(ProjectDir)..\build\hazard3-test.elf</NMakeOutput>
+    <NMakeOutput>$(ProjectDir)..\build\hazard3-boot-monitor.elf</NMakeOutput>
     <NMakeIncludeSearchPath>$(ProjectDir)..;$(ProjectDir)..\src;$(ProjectDir)..\doom;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <NMakePreprocessorDefinitions>HAZARD3_SYS_CLK_HZ=50000000u;__riscv=1;__riscv_xlen=32;__riscv_float_abi_soft=1;__riscv_compressed=1;__VisualGDB_CFG_Debug;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
   </PropertyGroup>
@@ -51,7 +51,7 @@
     <NMakeBuildCommandLine>cmd.exe /d /c call &quot;$(ProjectDir)build-wsl.cmd&quot; build</NMakeBuildCommandLine>
     <NMakeCleanCommandLine>cmd.exe /d /c call &quot;$(ProjectDir)build-wsl.cmd&quot; clean</NMakeCleanCommandLine>
     <NMakeReBuildCommandLine>cmd.exe /d /c call &quot;$(ProjectDir)build-wsl.cmd&quot; rebuild</NMakeReBuildCommandLine>
-    <NMakeOutput>$(ProjectDir)..\build\hazard3-test.elf</NMakeOutput>
+    <NMakeOutput>$(ProjectDir)..\build\hazard3-boot-monitor.elf</NMakeOutput>
     <NMakeIncludeSearchPath>$(ProjectDir)..;$(ProjectDir)..\src;$(ProjectDir)..\doom;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
     <NMakePreprocessorDefinitions>HAZARD3_SYS_CLK_HZ=50000000u;__riscv=1;__riscv_xlen=32;__riscv_float_abi_soft=1;__riscv_compressed=1;__VisualGDB_CFG_Release;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
   </PropertyGroup>

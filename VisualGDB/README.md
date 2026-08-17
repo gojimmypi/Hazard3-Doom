@@ -74,7 +74,7 @@ netstat -ano | findstr LISTENING | findstr :3333
 When using `Debug - Start Debugging with GDB` _without_ having first compiled to RISC-V elf file, and error similar to this may be encountered:
 
 ```
-C:\temp\Hazard3-Doom\bin\gdb\riscv-none-elf-gdb.exe --interpreter mi --args "C:/temp/Hazard3-Doom/build/hazard3-test.elf"
+C:\temp\Hazard3-Doom\bin\gdb\riscv-none-elf-gdb.exe --interpreter mi --args "C:/temp/Hazard3-Doom/build/hazard3-boot-monitor.elf"
 No executable file specified.
 Use the "file" or "exec-file" command.
 -stack-list-frames did not finish within 10000 msec and has been stopped.

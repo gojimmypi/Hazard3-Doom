@@ -31,7 +31,7 @@
       <BackgroundMode xsi:nil="true" />
     </CleanCommand>
     <MainBuildDirectory>$(ProjectDir)\..</MainBuildDirectory>
-    <AbsoluteTargetPath>$(ProjectDir)\..\build\hazard3-test.elf</AbsoluteTargetPath>
+    <AbsoluteTargetPath>$(ProjectDir)\..\build\hazard3-boot-monitor.elf</AbsoluteTargetPath>
     <AutoUpdateMakefiles>false</AutoUpdateMakefiles>
   </Build>
   <CustomBuild>

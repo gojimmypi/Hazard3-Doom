@@ -160,7 +160,7 @@ bitstream into this repository:
 ```text
 build/ulx3s/fpga_ulx3s.bit
 build/ulx4m-ld/fpga_ulx4m_ld.bit
-build/hazard3-test.elf
+build/hazard3-boot-monitor.elf
 build/doom-image/hazard3-doom.h3d
 ```
 
@@ -201,8 +201,8 @@ HAZARD3_SYS_CLK_HZ=50000000 \
 Output:
 
 ```text
-build/hazard3-test.elf
-build/hazard3-test.map
+build/hazard3-boot-monitor.elf
+build/hazard3-boot-monitor.map
 ```
 
 ## Load the resident monitor
@@ -217,7 +217,7 @@ the batch loader:
 An explicit ELF path may be supplied as the first argument:
 
 ```bash
-./scripts/load-firmware.sh /path/to/hazard3-test.elf
+./scripts/load-firmware.sh /path/to/hazard3-boot-monitor.elf
 ```
 
 The loader halts the target, loads and compares the ELF sections, sets `_start`,
@@ -385,7 +385,7 @@ Sound remains stubbed in this milestone.
 
 For Windows users, the VisualGDB project settings are included under `VisualGDB/`.
 
-The target ELF is `build/hazard3-test.elf`. The GDB startup helper is
+The target ELF is `build/hazard3-boot-monitor.elf`. The GDB startup helper is
 `scripts/hazard3-debug.gdb`. Per-user `.user` files are intentionally excluded.
 
 ## Tiny Tapeout

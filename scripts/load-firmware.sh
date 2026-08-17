@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 GDB="${GDB:-/opt/riscv/bin/riscv32-unknown-elf-gdb}"
-ELF="${1:-${ROOT_DIR}/build/hazard3-test.elf}"
+ELF="${1:-${ROOT_DIR}/build/hazard3-boot-monitor.elf}"
 
 # Run shellcheck to ensure this is a good script.
 # Specify the executable shell checker you want to use:

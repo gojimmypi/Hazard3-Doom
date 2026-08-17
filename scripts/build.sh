@@ -9,9 +9,9 @@ BUILD_DIR="${HAZARD3_BUILD_DIR:-${ROOT_DIR}/build}"
 TOOLCHAIN_PREFIX="${TOOLCHAIN_PREFIX:-/opt/riscv/bin/riscv32-unknown-elf-}"
 CC="${TOOLCHAIN_PREFIX}gcc"
 OBJCOPY="${TOOLCHAIN_PREFIX}objcopy"
-OUTPUT_ELF="${BUILD_DIR}/hazard3-test.elf"
-OUTPUT_MAP="${BUILD_DIR}/hazard3-test.map"
-OUTPUT_BIN="${BUILD_DIR}/hazard3-test.bin"
+OUTPUT_ELF="${BUILD_DIR}/hazard3-boot-monitor.elf"
+OUTPUT_MAP="${BUILD_DIR}/hazard3-boot-monitor.map"
+OUTPUT_BIN="${BUILD_DIR}/hazard3-boot-monitor.bin"
 
 # Run shellcheck to ensure this is a good script.
 # Specify the executable shell checker you want to use:

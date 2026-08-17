@@ -35,7 +35,7 @@ exit /b %RESULT%
 :clean
 call :enter_root
 if errorlevel 1 exit /b %ERRORLEVEL%
-wsl.exe --exec /bin/bash -c "rm -f -- ./build/hazard3-test.elf ./build/hazard3-test.map"
+wsl.exe --exec /bin/bash -c "rm -f -- ./build/hazard3-boot-monitor.elf ./build/hazard3-boot-monitor.map"
 set "RESULT=%ERRORLEVEL%"
 popd
 exit /b %RESULT%

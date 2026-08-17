@@ -59,7 +59,7 @@
       <BackgroundMode xsi:nil="true" />
     </CleanCommand>
     <MainBuildDirectory>$(SourceDir)/..</MainBuildDirectory>
-    <AbsoluteTargetPath>$(SourceDir)/../build/hazard3-test.elf</AbsoluteTargetPath>
+    <AbsoluteTargetPath>$(SourceDir)/../build/hazard3-boot-monitor.elf</AbsoluteTargetPath>
     <AutoUpdateMakefiles>true</AutoUpdateMakefiles>
   </Build>
   <CustomBuild>
@@ -78,7 +78,7 @@
           <Transport>BuiltinShortcut</Transport>
         </RemoteHost>
         <Command>/bin/bash</Command>
-        <Arguments>-lc 'test -f "$(SourceDir)/../build/hazard3-test.elf" || { echo "ERROR: build/hazard3-test.elf is missing. Run ./scripts/build.sh first." &gt;&amp;2; exit 1; }'</Arguments>
+        <Arguments>-lc 'test -f "$(SourceDir)/../build/hazard3-boot-monitor.elf" || { echo "ERROR: build/hazard3-boot-monitor.elf is missing. Run ./scripts/build.sh first." &gt;&amp;2; exit 1; }'</Arguments>
         <WorkingDirectory>$(SourceDir)/..</WorkingDirectory>
         <BackgroundMode>false</BackgroundMode>
       </CustomActionBase>
