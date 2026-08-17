@@ -27,3 +27,18 @@ __pycache__/
 # The RISC-V 440+ MB download expands to 1.5+ GB
 # See install: ./scripts/setup-xpack-riscv-gcc.cmd
 /bin/riscv-gcc
+/commit_squash.sh
+/gpg_refresh.sh
+/INSTALL.md
+/MANIFEST.txt
+/MANIFEST_SAO_BRIDGE.txt
+/my_gh_refresh.sh
+/README_SAO_BRIDGE.md
+/README_SAO_MONITOR.md
+/VALIDATION.txt
+/wads/make_supercon10_wad.py
+/wads/merge_iwad.py
+/wads/supercon10-map-preview.png
+/wads/supercon10-objects-preview.png
+/wads/supercon10-title-preview.png
+/bin/fpga_ulx3s-46.bit

@@ -1,0 +1,13 @@
+/* Small readability tweaks while keeping the stock Read the Docs look. */
+.wy-nav-content {
+    max-width: 1100px;
+}
+
+.rst-content code.literal,
+.rst-content tt.literal {
+    white-space: nowrap;
+}
+
+.rst-content .admonition-title {
+    font-weight: 700;
+}
