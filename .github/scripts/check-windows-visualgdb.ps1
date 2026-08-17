@@ -200,7 +200,7 @@ foreach ($configuration in @('Debug', 'Release')) {
         "$configuration VisualGDB clean working directory"
 
     Assert-Equal ([string]$root.Build.AbsoluteTargetPath) `
-        '$(ProjectDir)\..\build\hazard3-test.elf' `
+        '$(ProjectDir)\..\build\hazard3-boot-monitor.elf' `
         "$configuration AbsoluteTargetPath"
 }
 

@@ -91,7 +91,7 @@ $expectedCommands = @{
     NMakeBuildCommandLine = 'cmd.exe /d /c call "$(ProjectDir)build-wsl.cmd" build'
     NMakeCleanCommandLine = 'cmd.exe /d /c call "$(ProjectDir)build-wsl.cmd" clean'
     NMakeReBuildCommandLine = 'cmd.exe /d /c call "$(ProjectDir)build-wsl.cmd" rebuild'
-    NMakeOutput = '$(ProjectDir)..\build\hazard3-test.elf'
+    NMakeOutput = '$(ProjectDir)..\build\hazard3-boot-monitor.elf'
 }
 
 foreach ($configuration in @('Debug', 'Release')) {
@@ -168,7 +168,7 @@ foreach ($configuration in @('Debug', 'Release')) {
         "$configuration MountInfo HostName"
     Assert-Equal ([string]$root.Project.MountInfo.RemoteHost.Transport) 'LinuxSubsystem' `
         "$configuration MountInfo Transport"
-    Assert-Equal ([string]$root.Build.AbsoluteTargetPath) '$(SourceDir)/../build/hazard3-test.elf' `
+    Assert-Equal ([string]$root.Build.AbsoluteTargetPath) '$(SourceDir)/../build/hazard3-boot-monitor.elf' `
         "$configuration AbsoluteTargetPath"
     Assert-Equal ([string]$root.Debug.LaunchGDBSettings.GDBExe) `
         '/opt/riscv/bin/riscv32-unknown-elf-gdb' "$configuration GDB executable"
