@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# File: scripts/scripts/hazard3-doom-source-status.sh
+# File: scripts/hazard3-doom-source-status.sh
 
 
 set -euo pipefail
@@ -38,6 +38,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SOURCE_STATUS_LOG="${ROOT_DIR}/build/source_status.log"
 
+# Keep this status report self-contained: create the output directory first,
+# then send all subsequent stdout/stderr to the log instead of the caller.
+mkdir -p -- "$(dirname "${SOURCE_STATUS_LOG}")"
+exec > "${SOURCE_STATUS_LOG}" 2>&1
+printf "Saving git branch history to %s\n" "${SOURCE_STATUS_LOG}"
+
 # Run shellcheck to ensure this is a good script.
 # Specify the executable shell checker you want to use:
 MY_SHELLCHECK="shellcheck"
@@ -49,9 +55,6 @@ if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
 else
     echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
 fi
-
-printf "Saving git branch history to %s\n" "${SOURCE_STATUS_LOG}"
-exec > "${SOURCE_STATUS_LOG}" 2>&1
 
 require_tool() {
     local tool="$1"

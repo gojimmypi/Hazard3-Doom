@@ -94,7 +94,13 @@ jobs:
           python3 --version
 
       - name: Initialize required submodules
-        run: ./scripts/setup-submodules.sh
+        run: |
+          # refresh submodules and show branch status in build/source_status.log
+          ./scripts/setup-submodules.sh
+          ./scripts/hazard3-doom-source-status.sh
+
+          # Hazard3 also has submodules that may be interesting, but not directly related
+          ./scripts/hazard3-submodule.sh status
 
       - name: Build FPGA, monitor, and Doom image
         env:
@@ -116,11 +122,14 @@ jobs:
           name: ${{ matrix.board }}-${{ github.sha }}
           path: |
             ${{ matrix.bitstream }}
+            build/source_status.log
             build/hazard3-boot-monitor.elf
             build/hazard3-boot-monitor.map
             build/doom-image/hazard3-doom.elf
             build/doom-image/hazard3-doom.map
             build/doom-image/hazard3-doom.h3d
+            build/hazard3-boot-monitor.bin
+            third_party/Hazard3/example_soc/soc/hazard3-boot-monitor.hex
             third_party/Hazard3/example_soc/synth/synth.log
             third_party/Hazard3/example_soc/synth/pnr.log
           if-no-files-found: warn
