@@ -115,7 +115,7 @@ mkdir -p "${SDCARD_DIR}"
 cp "${DOOM_OUTPUT}" "${SDCARD_DIR}/DOOM.H3D"
 if [[ -n "${HAZARD3_DOOM_WAD:-}" ]]; then
     require_file "${HAZARD3_DOOM_WAD}"
-    cp "${HAZARD3_DOOM_WAD}" "${SDCARD_DIR}/DOOM1.WAD"
+    cp "${HAZARD3_DOOM_WAD}" "${SDCARD_DIR}/DOOM.WAD"
 fi
 
 printf '\nULX3S 85F Doom build complete.\n'
