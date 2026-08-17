@@ -38,23 +38,31 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install script checks
+        id: install_script_checks
+        continue-on-error: true
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends shellcheck
 
+      # These checks are independent. Record each result instead of stopping
+      # at the first failure, then fail the job once all checks have run.
       - name: Check shell scripts
+        id: shellcheck
+        continue-on-error: true
         shell: bash
         run: |
           mapfile -d '' scripts < <(
               git ls-files -z -- 'scripts/*.sh' 'doom/*.sh'
           )
           if (( ${#scripts[@]} == 0 )); then
-              echo "No shell scripts found." >&2
+              echo "::error::No shell scripts found."
               exit 1
           fi
           shellcheck -x "${scripts[@]}"
 
       - name: Check executable permissions
+        id: executable_permissions
+        continue-on-error: true
         shell: bash
         run: |
           status=0
@@ -67,14 +75,47 @@ jobs:
           exit "${status}"
 
       - name: Check Python syntax
+        id: python_syntax
+        continue-on-error: true
         run: python -m compileall -q doom tests
 
       - name: Run host-tool tests
+        id: host_tool_tests
+        continue-on-error: true
         run: python -m unittest discover -s tests -v
+
+      - name: Report quality check failures
+        if: always()
+        shell: bash
+        env:
+          INSTALL_SCRIPT_CHECKS_OUTCOME: ${{ steps.install_script_checks.outcome }}
+          SHELLCHECK_OUTCOME: ${{ steps.shellcheck.outcome }}
+          EXECUTABLE_PERMISSIONS_OUTCOME: ${{ steps.executable_permissions.outcome }}
+          PYTHON_SYNTAX_OUTCOME: ${{ steps.python_syntax.outcome }}
+          HOST_TOOL_TESTS_OUTCOME: ${{ steps.host_tool_tests.outcome }}
+        run: |
+          status=0
+
+          report_failure() {
+              local name="$1"
+              local outcome="$2"
+
+              if [[ "${outcome}" != "success" ]]; then
+                  echo "::error::${name} failed (outcome: ${outcome})"
+                  status=1
+              fi
+          }
+
+          report_failure "Script-check dependency installation" "${INSTALL_SCRIPT_CHECKS_OUTCOME}"
+          report_failure "ShellCheck" "${SHELLCHECK_OUTCOME}"
+          report_failure "Executable permission check" "${EXECUTABLE_PERMISSIONS_OUTCOME}"
+          report_failure "Python syntax check" "${PYTHON_SYNTAX_OUTCOME}"
+          report_failure "Host-tool tests" "${HOST_TOOL_TESTS_OUTCOME}"
+
+          exit "${status}"
 
   visual-studio-windows:
     name: Visual Studio native Windows validation
-    needs: quality
     runs-on: windows-2022
     timeout-minutes: 10
 
@@ -89,6 +130,8 @@ jobs:
       # the native project/settings contract, then ask the installed Microsoft
       # build system to load and evaluate both project configurations.
       - name: Validate native Windows Visual Studio project metadata
+        id: native_metadata
+        continue-on-error: true
         shell: pwsh
         run: .\.github\scripts\check-windows-visualgdb.ps1
 
@@ -116,6 +159,7 @@ jobs:
           # windows-2022 provides. /pp only loads/evaluates the project; use the
           # runner's v143 toolset for that evaluation. The metadata validator
           # above independently verifies the toolset declared by the project.
+          $status = 0
           foreach ($configuration in @("Debug", "Release")) {
               $output = Join-Path $env:RUNNER_TEMP "Hazard3-Doom-$configuration.preprocessed.xml"
 
@@ -128,19 +172,36 @@ jobs:
                   /p:PlatformToolset=v143
 
               if ($LASTEXITCODE -ne 0) {
-                  throw "MSBuild failed to evaluate the native $configuration project configuration."
+                  Write-Host "::error::MSBuild failed to evaluate the native $configuration project configuration."
+                  $status = 1
+                  continue
               }
               if (-not (Test-Path -LiteralPath $output -PathType Leaf)) {
-                  throw "MSBuild did not create the preprocessed $configuration project."
+                  Write-Host "::error::MSBuild did not create the preprocessed $configuration project."
+                  $status = 1
+                  continue
               }
               if ((Get-Item -LiteralPath $output).Length -eq 0) {
-                  throw "MSBuild created an empty preprocessed $configuration project."
+                  Write-Host "::error::MSBuild created an empty preprocessed $configuration project."
+                  $status = 1
               }
+          }
+
+          exit $status
+
+      - name: Report native Windows validation failures
+        if: always()
+        shell: pwsh
+        env:
+          NATIVE_METADATA_OUTCOME: ${{ steps.native_metadata.outcome }}
+        run: |
+          if ($env:NATIVE_METADATA_OUTCOME -ne 'success') {
+              Write-Host "::error::Native Windows Visual Studio metadata validation failed."
+              exit 1
           }
 
   visual-studio-wsl:
     name: Visual Studio WSL build
-    needs: quality
     runs-on: windows-2022
     timeout-minutes: 30
     env:
@@ -158,6 +219,8 @@ jobs:
           persist-credentials: false
 
       - name: Validate WSL Visual Studio project metadata
+        id: wsl_metadata
+        continue-on-error: true
         shell: pwsh
         run: .\.github\scripts\check-wsl-visualgdb.ps1
 
@@ -219,31 +282,43 @@ jobs:
       - name: Show WSL and RISC-V toolchain versions
         shell: pwsh
         run: |
+          $status = 0
+
           wsl.exe -d $env:WSL_DISTRO -- bash -lc 'uname -a'
           if ($LASTEXITCODE -ne 0) {
-              throw "Failed to run uname inside WSL."
+              Write-Host "::error::Failed to run uname inside WSL."
+              $status = 1
           }
 
           wsl.exe -d $env:WSL_DISTRO -- bash -lc 'printf "TOOLCHAIN_PREFIX=%s\n" "${TOOLCHAIN_PREFIX}"'
           if ($LASTEXITCODE -ne 0) {
-              throw "TOOLCHAIN_PREFIX was not available inside WSL."
+              Write-Host "::error::TOOLCHAIN_PREFIX was not available inside WSL."
+              $status = 1
           }
 
           wsl.exe -d $env:WSL_DISTRO -- riscv64-unknown-elf-gcc --version
           if ($LASTEXITCODE -ne 0) {
-              throw "RISC-V GCC was not available inside WSL."
+              Write-Host "::error::RISC-V GCC was not available inside WSL."
+              $status = 1
           }
 
           wsl.exe -d $env:WSL_DISTRO -- bash -lc 'printf "int x;\n" | riscv64-unknown-elf-gcc -march=rv32imc_zicsr_zifencei_zba_zbb_zbs -mabi=ilp32 -x c -c -o /tmp/hazard3-isa-probe.o -'
           if ($LASTEXITCODE -ne 0) {
-              throw "WSL RISC-V GCC does not support the Hazard3 ISA flags."
+              Write-Host "::error::WSL RISC-V GCC does not support the Hazard3 ISA flags."
+              $status = 1
           }
 
+          exit $status
+
       - name: Build through the Visual Studio WSL bridge
+        id: wsl_bridge_build
+        continue-on-error: true
         shell: cmd
         run: call VisualGDB\build-wsl.cmd build
 
       - name: Verify WSL build output
+        id: wsl_bridge_build_verify
+        continue-on-error: true
         shell: pwsh
         run: |
           $elf = Join-Path $env:GITHUB_WORKSPACE "build\hazard3-test.elf"
@@ -256,26 +331,37 @@ jobs:
           Get-Item -LiteralPath $elf | Format-List FullName, Length, LastWriteTimeUtc
 
       - name: Clean through the Visual Studio WSL bridge
+        id: wsl_bridge_clean
+        continue-on-error: true
         shell: cmd
         run: call VisualGDB\build-wsl.cmd clean
 
       - name: Verify WSL clean output
+        id: wsl_bridge_clean_verify
+        continue-on-error: true
         shell: pwsh
         run: |
+          $status = 0
           foreach ($path in @(
               "build\hazard3-test.elf",
               "build\hazard3-test.map"
           )) {
               if (Test-Path -LiteralPath $path) {
-                  throw "WSL clean left generated output behind: $path"
+                  Write-Host "::error::WSL clean left generated output behind: $path"
+                  $status = 1
               }
           }
+          exit $status
 
       - name: Rebuild through the Visual Studio WSL bridge
+        id: wsl_bridge_rebuild
+        continue-on-error: true
         shell: cmd
         run: call VisualGDB\build-wsl.cmd rebuild
 
       - name: Verify WSL rebuild output
+        id: wsl_bridge_rebuild_verify
+        continue-on-error: true
         shell: pwsh
         run: |
           Push-Location $env:GITHUB_WORKSPACE
@@ -290,9 +376,40 @@ jobs:
               Pop-Location
           }
 
+      - name: Report WSL validation failures
+        if: always()
+        shell: pwsh
+        env:
+          WSL_METADATA_OUTCOME: ${{ steps.wsl_metadata.outcome }}
+          WSL_BRIDGE_BUILD_OUTCOME: ${{ steps.wsl_bridge_build.outcome }}
+          WSL_BRIDGE_BUILD_VERIFY_OUTCOME: ${{ steps.wsl_bridge_build_verify.outcome }}
+          WSL_BRIDGE_CLEAN_OUTCOME: ${{ steps.wsl_bridge_clean.outcome }}
+          WSL_BRIDGE_CLEAN_VERIFY_OUTCOME: ${{ steps.wsl_bridge_clean_verify.outcome }}
+          WSL_BRIDGE_REBUILD_OUTCOME: ${{ steps.wsl_bridge_rebuild.outcome }}
+          WSL_BRIDGE_REBUILD_VERIFY_OUTCOME: ${{ steps.wsl_bridge_rebuild_verify.outcome }}
+        run: |
+          $status = 0
+          $checks = @(
+              @('WSL Visual Studio metadata validation', $env:WSL_METADATA_OUTCOME),
+              @('WSL bridge build', $env:WSL_BRIDGE_BUILD_OUTCOME),
+              @('WSL bridge build output validation', $env:WSL_BRIDGE_BUILD_VERIFY_OUTCOME),
+              @('WSL bridge clean', $env:WSL_BRIDGE_CLEAN_OUTCOME),
+              @('WSL bridge clean output validation', $env:WSL_BRIDGE_CLEAN_VERIFY_OUTCOME),
+              @('WSL bridge rebuild', $env:WSL_BRIDGE_REBUILD_OUTCOME),
+              @('WSL bridge rebuild output validation', $env:WSL_BRIDGE_REBUILD_VERIFY_OUTCOME)
+          )
+
+          foreach ($check in $checks) {
+              if ($check[1] -ne 'success') {
+                  Write-Host "::error::$($check[0]) failed (outcome: $($check[1]))."
+                  $status = 1
+              }
+          }
+
+          exit $status
+
   windows-cli-builds:
     name: Windows command-line build paths
-    needs: quality
     runs-on: windows-2022
     timeout-minutes: 45
 
@@ -356,25 +473,31 @@ jobs:
           Add-Content -LiteralPath $env:GITHUB_PATH -Value $toolchainBin
 
       - name: "CMD: Build monitor"
+        id: cmd_build_monitor
+        continue-on-error: true
         shell: cmd
         run: call scripts\build-xpack.cmd rebuild 64m 50000000
 
       - name: "CMD: Validate monitor"
+        id: cmd_validate_monitor
+        continue-on-error: true
         shell: cmd
         run: |
+          set "STATUS=0"
           if not exist build\hazard3-test.elf (
-              echo ERROR: Native CMD build did not create build\hazard3-test.elf
-              exit /b 1
+              echo ::error::Native CMD build did not create build\hazard3-test.elf
+              set "STATUS=1"
           )
           if not exist build\hazard3-test.map (
-              echo ERROR: Native CMD build did not create build\hazard3-test.map
-              exit /b 1
+              echo ::error::Native CMD build did not create build\hazard3-test.map
+              set "STATUS=1"
           )
-          for %%F in (build\hazard3-test.elf build\hazard3-test.map) do if %%~zF EQU 0 (
-              echo ERROR: Native CMD build created an empty file: %%F
-              exit /b 1
+          for %%F in (build\hazard3-test.elf build\hazard3-test.map) do if exist %%F if %%~zF EQU 0 (
+              echo ::error::Native CMD build created an empty file: %%F
+              set "STATUS=1"
           )
-          bin\riscv-gcc\bin\riscv-none-elf-size.exe build\hazard3-test.elf
+          if exist build\hazard3-test.elf bin\riscv-gcc\bin\riscv-none-elf-size.exe build\hazard3-test.elf
+          exit /b %STATUS%
 
       - name: "Git Bash: Show tool versions"
         shell: bash
@@ -405,40 +528,91 @@ jobs:
           fi
 
       - name: "Git Bash: Build monitor configurations"
+        id: bash_monitor_configs
+        continue-on-error: true
         shell: bash
         run: |
+          status=0
           for profile in 64m 32m; do
               for clock_hz in 50000000 25000000; do
                   build_dir="build/ci/monitor-${profile}-${clock_hz}"
-                  HAZARD3_BUILD_DIR="${build_dir}" \
-                  HAZARD3_MEMORY_PROFILE="${profile}" \
-                  HAZARD3_SYS_CLK_HZ="${clock_hz}" \
-                      ./scripts/build.sh
-
                   elf="${build_dir}/hazard3-test.elf"
-                  test -s "${elf}"
-                  riscv-none-elf-readelf --file-header "${elf}"
-                  riscv-none-elf-size "${elf}"
+                  label="monitor profile=${profile} clock=${clock_hz}"
+
+                  echo "::group::${label}"
+                  if ! HAZARD3_BUILD_DIR="${build_dir}" \
+                      HAZARD3_MEMORY_PROFILE="${profile}" \
+                      HAZARD3_SYS_CLK_HZ="${clock_hz}" \
+                          ./scripts/build.sh; then
+                      echo "::error::Build failed: ${label}"
+                      status=1
+                      echo "::endgroup::"
+                      continue
+                  fi
+
+                  if [[ ! -s "${elf}" ]]; then
+                      echo "::error file=${elf}::Missing or empty ELF: ${label}"
+                      status=1
+                      echo "::endgroup::"
+                      continue
+                  fi
+                  if ! riscv-none-elf-readelf --file-header "${elf}"; then
+                      echo "::error file=${elf}::readelf failed: ${label}"
+                      status=1
+                  fi
+                  if ! riscv-none-elf-size "${elf}"; then
+                      echo "::error file=${elf}::size failed: ${label}"
+                      status=1
+                  fi
+                  echo "::endgroup::"
               done
           done
+          exit "${status}"
 
       - name: "Git Bash: Build Doom image configurations"
+        id: bash_doom_configs
+        continue-on-error: true
         shell: bash
         run: |
+          status=0
           for profile in 64m 32m; do
               build_dir="build/ci/doom-${profile}"
-              HAZARD3_DOOM_BUILD_DIR="${build_dir}" \
-              HAZARD3_MEMORY_PROFILE="${profile}" \
-                  ./doom/build-doom-image.sh
-
               elf="${build_dir}/hazard3-doom.elf"
               image="${build_dir}/hazard3-doom.h3d"
-              test -s "${elf}"
-              test -s "${image}"
-              riscv-none-elf-readelf --file-header "${elf}"
-              riscv-none-elf-size "${elf}"
+              label="Doom profile=${profile}"
 
-              python3 - "${image}" <<'PY'
+              echo "::group::${label}"
+              if ! HAZARD3_DOOM_BUILD_DIR="${build_dir}" \
+                  HAZARD3_MEMORY_PROFILE="${profile}" \
+                      ./doom/build-doom-image.sh; then
+                  echo "::error::Build failed: ${label}"
+                  status=1
+                  echo "::endgroup::"
+                  continue
+              fi
+
+              if [[ ! -s "${elf}" ]]; then
+                  echo "::error file=${elf}::Missing or empty ELF: ${label}"
+                  status=1
+              else
+                  if ! riscv-none-elf-readelf --file-header "${elf}"; then
+                      echo "::error file=${elf}::readelf failed: ${label}"
+                      status=1
+                  fi
+                  if ! riscv-none-elf-size "${elf}"; then
+                      echo "::error file=${elf}::size failed: ${label}"
+                      status=1
+                  fi
+              fi
+
+              if [[ ! -s "${image}" ]]; then
+                  echo "::error file=${image}::Missing or empty H3D image: ${label}"
+                  status=1
+                  echo "::endgroup::"
+                  continue
+              fi
+
+              if ! python3 - "${image}" <<'PY'
           import pathlib
           import struct
           import sys
@@ -464,9 +638,17 @@ jobs:
               f"CRC32=0x{words[9]:08x}"
           )
           PY
+              then
+                  echo "::error file=${image}::H3D package validation failed: ${label}"
+                  status=1
+              fi
+              echo "::endgroup::"
           done
+          exit "${status}"
 
       - name: "Git Bash: Run Doom object-size probe"
+        id: doom_size_probe
+        continue-on-error: true
         shell: bash
         run: |
           HAZARD3_SIZE_BUILD_DIR=build/ci/doom-size-probe \
@@ -474,15 +656,85 @@ jobs:
               ./doom/build-size-probe.sh
 
       - name: "Git Bash: Verify builds did not modify submodules"
+        id: submodule_cleanliness
+        continue-on-error: true
         shell: bash
         run: |
+          status=0
           for repository in third_party/doomgeneric third_party/Hazard3; do
               changes="$(git -C "${repository}" status --porcelain --untracked-files=all)"
               if [[ -n "${changes}" ]]; then
-                  printf 'Unexpected changes in %s:\n%s\n' "${repository}" "${changes}" >&2
-                  exit 1
+                  printf '::error::Unexpected changes in %s:\n%s\n' "${repository}" "${changes}"
+                  status=1
               fi
           done
+          exit "${status}"
+
+      - name: "Git Bash: Write build artifact README"
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p build/ci
+          cat > build/ci/README.md <<'EOF'
+          # Hazard3-Doom CI build artifacts
+
+          These files are software build products from the Git Bash CI matrix.
+          They are not FPGA bitstreams. Board compatibility is determined by
+          the SDRAM memory profile and, for the resident monitor, system clock.
+
+          ## Target board profiles
+
+          | Board | SDRAM profile | Monitor clock |
+          |---|---:|---:|
+          | ULX3S 85F | `64m` | 50 MHz |
+          | ULX4M-LD 85F | `64m` | 25 MHz* |
+          | ULX4M-LS 85F | `32m` | 50 MHz |
+
+          * The repository's monitor build instructions currently use 25 MHz
+            for ULX4M-LD. The board-profile summary elsewhere in the README
+            lists 50 MHz for ULX4M-LD; this CI artifact README follows the
+            explicit monitor build command and does not attempt to resolve that
+            documentation discrepancy.
+
+          ## Directory contents
+
+          | Directory | Contents | Intended target |
+          |---|---|---|
+          | `doom-64m/` | Doom ELF, map, and packaged H3D image using the 64 MiB memory map | ULX3S 85F and ULX4M-LD 85F |
+          | `doom-32m/` | Doom ELF, map, and packaged H3D image using the 32 MiB memory map | ULX4M-LS 85F |
+          | `monitor-64m-50000000/` | Resident monitor built for 64 MiB SDRAM at 50 MHz | ULX3S 85F |
+          | `monitor-64m-25000000/` | Resident monitor built for 64 MiB SDRAM at 25 MHz | ULX4M-LD 85F per the explicit monitor build instructions |
+          | `monitor-32m-50000000/` | Resident monitor built for 32 MiB SDRAM at 50 MHz | ULX4M-LS 85F |
+          | `monitor-32m-25000000/` | Resident monitor built for 32 MiB SDRAM at 25 MHz | CI compatibility build; no documented board target |
+
+          ## ULX3S files
+
+          For ULX3S 85F, use the `64m` software profile and 50 MHz monitor:
+
+          - `doom-64m/hazard3-doom.h3d`
+          - `doom-64m/hazard3-doom.elf` and `.map` for debugging/inspection
+          - `monitor-64m-50000000/hazard3-test.elf`
+          - `monitor-64m-50000000/hazard3-test.map`
+
+          The complete ULX3S board build, including the FPGA bitstream, is made
+          separately by `./scripts/build-ulx3s-doom.sh`. Its FPGA output is:
+
+          `build/ulx3s/fpga_ulx3s.bit`
+
+          That bitstream is not included in this `windows-bash-builds-*` CI
+          artifact unless the workflow is separately changed to upload it.
+
+          ## File types
+
+          - `hazard3-test.elf`: resident monitor firmware for JTAG/debug loading.
+          - `hazard3-test.map`: linker map for the resident monitor.
+          - `hazard3-doom.elf`: linked Doom executable for debugging/inspection.
+          - `hazard3-doom.map`: linker map for the Doom executable.
+          - `hazard3-doom.h3d`: packaged Doom image consumed by the Hazard3 monitor/loader.
+
+          The monitor, Doom image, and WAD uploader must use the same SDRAM
+          memory profile (`64m` or `32m`).
+          EOF
 
       - name: Upload Git Bash build artifacts
         if: always()
@@ -490,9 +742,42 @@ jobs:
         with:
           name: windows-bash-builds-${{ github.sha }}
           path: |
+            build/ci/README.md
             build/ci/**/*.elf
             build/ci/**/*.map
             build/ci/**/*.h3d
           if-no-files-found: warn
           retention-days: 7
           compression-level: 0
+
+      - name: Report Windows command-line build failures
+        if: always()
+        shell: bash
+        env:
+          CMD_BUILD_MONITOR_OUTCOME: ${{ steps.cmd_build_monitor.outcome }}
+          CMD_VALIDATE_MONITOR_OUTCOME: ${{ steps.cmd_validate_monitor.outcome }}
+          BASH_MONITOR_CONFIGS_OUTCOME: ${{ steps.bash_monitor_configs.outcome }}
+          BASH_DOOM_CONFIGS_OUTCOME: ${{ steps.bash_doom_configs.outcome }}
+          DOOM_SIZE_PROBE_OUTCOME: ${{ steps.doom_size_probe.outcome }}
+          SUBMODULE_CLEANLINESS_OUTCOME: ${{ steps.submodule_cleanliness.outcome }}
+        run: |
+          status=0
+
+          report_failure() {
+              local name="$1"
+              local outcome="$2"
+
+              if [[ "${outcome}" != "success" ]]; then
+                  echo "::error::${name} failed (outcome: ${outcome})"
+                  status=1
+              fi
+          }
+
+          report_failure "CMD monitor build" "${CMD_BUILD_MONITOR_OUTCOME}"
+          report_failure "CMD monitor validation" "${CMD_VALIDATE_MONITOR_OUTCOME}"
+          report_failure "Git Bash monitor configuration builds" "${BASH_MONITOR_CONFIGS_OUTCOME}"
+          report_failure "Git Bash Doom configuration builds" "${BASH_DOOM_CONFIGS_OUTCOME}"
+          report_failure "Doom object-size probe" "${DOOM_SIZE_PROBE_OUTCOME}"
+          report_failure "Submodule cleanliness check" "${SUBMODULE_CLEANLINESS_OUTCOME}"
+
+          exit "${status}"
