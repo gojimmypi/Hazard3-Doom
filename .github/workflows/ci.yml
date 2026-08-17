@@ -321,7 +321,7 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: |
-          $elf = Join-Path $env:GITHUB_WORKSPACE "build\hazard3-test.elf"
+          $elf = Join-Path $env:GITHUB_WORKSPACE "build\hazard3-boot-monitor.elf"
           if (-not (Test-Path -LiteralPath $elf -PathType Leaf)) {
               throw "WSL build did not create $elf"
           }
@@ -343,8 +343,8 @@ jobs:
         run: |
           $status = 0
           foreach ($path in @(
-              "build\hazard3-test.elf",
-              "build\hazard3-test.map"
+              "build\hazard3-boot-monitor.elf",
+              "build\hazard3-boot-monitor.map"
           )) {
               if (Test-Path -LiteralPath $path) {
                   Write-Host "::error::WSL clean left generated output behind: $path"
@@ -367,7 +367,7 @@ jobs:
           Push-Location $env:GITHUB_WORKSPACE
           try {
               wsl.exe -d $env:WSL_DISTRO -- bash -c `
-                  'test -s build/hazard3-test.elf && test -s build/hazard3-test.map && riscv64-unknown-elf-readelf --file-header build/hazard3-test.elf && riscv64-unknown-elf-size build/hazard3-test.elf'
+                  'test -s build/hazard3-boot-monitor.elf && test -s build/hazard3-boot-monitor.map && riscv64-unknown-elf-readelf --file-header build/hazard3-boot-monitor.elf && riscv64-unknown-elf-size build/hazard3-boot-monitor.elf'
               if ($LASTEXITCODE -ne 0) {
                   throw "WSL rebuild output validation failed."
               }
@@ -484,19 +484,19 @@ jobs:
         shell: cmd
         run: |
           set "STATUS=0"
-          if not exist build\hazard3-test.elf (
-              echo ::error::Native CMD build did not create build\hazard3-test.elf
+          if not exist build\hazard3-boot-monitor.elf (
+              echo ::error::Native CMD build did not create build\hazard3-boot-monitor.elf
               set "STATUS=1"
           )
-          if not exist build\hazard3-test.map (
-              echo ::error::Native CMD build did not create build\hazard3-test.map
+          if not exist build\hazard3-boot-monitor.map (
+              echo ::error::Native CMD build did not create build\hazard3-boot-monitor.map
               set "STATUS=1"
           )
-          for %%F in (build\hazard3-test.elf build\hazard3-test.map) do if exist %%F if %%~zF EQU 0 (
+          for %%F in (build\hazard3-boot-monitor.elf build\hazard3-boot-monitor.map) do if exist %%F if %%~zF EQU 0 (
               echo ::error::Native CMD build created an empty file: %%F
               set "STATUS=1"
           )
-          if exist build\hazard3-test.elf bin\riscv-gcc\bin\riscv-none-elf-size.exe build\hazard3-test.elf
+          if exist build\hazard3-boot-monitor.elf bin\riscv-gcc\bin\riscv-none-elf-size.exe build\hazard3-boot-monitor.elf
           exit /b %STATUS%
 
       - name: "Git Bash: Show tool versions"
@@ -536,7 +536,7 @@ jobs:
           for profile in 64m 32m; do
               for clock_hz in 50000000 25000000; do
                   build_dir="build/ci/monitor-${profile}-${clock_hz}"
-                  elf="${build_dir}/hazard3-test.elf"
+                  elf="${build_dir}/hazard3-boot-monitor.elf"
                   label="monitor profile=${profile} clock=${clock_hz}"
 
                   echo "::group::${label}"
@@ -713,8 +713,8 @@ jobs:
 
           - `doom-64m/hazard3-doom.h3d`
           - `doom-64m/hazard3-doom.elf` and `.map` for debugging/inspection
-          - `monitor-64m-50000000/hazard3-test.elf`
-          - `monitor-64m-50000000/hazard3-test.map`
+          - `monitor-64m-50000000/hazard3-boot-monitor.elf`
+          - `monitor-64m-50000000/hazard3-boot-monitor.map`
 
           The complete ULX3S board build, including the FPGA bitstream, is made
           separately by `./scripts/build-ulx3s-doom.sh`. Its FPGA output is:
@@ -726,8 +726,8 @@ jobs:
 
           ## File types
 
-          - `hazard3-test.elf`: resident monitor firmware for JTAG/debug loading.
-          - `hazard3-test.map`: linker map for the resident monitor.
+          - `hazard3-boot-monitor.elf`: resident monitor firmware for JTAG/debug loading.
+          - `hazard3-boot-monitor.map`: linker map for the resident monitor.
           - `hazard3-doom.elf`: linked Doom executable for debugging/inspection.
           - `hazard3-doom.map`: linker map for the Doom executable.
           - `hazard3-doom.h3d`: packaged Doom image consumed by the Hazard3 monitor/loader.

@@ -106,7 +106,7 @@ jobs:
           ${{ matrix.command }}
 
           test -s "${{ matrix.bitstream }}"
-          test -s build/hazard3-test.elf
+          test -s build/hazard3-boot-monitor.elf
           test -s build/doom-image/hazard3-doom.h3d
 
       - name: Upload build artifacts and timing logs
@@ -116,8 +116,8 @@ jobs:
           name: ${{ matrix.board }}-${{ github.sha }}
           path: |
             ${{ matrix.bitstream }}
-            build/hazard3-test.elf
-            build/hazard3-test.map
+            build/hazard3-boot-monitor.elf
+            build/hazard3-boot-monitor.map
             build/doom-image/hazard3-doom.elf
             build/doom-image/hazard3-doom.map
             build/doom-image/hazard3-doom.h3d
