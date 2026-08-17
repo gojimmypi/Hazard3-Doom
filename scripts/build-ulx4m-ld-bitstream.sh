@@ -20,7 +20,10 @@ BITSTREAM_OUTPUT="${HAZARD3_SYNTH}/fpga_ulx4m_ld.bit"
 ALLOW_TIMING_FAILURE="${ALLOW_TIMING_FAILURE:-0}"
 FORCE_BITSTREAM_REBUILD="${FORCE_BITSTREAM_REBUILD:-0}"
 
-NEXTPNR_SEED="${NEXTPNR_SEED:-56}"
+NEXTPNR_SEED="${NEXTPNR_SEED:-178}"
+
+# See scripts/sweep.sh results:
+#
 # |   Seed |          `clk_sys` |
 # | -----: | -----------------: |
 # | **56** | **51.92 MHz PASS** |
