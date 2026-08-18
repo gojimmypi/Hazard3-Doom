@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "doom/hazard3_sao.h"
+#include "i2cdriver_hdmi.h"
 
 #define SAO_CONSOLE_LINE_BYTES 64u
 #define SAO_SCAN_CAPACITY      112u
@@ -168,12 +169,14 @@ static void print_usage(void)
 {
     console_puts("Usage:\r\n");
     console_puts("  sao info\r\n");
+    console_puts("  sao gui\r\n");
     console_puts("  sao recover\r\n");
     console_puts("  sao scan\r\n");
     console_puts("  sao probe <addr>\r\n");
     console_puts("  sao read <addr> <reg>\r\n");
     console_puts("  sao write <addr> <reg> <value>\r\n");
     console_puts("  i2c scan\r\n");
+    console_puts("  i2c gui\r\n");
     console_puts("Operands are hexadecimal; 0x prefix is optional.\r\n");
 }
 
@@ -192,6 +195,13 @@ static void command_info(void)
     if (id != HAZARD3_SAO_BRIDGE_ID) {
         console_puts("WARNING: expected bridge ID 0x53414F31 (SAO1).\r\n");
     }
+}
+
+static void command_gui(void)
+{
+    console_puts("Starting I2CDriver HDMI...\r\n");
+    hazard3_i2cdriver_hdmi_run();
+    console_puts("I2CDriver HDMI returned to monitor.\r\n");
 }
 
 static void command_scan(void)
@@ -220,6 +230,10 @@ static int execute_sao(size_t argc, char* argv[])
     uint8_t value;
     int rc;
 
+    if (argc == 2u && string_equal_ci(argv[1], "gui")) {
+        command_gui();
+        return 1;
+    }
     if (argc == 2u && string_equal_ci(argv[1], "info")) {
         command_info();
         return 1;
@@ -300,10 +314,15 @@ static void execute_line(char* line)
     char* argv[5];
     size_t argc = tokenize(line, argv, sizeof(argv) / sizeof(argv[0]));
 
-    if (argc == 2u && string_equal_ci(argv[0], "i2c") &&
-        string_equal_ci(argv[1], "scan")) {
-        command_scan();
-        return;
+    if (argc == 2u && string_equal_ci(argv[0], "i2c")) {
+        if (string_equal_ci(argv[1], "scan")) {
+            command_scan();
+            return;
+        }
+        if (string_equal_ci(argv[1], "gui")) {
+            command_gui();
+            return;
+        }
     }
     if (argc <= sizeof(argv) / sizeof(argv[0]) && argc != 0u &&
         string_equal_ci(argv[0], "sao") && execute_sao(argc, argv)) {
@@ -332,12 +351,14 @@ void hazard3_sao_console_init(
 void hazard3_sao_console_print_help(void)
 {
     console_puts("  sao info                 bridge ID/version/status\r\n");
+    console_puts("  sao gui                  I2CDriver-style HDMI interface\r\n");
     console_puts("  sao recover              I2C bus recovery\r\n");
     console_puts("  sao scan                 scan I2C addresses 0x08..0x77\r\n");
     console_puts("  sao probe <addr>         probe one 7-bit I2C address\r\n");
     console_puts("  sao read <addr> <reg>    read one 8-bit register\r\n");
     console_puts("  sao write <a> <r> <v>    write one 8-bit register\r\n");
     console_puts("  i2c scan                 alias for sao scan\r\n");
+    console_puts("  i2c gui                  alias for sao gui\r\n");
 }
 
 int hazard3_sao_console_feed(uint8_t received)

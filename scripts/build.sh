@@ -82,6 +82,8 @@ require_file "${SRC_DIR}/start.S"
 require_file "${SRC_DIR}/main.c"
 require_file "${SRC_DIR}/sao_console.c"
 require_file "${SRC_DIR}/sao_console.h"
+require_file "${SRC_DIR}/i2cdriver_hdmi.c"
+require_file "${SRC_DIR}/i2cdriver_hdmi.h"
 require_file "${SRC_DIR}/sd_spi.c"
 require_file "${SRC_DIR}/sd_spi.h"
 require_file "${SRC_DIR}/fat_ro.c"
@@ -128,6 +130,7 @@ printf 'Monitor output: %s
     "${SRC_DIR}/fat_ro.c" \
     "${SRC_DIR}/sd_boot.c" \
     "${SRC_DIR}/sao_console.c" \
+    "${SRC_DIR}/i2cdriver_hdmi.c" \
     "${DOOM_DIR}/hazard3_sao.c" \
     "${DOOM_DIR}/doom_image_loader.c" \
     "${DOOM_DIR}/doom_wad_loader.c" \

@@ -12,11 +12,12 @@ Hazard3-Doom combines a resident monitor, a loadable DoomGeneric application, FP
 Start here
 ----------
 
-* :doc:`getting-started/quick-start` — get a board running with the minimum number of steps.
-* :doc:`getting-started/build` — build the FPGA, resident monitor, and Doom image.
-* :doc:`user-guide/sd-card` — configure standalone cold boot from micro-SD.
-* :doc:`user-guide/jtag-debugging` — debug Hazard3 through OpenOCD/GDB or VisualGDB.
-* :doc:`architecture/system` — understand how the FPGA, monitor, SDRAM, HDMI, SD, SAO, and ESP32 pieces fit together.
+* :doc:`getting-started/quick-start` - get a board running with the minimum number of steps.
+* :doc:`getting-started/build` - build the FPGA, resident monitor, and Doom image.
+* :doc:`user-guide/sd-card` - configure standalone cold boot from micro-SD.
+* :doc:`user-guide/i2cdriver` - scan and inspect the SAO I2C bus on HDMI.
+* :doc:`user-guide/jtag-debugging` - debug Hazard3 through OpenOCD/GDB or VisualGDB.
+* :doc:`architecture/system` - understand how the FPGA, monitor, SDRAM, HDMI, SD, SAO, and ESP32 pieces fit together.
 
 .. toctree::
    :maxdepth: 2

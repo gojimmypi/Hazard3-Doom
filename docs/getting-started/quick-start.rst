@@ -93,3 +93,4 @@ Next steps
 * Use :doc:`../user-guide/sd-card` to boot without a PC.
 * Use :doc:`../user-guide/jtag-debugging` for source-level debugging.
 * Use :doc:`../user-guide/sao` for SAO/I2C support.
+* Use :doc:`../user-guide/i2cdriver` for the HDMI I2C scanner/analyzer interface.

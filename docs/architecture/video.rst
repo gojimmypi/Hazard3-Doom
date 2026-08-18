@@ -6,16 +6,16 @@ Doom keeps its native indexed renderer. The project does not require the game to
 Pipeline
 --------
 
-#. Doom renders a 320x200 8-bit indexed frame into internal SRAM.
-#. Software stages a completed frame in the uncached video region.
-#. FPGA logic transfers the frame into the inactive block-RAM video buffer.
-#. The frame buffers swap on vertical blank.
+#. Doom renders a 320x200 8-bit indexed frame into the project screen buffer.
+#. Software writes the completed indexed frame into the inactive internal EBR
+   framebuffer through the direct video register path.
+#. The internal frame buffers swap on vertical blank.
 #. A hardware palette converts the indexed pixels for HDMI scanout.
 
 Output geometry
 ---------------
 
-The documented 1024x600 output repeats each Doom pixel and scanline three times, producing a centered 960x600 image with 32-pixel black borders on the left and right.
+The documented 1024x600 output scales Doom's native 320x200 indexed frame to the full panel. Vertical scaling is exactly 3x (200 to 600 lines), while horizontal scaling is fractional so all 1024 output pixels are used.
 
 Why indexed color?
 ------------------
@@ -30,3 +30,12 @@ The HDMI/video control register block begins at:
 .. code-block:: text
 
    0x4000C000
+
+
+Non-Doom users of the video path
+--------------------------------
+
+The resident monitor can also use the direct indexed EBR path for diagnostics.
+The :doc:`../user-guide/i2cdriver` interface renders its own 320x200 indexed
+screen, writes the inactive internal framebuffer, and requests a vertical-blank
+swap without modifying DoomGeneric.

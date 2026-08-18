@@ -8,4 +8,5 @@ User Guide
    doom
    sd-card
    sao
+   i2cdriver
    jtag-debugging

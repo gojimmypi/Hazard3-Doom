@@ -23,6 +23,19 @@ Core Doom commands
    * - ``c``
      - Print SD/FAT boot status and counters.
 
+SAO / I2C HDMI diagnostics
+--------------------------
+
+The monitor can launch the interactive HDMI I2C diagnostic interface with:
+
+.. code-block:: text
+
+   i2c gui
+
+or ``sao gui``. While the GUI is active, UART keystrokes control the HDMI
+interface. Exit with ``Q``, ``Ctrl-X``, or Esc when no operand prompt is active.
+See :doc:`i2cdriver` for the complete control reference.
+
 Returning from Doom
 -------------------
 

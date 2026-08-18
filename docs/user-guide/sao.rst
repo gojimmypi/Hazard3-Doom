@@ -39,12 +39,29 @@ The resident monitor provides commands including:
 .. code-block:: text
 
    sao info
+   sao gui
    sao recover
    sao scan
    sao probe
    sao read
    sao write
    i2c scan
+   i2c gui
+
+HDMI I2CDriver interface
+------------------------
+
+The resident monitor also provides an interactive I2CDriver-style HDMI tool:
+
+.. code-block:: text
+
+   i2c gui
+
+The GUI provides scanning, probing, register reads/writes, bus recovery,
+100/400-kHz selection, an address heatmap, transaction history, and a logical
+SDA/SCL trace. See :doc:`i2cdriver` for controls, safety notes, and the
+important distinction between an initiated logical trace and true passive bus
+capture.
 
 ESP32 sharing
 -------------

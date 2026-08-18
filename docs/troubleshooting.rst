@@ -27,6 +27,37 @@ SAO scan finds some devices but not others
 
 Not every SAO is necessarily an I2C peripheral. Some devices may use the optional GPIO pins or unusual I2C behavior. Use ``sao info``, ``sao scan``, ``sao probe``, and device-specific documentation before assuming the bridge is faulty.
 
+``i2c gui`` is reported as an unknown command
+-----------------------------------------------
+
+The board is running an older resident monitor. Building a new ELF does not
+replace the firmware already executing in Hazard3. Rebuild and load the monitor
+explicitly:
+
+.. code-block:: bash
+
+   ./scripts/build.sh
+   ./scripts/load-firmware.sh ./build/hazard3-boot-monitor.elf
+
+After loading, monitor help should list both ``sao gui`` and ``i2c gui``.
+
+I2C GUI scan finds a device but logical trace is blank
+------------------------------------------------------
+
+Older revisions of the HDMI GUI cleared the logical trace at the end of
+``S`` scan. Current code retains the probe trace for the last ACKing address.
+Rebuild/reload the current monitor if the heatmap updates but the scan trace
+remains empty. ``P`` on a known address is also a direct check of the logical
+trace renderer.
+
+I2C GUI remains on HDMI after exit
+----------------------------------
+
+This is expected with the current software. Exiting restores UART monitor
+control and the 100-kHz SAO bus rate, but does not reconstruct the frame that
+was visible before the GUI started. Launch Doom or present another monitor
+video frame to replace the last analyzer image.
+
 OpenOCD cannot see a working Hazard3 debug module
 -------------------------------------------------
 
