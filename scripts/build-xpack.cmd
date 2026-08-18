@@ -67,7 +67,6 @@ exit /b 2
 :clock_ok
 call :require_toolchain
 if errorlevel 1 exit /b 1
-
 call :require_file "%SRC_DIR%\start.S"
 if errorlevel 1 exit /b 1
 
@@ -78,6 +77,12 @@ call :require_file "%SRC_DIR%\sao_console.c"
 if errorlevel 1 exit /b 1
 
 call :require_file "%SRC_DIR%\sao_console.h"
+if errorlevel 1 exit /b 1
+
+call :require_file "%SRC_DIR%\i2cdriver_hdmi.c"
+if errorlevel 1 exit /b 1
+
+call :require_file "%SRC_DIR%\i2cdriver_hdmi.h"
 if errorlevel 1 exit /b 1
 
 call :require_file "%SRC_DIR%\sd_spi.c"
@@ -104,7 +109,6 @@ if errorlevel 1 exit /b 1
 
 call :require_file "%DOOM_DIR%\doom_image_loader.c"
 if errorlevel 1 exit /b 1
-
 call :require_file "%DOOM_DIR%\doom_wad_loader.c"
 if errorlevel 1 exit /b 1
 
@@ -165,6 +169,7 @@ if errorlevel 1 (
     "%SRC_DIR%\fat_ro.c" ^
     "%SRC_DIR%\sd_boot.c" ^
     "%SRC_DIR%\sao_console.c" ^
+    "%SRC_DIR%\i2cdriver_hdmi.c" ^
     "%DOOM_DIR%\hazard3_sao.c" ^
     "%DOOM_DIR%\doom_image_loader.c" ^
     "%DOOM_DIR%\doom_wad_loader.c" ^
@@ -234,7 +239,6 @@ if exist "%OUTPUT_MAP%" (
     echo   %OUTPUT_MAP%
     exit /b 1
 )
-
 if exist "%OUTPUT_BIN%" (
     echo ERROR: Could not remove:
     echo   %OUTPUT_BIN%
