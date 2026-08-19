@@ -26,10 +26,16 @@
 #define HAZARD3_SYS_CLK_HZ 50000000u
 #endif
 
-#define UI_WIDTH                 320u
-#define UI_HEIGHT                200u
+/* Logical layout remains 320x200. The optional HDMI test mode scales this
+ * layout into a 400x240 physical source framebuffer. */
+#define UI_WIDTH                 HAZARD3_VIDEO_STANDARD_WIDTH
+#define UI_HEIGHT                HAZARD3_VIDEO_STANDARD_HEIGHT
 #define UI_PIXELS                (UI_WIDTH * UI_HEIGHT)
 #define UI_WORDS                 (UI_PIXELS / 4u)
+#define UI_HIGH_WIDTH            HAZARD3_VIDEO_HIGH_WIDTH
+#define UI_HIGH_HEIGHT           HAZARD3_VIDEO_HIGH_HEIGHT
+#define UI_HIGH_PIXELS           (UI_HIGH_WIDTH * UI_HIGH_HEIGHT)
+#define UI_HIGH_WORDS            (UI_HIGH_PIXELS / 4u)
 #define UI_PRESENT_TIMEOUT_MS    500u
 #define UI_COOL_INTERVAL_MS      80u
 #define UI_HEAT_MAX              72u
@@ -90,8 +96,7 @@ struct ui_event {
     int result;
 };
 
-static volatile uint8_t* const ui_framebuffer =
-    (volatile uint8_t*)(uintptr_t)HAZARD3_DOOM_SCREENBUFFER_BASE;
+static int ui_high_resolution;
 static uint8_t ui_heat[128];
 static struct ui_trace_item ui_trace[UI_TRACE_COUNT];
 static struct ui_event ui_events[UI_LOG_COUNT];
@@ -200,10 +205,51 @@ static uint16_t glyph3x5(char value)
 #undef G
 }
 
+static volatile uint8_t* ui_framebuffer(void)
+{
+    uintptr_t address = ui_high_resolution != 0
+        ? HAZARD3_VIDEO_WORKBUFFER_BASE
+        : HAZARD3_DOOM_SCREENBUFFER_BASE;
+    return (volatile uint8_t*)address;
+}
+
+static size_t ui_physical_words(void)
+{
+    return ui_high_resolution != 0 ? UI_HIGH_WORDS : UI_WORDS;
+}
+
 static void ui_pixel(unsigned int x, unsigned int y, uint8_t color)
 {
-    if (x < UI_WIDTH && y < UI_HEIGHT) {
-        ui_framebuffer[y * UI_WIDTH + x] = color;
+    volatile uint8_t* framebuffer;
+
+    if (x >= UI_WIDTH || y >= UI_HEIGHT) {
+        return;
+    }
+
+    framebuffer = ui_framebuffer();
+    if (ui_high_resolution == 0) {
+        framebuffer[y * UI_WIDTH + x] = color;
+        return;
+    }
+
+    /* Nearest-neighbor expansion of the established 320x200 GUI layout. */
+    {
+        unsigned int x0 =
+            (x * UI_HIGH_WIDTH + UI_WIDTH - 1u) / UI_WIDTH;
+        unsigned int x1 =
+            ((x + 1u) * UI_HIGH_WIDTH + UI_WIDTH - 1u) / UI_WIDTH;
+        unsigned int y0 =
+            (y * UI_HIGH_HEIGHT + UI_HEIGHT - 1u) / UI_HEIGHT;
+        unsigned int y1 =
+            ((y + 1u) * UI_HIGH_HEIGHT + UI_HEIGHT - 1u) / UI_HEIGHT;
+        unsigned int yy;
+        unsigned int xx;
+
+        for (yy = y0; yy < y1; ++yy) {
+            for (xx = x0; xx < x1; ++xx) {
+                framebuffer[yy * UI_HIGH_WIDTH + xx] = color;
+            }
+        }
     }
 }
 
@@ -274,12 +320,13 @@ static void ui_clear(uint8_t color)
 {
     uint32_t packed = (uint32_t)color;
     volatile uint32_t* destination =
-        (volatile uint32_t*)(uintptr_t)HAZARD3_DOOM_SCREENBUFFER_BASE;
+        (volatile uint32_t*)(uintptr_t)ui_framebuffer();
+    size_t word_count = ui_physical_words();
     size_t i;
 
     packed |= packed << 8;
     packed |= packed << 16;
-    for (i = 0u; i < UI_WORDS; ++i) {
+    for (i = 0u; i < word_count; ++i) {
         destination[i] = packed;
     }
 }
@@ -374,7 +421,8 @@ static void video_upload_palette(unsigned int buffer_index)
 static int video_present(void)
 {
     const volatile uint32_t* source =
-        (const volatile uint32_t*)(uintptr_t)HAZARD3_DOOM_SCREENBUFFER_BASE;
+        (const volatile uint32_t*)(uintptr_t)ui_framebuffer();
+    size_t word_count = ui_physical_words();
     uint32_t status;
     uint32_t present_before;
     uint32_t started;
@@ -399,8 +447,9 @@ static int video_present(void)
     ui_back_buffer = (status & HAZARD3_VIDEO_STATUS_INTERNAL_BUFFER) != 0u
         ? 0u : 1u;
 
-    HAZARD3_VIDEO_DIRECT_ADDRESS = ui_back_buffer != 0u ? 0x8000u : 0u;
-    for (i = 0u; i < UI_WORDS; ++i) {
+    HAZARD3_VIDEO_DIRECT_ADDRESS = hazard3_video_direct_halfword_base(
+        ui_back_buffer, ui_high_resolution);
+    for (i = 0u; i < word_count; ++i) {
         HAZARD3_VIDEO_DIRECT_DATA = source[i];
     }
 
@@ -409,6 +458,9 @@ static int video_present(void)
     control = HAZARD3_VIDEO_CONTROL_INDEXED |
               HAZARD3_VIDEO_CONTROL_DIRECT |
               HAZARD3_VIDEO_CONTROL_PRESENT;
+    if (ui_high_resolution != 0) {
+        control |= HAZARD3_VIDEO_CONTROL_HIGH_RES;
+    }
     if (ui_back_buffer != 0u) {
         control |= HAZARD3_VIDEO_CONTROL_BUFFER1;
     }
@@ -713,6 +765,7 @@ static void draw_header(void)
     ui_text(147u, 3u, "SCL", UI_COLOR_GRAY);
     ui_char(163u, 3u, (status & HAZARD3_SAO_STATUS_SCL) != 0u ? '1' : '0', UI_COLOR_GREEN);
     ui_text(173u, 3u, "ACTIVE MASTER", UI_COLOR_CYAN);
+    ui_text(231u, 3u, ui_high_resolution != 0 ? "400X240" : "320X200", UI_COLOR_YELLOW);
     ui_text(3u, 11u, ui_message, ui_last_result == HAZARD3_SAO_OK ? UI_COLOR_GREEN : UI_COLOR_ORANGE);
 }
 
@@ -723,7 +776,7 @@ static void draw_footer(void)
 
     ui_fill_rect(0u, 181u, UI_WIDTH, 19u, UI_COLOR_NAVY);
     if (ui_prompt_mode == PROMPT_NONE) {
-        ui_text(3u, 184u, "S SCAN P PROBE R READ W WRITE X RECOVER 1/4 SPEED C CLEAR Q EXIT", UI_COLOR_WHITE);
+        ui_text(3u, 184u, "S SCAN P PROBE R READ W WRITE X RECOVER 1/4 SPEED H RES C CLEAR Q EXIT", UI_COLOR_WHITE);
         ui_text(3u, 192u, "TRACE IS INITIATED TRAFFIC - PASSIVE CAPTURE NEEDS FPGA FIFO", UI_COLOR_GRAY);
         return;
     }
@@ -966,6 +1019,31 @@ static int handle_prompt_key(uint8_t key)
     return 0;
 }
 
+/* GCC 12.2.0 used by the Hazard3 toolchain can ICE when it turns a bit-11
+ * test into a direct 0x800 mask. Keep this helper out of line and make the
+ * shifted value volatile so GCC must perform the shift before testing bit 0. */
+static __attribute__((noinline)) int video_high_resolution_supported(void)
+{
+    uint32_t status = HAZARD3_VIDEO_STATUS;
+    volatile uint32_t shifted_status = status >> 11u;
+
+    return (shifted_status & 1u) != 0u;
+}
+
+static void toggle_resolution(void)
+{
+    if (ui_high_resolution == 0 && !video_high_resolution_supported()) {
+        set_message("400X240 NOT SUPPORTED BY FPGA", HAZARD3_SAO_ERR_REJECTED);
+        return;
+    }
+
+    ui_high_resolution = ui_high_resolution == 0 ? 1 : 0;
+    ui_palette_uploaded_mask = 0u;
+    set_message(
+        ui_high_resolution != 0 ? "HDMI SOURCE 400X240 TEST" : "HDMI SOURCE 320X200",
+        HAZARD3_SAO_OK);
+}
+
 static int handle_idle_key(uint8_t key)
 {
     key = (uint8_t)ascii_upper((char)key);
@@ -990,6 +1068,9 @@ static int handle_idle_key(uint8_t key)
         return 1;
     case '4':
         set_speed(UI_I2C_400KHZ);
+        return 1;
+    case 'H':
+        toggle_resolution();
         return 1;
     case 'C':
         for (key = 0u; key < 128u; ++key) {
@@ -1023,6 +1104,7 @@ static void initialize_state(void)
     ui_prompt_length = 0u;
     ui_i2c_hz = UI_I2C_100KHZ;
     ui_palette_uploaded_mask = 0u;
+    ui_high_resolution = 0;
     ui_back_buffer = (status & HAZARD3_VIDEO_STATUS_INTERNAL_BUFFER) != 0u ? 0u : 1u;
     ui_last_address = 0xffu;
     ui_last_reg = 0u;
@@ -1049,7 +1131,7 @@ void hazard3_i2cdriver_hdmi_run(void)
 
     initialize_state();
     hazard3_sao_init(HAZARD3_SYS_CLK_HZ, UI_I2C_100KHZ);
-    hazard3_console_puts("I2CDriver HDMI active. S scan, P probe, R read, W write, X recover, 1/4 speed, C clear, Q exit.\r\n");
+    hazard3_console_puts("I2CDriver HDMI active. S scan, P probe, R read, W write, X recover, 1/4 speed, H resolution, C clear, Q exit.\r\n");
     if (!refresh_screen()) {
         hazard3_console_puts("I2CDriver HDMI: initial HDMI presentation failed.\r\n");
         return;
