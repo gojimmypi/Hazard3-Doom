@@ -25,7 +25,6 @@ Included here:
 - [VisualGDB settings](./VisualGDB/) for building monitor ELF and JTAG debugging in Windows;
 - pinned Hazard3 and DoomGeneric submodules in [./third_party/](./third_party/);
 - ULX3S and ULX4M-LD board build wrappers;
-- the Hazard3-specific [DoomGeneric patch](./doom/patches/);
 - prebuilt FPGA bitstreams in [./bin/](./bin/);
 
 Not included here:
@@ -104,8 +103,8 @@ The compatibility command below initializes only DoomGeneric:
 ./scripts/setup-doomgeneric.sh
 ```
 
-Builds keep the DoomGeneric submodule clean. The Hazard3-specific patch is
-applied to a temporary source copy under `build/`.
+Normal builds use the pinned DoomGeneric fork. Development builds may use local
+DoomGeneric changes by setting `HAZARD3_DOOM_ALLOW_DIRTY_DOOMGENERIC=1`.
 
 ## Board profiles
 
@@ -186,7 +185,7 @@ ULX4M-LD:
 
 ```bash
 HAZARD3_MEMORY_PROFILE=64m \
-HAZARD3_SYS_CLK_HZ=25000000 \
+HAZARD3_SYS_CLK_HZ=50000000 \
     ./scripts/build.sh
 ```
 
@@ -355,13 +354,13 @@ The HDMI controller registers remain at `0x4000c000`.
 
 ## Rendering and controls
 
-Doom renders its native 320x200 8-bit indexed screen into internal SRAM. The
-platform copies a completed indexed frame to the uncached staging area, and the
-FPGA transfers it into the inactive block-RAM frame before swapping during
-vertical blank. A hardware palette converts indices to RGB332 during scanout.
+The standard Doom build renders a 320x200 8-bit indexed screen and presents
+completed frames through the direct APB-to-EBR path, swapping the inactive
+block-RAM framebuffer during vertical blank. A hardware palette converts
+indices to RGB332 during scanout.
 
-The 1024x600 output repeats each Doom pixel and line three times, producing a
-centered 960x600 image with 32-pixel black side borders.
+An experimental native 400x240 renderer/source mode is available by setting
+`HAZARD3_DOOM_HDMI_RESOLUTION=400x240`; 320x200 remains the default.
 
 UART controls:
 
