@@ -1624,10 +1624,13 @@ static void console_poll(void)
             break;
 
         case 'h':
-        case 'H':
         case '?':
             console_print_help();
             break;
+
+        case 'H':
+            toggle_resolution();
+            return 1;
 
         case 'm':
         case 'M':

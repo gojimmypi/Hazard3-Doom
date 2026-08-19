@@ -26,8 +26,9 @@
 #define HAZARD3_SYS_CLK_HZ 50000000u
 #endif
 
-/* Logical layout remains 320x200. The optional HDMI test mode scales this
- * layout into a 400x240 physical source framebuffer. */
+/* The compatibility UI uses the original 320x200 layout. When the FPGA
+ * exposes the 400x240 source mode, the GUI is rendered natively at 400x240
+ * with a larger 5x7 font and expanded panels instead of scaling 320x200. */
 #define UI_WIDTH                 HAZARD3_VIDEO_STANDARD_WIDTH
 #define UI_HEIGHT                HAZARD3_VIDEO_STANDARD_HEIGHT
 #define UI_PIXELS                (UI_WIDTH * UI_HEIGHT)
@@ -43,6 +44,11 @@
 #define UI_TRACE_COUNT           12u
 #define UI_I2C_100KHZ            100000u
 #define UI_I2C_400KHZ            400000u
+#define UI_SCREEN_SNIP_REQUEST    0x1du
+#define UI_SCREEN_SNIP_HEADER_STANDARD \
+    "\r\nH3SNIP1 320 200 1024 600 IDX8 256 64000\r\n"
+#define UI_SCREEN_SNIP_HEADER_HIGH \
+    "\r\nH3SNIP1 400 240 1024 600 IDX8 256 96000\r\n"
 
 #define UI_COLOR_BLACK           0u
 #define UI_COLOR_DARK_GRAY       1u
@@ -205,6 +211,91 @@ static uint16_t glyph3x5(char value)
 #undef G
 }
 
+/* 5x7 glyphs used by the native 400x240 interface. */
+static void glyph5x7(char value, uint8_t rows[7])
+{
+#define G5(r0, r1, r2, r3, r4, r5, r6) \
+    do { \
+        rows[0] = (r0); rows[1] = (r1); rows[2] = (r2); rows[3] = (r3); \
+        rows[4] = (r4); rows[5] = (r5); rows[6] = (r6); \
+        return; \
+    } while (0)
+    switch (ascii_upper(value)) {
+    case '0': G5(14, 17, 19, 21, 25, 17, 14);
+    case '1': G5(4, 12, 4, 4, 4, 4, 14);
+    case '2': G5(14, 17, 1, 2, 4, 8, 31);
+    case '3': G5(30, 1, 1, 14, 1, 1, 30);
+    case '4': G5(2, 6, 10, 18, 31, 2, 2);
+    case '5': G5(31, 16, 16, 30, 1, 1, 30);
+    case '6': G5(14, 16, 16, 30, 17, 17, 14);
+    case '7': G5(31, 1, 2, 4, 8, 8, 8);
+    case '8': G5(14, 17, 17, 14, 17, 17, 14);
+    case '9': G5(14, 17, 17, 15, 1, 1, 14);
+    case 'A': G5(14, 17, 17, 31, 17, 17, 17);
+    case 'B': G5(30, 17, 17, 30, 17, 17, 30);
+    case 'C': G5(14, 17, 16, 16, 16, 17, 14);
+    case 'D': G5(30, 17, 17, 17, 17, 17, 30);
+    case 'E': G5(31, 16, 16, 30, 16, 16, 31);
+    case 'F': G5(31, 16, 16, 30, 16, 16, 16);
+    case 'G': G5(14, 17, 16, 23, 17, 17, 15);
+    case 'H': G5(17, 17, 17, 31, 17, 17, 17);
+    case 'I': G5(14, 4, 4, 4, 4, 4, 14);
+    case 'J': G5(7, 2, 2, 2, 18, 18, 12);
+    case 'K': G5(17, 18, 20, 24, 20, 18, 17);
+    case 'L': G5(16, 16, 16, 16, 16, 16, 31);
+    case 'M': G5(17, 27, 21, 21, 17, 17, 17);
+    case 'N': G5(17, 25, 21, 19, 17, 17, 17);
+    case 'O': G5(14, 17, 17, 17, 17, 17, 14);
+    case 'P': G5(30, 17, 17, 30, 16, 16, 16);
+    case 'Q': G5(14, 17, 17, 17, 21, 18, 13);
+    case 'R': G5(30, 17, 17, 30, 20, 18, 17);
+    case 'S': G5(15, 16, 16, 14, 1, 1, 30);
+    case 'T': G5(31, 4, 4, 4, 4, 4, 4);
+    case 'U': G5(17, 17, 17, 17, 17, 17, 14);
+    case 'V': G5(17, 17, 17, 17, 17, 10, 4);
+    case 'W': G5(17, 17, 17, 21, 21, 21, 10);
+    case 'X': G5(17, 17, 10, 4, 10, 17, 17);
+    case 'Y': G5(17, 17, 10, 4, 4, 4, 4);
+    case 'Z': G5(31, 1, 2, 4, 8, 16, 31);
+    case ':': G5(0, 4, 4, 0, 4, 4, 0);
+    case '.': G5(0, 0, 0, 0, 0, 12, 12);
+    case '-': G5(0, 0, 0, 31, 0, 0, 0);
+    case '_': G5(0, 0, 0, 0, 0, 0, 31);
+    case '=': G5(0, 0, 31, 0, 31, 0, 0);
+    case '/': G5(1, 2, 2, 4, 8, 8, 16);
+    case '>': G5(16, 8, 4, 2, 4, 8, 16);
+    case '<': G5(1, 2, 4, 8, 4, 2, 1);
+    case '[': G5(14, 8, 8, 8, 8, 8, 14);
+    case ']': G5(14, 2, 2, 2, 2, 2, 14);
+    case '?': G5(14, 17, 1, 2, 4, 0, 4);
+    case '+': G5(0, 4, 4, 31, 4, 4, 0);
+    case '!': G5(4, 4, 4, 4, 4, 0, 4);
+    case ' ': G5(0, 0, 0, 0, 0, 0, 0);
+    default:  G5(14, 17, 1, 2, 4, 0, 4);
+    }
+#undef G5
+}
+
+static unsigned int ui_canvas_width(void)
+{
+    return ui_high_resolution != 0 ? UI_HIGH_WIDTH : UI_WIDTH;
+}
+
+static unsigned int ui_canvas_height(void)
+{
+    return ui_high_resolution != 0 ? UI_HIGH_HEIGHT : UI_HEIGHT;
+}
+
+static unsigned int ui_char_width(void)
+{
+    return ui_high_resolution != 0 ? 5u : 3u;
+}
+
+static unsigned int ui_char_pitch(void)
+{
+    return ui_high_resolution != 0 ? 6u : 4u;
+}
+
 static volatile uint8_t* ui_framebuffer(void)
 {
     uintptr_t address = ui_high_resolution != 0
@@ -218,50 +309,49 @@ static size_t ui_physical_words(void)
     return ui_high_resolution != 0 ? UI_HIGH_WORDS : UI_WORDS;
 }
 
+static void screen_snip_send(void)
+{
+    const volatile uint8_t* framebuffer = ui_framebuffer();
+    size_t pixel_count = ui_high_resolution != 0 ? UI_HIGH_PIXELS : UI_PIXELS;
+    size_t i;
+
+    hazard3_console_puts(ui_high_resolution != 0
+        ? UI_SCREEN_SNIP_HEADER_HIGH : UI_SCREEN_SNIP_HEADER_STANDARD);
+
+    for (i = 0u; i < 256u; ++i) {
+        hazard3_console_putc(i < sizeof(ui_palette) ? ui_palette[i] : 0u);
+    }
+    for (i = 0u; i < pixel_count; ++i) {
+        hazard3_console_putc(framebuffer[i]);
+    }
+}
+
 static void ui_pixel(unsigned int x, unsigned int y, uint8_t color)
 {
     volatile uint8_t* framebuffer;
+    unsigned int width = ui_canvas_width();
+    unsigned int height = ui_canvas_height();
 
-    if (x >= UI_WIDTH || y >= UI_HEIGHT) {
+    if (x >= width || y >= height) {
         return;
     }
 
     framebuffer = ui_framebuffer();
-    if (ui_high_resolution == 0) {
-        framebuffer[y * UI_WIDTH + x] = color;
-        return;
-    }
-
-    /* Nearest-neighbor expansion of the established 320x200 GUI layout. */
-    {
-        unsigned int x0 =
-            (x * UI_HIGH_WIDTH + UI_WIDTH - 1u) / UI_WIDTH;
-        unsigned int x1 =
-            ((x + 1u) * UI_HIGH_WIDTH + UI_WIDTH - 1u) / UI_WIDTH;
-        unsigned int y0 =
-            (y * UI_HIGH_HEIGHT + UI_HEIGHT - 1u) / UI_HEIGHT;
-        unsigned int y1 =
-            ((y + 1u) * UI_HIGH_HEIGHT + UI_HEIGHT - 1u) / UI_HEIGHT;
-        unsigned int yy;
-        unsigned int xx;
-
-        for (yy = y0; yy < y1; ++yy) {
-            for (xx = x0; xx < x1; ++xx) {
-                framebuffer[yy * UI_HIGH_WIDTH + xx] = color;
-            }
-        }
-    }
+    framebuffer[y * width + x] = color;
 }
 
 static void ui_hline(unsigned int x0, unsigned int x1, unsigned int y, uint8_t color)
 {
     unsigned int x;
 
-    if (y >= UI_HEIGHT || x0 >= UI_WIDTH) {
+    unsigned int width = ui_canvas_width();
+    unsigned int height = ui_canvas_height();
+
+    if (y >= height || x0 >= width) {
         return;
     }
-    if (x1 >= UI_WIDTH) {
-        x1 = UI_WIDTH - 1u;
+    if (x1 >= width) {
+        x1 = width - 1u;
     }
     for (x = x0; x <= x1; ++x) {
         ui_pixel(x, y, color);
@@ -272,11 +362,14 @@ static void ui_vline(unsigned int x, unsigned int y0, unsigned int y1, uint8_t c
 {
     unsigned int y;
 
-    if (x >= UI_WIDTH || y0 >= UI_HEIGHT) {
+    unsigned int width = ui_canvas_width();
+    unsigned int height = ui_canvas_height();
+
+    if (x >= width || y0 >= height) {
         return;
     }
-    if (y1 >= UI_HEIGHT) {
-        y1 = UI_HEIGHT - 1u;
+    if (y1 >= height) {
+        y1 = height - 1u;
     }
     for (y = y0; y <= y1; ++y) {
         ui_pixel(x, y, color);
@@ -290,11 +383,13 @@ static void ui_fill_rect(
     unsigned int height,
     uint8_t color)
 {
+    unsigned int canvas_width = ui_canvas_width();
+    unsigned int canvas_height = ui_canvas_height();
     unsigned int yy;
     unsigned int xx;
 
-    for (yy = 0u; yy < height && y + yy < UI_HEIGHT; ++yy) {
-        for (xx = 0u; xx < width && x + xx < UI_WIDTH; ++xx) {
+    for (yy = 0u; yy < height && y + yy < canvas_height; ++yy) {
+        for (xx = 0u; xx < width && x + xx < canvas_width; ++xx) {
             ui_pixel(x + xx, y + yy, color);
         }
     }
@@ -333,15 +428,32 @@ static void ui_clear(uint8_t color)
 
 static void ui_char(unsigned int x, unsigned int y, char value, uint8_t color)
 {
-    uint16_t glyph = glyph3x5(value);
     unsigned int row;
     unsigned int col;
 
-    for (row = 0u; row < 5u; ++row) {
-        uint8_t bits = (uint8_t)((glyph >> (row * 3u)) & 7u);
-        for (col = 0u; col < 3u; ++col) {
-            if ((bits & (uint8_t)(4u >> col)) != 0u) {
-                ui_pixel(x + col, y + row, color);
+    if (ui_high_resolution != 0) {
+        uint8_t rows[7];
+
+        glyph5x7(value, rows);
+        for (row = 0u; row < 7u; ++row) {
+            for (col = 0u; col < 5u; ++col) {
+                if ((rows[row] & (uint8_t)(16u >> col)) != 0u) {
+                    ui_pixel(x + col, y + row, color);
+                }
+            }
+        }
+        return;
+    }
+
+    {
+        uint16_t glyph = glyph3x5(value);
+
+        for (row = 0u; row < 5u; ++row) {
+            uint8_t bits = (uint8_t)((glyph >> (row * 3u)) & 7u);
+            for (col = 0u; col < 3u; ++col) {
+                if ((bits & (uint8_t)(4u >> col)) != 0u) {
+                    ui_pixel(x + col, y + row, color);
+                }
             }
         }
     }
@@ -349,18 +461,23 @@ static void ui_char(unsigned int x, unsigned int y, char value, uint8_t color)
 
 static void ui_text(unsigned int x, unsigned int y, const char* text, uint8_t color)
 {
-    while (*text != '\0' && x + 2u < UI_WIDTH) {
+    unsigned int width = ui_canvas_width();
+    unsigned int glyph_width = ui_char_width();
+    unsigned int pitch = ui_char_pitch();
+
+    while (*text != '\0' && x + glyph_width - 1u < width) {
         ui_char(x, y, *text++, color);
-        x += 4u;
+        x += pitch;
     }
 }
 
 static void ui_hex8(unsigned int x, unsigned int y, uint8_t value, uint8_t color)
 {
     static const char digits[] = "0123456789ABCDEF";
+    unsigned int pitch = ui_char_pitch();
 
     ui_char(x, y, digits[(value >> 4) & 0x0fu], color);
-    ui_char(x + 4u, y, digits[value & 0x0fu], color);
+    ui_char(x + pitch, y, digits[value & 0x0fu], color);
 }
 
 static void ui_uint(unsigned int x, unsigned int y, size_t value, uint8_t color)
@@ -378,7 +495,7 @@ static void ui_uint(unsigned int x, unsigned int y, size_t value, uint8_t color)
         value /= 10u;
     }
     for (i = 0u; i < count; ++i) {
-        ui_char(x + i * 4u, y, buffer[count - i - 1u], color);
+        ui_char(x + i * ui_char_pitch(), y, buffer[count - i - 1u], color);
     }
 }
 
@@ -666,7 +783,7 @@ static void wave_segment(
 {
     unsigned int yy = high ? y : y + 6u;
 
-    if (*x + width >= UI_WIDTH) {
+    if (*x + width >= ui_canvas_width()) {
         return;
     }
     ui_hline(*x, *x + width, yy, color);
@@ -753,6 +870,216 @@ static void draw_waveform(void)
     }
 }
 
+static void draw_event_high(unsigned int x, unsigned int y, const struct ui_event* event)
+{
+    uint8_t color = event->result == HAZARD3_SAO_OK ? UI_COLOR_GREEN : UI_COLOR_ORANGE;
+
+    switch (event->kind) {
+    case EVENT_SCAN:
+        ui_text(x, y, "SCAN", UI_COLOR_CYAN);
+        ui_uint(x + 30u, y, event->extra, UI_COLOR_WHITE);
+        ui_text(x + 60u, y, "DEV", UI_COLOR_GRAY);
+        break;
+    case EVENT_PROBE:
+        ui_text(x, y, "P", UI_COLOR_CYAN);
+        ui_hex8(x + 12u, y, event->address, UI_COLOR_WHITE);
+        ui_text(x + 30u, y, result_text(event->result), color);
+        break;
+    case EVENT_READ:
+        ui_text(x, y, "R", UI_COLOR_CYAN);
+        ui_hex8(x + 12u, y, event->address, UI_COLOR_WHITE);
+        ui_text(x + 24u, y, ":", UI_COLOR_GRAY);
+        ui_hex8(x + 30u, y, event->reg, UI_COLOR_WHITE);
+        ui_text(x + 42u, y, "=", UI_COLOR_GRAY);
+        if (event->result == HAZARD3_SAO_OK) {
+            ui_hex8(x + 48u, y, event->value, UI_COLOR_YELLOW);
+        } else {
+            ui_text(x + 48u, y, result_text(event->result), color);
+        }
+        break;
+    case EVENT_WRITE:
+        ui_text(x, y, "W", UI_COLOR_CYAN);
+        ui_hex8(x + 12u, y, event->address, UI_COLOR_WHITE);
+        ui_text(x + 24u, y, ":", UI_COLOR_GRAY);
+        ui_hex8(x + 30u, y, event->reg, UI_COLOR_WHITE);
+        ui_text(x + 42u, y, "=", UI_COLOR_GRAY);
+        ui_hex8(x + 48u, y, event->value, UI_COLOR_YELLOW);
+        ui_text(x + 66u, y, result_text(event->result), color);
+        break;
+    case EVENT_RECOVER:
+        ui_text(x, y, "RECOVER", UI_COLOR_CYAN);
+        ui_text(x + 48u, y, result_text(event->result), color);
+        break;
+    case EVENT_SPEED:
+        ui_text(x, y, "SPEED", UI_COLOR_CYAN);
+        ui_text(x + 36u, y, event->extra == 4u ? "400K" : "100K", UI_COLOR_WHITE);
+        break;
+    default:
+        break;
+    }
+}
+
+static void draw_heatmap_high(void)
+{
+    unsigned int row;
+    unsigned int col;
+    unsigned int address;
+    static const char digits[] = "0123456789ABCDEF";
+
+    ui_text(4u, 26u, "I2C ADDRESS HEATMAP", UI_COLOR_CYAN);
+    for (col = 0u; col < 16u; ++col) {
+        ui_char(29u + col * 12u, 35u, digits[col], UI_COLOR_GRAY);
+    }
+    for (row = 0u; row < 8u; ++row) {
+        ui_char(8u, 47u + row * 14u, digits[row], UI_COLOR_GRAY);
+        for (col = 0u; col < 16u; ++col) {
+            unsigned int x = 24u + col * 12u;
+            unsigned int y = 44u + row * 14u;
+            uint8_t background;
+            uint8_t foreground;
+
+            address = row * 16u + col;
+            if (address < 0x08u || address > 0x77u) {
+                background = UI_COLOR_BLACK;
+                foreground = UI_COLOR_DARK_GRAY;
+            } else {
+                background = heat_color(ui_heat[address]);
+                foreground = ui_heat[address] >= 48u ? UI_COLOR_BLACK : UI_COLOR_WHITE;
+            }
+            ui_fill_rect(x, y, 11u, 12u, background);
+            if (address == ui_last_address && ui_last_result != HAZARD3_SAO_OK) {
+                ui_box(x, y, 11u, 12u, UI_COLOR_ORANGE);
+            }
+            ui_hex8(x, y + 2u, (uint8_t)address, foreground);
+        }
+    }
+}
+
+static void draw_log_high(void)
+{
+    size_t i;
+    size_t index;
+
+    ui_text(222u, 26u, "TRANSACTION LOG", UI_COLOR_CYAN);
+    ui_box(220u, 35u, 177u, 124u, UI_COLOR_DARK_GRAY);
+    for (i = 0u; i < ui_event_used; ++i) {
+        index = (ui_event_head + UI_LOG_COUNT - ui_event_used + i) % UI_LOG_COUNT;
+        draw_event_high(225u, 40u + (unsigned int)i * 14u, &ui_events[index]);
+    }
+}
+
+static void draw_waveform_high(void)
+{
+    unsigned int x = 35u;
+    unsigned int i;
+    unsigned int bit;
+    unsigned int cell = 3u;
+    int sda_high = 1;
+
+    ui_text(4u, 166u, "LOGICAL TRACE", UI_COLOR_CYAN);
+    ui_text(4u, 179u, "SDA", UI_COLOR_WHITE);
+    ui_text(4u, 197u, "SCL", UI_COLOR_WHITE);
+    ui_hline(34u, 396u, 182u, UI_COLOR_DARK_GRAY);
+    ui_hline(34u, 396u, 200u, UI_COLOR_DARK_GRAY);
+
+    for (i = 0u; i < ui_trace_used && x < 393u; ++i) {
+        const struct ui_trace_item* item = &ui_trace[i];
+
+        if (item->kind == TRACE_START) {
+            wave_segment(&x, 2u, 179u, 1, UI_COLOR_YELLOW);
+            wave_transition(x, 179u, 1, 0, UI_COLOR_YELLOW);
+            sda_high = 0;
+            wave_segment(&x, 2u, 179u, 0, UI_COLOR_YELLOW);
+            ui_hline(x - 4u, x, 197u, UI_COLOR_CYAN);
+            continue;
+        }
+        if (item->kind == TRACE_STOP) {
+            wave_segment(&x, 2u, 179u, 0, UI_COLOR_YELLOW);
+            wave_transition(x, 179u, 0, 1, UI_COLOR_YELLOW);
+            sda_high = 1;
+            wave_segment(&x, 2u, 179u, 1, UI_COLOR_YELLOW);
+            ui_hline(x - 4u, x, 197u, UI_COLOR_CYAN);
+            continue;
+        }
+        if (item->kind != TRACE_BYTE) {
+            continue;
+        }
+
+        for (bit = 0u; bit < 9u && x + cell < 397u; ++bit) {
+            int next_sda;
+            uint8_t sda_color = UI_COLOR_YELLOW;
+            uint8_t scl_color = UI_COLOR_CYAN;
+
+            if (bit < 8u) {
+                next_sda = (item->value & (uint8_t)(0x80u >> bit)) != 0u;
+            } else {
+                next_sda = item->ack == TRACE_ACK ? 0 : 1;
+                if (item->ack == TRACE_ACK) {
+                    sda_color = UI_COLOR_GREEN;
+                } else if (item->ack == TRACE_MASTER_NACK) {
+                    sda_color = UI_COLOR_ORANGE;
+                } else {
+                    sda_color = UI_COLOR_RED;
+                }
+            }
+            if (next_sda != sda_high) {
+                wave_transition(x, 179u, sda_high, next_sda, sda_color);
+            }
+            sda_high = next_sda;
+            wave_segment(&x, cell, 179u, sda_high, sda_color);
+
+            ui_hline(x - cell, x - cell + 1u, 206u, scl_color);
+            ui_vline(x - cell + 1u, 200u, 206u, scl_color);
+            ui_hline(x - cell + 1u, x - 1u, 200u, scl_color);
+            ui_vline(x - 1u, 200u, 206u, scl_color);
+        }
+    }
+}
+
+static void draw_header_high(void)
+{
+    uint32_t status = hazard3_sao_status();
+
+    ui_fill_rect(0u, 0u, UI_HIGH_WIDTH, 22u, UI_COLOR_NAVY);
+    ui_text(4u, 2u, "HAZARD3 I2CDRIVER", UI_COLOR_WHITE);
+    ui_text(112u, 2u, ui_i2c_hz == UI_I2C_400KHZ ? "400 KHZ" : "100 KHZ", UI_COLOR_YELLOW);
+    ui_text(166u, 2u, "SDA", UI_COLOR_GRAY);
+    ui_char(190u, 2u, (status & HAZARD3_SAO_STATUS_SDA) != 0u ? '1' : '0', UI_COLOR_GREEN);
+    ui_text(204u, 2u, "SCL", UI_COLOR_GRAY);
+    ui_char(228u, 2u, (status & HAZARD3_SAO_STATUS_SCL) != 0u ? '1' : '0', UI_COLOR_GREEN);
+    ui_text(244u, 2u, "ACTIVE MASTER", UI_COLOR_CYAN);
+    ui_text(352u, 2u, "400X240", UI_COLOR_YELLOW);
+    ui_text(4u, 12u, ui_message, ui_last_result == HAZARD3_SAO_OK ? UI_COLOR_GREEN : UI_COLOR_ORANGE);
+}
+
+static void draw_footer_high(void)
+{
+    size_t i;
+    unsigned int x;
+
+    ui_fill_rect(0u, 216u, UI_HIGH_WIDTH, 24u, UI_COLOR_NAVY);
+    if (ui_prompt_mode == PROMPT_NONE) {
+        ui_text(4u, 219u, "S SCAN P PROBE R READ W WRITE X RECOVER 1/4 SPEED H RES", UI_COLOR_WHITE);
+        ui_text(4u, 230u, "C CLEAR Q EXIT  TRACE: INITIATED ONLY - PASSIVE NEEDS FPGA FIFO", UI_COLOR_GRAY);
+        return;
+    }
+
+    if (ui_prompt_mode == PROMPT_PROBE) {
+        ui_text(4u, 219u, "PROBE ADDR HEX: ", UI_COLOR_WHITE);
+        x = 100u;
+    } else if (ui_prompt_mode == PROMPT_READ) {
+        ui_text(4u, 219u, "READ ADDR REG HEX: ", UI_COLOR_WHITE);
+        x = 118u;
+    } else {
+        ui_text(4u, 219u, "WRITE ADDR REG VALUE HEX: ", UI_COLOR_WHITE);
+        x = 154u;
+    }
+    for (i = 0u; i < ui_prompt_length; ++i) {
+        ui_char(x + (unsigned int)i * 6u, 219u, "0123456789ABCDEF"[ui_prompt_digits[i]], UI_COLOR_YELLOW);
+    }
+    ui_text(4u, 230u, "ENTER EXECUTES  BACKSPACE EDITS  ESC CANCELS", UI_COLOR_GRAY);
+}
+
 static void draw_header(void)
 {
     uint32_t status = hazard3_sao_status();
@@ -799,6 +1126,15 @@ static void draw_footer(void)
 static void draw_screen(void)
 {
     ui_clear(UI_COLOR_BLACK);
+    if (ui_high_resolution != 0) {
+        draw_header_high();
+        draw_heatmap_high();
+        draw_log_high();
+        draw_waveform_high();
+        draw_footer_high();
+        return;
+    }
+
     draw_header();
     draw_heatmap();
     draw_log();
@@ -1040,7 +1376,7 @@ static void toggle_resolution(void)
     ui_high_resolution = ui_high_resolution == 0 ? 1 : 0;
     ui_palette_uploaded_mask = 0u;
     set_message(
-        ui_high_resolution != 0 ? "HDMI SOURCE 400X240 TEST" : "HDMI SOURCE 320X200",
+        ui_high_resolution != 0 ? "HDMI SOURCE 400X240 NATIVE" : "HDMI SOURCE 320X200",
         HAZARD3_SAO_OK);
 }
 
@@ -1146,6 +1482,10 @@ void hazard3_i2cdriver_hdmi_run(void)
         int redraw = 0;
 
         if (received != 0) {
+            if (key == UI_SCREEN_SNIP_REQUEST) {
+                screen_snip_send();
+                continue;
+            }
             if (key == 0x18u || key == (uint8_t)'q' || key == (uint8_t)'Q' ||
                 (key == 0x1bu && ui_prompt_mode == PROMPT_NONE)) {
                 running = 0;

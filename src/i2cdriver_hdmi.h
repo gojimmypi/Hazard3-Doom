@@ -10,8 +10,9 @@ extern "C" {
  * Run the I2CDriver-inspired interactive HDMI application.
  *
  * The application uses the existing Hazard3 SAO APB I2C master and the
- * existing 320x200 indexed HDMI presentation path. It returns when the user
- * presses Q, Escape, or Ctrl-X.
+ * indexed HDMI presentation path. The 320x200 mode retains the compact legacy
+ * layout, while supported 400x240 bitstreams use a native higher-detail GUI.
+ * It returns when the user presses Q, Escape, or Ctrl-X.
  */
 void hazard3_i2cdriver_hdmi_run(void);
 
