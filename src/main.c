@@ -1623,15 +1623,11 @@ static void console_poll(void)
             console_print_prompt();
             break;
 
+        case 'H':
         case 'h':
         case '?':
             console_print_help();
             break;
-
-        case 'H':
-            toggle_resolution();
-            return 1;
-
         case 'm':
         case 'M':
             if (external_memory_require_ready(
