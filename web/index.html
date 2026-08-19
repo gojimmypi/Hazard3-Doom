@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#171a21">
+    <title>Hazard3-Doom UART Console</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="app-header">
+        <div>
+            <div class="eyebrow">ULX3S / Hazard3-Doom</div>
+            <h1>UART Console</h1>
+        </div>
+        <div class="connection-summary">
+            <span id="statusDot" class="status-dot" aria-hidden="true"></span>
+            <span id="connectionStatus">Not connected</span>
+        </div>
+    </header>
+
+    <main class="layout">
+        <section class="panel serial-panel" aria-labelledby="serial-title">
+            <div class="panel-heading">
+                <div>
+                    <h2 id="serial-title">Serial connection</h2>
+                    <p>Direct browser connection using the Web Serial API.</p>
+                </div>
+                <div class="connection-actions">
+                    <button id="reconnectButton" type="button" class="secondary">Reconnect</button>
+                    <button id="connectButton" type="button" class="primary">Connect</button>
+                </div>
+            </div>
+
+            <div id="unsupportedNotice" class="notice error hidden" role="alert">
+                Web Serial is not available in this browser. Use a Chromium-based browser with Web Serial support and serve this page from HTTPS or localhost.
+            </div>
+
+            <div class="settings-grid">
+                <label>
+                    <span>Baud rate</span>
+                    <select id="baudRate">
+                        <option value="9600">9,600</option>
+                        <option value="19200">19,200</option>
+                        <option value="38400">38,400</option>
+                        <option value="57600">57,600</option>
+                        <option value="115200" selected>115,200</option>
+                        <option value="230400">230,400</option>
+                        <option value="460800">460,800</option>
+                        <option value="921600">921,600</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Data bits</span>
+                    <select id="dataBits">
+                        <option value="8" selected>8</option>
+                        <option value="7">7</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Parity</span>
+                    <select id="parity">
+                        <option value="none" selected>None</option>
+                        <option value="even">Even</option>
+                        <option value="odd">Odd</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Stop bits</span>
+                    <select id="stopBits">
+                        <option value="1" selected>1</option>
+                        <option value="2">2</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Line ending</span>
+                    <select id="lineEnding">
+                        <option value="crlf" selected>CR + LF</option>
+                        <option value="lf">LF</option>
+                        <option value="cr">CR</option>
+                        <option value="none">None</option>
+                    </select>
+                </label>
+            </div>
+        </section>
+
+        <section class="panel terminal-panel" aria-labelledby="terminal-title">
+            <div class="panel-heading terminal-heading">
+                <div>
+                    <h2 id="terminal-title">UART terminal</h2>
+                    <p id="portDetails">No serial port selected.</p>
+                </div>
+                <div class="terminal-actions">
+                    <label class="check-control"><input id="autoScroll" type="checkbox" checked> Auto-scroll</label>
+                    <label class="check-control"><input id="localEcho" type="checkbox"> Local echo</label>
+                    <button id="downloadButton" type="button" class="secondary">Save log</button>
+                    <button id="clearButton" type="button" class="secondary">Clear</button>
+                </div>
+            </div>
+
+            <pre id="terminal" class="terminal" tabindex="0" aria-live="polite" aria-label="UART receive output"></pre>
+
+            <form id="commandForm" class="command-row">
+                <span class="prompt-mark" aria-hidden="true">&gt;</span>
+                <input id="commandInput" type="text" autocomplete="off" spellcheck="false" placeholder="Enter Hazard3 monitor command" disabled>
+                <button id="sendButton" type="submit" class="primary" disabled>Send</button>
+            </form>
+
+            <div class="terminal-footer">
+                <span>RX <strong id="rxCount">0</strong> bytes</span>
+                <span>TX <strong id="txCount">0</strong> bytes</span>
+                <span id="sessionTime">00:00:00</span>
+            </div>
+        </section>
+
+        <section class="panel controls-panel" aria-labelledby="controls-title">
+            <div class="panel-heading">
+                <div>
+                    <h2 id="controls-title">Hazard3-Doom controls</h2>
+                    <p>Convenience controls for the resident monitor. Line commands use the selected line ending; raw monitor keys are sent as one byte.</p>
+                </div>
+            </div>
+
+            <div class="command-groups">
+                <div class="command-group">
+                    <h3>Monitor</h3>
+                    <div class="button-grid">
+                        <button type="button" class="command-button" data-command="help">Help <code>h</code></button>
+                        <button type="button" class="command-button" data-control="enter">Enter <code>CR/LF</code></button>
+                        <button type="button" class="command-button danger-soft" data-control="ctrl-c">Ctrl-C <code>0x03</code></button>
+                        <button type="button" class="command-button danger-soft" data-control="ctrl-x">Stop Doom <code>Ctrl-X</code></button>
+                        <button type="button" class="command-button" data-raw="c" title="Use from the resident monitor after stopping Doom">SD status / files <code>c</code></button>
+                        <button type="button" class="command-button" data-control="break">Break <code>150 ms</code></button>
+                    </div>
+                </div>
+
+                <div class="command-group">
+                    <h3>SAO / I2C</h3>
+                    <div class="button-grid">
+                        <button type="button" class="command-button" data-command="sao info">SAO info <code>sao info</code></button>
+                        <button type="button" class="command-button" data-command="sao scan">SAO scan <code>sao scan</code></button>
+                        <button type="button" class="command-button" data-command="sao recover">SAO recover <code>sao recover</code></button>
+                        <button type="button" class="command-button" data-command="sao gui">SAO GUI <code>sao gui</code></button>
+                        <button type="button" class="command-button" data-command="i2c gui">I2C GUI <code>i2c gui</code></button>
+                    </div>
+                </div>
+
+                <div class="command-group">
+                    <h3>I2CDriver GUI keys</h3>
+                    <p class="group-hint">Single-byte controls for the interactive <code>i2c gui</code> screen; no CR/LF is appended.</p>
+                    <div class="button-grid raw-key-grid">
+                        <button type="button" class="command-button" data-raw="S">Scan <code>S</code></button>
+                        <button type="button" class="command-button" data-raw="P">Probe <code>P</code></button>
+                        <button type="button" class="command-button" data-raw="R">Read <code>R</code></button>
+                        <button type="button" class="command-button" data-raw="W">Write <code>W</code></button>
+                        <button type="button" class="command-button" data-raw="X">Recover <code>X</code></button>
+                        <button type="button" class="command-button" data-raw="1">100 kHz <code>1</code></button>
+                        <button type="button" class="command-button" data-raw="4">400 kHz <code>4</code></button>
+                        <button type="button" class="command-button" data-raw="H">Resolution <code>H</code></button>
+                        <button type="button" class="command-button" data-raw="C">Clear <code>C</code></button>
+                        <button type="button" class="command-button danger-soft" data-raw="Q">Exit GUI <code>Q</code></button>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="macro-row">
+                <label for="macroInput">One-click custom command</label>
+                <div class="macro-controls">
+                    <input id="macroInput" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. sao probe 0x50">
+                    <button id="macroSendButton" type="button" class="secondary" disabled>Send custom</button>
+                </div>
+                <p class="hint">The custom command is saved only in this browser.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <span>Hazard3-Doom WebSerial controller</span>
+        <span>Serial data stays between this browser and the selected device.</span>
+    </footer>
+
+    <script src="app.js" defer></script>
+</body>
+</html>
