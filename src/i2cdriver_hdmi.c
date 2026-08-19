@@ -44,7 +44,9 @@
 #define UI_TRACE_COUNT           12u
 #define UI_I2C_100KHZ            100000u
 #define UI_I2C_400KHZ            400000u
-#define UI_SCREEN_SNIP_REQUEST    0x1du
+#define UI_SCREEN_SNIP_CAPABILITY_REQUEST 0x1cu
+#define UI_SCREEN_SNIP_CAPABILITY_ACK     0x06u
+#define UI_SCREEN_SNIP_REQUEST            0x1du
 #define UI_SCREEN_SNIP_HEADER_STANDARD \
     "\r\nH3SNIP1 320 200 1024 600 IDX8 256 64000\r\n"
 #define UI_SCREEN_SNIP_HEADER_HIGH \
@@ -1482,6 +1484,10 @@ void hazard3_i2cdriver_hdmi_run(void)
         int redraw = 0;
 
         if (received != 0) {
+            if (key == UI_SCREEN_SNIP_CAPABILITY_REQUEST) {
+                hazard3_console_putc(UI_SCREEN_SNIP_CAPABILITY_ACK);
+                continue;
+            }
             if (key == UI_SCREEN_SNIP_REQUEST) {
                 screen_snip_send();
                 continue;

@@ -2,7 +2,10 @@
 
 const MAX_TERMINAL_CHARS = 1_000_000;
 const STORAGE_PREFIX = "hazard3-doom-webserial.";
+const SCREEN_SNIP_CAPABILITY_REQUEST_BYTE = 0x1c;
+const SCREEN_SNIP_CAPABILITY_ACK_BYTE = 0x06;
 const SCREEN_SNIP_REQUEST_BYTE = 0x1d;
+const SCREEN_SNIP_CAPABILITY_TIMEOUT_MS = 750;
 const SCREEN_SNIP_TIMEOUT_MS = 30_000;
 const SCREEN_SNIP_MAX_SOURCE_PIXELS = 1_000_000;
 const SCREEN_SNIP_MAX_DISPLAY_PIXELS = 4_000_000;
@@ -19,6 +22,9 @@ const state = {
     commandHistory: [],
     historyIndex: 0,
     screenSnip: null,
+    screenSnipCapability: "unavailable",
+    screenSnipProbe: null,
+    screenSnipProbeTimer: null,
     textDecoder: new TextDecoder(),
 };
 
@@ -41,6 +47,7 @@ const els = {
     commandInput: document.getElementById("commandInput"),
     sendButton: document.getElementById("sendButton"),
     downloadButton: document.getElementById("downloadButton"),
+    screenSnipControl: document.getElementById("screenSnipControl"),
     screenSnipButton: document.getElementById("screenSnipButton"),
     clearButton: document.getElementById("clearButton"),
     rxCount: document.getElementById("rxCount"),
@@ -52,6 +59,106 @@ const els = {
 
 const serialSupported = "serial" in navigator;
 
+function screenSnipStatusText() {
+    if (!state.port) {
+        return "Screen snip unavailable: connect to the board first.";
+    }
+    if (state.screenSnip !== null) {
+        return "Screen snip capture is in progress.";
+    }
+    if (state.screenSnipCapability === "checking") {
+        return "Checking whether the active firmware screen supports screen snip.";
+    }
+    if (state.screenSnipCapability !== "available") {
+        return "Screen snip unavailable: the active firmware screen did not report capture support.";
+    }
+    return "Download the current HDMI display as a full 1024x600 PNG.";
+}
+
+function updateScreenSnipUi() {
+    const available = state.port &&
+        state.screenSnipCapability === "available" &&
+        state.screenSnip === null;
+    const status = screenSnipStatusText();
+
+    els.screenSnipButton.disabled = !available;
+    els.screenSnipButton.textContent = state.screenSnip !== null ? "Capturing..." : "Screen snip";
+    els.screenSnipControl.title = status;
+    els.screenSnipButton.setAttribute("aria-label", status);
+}
+
+function setScreenSnipCapability(capability) {
+    state.screenSnipCapability = capability;
+    updateScreenSnipUi();
+}
+
+function clearScreenSnipProbe(result = false) {
+    const probe = state.screenSnipProbe;
+    if (!probe) {
+        return;
+    }
+    if (probe.timeoutId !== undefined) {
+        window.clearTimeout(probe.timeoutId);
+    }
+    state.screenSnipProbe = null;
+    probe.resolve(result);
+}
+
+function cancelScheduledScreenSnipProbe() {
+    if (state.screenSnipProbeTimer !== null) {
+        window.clearTimeout(state.screenSnipProbeTimer);
+        state.screenSnipProbeTimer = null;
+    }
+}
+
+async function probeScreenSnipCapability() {
+    if (!state.port?.writable || state.screenSnip !== null) {
+        return false;
+    }
+    if (state.screenSnipProbe !== null) {
+        return state.screenSnipProbe.promise;
+    }
+
+    setScreenSnipCapability("checking");
+    let resolveProbe;
+    const promise = new Promise((resolve) => {
+        resolveProbe = resolve;
+    });
+    const probe = { timeoutId: undefined, promise, resolve: resolveProbe };
+    state.screenSnipProbe = probe;
+
+    const sent = await writeBytes(new Uint8Array([SCREEN_SNIP_CAPABILITY_REQUEST_BYTE]));
+    if (state.screenSnipProbe !== probe) {
+        return promise;
+    }
+    if (!sent) {
+        clearScreenSnipProbe(false);
+        setScreenSnipCapability("unavailable");
+        return promise;
+    }
+
+    probe.timeoutId = window.setTimeout(() => {
+        if (state.screenSnipProbe !== probe) {
+            return;
+        }
+        clearScreenSnipProbe(false);
+        setScreenSnipCapability("unavailable");
+    }, SCREEN_SNIP_CAPABILITY_TIMEOUT_MS);
+    return promise;
+}
+
+function scheduleScreenSnipProbe(delayMs = 500) {
+    if (!state.port || state.screenSnip !== null) {
+        return;
+    }
+
+    cancelScheduledScreenSnipProbe();
+    state.screenSnipProbeTimer = window.setTimeout(() => {
+        state.screenSnipProbeTimer = null;
+        void probeScreenSnipCapability();
+    }, delayMs);
+}
+
 function setConnectionUi(connected, detail = "") {
     els.statusDot.classList.toggle("connected", connected);
     els.connectionStatus.textContent = connected ? "Connected" : "Not connected";
@@ -59,7 +166,7 @@ function setConnectionUi(connected, detail = "") {
     els.commandInput.disabled = !connected;
     els.sendButton.disabled = !connected;
     els.macroSendButton.disabled = !connected;
-    els.screenSnipButton.disabled = !connected || state.screenSnip !== null;
+    updateScreenSnipUi();
     document.querySelectorAll(".command-button").forEach((button) => {
         button.disabled = !connected;
     });
@@ -146,8 +253,7 @@ function setScreenSnipIdle() {
         window.clearTimeout(state.screenSnip.timeoutId);
     }
     state.screenSnip = null;
-    els.screenSnipButton.disabled = !state.port;
-    els.screenSnipButton.textContent = "Screen snip";
+    updateScreenSnipUi();
 }
 
 function abortScreenSnip(message, flushHeader = true) {
@@ -311,9 +417,25 @@ function processScreenSnipBytes(bytes) {
 function processSerialBytes(bytes) {
     if (state.screenSnip) {
         processScreenSnipBytes(bytes);
-    } else {
-        appendSerialBytes(bytes);
+        return;
     }
+
+    if (state.screenSnipProbe !== null) {
+        const ackIndex = bytes.indexOf(SCREEN_SNIP_CAPABILITY_ACK_BYTE);
+        if (ackIndex !== -1) {
+            if (ackIndex > 0) {
+                appendSerialBytes(bytes.subarray(0, ackIndex));
+            }
+            clearScreenSnipProbe(true);
+            setScreenSnipCapability("available");
+            if (ackIndex + 1 < bytes.byteLength) {
+                appendSerialBytes(bytes.subarray(ackIndex + 1));
+            }
+            return;
+        }
+    }
+
+    appendSerialBytes(bytes);
 }
 
 async function readLoop() {
@@ -370,11 +492,13 @@ async function openPort(port) {
     state.textDecoder = new TextDecoder();
     els.rxCount.textContent = "0";
     els.txCount.textContent = "0";
+    setScreenSnipCapability("checking");
     setConnectionUi(true, describePort(port));
     startSessionTimer();
     saveSettings();
     appendSystem(`Connected: ${describePort(port)}`);
     state.readLoopPromise = readLoop();
+    void probeScreenSnipCapability();
     els.commandInput.focus();
 }
 
@@ -426,6 +550,9 @@ async function disconnect() {
 
     const port = state.port;
     state.keepReading = false;
+    cancelScheduledScreenSnipProbe();
+    clearScreenSnipProbe();
+    setScreenSnipCapability("unavailable");
     if (state.screenSnip) {
         abortScreenSnip("Screen snip cancelled: disconnected.", false);
     }
@@ -485,11 +612,18 @@ async function sendCommand(command) {
     }
 
     const sent = await sendText(command, true);
-    if (!sent || !command.trim()) {
+    if (!sent) {
         return;
     }
 
     const trimmed = command.trim();
+    if (/^(?:i2c\s+gui|sao\s+gui|j|b)$/i.test(trimmed)) {
+        setScreenSnipCapability("checking");
+        scheduleScreenSnipProbe(trimmed.length === 1 ? 2000 : 1000);
+    }
+    if (!trimmed) {
+        return;
+    }
     if (state.commandHistory[state.commandHistory.length - 1] !== trimmed) {
         state.commandHistory.push(trimmed);
         if (state.commandHistory.length > 100) {
@@ -546,7 +680,12 @@ async function requestScreenSnip() {
         appendSystem("A screen snip is already in progress.");
         return;
     }
+    if (!await probeScreenSnipCapability()) {
+        appendSystem(screenSnipStatusText());
+        return;
+    }
 
+    cancelScheduledScreenSnipProbe();
     state.screenSnip = {
         phase: "header",
         headerBytes: [],
@@ -556,8 +695,7 @@ async function requestScreenSnip() {
             abortScreenSnip("Screen snip timed out. Updated Doom or I2C GUI firmware must be running.");
         }, SCREEN_SNIP_TIMEOUT_MS),
     };
-    els.screenSnipButton.disabled = true;
-    els.screenSnipButton.textContent = "Capturing...";
+    updateScreenSnipUi();
     appendSystem("Requesting full-resolution HDMI screen snip...");
 
     const sent = await writeBytes(new Uint8Array([SCREEN_SNIP_REQUEST_BYTE]));
@@ -657,6 +795,12 @@ function wireEvents() {
     els.clearButton.addEventListener("click", clearTerminal);
     els.downloadButton.addEventListener("click", downloadLog);
     els.screenSnipButton.addEventListener("click", requestScreenSnip);
+    els.screenSnipControl.addEventListener("mouseenter", () => {
+        if (state.port && state.screenSnip === null &&
+            state.screenSnipCapability !== "available" && state.screenSnipProbe === null) {
+            void probeScreenSnipCapability();
+        }
+    });
 
     els.commandForm.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -672,9 +816,13 @@ function wireEvents() {
     });
 
     document.querySelectorAll("[data-raw]").forEach((button) => {
-        button.addEventListener("click", () => {
+        button.addEventListener("click", async () => {
             const value = button.dataset.raw;
-            writeBytes(new TextEncoder().encode(value), els.localEcho.checked ? value : "");
+            const sent = await writeBytes(new TextEncoder().encode(value), els.localEcho.checked ? value : "");
+            if (sent && value === "Q") {
+                clearScreenSnipProbe();
+                setScreenSnipCapability("unavailable");
+            }
         });
     });
 
@@ -688,7 +836,10 @@ function wireEvents() {
                     await writeBytes(new Uint8Array([0x03]), els.localEcho.checked ? "^C" : "");
                     break;
                 case "ctrl-x":
-                    await writeBytes(new Uint8Array([0x18]), els.localEcho.checked ? "^X" : "");
+                    if (await writeBytes(new Uint8Array([0x18]), els.localEcho.checked ? "^X" : "")) {
+                        clearScreenSnipProbe();
+                        setScreenSnipCapability("unavailable");
+                    }
                     break;
                 case "break":
                     await sendBreak();

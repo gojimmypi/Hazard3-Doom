@@ -214,6 +214,14 @@ p {
     gap: 0.5rem;
 }
 
+.screen-snip-control {
+    display: inline-flex;
+}
+
+.screen-snip-control > button:disabled {
+    pointer-events: none;
+}
+
 .settings-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(120px, 1fr));

@@ -94,7 +94,9 @@
                     <label class="check-control"><input id="autoScroll" type="checkbox" checked> Auto-scroll</label>
                     <label class="check-control"><input id="localEcho" type="checkbox"> Local echo</label>
                     <button id="downloadButton" type="button" class="secondary">Save log</button>
-                    <button id="screenSnipButton" type="button" class="secondary" disabled title="Download the current HDMI display as a full 1024x600 PNG">Screen snip</button>
+                    <span id="screenSnipControl" class="screen-snip-control" title="Screen snip unavailable: connect to the board first.">
+                        <button id="screenSnipButton" type="button" class="secondary" disabled>Screen snip</button>
+                    </span>
                     <button id="clearButton" type="button" class="secondary">Clear</button>
                 </div>
             </div>

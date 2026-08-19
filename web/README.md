@@ -63,6 +63,8 @@ The app does not send UART data to a server. JavaScript communicates directly wi
 
 The **Screen snip** button sends reserved raw control byte `0x1d` to the active Hazard3-Doom display application. Updated Doom and I2CDriver GUI firmware respond with a short ASCII header followed by a binary RGB332 palette and the indexed source frame. The browser consumes that binary transfer without placing it in the terminal, reconstructs the FPGA nearest-neighbor scaling, and downloads a 1024x600 PNG.
 
+Before enabling the button, the browser sends capability query byte `0x1c`. Supported Doom and I2CDriver HDMI screens reply with ACK byte `0x06`. If no ACK arrives, **Screen snip** remains disabled; hovering the disabled control explains that the active firmware screen does not report capture support. The browser rechecks after known screen-mode entry commands and immediately disables capture after `Ctrl-X` or the I2C GUI `Q` control. A capture click also performs a final capability preflight.
+
 The current protocol is:
 
 ```text

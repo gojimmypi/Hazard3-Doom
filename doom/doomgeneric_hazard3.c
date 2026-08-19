@@ -15,6 +15,8 @@
 #define HAZARD3_VIDEO_PRESENT_TIMEOUT_MS 1000u
 #define HAZARD3_UART_KEY_HOLD_MS 120u
 #define HAZARD3_ESCAPE_SEQUENCE_TIMEOUT_MS 40u
+#define HAZARD3_SCREEN_SNIP_CAPABILITY_REQUEST 0x1cu
+#define HAZARD3_SCREEN_SNIP_CAPABILITY_ACK 0x06u
 #define HAZARD3_SCREEN_SNIP_REQUEST 0x1du
 #define HAZARD3_SCREEN_SNIP_HEADER_STANDARD \
     "\r\nH3SNIP1 320 200 1024 600 IDX8 256 64000\r\n"
@@ -627,6 +629,11 @@ int DG_GetKey(int* pressed, unsigned char* key)
             character = deferred_character;
             deferred_character_valid = 0;
         } else if (!hazard3_console_getc_nonblocking(&character)) {
+            return 0;
+        }
+
+        if (character == HAZARD3_SCREEN_SNIP_CAPABILITY_REQUEST) {
+            hazard3_console_putc(HAZARD3_SCREEN_SNIP_CAPABILITY_ACK);
             return 0;
         }
 
