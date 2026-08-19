@@ -62,38 +62,98 @@
 #define HAZARD3_DDR_STATUS_MARKER_ULX4M_LD    0x4c440000u
 #define HAZARD3_DDR_STATUS_MARKER_ULX3S       0x53440000u
 
-#define HAZARD3_VIDEO_STATUS_FRONT_BUFFER    (1u << 0)
-#define HAZARD3_VIDEO_STATUS_PRESENT_PENDING (1u << 1)
-#define HAZARD3_VIDEO_STATUS_INDEXED         (1u << 2)
-#define HAZARD3_VIDEO_STATUS_VBLANK          (1u << 3)
-#define HAZARD3_VIDEO_STATUS_SDRAM_READY      (1u << 4)
-#define HAZARD3_VIDEO_STATUS_FRAME_VALID      (1u << 5)
-#define HAZARD3_VIDEO_STATUS_INTERNAL_BUFFER   (1u << 6)
-#define HAZARD3_VIDEO_STATUS_DMA_BUSY          (1u << 7)
-#define HAZARD3_VIDEO_STATUS_SWAP_PENDING      (1u << 8)
+#define HAZARD3_VIDEO_STATUS_FRONT_BUFFER       (1u << 0)
+#define HAZARD3_VIDEO_STATUS_PRESENT_PENDING    (1u << 1)
+#define HAZARD3_VIDEO_STATUS_INDEXED            (1u << 2)
+#define HAZARD3_VIDEO_STATUS_VBLANK             (1u << 3)
+#define HAZARD3_VIDEO_STATUS_SDRAM_READY        (1u << 4)
+#define HAZARD3_VIDEO_STATUS_FRAME_VALID        (1u << 5)
+#define HAZARD3_VIDEO_STATUS_INTERNAL_BUFFER    (1u << 6)
+#define HAZARD3_VIDEO_STATUS_DMA_BUSY           (1u << 7)
+#define HAZARD3_VIDEO_STATUS_SWAP_PENDING       (1u << 8)
 #define HAZARD3_VIDEO_STATUS_DIRECT_SUPPORTED   (1u << 9)
 #define HAZARD3_VIDEO_STATUS_DIRECT_WRITE_BUSY  (1u << 10)
+#define HAZARD3_VIDEO_STATUS_HIGH_RES_SUPPORTED (1u << 11)
+#define HAZARD3_VIDEO_STATUS_HIGH_RES_ACTIVE    (1u << 12)
 
 #define HAZARD3_VIDEO_CONTROL_INDEXED         (1u << 0)
 #define HAZARD3_VIDEO_CONTROL_BUFFER1         (1u << 1)
 #define HAZARD3_VIDEO_CONTROL_PRESENT         (1u << 2)
 #define HAZARD3_VIDEO_CONTROL_DIRECT          (1u << 3)
+#define HAZARD3_VIDEO_CONTROL_HIGH_RES        (1u << 4)
 
-#define HAZARD3_VIDEO_FRAMEBUFFER_WIDTH       320u
-#define HAZARD3_VIDEO_FRAMEBUFFER_HEIGHT      200u
-#define HAZARD3_VIDEO_FRAMEBUFFER_BYTES       \
-    (HAZARD3_VIDEO_FRAMEBUFFER_WIDTH * HAZARD3_VIDEO_FRAMEBUFFER_HEIGHT)
+#define HAZARD3_VIDEO_STANDARD_WIDTH          320u
+#define HAZARD3_VIDEO_STANDARD_HEIGHT         200u
+#define HAZARD3_VIDEO_STANDARD_BYTES          \
+    (HAZARD3_VIDEO_STANDARD_WIDTH * HAZARD3_VIDEO_STANDARD_HEIGHT)
+#define HAZARD3_VIDEO_HIGH_WIDTH              400u
+#define HAZARD3_VIDEO_HIGH_HEIGHT             240u
+#define HAZARD3_VIDEO_HIGH_BYTES              \
+    (HAZARD3_VIDEO_HIGH_WIDTH * HAZARD3_VIDEO_HIGH_HEIGHT)
 
-#define HAZARD3_DOOM_SCREENBUFFER_BASE       0x00010000u
-#define HAZARD3_DOOM_SCREENBUFFER_BYTES      HAZARD3_VIDEO_FRAMEBUFFER_BYTES
+#define HAZARD3_VIDEO_DIRECT_BUFFER1_STANDARD_HALFWORD 0x00008000u
+#define HAZARD3_VIDEO_DIRECT_BUFFER1_HIGH_HALFWORD     0x0000c000u
+#define HAZARD3_VIDEO_DIRECT_ADDRESS_HIGH_RES_FLAG     0x80000000u
+
+#define HAZARD3_DOOM_SCREENBUFFER_BASE        0x00010000u
+/* The resident monitor always reserves exactly the original on-chip screen. */
+#define HAZARD3_DOOM_SCREENBUFFER_BYTES       HAZARD3_VIDEO_STANDARD_BYTES
+
+#ifdef HAZARD3_VIDEO_HIGH_RES
+#define HAZARD3_VIDEO_FRAMEBUFFER_WIDTH       HAZARD3_VIDEO_HIGH_WIDTH
+#define HAZARD3_VIDEO_FRAMEBUFFER_HEIGHT      HAZARD3_VIDEO_HIGH_HEIGHT
+#define HAZARD3_VIDEO_FRAMEBUFFER_BYTES       HAZARD3_VIDEO_HIGH_BYTES
+#define HAZARD3_VIDEO_MODE_CONTROL            HAZARD3_VIDEO_CONTROL_HIGH_RES
+#define HAZARD3_VIDEO_HIGH_RES_ENABLED         1u
+#define HAZARD3_VIDEO_MINIMUM_RESERVE_BYTES   \
+    (0x00030000u + HAZARD3_VIDEO_HIGH_BYTES)
+#else
+#define HAZARD3_VIDEO_FRAMEBUFFER_WIDTH       HAZARD3_VIDEO_STANDARD_WIDTH
+#define HAZARD3_VIDEO_FRAMEBUFFER_HEIGHT      HAZARD3_VIDEO_STANDARD_HEIGHT
+#define HAZARD3_VIDEO_FRAMEBUFFER_BYTES       HAZARD3_VIDEO_STANDARD_BYTES
+#define HAZARD3_VIDEO_MODE_CONTROL            0u
+#define HAZARD3_VIDEO_HIGH_RES_ENABLED         0u
+#define HAZARD3_VIDEO_MINIMUM_RESERVE_BYTES   \
+    (0x00010000u + HAZARD3_VIDEO_STANDARD_BYTES)
+#endif
+
+static inline uint32_t hazard3_video_direct_halfword_base(
+    uint32_t buffer_index,
+    int high_resolution)
+{
+    uint32_t address = buffer_index == 0u ? 0u :
+        (high_resolution != 0
+            ? HAZARD3_VIDEO_DIRECT_BUFFER1_HIGH_HALFWORD
+            : HAZARD3_VIDEO_DIRECT_BUFFER1_STANDARD_HALFWORD);
+
+    if (high_resolution != 0) {
+        address |= HAZARD3_VIDEO_DIRECT_ADDRESS_HIGH_RES_FLAG;
+    }
+    return address;
+}
+
+static inline volatile uint32_t* hazard3_video_framebuffer_words_for_mode(
+    uint32_t buffer_index,
+    int high_resolution)
+{
+    uintptr_t address = HAZARD3_VIDEO_FRAMEBUFFER0_BASE;
+
+    if (buffer_index != 0u) {
+        address = high_resolution != 0
+            ? HAZARD3_VIDEO_FRAMEBUFFER1_HIGH_BASE
+            : HAZARD3_VIDEO_FRAMEBUFFER1_BASE;
+    }
+    return (volatile uint32_t*)address;
+}
 
 static inline volatile uint32_t* hazard3_video_framebuffer_words(
     uint32_t buffer_index)
 {
-    uintptr_t address = buffer_index != 0u
-        ? HAZARD3_VIDEO_FRAMEBUFFER1_BASE
-        : HAZARD3_VIDEO_FRAMEBUFFER0_BASE;
-    return (volatile uint32_t*)address;
+#ifdef HAZARD3_VIDEO_HIGH_RES
+    return hazard3_video_framebuffer_words_for_mode(buffer_index, 1);
+#else
+    return hazard3_video_framebuffer_words_for_mode(buffer_index, 0);
+#endif
 }
 
 #endif

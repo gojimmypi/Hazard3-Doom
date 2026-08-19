@@ -97,6 +97,16 @@ static int wait_for_dma_complete(uint32_t present_count_before)
     }
 }
 
+/* GCC 12.2.0 used by the Hazard3 toolchain can ICE when it turns a bit-11
+ * test into a direct 0x800 mask. Keep this helper out of line and make the
+ * shifted value volatile so GCC must perform the shift before testing bit 0. */
+static __attribute__((noinline)) int video_high_resolution_supported(uint32_t status)
+{
+    volatile uint32_t shifted_status = status >> 11u;
+
+    return (shifted_status & 1u) != 0u;
+}
+
 void DG_Init(void)
 {
     uint32_t video_base = hazard3_video_base();
@@ -104,9 +114,10 @@ void DG_Init(void)
     uint32_t status = HAZARD3_VIDEO_STATUS;
     uint32_t front_buffer =
         (status & HAZARD3_VIDEO_STATUS_FRONT_BUFFER) != 0u ? 1u : 0u;
+    uint32_t internal_buffer =
+        (status & HAZARD3_VIDEO_STATUS_INTERNAL_BUFFER) != 0u ? 1u : 0u;
 
     draw_frame_count = 0u;
-    back_buffer_index = front_buffer ^ 1u;
     palette_bank_valid_mask = 0u;
     video_failure_reported = 0;
     copy_cycles_total = 0u;
@@ -115,13 +126,23 @@ void DG_Init(void)
     last_present_cycles = 0u;
     direct_video_available =
         (status & HAZARD3_VIDEO_STATUS_DIRECT_SUPPORTED) != 0u;
+    back_buffer_index = (direct_video_available
+        ? internal_buffer : front_buffer) ^ 1u;
     video_available = video_base == HAZARD3_VIDEO_FRAMEBUFFER0_BASE
         && video_limit >= video_base
-        && video_limit - video_base >= 2u * HAZARD3_VIDEO_FRAMEBUFFER_BYTES
-        && (status & HAZARD3_VIDEO_STATUS_SDRAM_READY) != 0u;
+        && video_limit - video_base >= HAZARD3_VIDEO_MINIMUM_RESERVE_BYTES
+        && (status & HAZARD3_VIDEO_STATUS_SDRAM_READY) != 0u
+        && (HAZARD3_VIDEO_HIGH_RES_ENABLED == 0u ||
+            video_high_resolution_supported(status));
 
     hazard3_console_puts(
         "Doom platform: indexed renderer + direct block-RAM HDMI initialized\r\n");
+#ifdef HAZARD3_VIDEO_HIGH_RES
+    hazard3_console_puts(
+        "  renderer/HDMI source: 400x240 EXPERIMENTAL\r\n");
+#else
+    hazard3_console_puts("  renderer/HDMI source: 320x200 standard\r\n");
+#endif
     hazard3_console_puts(
         direct_video_available
             ? "  presentation path: direct APB-to-EBR\r\n"
@@ -133,8 +154,8 @@ void DG_Init(void)
 
 static void copy_frame_direct(const uint32_t* source_words)
 {
-    HAZARD3_VIDEO_DIRECT_ADDRESS =
-        back_buffer_index != 0u ? 0x00008000u : 0u;
+    HAZARD3_VIDEO_DIRECT_ADDRESS = hazard3_video_direct_halfword_base(
+        back_buffer_index, HAZARD3_VIDEO_HIGH_RES_ENABLED != 0u);
 
     for (uint32_t i = 0u; i < HAZARD3_VIDEO_WORDS; i += 8u) {
         HAZARD3_VIDEO_DIRECT_DATA = source_words[i + 0u];
@@ -216,6 +237,7 @@ void DG_DrawFrame(void)
                     ? HAZARD3_VIDEO_CONTROL_BUFFER1 : 0u)
                 | (direct_video_available
                     ? HAZARD3_VIDEO_CONTROL_DIRECT : 0u)
+                | HAZARD3_VIDEO_MODE_CONTROL
                 | HAZARD3_VIDEO_CONTROL_PRESENT;
 
             // Direct presentation only queues a vertical-blank bank swap.

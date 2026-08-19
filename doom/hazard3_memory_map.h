@@ -37,7 +37,19 @@
 #endif
 
 #define HAZARD3_SDRAM_BANK_COUNT              4u
+
+/*
+ * HDMI SDRAM staging layout.
+ *
+ * The legacy 320x200 path keeps its original 64 KiB bank spacing so existing
+ * software continues to work unchanged. The optional 400x240 test mode uses a
+ * 96 KiB-aligned second staging buffer. A separate work area follows both high
+ * resolution staging buffers for runtime clients that need a full 400x240
+ * scratch framebuffer, such as the I2CDriver HDMI explorer.
+ */
 #define HAZARD3_VIDEO_FRAMEBUFFER0_BASE       HAZARD3_VIDEO_BASE
 #define HAZARD3_VIDEO_FRAMEBUFFER1_BASE       (HAZARD3_VIDEO_BASE + 0x00010000u)
+#define HAZARD3_VIDEO_FRAMEBUFFER1_HIGH_BASE  (HAZARD3_VIDEO_BASE + 0x00018000u)
+#define HAZARD3_VIDEO_WORKBUFFER_BASE         (HAZARD3_VIDEO_BASE + 0x00030000u)
 
 #endif

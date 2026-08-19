@@ -57,7 +57,8 @@ static int services_are_valid(const hazard3_monitor_services_t* services)
         services->heap_limit == HAZARD3_DOOM_HEAP_LIMIT &&
         services->video_base == HAZARD3_VIDEO_BASE &&
         services->video_limit == HAZARD3_VIDEO_LIMIT &&
-        services->video_limit - services->video_base >= 2u * 320u * 200u &&
+        services->video_limit - services->video_base >=
+            HAZARD3_VIDEO_MINIMUM_RESERVE_BYTES &&
         services->screen_base == HAZARD3_DOOM_SCREENBUFFER_BASE &&
         services->screen_bytes >= HAZARD3_DOOM_SCREENBUFFER_BYTES &&
         services->wad_base == HAZARD3_DOOM_WAD_BASE &&
