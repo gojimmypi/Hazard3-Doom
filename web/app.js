@@ -4,8 +4,10 @@ const MAX_TERMINAL_CHARS = 1_000_000;
 const STORAGE_PREFIX = "hazard3-doom-webserial.";
 const SCREEN_SNIP_CAPABILITY_REQUEST_BYTE = 0x1c;
 const SCREEN_SNIP_CAPABILITY_ACK_BYTE = 0x06;
+const SCREEN_SNIP_CAPABILITY_NAK_BYTE = 0x15;
 const SCREEN_SNIP_REQUEST_BYTE = 0x1d;
 const SCREEN_SNIP_CAPABILITY_TIMEOUT_MS = 750;
+const SCREEN_SNIP_CAPABILITY_WATCH_MS = 2000;
 const SCREEN_SNIP_TIMEOUT_MS = 30_000;
 const SCREEN_SNIP_MAX_SOURCE_PIXELS = 1_000_000;
 const SCREEN_SNIP_MAX_DISPLAY_PIXELS = 4_000_000;
@@ -23,8 +25,10 @@ const state = {
     historyIndex: 0,
     screenSnip: null,
     screenSnipCapability: "unavailable",
+    screenSnipCapabilityProtocolKnown: false,
     screenSnipProbe: null,
     screenSnipProbeTimer: null,
+    screenSnipWatchTimer: null,
     textDecoder: new TextDecoder(),
 };
 
@@ -70,7 +74,10 @@ function screenSnipStatusText() {
         return "Checking whether the active firmware screen supports screen snip.";
     }
     if (state.screenSnipCapability !== "available") {
-        return "Screen snip unavailable: the active firmware screen did not report capture support.";
+        if (state.screenSnipCapabilityProtocolKnown) {
+            return "Screen snip unavailable on the current HDMI screen.";
+        }
+        return "Screen snip unavailable: no capability response from the active firmware.";
     }
     return "Download the current HDMI display as a full 1024x600 PNG.";
 }
@@ -109,6 +116,27 @@ function cancelScheduledScreenSnipProbe() {
         window.clearTimeout(state.screenSnipProbeTimer);
         state.screenSnipProbeTimer = null;
     }
+}
+
+function stopScreenSnipCapabilityWatch() {
+    if (state.screenSnipWatchTimer !== null) {
+        window.clearInterval(state.screenSnipWatchTimer);
+        state.screenSnipWatchTimer = null;
+    }
+}
+
+function startScreenSnipCapabilityWatch() {
+    if (!state.port || !state.screenSnipCapabilityProtocolKnown ||
+        state.screenSnipWatchTimer !== null) {
+        return;
+    }
+
+    state.screenSnipWatchTimer = window.setInterval(() => {
+        if (state.port && state.screenSnip === null &&
+            state.screenSnipProbe === null) {
+            void probeScreenSnipCapability();
+        }
+    }, SCREEN_SNIP_CAPABILITY_WATCH_MS);
 }
 
 async function probeScreenSnipCapability() {
@@ -422,14 +450,27 @@ function processSerialBytes(bytes) {
 
     if (state.screenSnipProbe !== null) {
         const ackIndex = bytes.indexOf(SCREEN_SNIP_CAPABILITY_ACK_BYTE);
-        if (ackIndex !== -1) {
-            if (ackIndex > 0) {
-                appendSerialBytes(bytes.subarray(0, ackIndex));
+        const nakIndex = bytes.indexOf(SCREEN_SNIP_CAPABILITY_NAK_BYTE);
+        let responseIndex = -1;
+        let available = false;
+
+        if (ackIndex !== -1 && (nakIndex === -1 || ackIndex < nakIndex)) {
+            responseIndex = ackIndex;
+            available = true;
+        } else if (nakIndex !== -1) {
+            responseIndex = nakIndex;
+        }
+
+        if (responseIndex !== -1) {
+            if (responseIndex > 0) {
+                appendSerialBytes(bytes.subarray(0, responseIndex));
             }
-            clearScreenSnipProbe(true);
-            setScreenSnipCapability("available");
-            if (ackIndex + 1 < bytes.byteLength) {
-                appendSerialBytes(bytes.subarray(ackIndex + 1));
+            state.screenSnipCapabilityProtocolKnown = true;
+            clearScreenSnipProbe(available);
+            setScreenSnipCapability(available ? "available" : "unavailable");
+            startScreenSnipCapabilityWatch();
+            if (responseIndex + 1 < bytes.byteLength) {
+                appendSerialBytes(bytes.subarray(responseIndex + 1));
             }
             return;
         }
@@ -490,6 +531,8 @@ async function openPort(port) {
     state.txBytes = 0;
     state.connectedAt = Date.now();
     state.textDecoder = new TextDecoder();
+    state.screenSnipCapabilityProtocolKnown = false;
+    stopScreenSnipCapabilityWatch();
     els.rxCount.textContent = "0";
     els.txCount.textContent = "0";
     setScreenSnipCapability("checking");
@@ -551,7 +594,9 @@ async function disconnect() {
     const port = state.port;
     state.keepReading = false;
     cancelScheduledScreenSnipProbe();
+    stopScreenSnipCapabilityWatch();
     clearScreenSnipProbe();
+    state.screenSnipCapabilityProtocolKnown = false;
     setScreenSnipCapability("unavailable");
     if (state.screenSnip) {
         abortScreenSnip("Screen snip cancelled: disconnected.", false);

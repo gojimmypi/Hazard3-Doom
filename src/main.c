@@ -34,6 +34,9 @@
 #define UART_FSTAT_TX_FULL    (1u << 8)
 #define UART_FSTAT_RX_EMPTY   (1u << 25)
 
+#define SCREEN_SNIP_CAPABILITY_REQUEST 0x1cu
+#define SCREEN_SNIP_CAPABILITY_NAK     0x15u
+
 #define DOOM_UART_CAPTURE_BYTES 64u
 #define DOOM_UART_CAPTURE_MASK  (DOOM_UART_CAPTURE_BYTES - 1u)
 
@@ -1607,7 +1610,14 @@ static void console_poll(void)
     uint8_t received;
 
     while (uart_getc_nonblocking(&received)) {
-        int sao_console_result = hazard3_sao_console_feed(received);
+        int sao_console_result;
+
+        if (received == SCREEN_SNIP_CAPABILITY_REQUEST) {
+            uart_putc(SCREEN_SNIP_CAPABILITY_NAK);
+            continue;
+        }
+
+        sao_console_result = hazard3_sao_console_feed(received);
 
         if (sao_console_result == HAZARD3_SAO_CONSOLE_CONSUMED) {
             continue;

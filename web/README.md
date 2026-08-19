@@ -63,7 +63,11 @@ The app does not send UART data to a server. JavaScript communicates directly wi
 
 The **Screen snip** button sends reserved raw control byte `0x1d` to the active Hazard3-Doom display application. Updated Doom and I2CDriver GUI firmware respond with a short ASCII header followed by a binary RGB332 palette and the indexed source frame. The browser consumes that binary transfer without placing it in the terminal, reconstructs the FPGA nearest-neighbor scaling, and downloads a 1024x600 PNG.
 
-Before enabling the button, the browser sends capability query byte `0x1c`. Supported Doom and I2CDriver HDMI screens reply with ACK byte `0x06`. If no ACK arrives, **Screen snip** remains disabled; hovering the disabled control explains that the active firmware screen does not report capture support. The browser rechecks after known screen-mode entry commands and immediately disables capture after `Ctrl-X` or the I2C GUI `Q` control. A capture click also performs a final capability preflight.
+Before enabling the button, the browser sends capability query byte `0x1c`. Supported Doom and I2CDriver HDMI screens reply with ACK byte `0x06`. The updated resident monitor replies with NAK byte `0x15`, because the monitor prompt itself does not own a readable software copy of the displayed frame. A timeout means the active firmware does not implement the capability protocol.
+
+Once the browser has seen either ACK or NAK, it rechecks capability every two seconds. This lets the button follow the actual active firmware mode even when Doom or the I2CDriver GUI is entered by a path the web app did not initiate. The browser consumes ACK/NAK bytes instead of displaying them in the terminal. Hovering the disabled control explains whether capture is unavailable on the current screen or whether no capability response was received. A capture click also performs a final capability preflight.
+
+The resident monitor handles `0x1c` before its line-command parser and returns NAK, so capability polling cannot become part of a partially typed `sao` or `i2c` command.
 
 The current protocol is:
 
