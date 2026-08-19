@@ -476,27 +476,39 @@ jobs:
         id: cmd_build_monitor
         continue-on-error: true
         shell: cmd
-        run: call scripts\build-xpack.cmd rebuild 64m 50000000
+        run: |
+          if not exist build\ci\logs mkdir build\ci\logs
+          call scripts\build-xpack.cmd rebuild 64m 50000000 > build\ci\logs\cmd-build-monitor.log 2>&1
+          set "STATUS=%ERRORLEVEL%"
+          type build\ci\logs\cmd-build-monitor.log
+          exit /b %STATUS%
 
       - name: "CMD: Validate monitor"
         id: cmd_validate_monitor
         continue-on-error: true
         shell: cmd
         run: |
+          if not exist build\ci\logs mkdir build\ci\logs
+          set "LOG=build\ci\logs\cmd-validate-monitor.log"
           set "STATUS=0"
+          > "%LOG%" echo CMD monitor validation
           if not exist build\hazard3-boot-monitor.elf (
               echo ::error::Native CMD build did not create build\hazard3-boot-monitor.elf
+              >> "%LOG%" echo Missing file: build\hazard3-boot-monitor.elf
               set "STATUS=1"
           )
           if not exist build\hazard3-boot-monitor.map (
               echo ::error::Native CMD build did not create build\hazard3-boot-monitor.map
+              >> "%LOG%" echo Missing file: build\hazard3-boot-monitor.map
               set "STATUS=1"
           )
           for %%F in (build\hazard3-boot-monitor.elf build\hazard3-boot-monitor.map) do if exist %%F if %%~zF EQU 0 (
               echo ::error::Native CMD build created an empty file: %%F
+              >> "%LOG%" echo Empty file: %%F
               set "STATUS=1"
           )
-          if exist build\hazard3-boot-monitor.elf bin\riscv-gcc\bin\riscv-none-elf-size.exe build\hazard3-boot-monitor.elf
+          if exist build\hazard3-boot-monitor.elf bin\riscv-gcc\bin\riscv-none-elf-size.exe build\hazard3-boot-monitor.elf >> "%LOG%" 2>&1
+          type "%LOG%"
           exit /b %STATUS%
 
       - name: "Git Bash: Show tool versions"
@@ -532,6 +544,10 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
+          mkdir -p build/ci/logs
+          log_file="build/ci/logs/bash-monitor-configs.log"
+          exec > >(tee "${log_file}") 2>&1
+
           status=0
           for profile in 64m 32m; do
               for clock_hz in 50000000 25000000; do
@@ -574,6 +590,10 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
+          mkdir -p build/ci/logs
+          log_file="build/ci/logs/bash-doom-configs.log"
+          exec > >(tee "${log_file}") 2>&1
+
           status=0
           for profile in 64m 32m; do
               build_dir="build/ci/doom-${profile}"
@@ -651,15 +671,27 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
+          mkdir -p build/ci/logs
+          log_file="build/ci/logs/doom-size-probe.log"
+
+          set +e
           HAZARD3_SIZE_BUILD_DIR=build/ci/doom-size-probe \
           HAZARD3_MEMORY_PROFILE=64m \
-              ./doom/build-size-probe.sh
+              ./doom/build-size-probe.sh 2>&1 | tee "${log_file}"
+          status=${PIPESTATUS[0]}
+          set -e
+
+          exit "${status}"
 
       - name: "Git Bash: Verify builds did not modify submodules"
         id: submodule_cleanliness
         continue-on-error: true
         shell: bash
         run: |
+          mkdir -p build/ci/logs
+          log_file="build/ci/logs/submodule-cleanliness.log"
+          exec > >(tee "${log_file}") 2>&1
+
           status=0
           for repository in third_party/doomgeneric third_party/Hazard3; do
               changes="$(git -C "${repository}" status --porcelain --untracked-files=all)"
@@ -746,6 +778,7 @@ jobs:
             build/ci/**/*.elf
             build/ci/**/*.map
             build/ci/**/*.h3d
+            build/ci/logs/*.log
           if-no-files-found: warn
           retention-days: 7
           compression-level: 0
@@ -762,22 +795,51 @@ jobs:
           SUBMODULE_CLEANLINESS_OUTCOME: ${{ steps.submodule_cleanliness.outcome }}
         run: |
           status=0
+          failed_count=0
 
-          report_failure() {
+          report_result() {
               local name="$1"
               local outcome="$2"
+              local log_file="$3"
 
-              if [[ "${outcome}" != "success" ]]; then
-                  echo "::error::${name} failed (outcome: ${outcome})"
-                  status=1
+              if [[ "${outcome}" == "success" ]]; then
+                  printf 'PASS  %s\n' "${name}"
+                  return
+              fi
+
+              printf 'FAIL  %s (outcome: %s)\n' "${name}" "${outcome}"
+              echo "::error title=${name}::${name} failed. Diagnostic output is included below."
+              status=1
+              failed_count=$((failed_count + 1))
+
+              if [[ -f "${log_file}" ]]; then
+                  echo "::group::Failure details - ${name}"
+                  tail -n 100 "${log_file}"
+                  echo "::endgroup::"
+              else
+                  echo "No saved diagnostic log was found at ${log_file}."
+                  echo "Expand the failed '${name}' step above for its complete output."
               fi
           }
 
-          report_failure "CMD monitor build" "${CMD_BUILD_MONITOR_OUTCOME}"
-          report_failure "CMD monitor validation" "${CMD_VALIDATE_MONITOR_OUTCOME}"
-          report_failure "Git Bash monitor configuration builds" "${BASH_MONITOR_CONFIGS_OUTCOME}"
-          report_failure "Git Bash Doom configuration builds" "${BASH_DOOM_CONFIGS_OUTCOME}"
-          report_failure "Doom object-size probe" "${DOOM_SIZE_PROBE_OUTCOME}"
-          report_failure "Submodule cleanliness check" "${SUBMODULE_CLEANLINESS_OUTCOME}"
+          echo "========================================"
+          echo "Windows command-line CI summary"
+          echo "========================================"
+
+          report_result "CMD monitor build" "${CMD_BUILD_MONITOR_OUTCOME}" "build/ci/logs/cmd-build-monitor.log"
+          report_result "CMD monitor validation" "${CMD_VALIDATE_MONITOR_OUTCOME}" "build/ci/logs/cmd-validate-monitor.log"
+          report_result "Git Bash monitor configuration builds" "${BASH_MONITOR_CONFIGS_OUTCOME}" "build/ci/logs/bash-monitor-configs.log"
+          report_result "Git Bash Doom configuration builds" "${BASH_DOOM_CONFIGS_OUTCOME}" "build/ci/logs/bash-doom-configs.log"
+          report_result "Doom object-size probe" "${DOOM_SIZE_PROBE_OUTCOME}" "build/ci/logs/doom-size-probe.log"
+          report_result "Submodule cleanliness check" "${SUBMODULE_CLEANLINESS_OUTCOME}" "build/ci/logs/submodule-cleanliness.log"
+
+          echo "========================================"
+          if (( failed_count == 0 )); then
+              echo "All checks passed."
+          else
+              echo "${failed_count} check(s) failed."
+              echo "Full diagnostic logs are included in the uploaded CI artifact."
+          fi
+          echo "========================================"
 
           exit "${status}"
