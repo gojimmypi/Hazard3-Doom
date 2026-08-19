@@ -1,6 +1,11 @@
 Memory Map
 ==========
 
+The addresses on this page belong to the Hazard3-Doom **SoC integration**, not
+to the RISC-V ISA or a fixed Hazard3 processor memory map. Hazard3 issues normal
+instruction/data transactions; the surrounding SoC decodes these physical
+address windows. See :doc:`hazard3/memory-and-bus` for the CPU/bus boundary.
+
 Internal SRAM
 -------------
 

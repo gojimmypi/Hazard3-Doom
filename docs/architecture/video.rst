@@ -1,6 +1,11 @@
 Video Pipeline
 ==============
 
+The video pipeline is a Hazard3-Doom/ULX3S SoC feature around the processor; it
+is not part of the upstream Hazard3 CPU core. The CPU produces framebuffer data
+with ordinary memory operations, while project hardware turns that data into a
+display signal.
+
 Doom keeps its native indexed renderer. The project does not require the game to render a full RGB framebuffer in software.
 
 Pipeline
