@@ -16,4 +16,4 @@ fi
 # shellcheck disable=SC2034
 DOOMGENERIC_REPOSITORY="https://github.com/ulx3s/doomgeneric.git"
 # shellcheck disable=SC2034
-DOOMGENERIC_COMMIT="bec511fec754ad5a54db04dfb743775f1986dd26"
+DOOMGENERIC_COMMIT="cea50b091ccb2c6309b745750a4a120bc4126995"
