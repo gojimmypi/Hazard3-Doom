@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DOOMGENERIC_ROOT="${DOOMGENERIC_ROOT:-${ROOT_DIR}/third_party/doomgeneric}"
 PREPARE_DOOMGENERIC="${SCRIPT_DIR}/prepare-doomgeneric.sh"
+SETUP_DOOMGENERIC="${ROOT_DIR}/scripts/setup-doomgeneric.sh"
 TOOLCHAIN_PREFIX="${TOOLCHAIN_PREFIX:-/opt/riscv/bin/riscv32-unknown-elf-}"
 CC="${TOOLCHAIN_PREFIX}gcc"
 OBJCOPY="${TOOLCHAIN_PREFIX}objcopy"
@@ -62,6 +63,7 @@ require_tool "${SIZE}"
 require_tool python3
 
 require_tool "${PREPARE_DOOMGENERIC}"
+require_tool "${SETUP_DOOMGENERIC}"
 require_file "${SCRIPT_DIR}/doom_sources.sh"
 require_file "${SCRIPT_DIR}/doom_build_flags.sh"
 require_file "${SCRIPT_DIR}/doom_image_entry.S"
@@ -94,6 +96,16 @@ mkdir -p "${BUILD_DIR}"
 if [[ -n "${HAZARD3_DOOM_PREPARED_SOURCE:-}" ]]; then
     DOOMGENERIC_DIR="$(cd "${HAZARD3_DOOM_PREPARED_SOURCE}" && pwd)"
     printf 'Using pre-prepared DoomGeneric source: %s\n' "${DOOMGENERIC_DIR}"
+elif [[ "${HAZARD3_DOOM_ALLOW_DIRTY_DOOMGENERIC:-0}" == "1" ]]; then
+    # Development builds may intentionally modify the pinned DoomGeneric fork.
+    # Keep the pinned-commit safety check, but compile those local sources
+    # directly instead of asking prepare-doomgeneric.sh for a clean copy.
+    DOOMGENERIC_ROOT="${DOOMGENERIC_ROOT}" \
+    HAZARD3_DOOM_ALLOW_DIRTY_DOOMGENERIC=1 \
+        "${SETUP_DOOMGENERIC}" >&2
+
+    DOOMGENERIC_DIR="$(cd "${DOOMGENERIC_ROOT}/doomgeneric" && pwd)"
+    printf 'Using intentional local DoomGeneric source: %s\n' "${DOOMGENERIC_DIR}"
 else
     DOOMGENERIC_DIR="$(
         DOOMGENERIC_ROOT="${DOOMGENERIC_ROOT}" \

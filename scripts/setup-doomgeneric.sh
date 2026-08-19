@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DEFAULT_DOOMGENERIC_ROOT="${ROOT_DIR}/third_party/doomgeneric"
 DOOMGENERIC_ROOT="${DOOMGENERIC_ROOT:-${DEFAULT_DOOMGENERIC_ROOT}}"
+ALLOW_DIRTY_DOOMGENERIC="${HAZARD3_DOOM_ALLOW_DIRTY_DOOMGENERIC:-0}"
 
 # Run shellcheck to ensure this is a good script.
 # Specify the executable shell checker you want to use:
@@ -65,12 +66,28 @@ require_file "${DOOMGENERIC_ROOT}/doomgeneric/doomgeneric.h"
 require_file "${DOOMGENERIC_ROOT}/doomgeneric/doomkeys.h"
 require_file "${DOOMGENERIC_ROOT}/doomgeneric/i_video.h"
 
-if [[ -n "$(git -C "${DOOMGENERIC_ROOT}" status --porcelain \
-    --untracked-files=all -- doomgeneric)" ]]; then
-    echo "DoomGeneric source tree has local changes: ${DOOMGENERIC_ROOT}/doomgeneric" >&2
-    echo "Restore the submodule to the pinned commit before building." >&2
-    exit 1
+doomgeneric_changes="$(
+    git -C "${DOOMGENERIC_ROOT}" status --porcelain \
+        --untracked-files=all -- doomgeneric
+)"
+
+if [[ -n "${doomgeneric_changes}" ]]; then
+    if [[ "${ALLOW_DIRTY_DOOMGENERIC}" != "1" ]]; then
+        echo "DoomGeneric source tree has local changes: ${DOOMGENERIC_ROOT}/doomgeneric" >&2
+        echo "Restore the submodule to the pinned commit before building," >&2
+        echo "or explicitly set HAZARD3_DOOM_ALLOW_DIRTY_DOOMGENERIC=1 for a development build." >&2
+        exit 1
+    fi
+
+    echo "WARNING: building with intentional local DoomGeneric source changes."
+    echo "Pinned DoomGeneric commit remains: ${current_commit}"
+    git -C "${DOOMGENERIC_ROOT}" status --short --untracked-files=all -- doomgeneric
+    echo
 fi
 
 printf 'DoomGeneric submodule ready at %s\n' "${current_commit}"
-printf 'Hazard3 DoomGeneric changes are committed in the pinned fork.\n'
+if [[ -n "${doomgeneric_changes}" ]]; then
+    printf 'Hazard3 DoomGeneric development build: local source changes enabled.\n'
+else
+    printf 'Hazard3 DoomGeneric changes are committed in the pinned fork.\n'
+fi
