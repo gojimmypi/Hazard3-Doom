@@ -2,6 +2,10 @@
 
 const MAX_TERMINAL_CHARS = 1_000_000;
 const STORAGE_PREFIX = "hazard3-doom-webserial.";
+const SCREEN_SNIP_REQUEST_BYTE = 0x1d;
+const SCREEN_SNIP_TIMEOUT_MS = 30_000;
+const SCREEN_SNIP_MAX_SOURCE_PIXELS = 1_000_000;
+const SCREEN_SNIP_MAX_DISPLAY_PIXELS = 4_000_000;
 
 const state = {
     port: null,
@@ -14,6 +18,8 @@ const state = {
     sessionTimer: null,
     commandHistory: [],
     historyIndex: 0,
+    screenSnip: null,
+    textDecoder: new TextDecoder(),
 };
 
 const els = {
@@ -35,6 +41,7 @@ const els = {
     commandInput: document.getElementById("commandInput"),
     sendButton: document.getElementById("sendButton"),
     downloadButton: document.getElementById("downloadButton"),
+    screenSnipButton: document.getElementById("screenSnipButton"),
     clearButton: document.getElementById("clearButton"),
     rxCount: document.getElementById("rxCount"),
     txCount: document.getElementById("txCount"),
@@ -52,6 +59,7 @@ function setConnectionUi(connected, detail = "") {
     els.commandInput.disabled = !connected;
     els.sendButton.disabled = !connected;
     els.macroSendButton.disabled = !connected;
+    els.screenSnipButton.disabled = !connected || state.screenSnip !== null;
     document.querySelectorAll(".command-button").forEach((button) => {
         button.disabled = !connected;
     });
@@ -126,9 +134,189 @@ function describePort(port) {
     return parts.join(" · ");
 }
 
-async function readLoop() {
-    const decoder = new TextDecoder();
+function appendSerialBytes(bytes) {
+    if (bytes.byteLength === 0) {
+        return;
+    }
+    appendTerminal(state.textDecoder.decode(bytes, { stream: true }));
+}
 
+function setScreenSnipIdle() {
+    if (state.screenSnip?.timeoutId !== undefined) {
+        window.clearTimeout(state.screenSnip.timeoutId);
+    }
+    state.screenSnip = null;
+    els.screenSnipButton.disabled = !state.port;
+    els.screenSnipButton.textContent = "Screen snip";
+}
+
+function abortScreenSnip(message, flushHeader = true) {
+    const capture = state.screenSnip;
+    if (!capture) {
+        return;
+    }
+
+    if (flushHeader && capture.phase === "header" && capture.headerBytes.length > 0) {
+        appendSerialBytes(Uint8Array.from(capture.headerBytes));
+    }
+    setScreenSnipIdle();
+    appendSystem(message);
+}
+
+function parseScreenSnipHeader(lineBytes) {
+    const line = new TextDecoder("ascii").decode(lineBytes).replace(/[\r\n]+$/, "");
+    const match = /^H3SNIP1 ([0-9]+) ([0-9]+) ([0-9]+) ([0-9]+) IDX8 ([0-9]+) ([0-9]+)$/.exec(line);
+    if (!match) {
+        return null;
+    }
+
+    const values = match.slice(1).map(Number);
+    const [sourceWidth, sourceHeight, displayWidth, displayHeight, paletteBytes, pixelBytes] = values;
+    if (sourceWidth <= 0 || sourceHeight <= 0 || displayWidth <= 0 || displayHeight <= 0 ||
+        sourceWidth * sourceHeight > SCREEN_SNIP_MAX_SOURCE_PIXELS ||
+        displayWidth * displayHeight > SCREEN_SNIP_MAX_DISPLAY_PIXELS ||
+        paletteBytes !== 256 || pixelBytes !== sourceWidth * sourceHeight) {
+        return null;
+    }
+
+    return { sourceWidth, sourceHeight, displayWidth, displayHeight, paletteBytes, pixelBytes };
+}
+
+function rgb332ToRgb(pixel) {
+    const red = (pixel >> 5) & 0x07;
+    const green = (pixel >> 2) & 0x07;
+    const blue = pixel & 0x03;
+    return [
+        (red << 5) | (red << 2) | (red >> 1),
+        (green << 5) | (green << 2) | (green >> 1),
+        blue * 0x55,
+    ];
+}
+
+async function downloadScreenSnip(capture) {
+    const palette = capture.payload.subarray(0, capture.paletteBytes);
+    const pixels = capture.payload.subarray(capture.paletteBytes);
+    const canvas = document.createElement("canvas");
+    canvas.width = capture.displayWidth;
+    canvas.height = capture.displayHeight;
+    const context = canvas.getContext("2d");
+    const image = context.createImageData(capture.displayWidth, capture.displayHeight);
+    const rgba = image.data;
+
+    for (let y = 0; y < capture.displayHeight; ++y) {
+        const sourceY = Math.floor(y * capture.sourceHeight / capture.displayHeight);
+        const sourceRow = sourceY * capture.sourceWidth;
+        const outputRow = y * capture.displayWidth;
+
+        for (let x = 0; x < capture.displayWidth; ++x) {
+            const sourceX = Math.floor(x * capture.sourceWidth / capture.displayWidth);
+            const paletteIndex = pixels[sourceRow + sourceX];
+            const [red, green, blue] = rgb332ToRgb(palette[paletteIndex]);
+            const output = (outputRow + x) * 4;
+            rgba[output] = red;
+            rgba[output + 1] = green;
+            rgba[output + 2] = blue;
+            rgba[output + 3] = 255;
+        }
+    }
+
+    context.putImageData(image, 0, 0);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) {
+        appendSystem("Screen snip failed: browser could not encode PNG.");
+        return;
+    }
+
+    const now = new Date();
+    const stamp = now.toISOString().replaceAll(":", "-").replace(".000Z", "Z");
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `hazard3-doom-hdmi-${capture.displayWidth}x${capture.displayHeight}-${stamp}.png`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    appendSystem(`Downloaded HDMI screen snip ${capture.displayWidth}x${capture.displayHeight} from ${capture.sourceWidth}x${capture.sourceHeight} source.`);
+}
+
+function finishScreenSnip() {
+    const capture = state.screenSnip;
+    if (!capture || capture.phase !== "payload" || capture.received !== capture.payload.byteLength) {
+        return;
+    }
+
+    setScreenSnipIdle();
+    void downloadScreenSnip(capture);
+}
+
+function processScreenSnipBytes(bytes) {
+    let offset = 0;
+
+    while (offset < bytes.byteLength && state.screenSnip) {
+        const capture = state.screenSnip;
+        if (capture.phase === "header") {
+            const newline = bytes.indexOf(0x0a, offset);
+            const end = newline === -1 ? bytes.byteLength : newline + 1;
+            for (let i = offset; i < end; ++i) {
+                capture.headerBytes.push(bytes[i]);
+            }
+            offset = end;
+
+            if (capture.headerBytes.length > 1024) {
+                abortScreenSnip("Screen snip failed: response header was too long.");
+                break;
+            }
+            if (newline === -1) {
+                break;
+            }
+
+            const lineBytes = Uint8Array.from(capture.headerBytes);
+            capture.headerBytes = [];
+            const header = parseScreenSnipHeader(lineBytes);
+            if (!header) {
+                const line = new TextDecoder("ascii").decode(lineBytes);
+                if (line.includes("H3SNIP1")) {
+                    abortScreenSnip("Screen snip failed: invalid firmware response.", false);
+                    break;
+                }
+                appendSerialBytes(lineBytes);
+                continue;
+            }
+
+            Object.assign(capture, header);
+            capture.payload = new Uint8Array(header.paletteBytes + header.pixelBytes);
+            capture.received = 0;
+            capture.phase = "payload";
+            appendSystem(`Receiving HDMI screen snip ${header.displayWidth}x${header.displayHeight} (${header.sourceWidth}x${header.sourceHeight} source)...`);
+            continue;
+        }
+
+        const remaining = capture.payload.byteLength - capture.received;
+        const count = Math.min(remaining, bytes.byteLength - offset);
+        capture.payload.set(bytes.subarray(offset, offset + count), capture.received);
+        capture.received += count;
+        offset += count;
+
+        if (capture.received === capture.payload.byteLength) {
+            finishScreenSnip();
+        }
+    }
+
+    if (offset < bytes.byteLength) {
+        appendSerialBytes(bytes.subarray(offset));
+    }
+}
+
+function processSerialBytes(bytes) {
+    if (state.screenSnip) {
+        processScreenSnipBytes(bytes);
+    } else {
+        appendSerialBytes(bytes);
+    }
+}
+
+async function readLoop() {
     try {
         while (state.port?.readable && state.keepReading) {
             state.reader = state.port.readable.getReader();
@@ -145,7 +333,7 @@ async function readLoop() {
 
                     state.rxBytes += value.byteLength;
                     els.rxCount.textContent = state.rxBytes.toLocaleString();
-                    appendTerminal(decoder.decode(value, { stream: true }));
+                    processSerialBytes(value);
                 }
             } catch (error) {
                 if (state.keepReading) {
@@ -157,7 +345,7 @@ async function readLoop() {
             }
         }
 
-        const tail = decoder.decode();
+        const tail = state.textDecoder.decode();
         if (tail) {
             appendTerminal(tail);
         }
@@ -179,6 +367,7 @@ async function openPort(port) {
     state.rxBytes = 0;
     state.txBytes = 0;
     state.connectedAt = Date.now();
+    state.textDecoder = new TextDecoder();
     els.rxCount.textContent = "0";
     els.txCount.textContent = "0";
     setConnectionUi(true, describePort(port));
@@ -237,6 +426,9 @@ async function disconnect() {
 
     const port = state.port;
     state.keepReading = false;
+    if (state.screenSnip) {
+        abortScreenSnip("Screen snip cancelled: disconnected.", false);
+    }
 
     try {
         if (state.reader) {
@@ -345,6 +537,35 @@ function downloadLog() {
     URL.revokeObjectURL(url);
 }
 
+async function requestScreenSnip() {
+    if (!state.port?.writable) {
+        appendSystem("Not connected.");
+        return;
+    }
+    if (state.screenSnip) {
+        appendSystem("A screen snip is already in progress.");
+        return;
+    }
+
+    state.screenSnip = {
+        phase: "header",
+        headerBytes: [],
+        payload: null,
+        received: 0,
+        timeoutId: window.setTimeout(() => {
+            abortScreenSnip("Screen snip timed out. Updated Doom or I2C GUI firmware must be running.");
+        }, SCREEN_SNIP_TIMEOUT_MS),
+    };
+    els.screenSnipButton.disabled = true;
+    els.screenSnipButton.textContent = "Capturing...";
+    appendSystem("Requesting full-resolution HDMI screen snip...");
+
+    const sent = await writeBytes(new Uint8Array([SCREEN_SNIP_REQUEST_BYTE]));
+    if (!sent && state.screenSnip) {
+        abortScreenSnip("Screen snip request could not be sent.", false);
+    }
+}
+
 function startSessionTimer() {
     stopSessionTimer();
     updateSessionTime();
@@ -435,6 +656,7 @@ function wireEvents() {
     els.reconnectButton.addEventListener("click", reconnect);
     els.clearButton.addEventListener("click", clearTerminal);
     els.downloadButton.addEventListener("click", downloadLog);
+    els.screenSnipButton.addEventListener("click", requestScreenSnip);
 
     els.commandForm.addEventListener("submit", async (event) => {
         event.preventDefault();

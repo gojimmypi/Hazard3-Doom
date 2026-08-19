@@ -11,6 +11,7 @@ A dependency-free static web app for connecting to the Hazard3-Doom UART from a 
 - Command entry with Up/Down command history.
 - RX/TX byte counters and session timer.
 - Download the visible terminal contents as a timestamped `.log` file.
+- Capture the current indexed HDMI source over UART and download the reconstructed full 1024x600 active display as a timestamped PNG.
 - Optional local echo and auto-scroll.
 - Hazard3-Doom command buttons for:
   - `help`
@@ -20,7 +21,7 @@ A dependency-free static web app for connecting to the Hazard3-Doom UART from a 
   - `sao gui`
   - `i2c gui`
 - Send Enter, Ctrl-C, and a 150 ms serial break.
-- One-byte I2CDriver GUI controls for `S`, `P`, `R`, `W`, `X`, `1`, `4`, `C`, and `Q` without appending a line ending.
+- One-byte I2CDriver GUI controls for `S`, `P`, `R`, `W`, `X`, `1`, `4`, `H`, `C`, and `Q` without appending a line ending.
 - One saved custom command macro.
 - No JavaScript packages, framework, build system, backend, or cloud service required.
 
@@ -57,6 +58,21 @@ docs/
 ```
 
 The app does not send UART data to a server. JavaScript communicates directly with the serial device selected in the browser permission dialog.
+
+## HDMI screen snip
+
+The **Screen snip** button sends reserved raw control byte `0x1d` to the active Hazard3-Doom display application. Updated Doom and I2CDriver GUI firmware respond with a short ASCII header followed by a binary RGB332 palette and the indexed source frame. The browser consumes that binary transfer without placing it in the terminal, reconstructs the FPGA nearest-neighbor scaling, and downloads a 1024x600 PNG.
+
+The current protocol is:
+
+```text
+H3SNIP1 <source-width> <source-height> 1024 600 IDX8 256 <pixel-bytes>\r\n
+<256 raw RGB332 palette bytes><source-width * source-height raw index bytes>
+```
+
+At 115200 baud, a 400x240 capture transfers about 96 KiB of binary data, so the game or GUI pauses briefly while the UART transfer completes. No screenshot pixels are uploaded to a server.
+
+The companion firmware changes are in `doom/doomgeneric_hazard3.c` and `src/i2cdriver_hdmi.c` in the integration package. The resident monitor itself does not expose block-RAM readback; capture is therefore handled while Doom or the I2CDriver HDMI GUI owns the display and still has the exact displayed source frame in software.
 
 ## Default UART settings
 
