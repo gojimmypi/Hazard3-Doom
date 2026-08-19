@@ -21,7 +21,69 @@ See the full Quick Start overview at https://ulx3s.github.io/ulx-doom/
 - `build-ulx4m-ld-bitstream.sh` - Builds or reuses the ULX4M-LD 85F FPGA bitstream.
 - `build-ulx4m-ld-doom.sh` - Builds the complete ULX4M-LD Doom target.
 - `build-xpack.cmd` - Builds the Hazard3 firmware on Windows using the configured xPack RISC-V GCC toolchain.
-- `sweep.sh` - Forces a rebuild for each nextpnr seed and saves every timing result and bitstream.
+- `sweep-peek.sh` - Runs a placement-only nextpnr seed scan without routing or bitstream generation. Use it to quickly rank candidate seeds before a full sweep.
+- `sweep.sh` - Runs the full FPGA build, placement, routing, timing analysis, and bitstream generation for every configured nextpnr seed.
+
+## Seed Sweep Workflow
+
+Use `sweep-peek.sh` as a fast screening pass before running the much more
+expensive full `sweep.sh`.
+
+`sweep-peek.sh` reuses the existing synthesized `fpga_ulx3s.json`, runs the
+same simulated-annealing placer and ULX3S 85F device selection used by the
+normal build, and stops before routing with `--no-route`. It records estimated
+placement timing for `clk_sys`, `clk_video_pix`, and `clk_tmds_x5`.
+
+From the repository root, run one seed for calibration or investigation:
+
+```bash
+./scripts/sweep-peek.sh 178
+```
+
+With no seed parameter, it scans seeds 1 through 260:
+
+```bash
+./scripts/sweep-peek.sh
+```
+
+Single-seed results are written under
+`third_party/Hazard3/example_soc/synth/placement-sweep/` as
+`results-seed-<seed>.csv`. A complete placement sweep writes
+`placement-sweep/results.csv`; individual nextpnr logs are saved as
+`placement-sweep/seed-<seed>.log`.
+
+Placement-only timing is a screening result, not final timing. A promising
+placement can still fail during routing. Rank the `sweep-peek.sh` results,
+select the strongest candidates, and then use the full routing flow to
+determine actual timing PASS/FAIL.
+
+`sweep.sh` is the authoritative full sweep. It rebuilds the resident monitor
+image used by the cold-boot FPGA netlist, runs complete FPGA place-and-route
+for each seed, and preserves each `pnr.log` and generated `.bit` file under
+`build/ulx3s-seed-sweep/`.
+
+In short:
+
+```text
+sweep-peek.sh
+    placement only
+    no routing
+    no bitstream
+    fast candidate ranking
+        |
+        v
+select strongest seeds
+        |
+        v
+sweep.sh
+    full placement and routing
+    final timing PASS/FAIL
+    generated bitstreams
+```
+
+Run a new seed search whenever the FPGA netlist changes materially. A seed that
+was optimal for an earlier design is not guaranteed to remain optimal after
+changes such as framebuffer size, EBR usage, or other FPGA resource changes.
 
 ## Setup Scripts
 

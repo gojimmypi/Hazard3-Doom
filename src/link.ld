@@ -38,8 +38,10 @@ SECTIONS
 
     /*
      * The upper 64 KiB of the physical 128 KiB SRAM is a dedicated Doom
-     * 320x200 indexed working screen. Keeping the renderer target out of the
-     * unified SDRAM cache leaves that cache available for code, WAD and heap.
+     * 320x200 indexed working screen. Keeping the Doom renderer target out of
+     * the unified SDRAM cache leaves that cache available for code, WAD and
+     * heap. Experimental higher-resolution HDMI presentation is scaled from
+     * this standard renderer buffer and does not enlarge the on-chip region.
      */
     __doom_screenbuffer_base = 0x00010000;
     __doom_screenbuffer_end = __doom_screenbuffer_base + 320 * 200;
