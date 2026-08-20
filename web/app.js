@@ -75,9 +75,9 @@ function screenSnipStatusText() {
     }
     if (state.screenSnipCapability !== "available") {
         if (state.screenSnipCapabilityProtocolKnown) {
-            return "Screen snip unavailable on the current HDMI screen.";
+            return "Screen snip unavailable: no capturable HDMI frame has been presented yet.";
         }
-        return "Screen snip unavailable: no capability response from the active firmware.";
+        return "Screen snip unavailable: the active firmware does not report screen capture support.";
     }
     return "Download the current HDMI display as a full 1024x600 PNG.";
 }
@@ -266,7 +266,7 @@ function describePort(port) {
         parts.push(`PID 0x${info.usbProductId.toString(16).padStart(4, "0")}`);
     }
 
-    return parts.join(" · ");
+    return parts.join(" | ");
 }
 
 function appendSerialBytes(bytes) {
@@ -390,19 +390,27 @@ function processScreenSnipBytes(bytes) {
     while (offset < bytes.byteLength && state.screenSnip) {
         const capture = state.screenSnip;
         if (capture.phase === "header") {
-            const newline = bytes.indexOf(0x0a, offset);
-            const end = newline === -1 ? bytes.byteLength : newline + 1;
-            for (let i = offset; i < end; ++i) {
-                capture.headerBytes.push(bytes[i]);
-            }
-            offset = end;
+            const byte = bytes[offset++];
 
+            if (byte === SCREEN_SNIP_CAPABILITY_NAK_BYTE) {
+                abortScreenSnip(
+                    "Screen snip unavailable: no retained HDMI frame is available.",
+                    false);
+                continue;
+            }
+            if (byte === SCREEN_SNIP_CAPABILITY_ACK_BYTE ||
+                byte === SCREEN_SNIP_CAPABILITY_REQUEST_BYTE ||
+                byte === SCREEN_SNIP_REQUEST_BYTE) {
+                continue;
+            }
+
+            capture.headerBytes.push(byte);
             if (capture.headerBytes.length > 1024) {
                 abortScreenSnip("Screen snip failed: response header was too long.");
                 break;
             }
-            if (newline === -1) {
-                break;
+            if (byte !== 0x0a) {
+                continue;
             }
 
             const lineBytes = Uint8Array.from(capture.headerBytes);
@@ -448,35 +456,47 @@ function processSerialBytes(bytes) {
         return;
     }
 
-    if (state.screenSnipProbe !== null) {
-        const ackIndex = bytes.indexOf(SCREEN_SNIP_CAPABILITY_ACK_BYTE);
-        const nakIndex = bytes.indexOf(SCREEN_SNIP_CAPABILITY_NAK_BYTE);
-        let responseIndex = -1;
-        let available = false;
+    const output = new Uint8Array(bytes.byteLength);
+    let outputLength = 0;
+    let probeResponse = null;
 
-        if (ackIndex !== -1 && (nakIndex === -1 || ackIndex < nakIndex)) {
-            responseIndex = ackIndex;
-            available = true;
-        } else if (nakIndex !== -1) {
-            responseIndex = nakIndex;
+    for (const byte of bytes) {
+        if (byte === SCREEN_SNIP_CAPABILITY_ACK_BYTE ||
+            byte === SCREEN_SNIP_CAPABILITY_NAK_BYTE) {
+            if (state.screenSnipProbe !== null && probeResponse === null) {
+                probeResponse = byte;
+            }
+            continue;
         }
 
-        if (responseIndex !== -1) {
-            if (responseIndex > 0) {
-                appendSerialBytes(bytes.subarray(0, responseIndex));
-            }
-            state.screenSnipCapabilityProtocolKnown = true;
-            clearScreenSnipProbe(available);
-            setScreenSnipCapability(available ? "available" : "unavailable");
-            startScreenSnipCapabilityWatch();
-            if (responseIndex + 1 < bytes.byteLength) {
-                appendSerialBytes(bytes.subarray(responseIndex + 1));
-            }
-            return;
+        // Screen-snip protocol controls are never terminal text. Consume any
+        // adapter/local echo instead of rendering an unprintable glyph.
+        if (byte === SCREEN_SNIP_CAPABILITY_REQUEST_BYTE ||
+            byte === SCREEN_SNIP_REQUEST_BYTE) {
+            continue;
         }
+
+        output[outputLength++] = byte;
     }
 
-    appendSerialBytes(bytes);
+    if (outputLength !== 0) {
+        appendSerialBytes(output.subarray(0, outputLength));
+    }
+
+    if (probeResponse !== null && state.screenSnipProbe !== null) {
+        const available = probeResponse === SCREEN_SNIP_CAPABILITY_ACK_BYTE;
+        const previousCapability = state.screenSnipCapability;
+
+        state.screenSnipCapabilityProtocolKnown = true;
+        clearScreenSnipProbe(available);
+        setScreenSnipCapability(available ? "available" : "unavailable");
+        startScreenSnipCapabilityWatch();
+
+        if (!available && previousCapability !== "unavailable") {
+            appendSystem(
+                "Screen snip unavailable: no capturable HDMI frame has been presented yet.");
+        }
+    }
 }
 
 async function readLoop() {
@@ -737,7 +757,7 @@ async function requestScreenSnip() {
         payload: null,
         received: 0,
         timeoutId: window.setTimeout(() => {
-            abortScreenSnip("Screen snip timed out. Updated Doom or I2C GUI firmware must be running.");
+            abortScreenSnip("Screen snip timed out: the active firmware did not return a capture frame.");
         }, SCREEN_SNIP_TIMEOUT_MS),
     };
     updateScreenSnipUi();
@@ -840,12 +860,6 @@ function wireEvents() {
     els.clearButton.addEventListener("click", clearTerminal);
     els.downloadButton.addEventListener("click", downloadLog);
     els.screenSnipButton.addEventListener("click", requestScreenSnip);
-    els.screenSnipControl.addEventListener("mouseenter", () => {
-        if (state.port && state.screenSnip === null &&
-            state.screenSnipCapability !== "available" && state.screenSnipProbe === null) {
-            void probeScreenSnipCapability();
-        }
-    });
 
     els.commandForm.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -866,7 +880,8 @@ function wireEvents() {
             const sent = await writeBytes(new TextEncoder().encode(value), els.localEcho.checked ? value : "");
             if (sent && value === "Q") {
                 clearScreenSnipProbe();
-                setScreenSnipCapability("unavailable");
+                setScreenSnipCapability("checking");
+                scheduleScreenSnipProbe(750);
             }
         });
     });
@@ -883,7 +898,8 @@ function wireEvents() {
                 case "ctrl-x":
                     if (await writeBytes(new Uint8Array([0x18]), els.localEcho.checked ? "^X" : "")) {
                         clearScreenSnipProbe();
-                        setScreenSnipCapability("unavailable");
+                        setScreenSnipCapability("checking");
+                        scheduleScreenSnipProbe(750);
                     }
                     break;
                 case "break":

@@ -35,7 +35,13 @@
 #define UART_FSTAT_RX_EMPTY   (1u << 25)
 
 #define SCREEN_SNIP_CAPABILITY_REQUEST 0x1cu
+#define SCREEN_SNIP_CAPABILITY_ACK     0x06u
 #define SCREEN_SNIP_CAPABILITY_NAK     0x15u
+#define SCREEN_SNIP_REQUEST            0x1du
+#define SCREEN_SNIP_HEADER_STANDARD \
+    "\r\nH3SNIP1 320 200 1024 600 IDX8 256 64000\r\n"
+#define SCREEN_SNIP_HEADER_HIGH \
+    "\r\nH3SNIP1 400 240 1024 600 IDX8 256 96000\r\n"
 
 #define DOOM_UART_CAPTURE_BYTES 64u
 #define DOOM_UART_CAPTURE_MASK  (DOOM_UART_CAPTURE_BYTES - 1u)
@@ -462,6 +468,95 @@ static uint8_t video_test_pattern_pixel(uint32_t x, uint32_t y)
     return pixel;
 }
 
+static volatile hazard3_screen_snip_cache_t* screen_snip_cache(void)
+{
+    return (volatile hazard3_screen_snip_cache_t*)(uintptr_t)
+        HAZARD3_SCREEN_SNIP_CACHE_BASE;
+}
+
+static int screen_snip_cache_valid(void)
+{
+    const volatile hazard3_screen_snip_cache_t* cache;
+    uint32_t width;
+    uint32_t height;
+    uint32_t pixel_bytes;
+
+    if (!external_memory_ready()) {
+        return 0;
+    }
+
+    cache = screen_snip_cache();
+    if (cache->magic != HAZARD3_SCREEN_SNIP_CACHE_MAGIC ||
+        cache->magic_inverse != ~HAZARD3_SCREEN_SNIP_CACHE_MAGIC ||
+        cache->version != HAZARD3_SCREEN_SNIP_CACHE_VERSION ||
+        cache->palette_bytes != HAZARD3_SCREEN_SNIP_PALETTE_BYTES) {
+        return 0;
+    }
+
+    width = cache->source_width;
+    height = cache->source_height;
+    pixel_bytes = cache->pixel_bytes;
+
+    return (width == HAZARD3_VIDEO_STANDARD_WIDTH &&
+            height == HAZARD3_VIDEO_STANDARD_HEIGHT &&
+            pixel_bytes == HAZARD3_VIDEO_STANDARD_BYTES) ||
+        (width == HAZARD3_VIDEO_HIGH_WIDTH &&
+            height == HAZARD3_VIDEO_HIGH_HEIGHT &&
+            pixel_bytes == HAZARD3_VIDEO_HIGH_BYTES);
+}
+
+static void screen_snip_cache_save_rgb332(
+    const volatile uint8_t* pixels,
+    uint32_t width,
+    uint32_t height)
+{
+    volatile hazard3_screen_snip_cache_t* cache = screen_snip_cache();
+    uint32_t pixel_bytes = width * height;
+
+    cache->magic = 0u;
+    cache->magic_inverse = 0u;
+    memory_barrier();
+
+    cache->version = HAZARD3_SCREEN_SNIP_CACHE_VERSION;
+    cache->source_width = width;
+    cache->source_height = height;
+    cache->palette_bytes = HAZARD3_SCREEN_SNIP_PALETTE_BYTES;
+    cache->pixel_bytes = pixel_bytes;
+    cache->reserved = 0u;
+
+    for (uint32_t i = 0u; i < HAZARD3_SCREEN_SNIP_PALETTE_BYTES; ++i) {
+        cache->palette[i] = (uint8_t)i;
+    }
+    for (uint32_t i = 0u; i < pixel_bytes; ++i) {
+        cache->pixels[i] = pixels[i];
+    }
+
+    memory_barrier();
+    cache->magic_inverse = ~HAZARD3_SCREEN_SNIP_CACHE_MAGIC;
+    memory_barrier();
+    cache->magic = HAZARD3_SCREEN_SNIP_CACHE_MAGIC;
+    memory_barrier();
+}
+
+static void screen_snip_send_cached(void)
+{
+    const volatile hazard3_screen_snip_cache_t* cache = screen_snip_cache();
+
+    if (!screen_snip_cache_valid()) {
+        uart_putc(SCREEN_SNIP_CAPABILITY_NAK);
+        return;
+    }
+
+    uart_puts(cache->source_width == HAZARD3_VIDEO_HIGH_WIDTH
+        ? SCREEN_SNIP_HEADER_HIGH : SCREEN_SNIP_HEADER_STANDARD);
+    for (uint32_t i = 0u; i < cache->palette_bytes; ++i) {
+        uart_putc(cache->palette[i]);
+    }
+    for (uint32_t i = 0u; i < cache->pixel_bytes; ++i) {
+        uart_putc(cache->pixels[i]);
+    }
+}
+
 static int video_present_rgb332_buffer0(uint32_t timeout_ms)
 {
     uint32_t start_ticks = system_ticks;
@@ -512,6 +607,12 @@ static void video_write_test_pattern(void)
 
     memory_barrier();
     presented = video_present_rgb332_buffer0(1000u);
+    if (presented) {
+        screen_snip_cache_save_rgb332(
+            (const volatile uint8_t*)(uintptr_t)destination,
+            VIDEO_FRAMEBUFFER_WIDTH,
+            VIDEO_FRAMEBUFFER_HEIGHT);
+    }
     ++video_pattern_runs;
     video_pattern_last_elapsed_ms = system_ticks - start_ticks;
 
@@ -1613,7 +1714,12 @@ static void console_poll(void)
         int sao_console_result;
 
         if (received == SCREEN_SNIP_CAPABILITY_REQUEST) {
-            uart_putc(SCREEN_SNIP_CAPABILITY_NAK);
+            uart_putc(screen_snip_cache_valid()
+                ? SCREEN_SNIP_CAPABILITY_ACK : SCREEN_SNIP_CAPABILITY_NAK);
+            continue;
+        }
+        if (received == SCREEN_SNIP_REQUEST) {
+            screen_snip_send_cached();
             continue;
         }
 

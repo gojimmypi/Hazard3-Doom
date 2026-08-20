@@ -61,24 +61,24 @@ The app does not send UART data to a server. JavaScript communicates directly wi
 
 ## HDMI screen snip
 
-The **Screen snip** button sends reserved raw control byte `0x1d` to the active Hazard3-Doom display application. Updated Doom and I2CDriver GUI firmware respond with a short ASCII header followed by a binary RGB332 palette and the indexed source frame. The browser consumes that binary transfer without placing it in the terminal, reconstructs the FPGA nearest-neighbor scaling, and downloads a 1024x600 PNG.
+The **Screen snip** button sends reserved raw control byte `0x1d` to the active Hazard3-Doom display owner. Running Doom and the active I2CDriver GUI respond with a short ASCII header followed by a binary RGB332 palette and indexed source frame. The browser consumes that transfer without placing it in the terminal, reconstructs the FPGA nearest-neighbor scaling, and downloads a 1024x600 PNG.
 
-Before enabling the button, the browser sends capability query byte `0x1c`. Supported Doom and I2CDriver HDMI screens reply with ACK byte `0x06`. The updated resident monitor replies with NAK byte `0x15`, because the monitor prompt itself does not own a readable software copy of the displayed frame. A timeout means the active firmware does not implement the capability protocol.
+Before enabling the button, the browser sends capability query byte `0x1c`. A screen-snip provider replies with ACK byte `0x06`. The resident monitor replies with ACK when a retained HDMI frame is available and NAK byte `0x15` only when no capturable frame has been presented yet. A timeout means the active firmware does not implement the capability protocol.
 
-Once the browser has seen either ACK or NAK, it rechecks capability every two seconds. This lets the button follow the actual active firmware mode even when Doom or the I2CDriver GUI is entered by a path the web app did not initiate. The browser consumes ACK/NAK bytes instead of displaying them in the terminal. Hovering the disabled control explains whether capture is unavailable on the current screen or whether no capability response was received. A capture click also performs a final capability preflight.
+The browser consumes the reserved `0x1c`, `0x1d`, `0x06`, and `0x15` protocol controls rather than rendering them as terminal characters. Hovering the disabled control is passive and only shows the current `title` text; it does not transmit a probe byte. When a NAK changes the capability state, the terminal receives a readable system message instead of an unprintable control glyph.
 
-The resident monitor handles `0x1c` before its line-command parser and returns NAK, so capability polling cannot become part of a partially typed `sao` or `i2c` command.
+Once the browser has seen either ACK or NAK, it rechecks capability every two seconds. Running Doom can be captured from the next completed `DG_DrawFrame()`; the I2CDriver GUI can be captured from its current software framebuffer. When Doom exits with Ctrl-X, or the I2CDriver GUI exits normally, the last displayed source frame and palette are copied once into a retained cache in the reserved video SDRAM area. The monitor then serves that retained frame, so Screen snip remains available after returning to the `>` prompt. The resident monitor HDMI test pattern is cached after a successful presentation as well. There is no per-frame cache copy during normal Doom gameplay.
 
-The current protocol is:
+The current UART transfer protocol is:
 
 ```text
 H3SNIP1 <source-width> <source-height> 1024 600 IDX8 256 <pixel-bytes>\r\n
 <256 raw RGB332 palette bytes><source-width * source-height raw index bytes>
 ```
 
-At 115200 baud, a 400x240 capture transfers about 96 KiB of binary data, so the game or GUI pauses briefly while the UART transfer completes. No screenshot pixels are uploaded to a server.
+Supported source sizes are 320x200 and 400x240. At 115200 baud, a 400x240 capture transfers about 96 KiB of binary data, so Doom or the GUI pauses briefly while the UART transfer completes. No screenshot pixels are uploaded to a server.
 
-The companion firmware changes are in `doom/doomgeneric_hazard3.c` and `src/i2cdriver_hdmi.c` in the integration package. The resident monitor itself does not expose block-RAM readback; capture is therefore handled while Doom or the I2CDriver HDMI GUI owns the display and still has the exact displayed source frame in software.
+The retained cache begins at offset `0x00048000` inside the existing reserved video SDRAM region. It stores a committed header, 256-byte RGB332 palette, and up to 96,000 source pixels. A magic value and inverse-magic commit pair prevent the monitor from treating a partially written cache as valid.
 
 ## Default UART settings
 

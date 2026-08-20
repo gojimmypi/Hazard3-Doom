@@ -235,6 +235,83 @@ static void screen_snip_send(const uint32_t* source_words)
 #endif
 }
 
+void hazard3_doom_screen_snip_cache(void)
+{
+    const uint32_t* source_words = (const uint32_t*)DG_ScreenBuffer;
+    volatile hazard3_screen_snip_cache_t* cache =
+        (volatile hazard3_screen_snip_cache_t*)(uintptr_t)
+            HAZARD3_SCREEN_SNIP_CACHE_BASE;
+
+    if (source_words == (const uint32_t*)0) {
+        return;
+    }
+
+    cache->magic = 0u;
+    cache->magic_inverse = 0u;
+    hazard3_memory_barrier();
+    cache->version = HAZARD3_SCREEN_SNIP_CACHE_VERSION;
+#ifdef HAZARD3_VIDEO_HIGH_RES
+    cache->source_width = HAZARD3_VIDEO_HIGH_WIDTH;
+    cache->source_height = HAZARD3_VIDEO_HIGH_HEIGHT;
+    cache->pixel_bytes = HAZARD3_VIDEO_HIGH_BYTES;
+#else
+    cache->source_width = HAZARD3_VIDEO_STANDARD_WIDTH;
+    cache->source_height = HAZARD3_VIDEO_STANDARD_HEIGHT;
+    cache->pixel_bytes = HAZARD3_VIDEO_STANDARD_BYTES;
+#endif
+    cache->palette_bytes = HAZARD3_SCREEN_SNIP_PALETTE_BYTES;
+    cache->reserved = 0u;
+
+    for (uint32_t i = 0u; i < HAZARD3_SCREEN_SNIP_PALETTE_BYTES; ++i) {
+        cache->palette[i] = color_to_rgb332(&colors[i]);
+    }
+
+#ifdef HAZARD3_VIDEO_HIGH_RES
+    {
+        const uint8_t* source_pixels = (const uint8_t*)source_words;
+        uint32_t destination = 0u;
+
+        for (uint32_t source_y = 0u;
+             source_y < HAZARD3_VIDEO_STANDARD_HEIGHT;
+             ++source_y) {
+            const uint8_t* source_row = source_pixels +
+                source_y * HAZARD3_VIDEO_STANDARD_WIDTH;
+            uint32_t repeat_count = source_y % 5u == 0u ? 2u : 1u;
+
+            for (uint32_t repeat = 0u; repeat < repeat_count; ++repeat) {
+                for (uint32_t source_x = 0u;
+                     source_x < HAZARD3_VIDEO_STANDARD_WIDTH;
+                     source_x += 16u) {
+                    const uint8_t* p = source_row + source_x;
+                    static const uint8_t map[20] = {
+                        0u, 0u, 1u, 2u, 3u, 4u, 4u, 5u, 6u, 7u,
+                        8u, 8u, 9u, 10u, 11u, 12u, 12u, 13u, 14u, 15u
+                    };
+
+                    for (uint32_t i = 0u; i < 20u; ++i) {
+                        cache->pixels[destination++] = p[map[i]];
+                    }
+                }
+            }
+        }
+    }
+#else
+    {
+        const uint8_t* source_pixels = (const uint8_t*)source_words;
+
+        for (uint32_t i = 0u; i < HAZARD3_VIDEO_STANDARD_BYTES; ++i) {
+            cache->pixels[i] = source_pixels[i];
+        }
+    }
+#endif
+
+    hazard3_memory_barrier();
+    cache->magic_inverse = ~HAZARD3_SCREEN_SNIP_CACHE_MAGIC;
+    hazard3_memory_barrier();
+    cache->magic = HAZARD3_SCREEN_SNIP_CACHE_MAGIC;
+    hazard3_memory_barrier();
+}
+
 static void copy_frame_direct(const uint32_t* source_words)
 {
     HAZARD3_VIDEO_DIRECT_ADDRESS = hazard3_video_direct_halfword_base(

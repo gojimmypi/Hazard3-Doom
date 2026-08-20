@@ -157,6 +157,7 @@ int32_t doom_image_main(const hazard3_monitor_services_t* services)
     while (!hazard3_doom_exit_requested()) {
         doomgeneric_Tick();
     }
+    hazard3_doom_screen_snip_cache();
     interactive_elapsed = hazard3_ticks_ms() - interactive_start_ticks;
     frame_count = hazard3_doom_draw_frame_count();
 

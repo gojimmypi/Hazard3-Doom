@@ -12,6 +12,7 @@ uint32_t hazard3_doom_last_copy_cycles(void);
 uint32_t hazard3_doom_last_present_cycles(void);
 uint32_t hazard3_doom_copy_cycles_total(void);
 uint32_t hazard3_doom_present_cycles_total(void);
+void hazard3_doom_screen_snip_cache(void);
 void hazard3_doom_input_reset(void);
 int hazard3_doom_exit_requested(void);
 

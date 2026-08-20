@@ -91,6 +91,34 @@
 #define HAZARD3_VIDEO_HIGH_BYTES              \
     (HAZARD3_VIDEO_HIGH_WIDTH * HAZARD3_VIDEO_HIGH_HEIGHT)
 
+/*
+ * Retained HDMI screen-snip cache. Active display clients update this only
+ * when they are about to return control to the resident monitor. It therefore
+ * has no per-frame cost for Doom or the I2CDriver GUI. The monitor can then
+ * return the last successfully displayed source frame after the client exits.
+ */
+#define HAZARD3_SCREEN_SNIP_CACHE_OFFSET       0x00048000u
+#define HAZARD3_SCREEN_SNIP_CACHE_BASE         \
+    (HAZARD3_VIDEO_BASE + HAZARD3_SCREEN_SNIP_CACHE_OFFSET)
+#define HAZARD3_SCREEN_SNIP_CACHE_REGION_BYTES 0x00018000u
+#define HAZARD3_SCREEN_SNIP_CACHE_MAGIC        0x31504e53u
+#define HAZARD3_SCREEN_SNIP_CACHE_VERSION      1u
+#define HAZARD3_SCREEN_SNIP_PALETTE_BYTES      256u
+#define HAZARD3_SCREEN_SNIP_MAX_PIXELS         HAZARD3_VIDEO_HIGH_BYTES
+
+typedef struct hazard3_screen_snip_cache {
+    uint32_t magic;
+    uint32_t magic_inverse;
+    uint32_t version;
+    uint32_t source_width;
+    uint32_t source_height;
+    uint32_t palette_bytes;
+    uint32_t pixel_bytes;
+    uint32_t reserved;
+    uint8_t palette[HAZARD3_SCREEN_SNIP_PALETTE_BYTES];
+    uint8_t pixels[HAZARD3_SCREEN_SNIP_MAX_PIXELS];
+} hazard3_screen_snip_cache_t;
+
 #define HAZARD3_VIDEO_DIRECT_BUFFER1_STANDARD_HALFWORD 0x00008000u
 #define HAZARD3_VIDEO_DIRECT_BUFFER1_HIGH_HALFWORD     0x0000c000u
 #define HAZARD3_VIDEO_DIRECT_ADDRESS_HIGH_RES_FLAG     0x80000000u
@@ -105,17 +133,16 @@
 #define HAZARD3_VIDEO_FRAMEBUFFER_BYTES       HAZARD3_VIDEO_HIGH_BYTES
 #define HAZARD3_VIDEO_MODE_CONTROL            HAZARD3_VIDEO_CONTROL_HIGH_RES
 #define HAZARD3_VIDEO_HIGH_RES_ENABLED         1u
-#define HAZARD3_VIDEO_MINIMUM_RESERVE_BYTES   \
-    (0x00030000u + HAZARD3_VIDEO_HIGH_BYTES)
 #else
 #define HAZARD3_VIDEO_FRAMEBUFFER_WIDTH       HAZARD3_VIDEO_STANDARD_WIDTH
 #define HAZARD3_VIDEO_FRAMEBUFFER_HEIGHT      HAZARD3_VIDEO_STANDARD_HEIGHT
 #define HAZARD3_VIDEO_FRAMEBUFFER_BYTES       HAZARD3_VIDEO_STANDARD_BYTES
 #define HAZARD3_VIDEO_MODE_CONTROL            0u
 #define HAZARD3_VIDEO_HIGH_RES_ENABLED         0u
-#define HAZARD3_VIDEO_MINIMUM_RESERVE_BYTES   \
-    (0x00010000u + HAZARD3_VIDEO_STANDARD_BYTES)
 #endif
+
+#define HAZARD3_VIDEO_MINIMUM_RESERVE_BYTES   \
+    (HAZARD3_SCREEN_SNIP_CACHE_OFFSET + HAZARD3_SCREEN_SNIP_CACHE_REGION_BYTES)
 
 static inline uint32_t hazard3_video_direct_halfword_base(
     uint32_t buffer_index,

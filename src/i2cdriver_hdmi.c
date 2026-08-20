@@ -328,6 +328,39 @@ static void screen_snip_send(void)
     }
 }
 
+static void screen_snip_cache_save(void)
+{
+    const volatile uint8_t* framebuffer = ui_framebuffer();
+    volatile hazard3_screen_snip_cache_t* cache =
+        (volatile hazard3_screen_snip_cache_t*)(uintptr_t)
+            HAZARD3_SCREEN_SNIP_CACHE_BASE;
+    size_t pixel_count = ui_high_resolution != 0 ? UI_HIGH_PIXELS : UI_PIXELS;
+    size_t i;
+
+    cache->magic = 0u;
+    cache->magic_inverse = 0u;
+    hazard3_memory_barrier();
+    cache->version = HAZARD3_SCREEN_SNIP_CACHE_VERSION;
+    cache->source_width = ui_high_resolution != 0 ? UI_HIGH_WIDTH : UI_WIDTH;
+    cache->source_height = ui_high_resolution != 0 ? UI_HIGH_HEIGHT : UI_HEIGHT;
+    cache->palette_bytes = HAZARD3_SCREEN_SNIP_PALETTE_BYTES;
+    cache->pixel_bytes = (uint32_t)pixel_count;
+    cache->reserved = 0u;
+
+    for (i = 0u; i < HAZARD3_SCREEN_SNIP_PALETTE_BYTES; ++i) {
+        cache->palette[i] = i < sizeof(ui_palette) ? ui_palette[i] : 0u;
+    }
+    for (i = 0u; i < pixel_count; ++i) {
+        cache->pixels[i] = framebuffer[i];
+    }
+
+    hazard3_memory_barrier();
+    cache->magic_inverse = ~HAZARD3_SCREEN_SNIP_CACHE_MAGIC;
+    hazard3_memory_barrier();
+    cache->magic = HAZARD3_SCREEN_SNIP_CACHE_MAGIC;
+    hazard3_memory_barrier();
+}
+
 static void ui_pixel(unsigned int x, unsigned int y, uint8_t color)
 {
     volatile uint8_t* framebuffer;
@@ -1494,6 +1527,7 @@ void hazard3_i2cdriver_hdmi_run(void)
             }
             if (key == 0x18u || key == (uint8_t)'q' || key == (uint8_t)'Q' ||
                 (key == 0x1bu && ui_prompt_mode == PROMPT_NONE)) {
+                screen_snip_cache_save();
                 running = 0;
                 continue;
             }
