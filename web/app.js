@@ -51,6 +51,8 @@ const els = {
     commandInput: document.getElementById("commandInput"),
     sendButton: document.getElementById("sendButton"),
     downloadButton: document.getElementById("downloadButton"),
+    copyButton: document.getElementById("copyButton"),
+    copyButtonLabel: document.getElementById("copyButtonLabel"),
     screenSnipControl: document.getElementById("screenSnipControl"),
     screenSnipButton: document.getElementById("screenSnipButton"),
     clearButton: document.getElementById("clearButton"),
@@ -722,6 +724,44 @@ function clearTerminal() {
     els.terminal.textContent = "";
 }
 
+function copyTerminalFallback(text) {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    if (!copied) {
+        throw new Error("browser clipboard command was rejected");
+    }
+}
+
+async function copyTerminalContents() {
+    const text = els.terminal.textContent;
+
+    try {
+        if (navigator.clipboard?.writeText && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            copyTerminalFallback(text);
+        }
+
+        const originalLabel = els.copyButtonLabel.textContent;
+        els.copyButtonLabel.textContent = "Copied";
+        els.copyButton.classList.add("copy-success");
+        window.setTimeout(() => {
+            els.copyButtonLabel.textContent = originalLabel;
+            els.copyButton.classList.remove("copy-success");
+        }, 1200);
+    } catch (error) {
+        appendSystem(`Copy failed: ${error.message}`);
+    }
+}
+
 function downloadLog() {
     const now = new Date();
     const stamp = now.toISOString().replaceAll(":", "-").replace(".000Z", "Z");
@@ -859,6 +899,7 @@ function wireEvents() {
     els.reconnectButton.addEventListener("click", reconnect);
     els.clearButton.addEventListener("click", clearTerminal);
     els.downloadButton.addEventListener("click", downloadLog);
+    els.copyButton.addEventListener("click", copyTerminalContents);
     els.screenSnipButton.addEventListener("click", requestScreenSnip);
 
     els.commandForm.addEventListener("submit", async (event) => {

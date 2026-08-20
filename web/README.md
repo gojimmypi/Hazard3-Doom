@@ -11,8 +11,12 @@ A dependency-free static web app for connecting to the Hazard3-Doom UART from a 
 - Command entry with Up/Down command history.
 - RX/TX byte counters and session timer.
 - Download the visible terminal contents as a timestamped `.log` file.
+- Copy the full UART terminal contents to the clipboard with one click.
 - Capture the current indexed HDMI source over UART and download the reconstructed full 1024x600 active display as a timestamped PNG.
 - Optional local echo and auto-scroll.
+- Viewport-filling desktop layout that keeps the UART command bar visible while the terminal expands to use available space.
+- Collapsible Monitor, SAO / I2C, and I2CDriver GUI control sections.
+- Prominent links to the Hazard3-Doom GitHub source and Read the Docs site.
 - Hazard3-Doom command buttons for:
   - `help`
   - `sao info`
