@@ -49,11 +49,16 @@
     <NMakePreprocessorDefinitions>HAZARD3_SYS_CLK_HZ=50000000u;__riscv=1;__riscv_xlen=32;__riscv_float_abi_soft=1;__riscv_compressed=1;__VisualGDB_CFG_Release;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
   </PropertyGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\fat_ro.c" />
+    <ClCompile Include="..\src\i2cdriver_hdmi.c" />
     <ClCompile Include="..\src\main.c" />
     <ClCompile Include="..\doom\doom_image_loader.c" />
     <ClCompile Include="..\doom\doom_wad_loader.c" />
     <ClCompile Include="..\doom\doom_port_smoke.c" />
     <ClCompile Include="..\doom\sdram_exec_test.c" />
+    <ClCompile Include="..\src\sao_console.c" />
+    <ClCompile Include="..\src\sd_boot.c" />
+    <ClCompile Include="..\src\sd_spi.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\src\start.S" />
@@ -62,6 +67,13 @@
     <None Include="..\scripts\build-xpack.cmd" />
     <None Include="Hazard3-Doom-Debug.vgdbsettings" />
     <None Include="Hazard3-Doom-Release.vgdbsettings" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\fat_ro.h" />
+    <ClInclude Include="..\src\i2cdriver_hdmi.h" />
+    <ClInclude Include="..\src\sao_console.h" />
+    <ClInclude Include="..\src\sd_boot.h" />
+    <ClInclude Include="..\src\sd_spi.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
