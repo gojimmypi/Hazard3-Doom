@@ -4,8 +4,22 @@
 	update = checkout
 	branch = ulx-doom
 
+# When changing, refresh and confirm:
+#
+#   git submodule sync -- third_party/Hazard3
+#   git submodule update --init --remote third_party/Hazard3
+#   git -C third_party/Hazard3 remote -v
+#   git -C third_party/Hazard3 branch --show-current
+#   git -C third_party/Hazard3 log -1 --oneline
+
+#[submodule "third_party/Hazard3"]
+#	path = third_party/Hazard3
+#	url = https://github.com/ulx3s/Hazard3.git
+#	branch = ulx-doom
+#	update = checkout
+
 [submodule "third_party/Hazard3"]
 	path = third_party/Hazard3
-	url = https://github.com/ulx3s/Hazard3.git
-	branch = ulx-doom
+	url = https://github.com/gojimmypi/Hazard3.git
+	branch = ulx-doom-dev
 	update = checkout
