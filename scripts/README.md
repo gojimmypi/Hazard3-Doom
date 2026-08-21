@@ -24,6 +24,27 @@ See the full Quick Start overview at https://ulx3s.github.io/ulx-doom/
 - `sweep-peek.sh` - Runs a placement-only nextpnr seed scan without routing or bitstream generation. Use it to quickly rank candidate seeds before a full sweep.
 - `sweep.sh` - Runs the full FPGA build, placement, routing, timing analysis, and bitstream generation for every configured nextpnr seed.
 
+### ULX3S HDMI framebuffer profiles
+
+The ULX3S build supports two framebuffer hardware profiles. The default
+`extended` profile preserves the 400x240 experimental source and packed 512x300
+GUI source. For unrelated FPGA development, select the lean `standard` profile
+to synthesize only the double-buffered 320x200 framebuffer:
+
+```bash
+HAZARD3_HDMI_EXTENDED_MODES=0 ./scripts/build-ulx3s-doom.sh
+```
+
+Use the extended profile explicitly when testing 400x240 or 512x300 video:
+
+```bash
+HAZARD3_HDMI_EXTENDED_MODES=1 ./scripts/build-ulx3s-doom.sh
+```
+
+The standard profile instantiates 64 framebuffer DP16KD banks instead of 95.
+The build records the active profile and automatically invalidates an existing
+synthesized ULX3S netlist when the requested profile changes.
+
 ## Seed Sweep Workflow
 
 Use `sweep-peek.sh` as a fast screening pass before running the much more

@@ -21,6 +21,7 @@ MONITOR_BIN="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.bin"
 BOOT_HEX="${HAZARD3_ROOT}/example_soc/soc/hazard3-boot-monitor.hex"
 SDCARD_DIR="${ROOT_DIR}/build/sdcard"
 DOOM_OUTPUT="${DOOM_BUILD_DIR}/hazard3-doom.h3d"
+HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
 
 # Run shellcheck to ensure this is a good script.
 # Specify the executable shell checker you want to use:
@@ -66,6 +67,22 @@ require_tool()
     }
 }
 
+case "${HAZARD3_HDMI_EXTENDED_MODES}" in
+0)
+    VIDEO_PROFILE="standard"
+    ;;
+1)
+    VIDEO_PROFILE="extended"
+    ;;
+*)
+    echo "HAZARD3_HDMI_EXTENDED_MODES must be 0 or 1" >&2
+    exit 1
+    ;;
+esac
+
+printf 'ULX3S HDMI video profile: %s (extended modes=%s)\n' \
+    "${VIDEO_PROFILE}" "${HAZARD3_HDMI_EXTENDED_MODES}"
+
 require_tool make
 require_tool python3
 require_file "${SYNTH_DIR}/ULX3S.mk"
@@ -95,12 +112,14 @@ printf '\nEmbedding the resident monitor into ULX3S EBR initialization...\n'
 
 printf '\nBuilding the Hazard3 ULX3S 85F FPGA target with cold-boot monitor...\n'
 FORCE_BITSTREAM_REBUILD=1 \
+HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES}" \
 HAZARD3_ROOT="${HAZARD3_ROOT}" \
     "${ROOT_DIR}/scripts/build-ulx3s-85f-bitstream.sh"
 
 mkdir -p "${BOARD_BUILD_DIR}"
 require_file "${FPGA_SOURCE}"
 cp "${FPGA_SOURCE}" "${FPGA_OUTPUT}"
+printf '%s\n' "${VIDEO_PROFILE}" > "${BOARD_BUILD_DIR}/video-profile.txt"
 
 printf '\nBuilding the shared 64 MiB Doom image...\n'
 HAZARD3_DOOM_BUILD_DIR="${DOOM_BUILD_DIR}" \

@@ -18,8 +18,10 @@ HAZARD3_SYNTH="${HAZARD3_ROOT}/example_soc/synth"
 BITSTREAM_OUTPUT="${HAZARD3_SYNTH}/fpga_ulx3s.bit"
 ALLOW_TIMING_FAILURE="${ALLOW_TIMING_FAILURE:-0}"
 FORCE_BITSTREAM_REBUILD="${FORCE_BITSTREAM_REBUILD:-0}"
+HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
+SYNTH_PROFILE_STAMP="${HAZARD3_SYNTH}/fpga_ulx3s.video-profile"
 
-NEXTPNR_SEED="${NEXTPNR_SEED:-178}"
+NEXTPNR_SEED="${NEXTPNR_SEED:-55}"
 
 # See scripts/sweep.sh results:
 #
@@ -80,6 +82,42 @@ case "${FORCE_BITSTREAM_REBUILD}" in
     ;;
 esac
 
+case "${HAZARD3_HDMI_EXTENDED_MODES}" in
+0)
+    VIDEO_PROFILE="standard"
+    ;;
+1)
+    VIDEO_PROFILE="extended"
+    ;;
+*)
+    echo "HAZARD3_HDMI_EXTENDED_MODES must be 0 or 1" >&2
+    exit 1
+    ;;
+esac
+
+current_video_profile=""
+if [[ -f "${SYNTH_PROFILE_STAMP}" ]]; then
+    read -r current_video_profile < "${SYNTH_PROFILE_STAMP}" || true
+fi
+
+if [[ "${current_video_profile}" != "${VIDEO_PROFILE}" ]]; then
+    if [[ -n "${current_video_profile}" ]]; then
+        printf 'HDMI video profile changed: %s -> %s\n' \
+            "${current_video_profile}" "${VIDEO_PROFILE}"
+    else
+        printf 'HDMI video profile is not recorded; rebuilding for %s mode.\n' \
+            "${VIDEO_PROFILE}"
+    fi
+    rm -f \
+        "${HAZARD3_SYNTH}/fpga_ulx3s.json" \
+        "${HAZARD3_SYNTH}/fpga_ulx3s.config" \
+        "${HAZARD3_SYNTH}/fpga_ulx3s.bit" \
+        "${HAZARD3_SYNTH}/fpga_ulx3s.svf"
+fi
+
+printf 'HDMI video profile: %s (extended modes=%s)\n' \
+    "${VIDEO_PROFILE}" "${HAZARD3_HDMI_EXTENDED_MODES}"
+
 require_tool stat
 if [[ -s "${BITSTREAM_OUTPUT}" && "${FORCE_BITSTREAM_REBUILD}" == 0 ]]; then
     printf '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n'
@@ -97,7 +135,9 @@ require_tool nextpnr-ecp5
 require_tool ecppack
 
 # Yosys is called indirectly here.
-make -C "${HAZARD3_SYNTH}" -f ULX3S.mk synth
+make -C "${HAZARD3_SYNTH}" -f ULX3S.mk \
+    HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES}" synth
+printf '%s\n' "${VIDEO_PROFILE}" > "${SYNTH_PROFILE_STAMP}"
 
 # Run P&R directly instead of the pinned fpgascripts recipe.
 (
