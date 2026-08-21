@@ -43,13 +43,21 @@
  *
  * The legacy 320x200 path keeps its original 64 KiB bank spacing so existing
  * software continues to work unchanged. The optional 400x240 test mode uses a
- * 96 KiB-aligned second staging buffer. A separate work area follows both high
- * resolution staging buffers for runtime clients that need a full 400x240
- * scratch framebuffer, such as the I2CDriver HDMI explorer.
+ * 96 KiB-aligned second staging buffer. A separate uncached workbuffer follows
+ * both high-resolution staging buffers. The 512x300 GUI uses this workbuffer as
+ * a packed 4-bpp staging surface; presentation copies it into the existing EBR
+ * frame banks, so there is no continuous SDRAM video scanout.
  */
 #define HAZARD3_VIDEO_FRAMEBUFFER0_BASE       HAZARD3_VIDEO_BASE
 #define HAZARD3_VIDEO_FRAMEBUFFER1_BASE       (HAZARD3_VIDEO_BASE + 0x00010000u)
 #define HAZARD3_VIDEO_FRAMEBUFFER1_HIGH_BASE  (HAZARD3_VIDEO_BASE + 0x00018000u)
-#define HAZARD3_VIDEO_WORKBUFFER_BASE         (HAZARD3_VIDEO_BASE + 0x00030000u)
+#define HAZARD3_VIDEO_GUI_FRAMEBUFFER_BASE    (HAZARD3_VIDEO_BASE + 0x00030000u)
+#define HAZARD3_VIDEO_WORKBUFFER_BASE         HAZARD3_VIDEO_GUI_FRAMEBUFFER_BASE
+
+/*
+ * Persistent Screen Snip cache. Keep it separate from all staging/workbuffer
+ * surfaces so monitor, Doom, and GUI presentation cannot overwrite it.
+ */
+#define HAZARD3_SCREEN_SNIP_CACHE_BASE        (HAZARD3_VIDEO_BASE + 0x00050000u)
 
 #endif

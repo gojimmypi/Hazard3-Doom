@@ -75,12 +75,15 @@
 #define HAZARD3_VIDEO_STATUS_DIRECT_WRITE_BUSY  (1u << 10)
 #define HAZARD3_VIDEO_STATUS_HIGH_RES_SUPPORTED (1u << 11)
 #define HAZARD3_VIDEO_STATUS_HIGH_RES_ACTIVE    (1u << 12)
+#define HAZARD3_VIDEO_STATUS_GUI_RES_SUPPORTED  (1u << 13)
+#define HAZARD3_VIDEO_STATUS_GUI_RES_ACTIVE     (1u << 14)
 
 #define HAZARD3_VIDEO_CONTROL_INDEXED         (1u << 0)
 #define HAZARD3_VIDEO_CONTROL_BUFFER1         (1u << 1)
 #define HAZARD3_VIDEO_CONTROL_PRESENT         (1u << 2)
 #define HAZARD3_VIDEO_CONTROL_DIRECT          (1u << 3)
 #define HAZARD3_VIDEO_CONTROL_HIGH_RES        (1u << 4)
+#define HAZARD3_VIDEO_CONTROL_GUI_RES         (1u << 5)
 
 #define HAZARD3_VIDEO_STANDARD_WIDTH          320u
 #define HAZARD3_VIDEO_STANDARD_HEIGHT         200u
@@ -90,23 +93,30 @@
 #define HAZARD3_VIDEO_HIGH_HEIGHT             240u
 #define HAZARD3_VIDEO_HIGH_BYTES              \
     (HAZARD3_VIDEO_HIGH_WIDTH * HAZARD3_VIDEO_HIGH_HEIGHT)
+#define HAZARD3_VIDEO_GUI_WIDTH               512u
+#define HAZARD3_VIDEO_GUI_HEIGHT              300u
+#define HAZARD3_VIDEO_GUI_PIXELS              \
+    (HAZARD3_VIDEO_GUI_WIDTH * HAZARD3_VIDEO_GUI_HEIGHT)
+#define HAZARD3_VIDEO_GUI_BYTES               (HAZARD3_VIDEO_GUI_PIXELS / 2u)
+#define HAZARD3_VIDEO_GUI_HALFWORDS           (HAZARD3_VIDEO_GUI_PIXELS / 4u)
 
 /*
- * Retained HDMI screen-snip cache. Active display clients update this only
- * when they are about to return control to the resident monitor. It therefore
- * has no per-frame cost for Doom or the I2CDriver GUI. The monitor can then
- * return the last successfully displayed source frame after the client exits.
+ * Screen Snip cache shared by the resident monitor and the Doom image. The
+ * cache always stores an unpacked IDX8 source image, even when a producer uses
+ * a packed framebuffer format. Size for the largest supported source so this
+ * layout can also accommodate a future cached 512x300 GUI capture.
  */
-#define HAZARD3_SCREEN_SNIP_CACHE_OFFSET       0x00048000u
-#define HAZARD3_SCREEN_SNIP_CACHE_BASE         \
-    (HAZARD3_VIDEO_BASE + HAZARD3_SCREEN_SNIP_CACHE_OFFSET)
-#define HAZARD3_SCREEN_SNIP_CACHE_REGION_BYTES 0x00018000u
-#define HAZARD3_SCREEN_SNIP_CACHE_MAGIC        0x31504e53u
-#define HAZARD3_SCREEN_SNIP_CACHE_VERSION      1u
-#define HAZARD3_SCREEN_SNIP_PALETTE_BYTES      256u
-#define HAZARD3_SCREEN_SNIP_MAX_PIXELS         HAZARD3_VIDEO_HIGH_BYTES
+#define HAZARD3_SCREEN_SNIP_CACHE_MAGIC       0x48335343u
+#define HAZARD3_SCREEN_SNIP_CACHE_VERSION     1u
+#define HAZARD3_SCREEN_SNIP_PALETTE_BYTES     256u
+#define HAZARD3_SCREEN_SNIP_MAX_PIXEL_BYTES   HAZARD3_VIDEO_GUI_PIXELS
+#define HAZARD3_SCREEN_SNIP_CACHE_HEADER_BYTES (8u * sizeof(uint32_t))
+#define HAZARD3_SCREEN_SNIP_CACHE_BYTES       \
+    (HAZARD3_SCREEN_SNIP_CACHE_HEADER_BYTES + \
+        HAZARD3_SCREEN_SNIP_PALETTE_BYTES + \
+        HAZARD3_SCREEN_SNIP_MAX_PIXEL_BYTES)
 
-typedef struct hazard3_screen_snip_cache {
+typedef struct {
     uint32_t magic;
     uint32_t magic_inverse;
     uint32_t version;
@@ -116,7 +126,7 @@ typedef struct hazard3_screen_snip_cache {
     uint32_t pixel_bytes;
     uint32_t reserved;
     uint8_t palette[HAZARD3_SCREEN_SNIP_PALETTE_BYTES];
-    uint8_t pixels[HAZARD3_SCREEN_SNIP_MAX_PIXELS];
+    uint8_t pixels[HAZARD3_SCREEN_SNIP_MAX_PIXEL_BYTES];
 } hazard3_screen_snip_cache_t;
 
 #define HAZARD3_VIDEO_DIRECT_BUFFER1_STANDARD_HALFWORD 0x00008000u
@@ -133,16 +143,17 @@ typedef struct hazard3_screen_snip_cache {
 #define HAZARD3_VIDEO_FRAMEBUFFER_BYTES       HAZARD3_VIDEO_HIGH_BYTES
 #define HAZARD3_VIDEO_MODE_CONTROL            HAZARD3_VIDEO_CONTROL_HIGH_RES
 #define HAZARD3_VIDEO_HIGH_RES_ENABLED         1u
+#define HAZARD3_VIDEO_MINIMUM_RESERVE_BYTES   \
+    (0x00030000u + HAZARD3_VIDEO_HIGH_BYTES)
 #else
 #define HAZARD3_VIDEO_FRAMEBUFFER_WIDTH       HAZARD3_VIDEO_STANDARD_WIDTH
 #define HAZARD3_VIDEO_FRAMEBUFFER_HEIGHT      HAZARD3_VIDEO_STANDARD_HEIGHT
 #define HAZARD3_VIDEO_FRAMEBUFFER_BYTES       HAZARD3_VIDEO_STANDARD_BYTES
 #define HAZARD3_VIDEO_MODE_CONTROL            0u
 #define HAZARD3_VIDEO_HIGH_RES_ENABLED         0u
-#endif
-
 #define HAZARD3_VIDEO_MINIMUM_RESERVE_BYTES   \
-    (HAZARD3_SCREEN_SNIP_CACHE_OFFSET + HAZARD3_SCREEN_SNIP_CACHE_REGION_BYTES)
+    (0x00010000u + HAZARD3_VIDEO_STANDARD_BYTES)
+#endif
 
 static inline uint32_t hazard3_video_direct_halfword_base(
     uint32_t buffer_index,
