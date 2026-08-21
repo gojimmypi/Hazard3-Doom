@@ -165,7 +165,7 @@ active firmware changed since the last successful probe.
 
 
 UART command routing and the ``H`` key
--------------------------------------
+--------------------------------------
 
 Screen-snip support does not require any change to the resident monitor's
 ``console_poll()`` command table. In particular, the monitor keeps ``H`` as a
