@@ -26,9 +26,11 @@
 #define HAZARD3_SYS_CLK_HZ 50000000u
 #endif
 
-/* The compatibility UI uses the original 320x200 layout. When the FPGA
- * exposes the 400x240 source mode, the GUI is rendered natively at 400x240
- * with a larger 5x7 font and expanded panels instead of scaling 320x200. */
+/* The compatibility UI uses the original 320x200 EBR layout. The optional
+ * 400x240 mode is retained for comparison. The preferred high-quality GUI
+ * mode is 512x300 packed 4-bpp in the uncached video workbuffer. Presentation
+ * copies it into the existing EBR frame banks, where the FPGA scales it
+ * exactly 2x to the 1024x600 HDMI panel. */
 #define UI_WIDTH                 HAZARD3_VIDEO_STANDARD_WIDTH
 #define UI_HEIGHT                HAZARD3_VIDEO_STANDARD_HEIGHT
 #define UI_PIXELS                (UI_WIDTH * UI_HEIGHT)
@@ -37,6 +39,11 @@
 #define UI_HIGH_HEIGHT           HAZARD3_VIDEO_HIGH_HEIGHT
 #define UI_HIGH_PIXELS           (UI_HIGH_WIDTH * UI_HIGH_HEIGHT)
 #define UI_HIGH_WORDS            (UI_HIGH_PIXELS / 4u)
+#define UI_GUI_WIDTH             HAZARD3_VIDEO_GUI_WIDTH
+#define UI_GUI_HEIGHT            HAZARD3_VIDEO_GUI_HEIGHT
+#define UI_GUI_PIXELS            (UI_GUI_WIDTH * UI_GUI_HEIGHT)
+#define UI_GUI_BYTES             (UI_GUI_PIXELS / 2u)
+#define UI_GUI_WORDS             (UI_GUI_BYTES / 4u)
 #define UI_PRESENT_TIMEOUT_MS    500u
 #define UI_COOL_INTERVAL_MS      80u
 #define UI_HEAT_MAX              72u
@@ -44,13 +51,17 @@
 #define UI_TRACE_COUNT           12u
 #define UI_I2C_100KHZ            100000u
 #define UI_I2C_400KHZ            400000u
-#define UI_SCREEN_SNIP_CAPABILITY_REQUEST 0x1cu
-#define UI_SCREEN_SNIP_CAPABILITY_ACK     0x06u
-#define UI_SCREEN_SNIP_REQUEST            0x1du
+#define UI_SCREEN_SNIP_REQUEST    0x1du
 #define UI_SCREEN_SNIP_HEADER_STANDARD \
     "\r\nH3SNIP1 320 200 1024 600 IDX8 256 64000\r\n"
 #define UI_SCREEN_SNIP_HEADER_HIGH \
     "\r\nH3SNIP1 400 240 1024 600 IDX8 256 96000\r\n"
+#define UI_SCREEN_SNIP_HEADER_GUI \
+    "\r\nH3SNIP1 512 300 1024 600 IDX8 256 153600\r\n"
+
+#if HAZARD3_VIDEO_GUI_FRAMEBUFFER_BASE + HAZARD3_VIDEO_GUI_BYTES > HAZARD3_VIDEO_LIMIT
+#error "512x300 GUI framebuffer exceeds the reserved video aperture"
+#endif
 
 #define UI_COLOR_BLACK           0u
 #define UI_COLOR_DARK_GRAY       1u
@@ -105,6 +116,7 @@ struct ui_event {
 };
 
 static int ui_high_resolution;
+static int ui_gui_resolution;
 static uint8_t ui_heat[128];
 static struct ui_trace_item ui_trace[UI_TRACE_COUNT];
 static struct ui_event ui_events[UI_LOG_COUNT];
@@ -280,85 +292,87 @@ static void glyph5x7(char value, uint8_t rows[7])
 
 static unsigned int ui_canvas_width(void)
 {
+    if (ui_gui_resolution != 0) {
+        return UI_GUI_WIDTH;
+    }
     return ui_high_resolution != 0 ? UI_HIGH_WIDTH : UI_WIDTH;
 }
 
 static unsigned int ui_canvas_height(void)
 {
+    if (ui_gui_resolution != 0) {
+        return UI_GUI_HEIGHT;
+    }
     return ui_high_resolution != 0 ? UI_HIGH_HEIGHT : UI_HEIGHT;
 }
 
 static unsigned int ui_char_width(void)
 {
-    return ui_high_resolution != 0 ? 5u : 3u;
+    return ui_high_resolution != 0 || ui_gui_resolution != 0 ? 5u : 3u;
 }
 
 static unsigned int ui_char_pitch(void)
 {
-    return ui_high_resolution != 0 ? 6u : 4u;
+    return ui_high_resolution != 0 || ui_gui_resolution != 0 ? 6u : 4u;
 }
 
 static volatile uint8_t* ui_framebuffer(void)
 {
-    uintptr_t address = ui_high_resolution != 0
-        ? HAZARD3_VIDEO_WORKBUFFER_BASE
-        : HAZARD3_DOOM_SCREENBUFFER_BASE;
+    uintptr_t address;
+
+    if (ui_gui_resolution != 0) {
+        address = HAZARD3_VIDEO_GUI_FRAMEBUFFER_BASE;
+    } else if (ui_high_resolution != 0) {
+        address = HAZARD3_VIDEO_WORKBUFFER_BASE;
+    } else {
+        address = HAZARD3_DOOM_SCREENBUFFER_BASE;
+    }
     return (volatile uint8_t*)address;
 }
 
 static size_t ui_physical_words(void)
 {
+    if (ui_gui_resolution != 0) {
+        return UI_GUI_WORDS;
+    }
     return ui_high_resolution != 0 ? UI_HIGH_WORDS : UI_WORDS;
 }
 
 static void screen_snip_send(void)
 {
     const volatile uint8_t* framebuffer = ui_framebuffer();
-    size_t pixel_count = ui_high_resolution != 0 ? UI_HIGH_PIXELS : UI_PIXELS;
+    size_t pixel_count;
+    const char* header;
     size_t i;
 
-    hazard3_console_puts(ui_high_resolution != 0
-        ? UI_SCREEN_SNIP_HEADER_HIGH : UI_SCREEN_SNIP_HEADER_STANDARD);
+    if (ui_gui_resolution != 0) {
+        pixel_count = UI_GUI_PIXELS;
+        header = UI_SCREEN_SNIP_HEADER_GUI;
+    } else if (ui_high_resolution != 0) {
+        pixel_count = UI_HIGH_PIXELS;
+        header = UI_SCREEN_SNIP_HEADER_HIGH;
+    } else {
+        pixel_count = UI_PIXELS;
+        header = UI_SCREEN_SNIP_HEADER_STANDARD;
+    }
+    hazard3_console_puts(header);
 
     for (i = 0u; i < 256u; ++i) {
         hazard3_console_putc(i < sizeof(ui_palette) ? ui_palette[i] : 0u);
     }
-    for (i = 0u; i < pixel_count; ++i) {
-        hazard3_console_putc(framebuffer[i]);
+    if (ui_gui_resolution != 0) {
+        for (i = 0u; i < pixel_count; ++i) {
+            uint8_t packed = framebuffer[i >> 1u];
+            uint8_t pixel = (i & 1u) != 0u
+                ? (uint8_t)(packed >> 4u)
+                : (uint8_t)(packed & 0x0fu);
+            hazard3_console_putc(pixel);
+        }
+    } else {
+        for (i = 0u; i < pixel_count; ++i) {
+            hazard3_console_putc(framebuffer[i]);
+        }
     }
-}
-
-static void screen_snip_cache_save(void)
-{
-    const volatile uint8_t* framebuffer = ui_framebuffer();
-    volatile hazard3_screen_snip_cache_t* cache =
-        (volatile hazard3_screen_snip_cache_t*)(uintptr_t)
-            HAZARD3_SCREEN_SNIP_CACHE_BASE;
-    size_t pixel_count = ui_high_resolution != 0 ? UI_HIGH_PIXELS : UI_PIXELS;
-    size_t i;
-
-    cache->magic = 0u;
-    cache->magic_inverse = 0u;
-    hazard3_memory_barrier();
-    cache->version = HAZARD3_SCREEN_SNIP_CACHE_VERSION;
-    cache->source_width = ui_high_resolution != 0 ? UI_HIGH_WIDTH : UI_WIDTH;
-    cache->source_height = ui_high_resolution != 0 ? UI_HIGH_HEIGHT : UI_HEIGHT;
-    cache->palette_bytes = HAZARD3_SCREEN_SNIP_PALETTE_BYTES;
-    cache->pixel_bytes = (uint32_t)pixel_count;
-    cache->reserved = 0u;
-
-    for (i = 0u; i < HAZARD3_SCREEN_SNIP_PALETTE_BYTES; ++i) {
-        cache->palette[i] = i < sizeof(ui_palette) ? ui_palette[i] : 0u;
-    }
-    for (i = 0u; i < pixel_count; ++i) {
-        cache->pixels[i] = framebuffer[i];
-    }
-
-    hazard3_memory_barrier();
-    cache->magic_inverse = ~HAZARD3_SCREEN_SNIP_CACHE_MAGIC;
-    hazard3_memory_barrier();
-    cache->magic = HAZARD3_SCREEN_SNIP_CACHE_MAGIC;
-    hazard3_memory_barrier();
 }
 
 static void ui_pixel(unsigned int x, unsigned int y, uint8_t color)
@@ -372,7 +386,19 @@ static void ui_pixel(unsigned int x, unsigned int y, uint8_t color)
     }
 
     framebuffer = ui_framebuffer();
-    framebuffer[y * width + x] = color;
+    if (ui_gui_resolution != 0) {
+        size_t offset = (size_t)y * (UI_GUI_WIDTH / 2u) + (x >> 1u);
+        uint8_t packed = framebuffer[offset];
+
+        if ((x & 1u) != 0u) {
+            packed = (uint8_t)((packed & 0x0fu) | ((color & 0x0fu) << 4u));
+        } else {
+            packed = (uint8_t)((packed & 0xf0u) | (color & 0x0fu));
+        }
+        framebuffer[offset] = packed;
+    } else {
+        framebuffer[y * width + x] = color;
+    }
 }
 
 static void ui_hline(unsigned int x0, unsigned int x1, unsigned int y, uint8_t color)
@@ -454,8 +480,12 @@ static void ui_clear(uint8_t color)
     size_t word_count = ui_physical_words();
     size_t i;
 
-    packed |= packed << 8;
-    packed |= packed << 16;
+    if (ui_gui_resolution != 0) {
+        packed &= 0x0fu;
+        packed |= packed << 4u;
+    }
+    packed |= packed << 8u;
+    packed |= packed << 16u;
     for (i = 0u; i < word_count; ++i) {
         destination[i] = packed;
     }
@@ -466,7 +496,7 @@ static void ui_char(unsigned int x, unsigned int y, char value, uint8_t color)
     unsigned int row;
     unsigned int col;
 
-    if (ui_high_resolution != 0) {
+    if (ui_high_resolution != 0 || ui_gui_resolution != 0) {
         uint8_t rows[7];
 
         glyph5x7(value, rows);
@@ -582,6 +612,43 @@ static int video_present(void)
     size_t i;
 
     status = HAZARD3_VIDEO_STATUS;
+
+    if (ui_gui_resolution != 0) {
+        if ((status & HAZARD3_VIDEO_STATUS_GUI_RES_SUPPORTED) == 0u) {
+            return 0;
+        }
+        if (!video_wait_idle(UI_PRESENT_TIMEOUT_MS)) {
+            return 0;
+        }
+
+        /*
+         * The GUI is drawn as packed 4-bpp pixels in the uncached workbuffer.
+         * PRESENT copies 38,400 halfwords into the inactive existing EBR bank,
+         * then changes to 512x300 mode at vertical blank. There is no continuous
+         * SDRAM scanout and no additional full-frame EBR allocation.
+         */
+        video_upload_palette(0u);
+        present_before = HAZARD3_VIDEO_PRESENT_COUNT;
+        HAZARD3_VIDEO_CONTROL =
+            HAZARD3_VIDEO_CONTROL_INDEXED |
+            HAZARD3_VIDEO_CONTROL_GUI_RES |
+            HAZARD3_VIDEO_CONTROL_PRESENT;
+
+        started = hazard3_ticks_ms();
+        for (;;) {
+            status = HAZARD3_VIDEO_STATUS;
+            if ((status & HAZARD3_VIDEO_STATUS_PRESENT_PENDING) == 0u &&
+                (status & HAZARD3_VIDEO_STATUS_GUI_RES_ACTIVE) != 0u &&
+                HAZARD3_VIDEO_PRESENT_COUNT != present_before) {
+                break;
+            }
+            if (elapsed(hazard3_ticks_ms(), started, UI_PRESENT_TIMEOUT_MS)) {
+                return 0;
+            }
+        }
+        return 1;
+    }
+
     if ((status & HAZARD3_VIDEO_STATUS_DIRECT_SUPPORTED) == 0u) {
         return 0;
     }
@@ -1094,7 +1161,7 @@ static void draw_footer_high(void)
 
     ui_fill_rect(0u, 216u, UI_HIGH_WIDTH, 24u, UI_COLOR_NAVY);
     if (ui_prompt_mode == PROMPT_NONE) {
-        ui_text(4u, 219u, "S SCAN P PROBE R READ W WRITE X RECOVER 1/4 SPEED H RES", UI_COLOR_WHITE);
+        ui_text(4u, 219u, "S SCAN P PROBE R READ W WRITE X RECOVER 1/4 SPEED H 512 G 400", UI_COLOR_WHITE);
         ui_text(4u, 230u, "C CLEAR Q EXIT  TRACE: INITIATED ONLY - PASSIVE NEEDS FPGA FIFO", UI_COLOR_GRAY);
         return;
     }
@@ -1115,6 +1182,191 @@ static void draw_footer_high(void)
     ui_text(4u, 230u, "ENTER EXECUTES  BACKSPACE EDITS  ESC CANCELS", UI_COLOR_GRAY);
 }
 
+
+static void draw_heatmap_gui(void)
+{
+    unsigned int row;
+    unsigned int col;
+    unsigned int address;
+    static const char digits[] = "0123456789ABCDEF";
+
+    ui_text(6u, 29u, "I2C ADDRESS HEATMAP", UI_COLOR_CYAN);
+    for (col = 0u; col < 16u; ++col) {
+        ui_char(29u + col * 16u, 41u, digits[col], UI_COLOR_GRAY);
+    }
+    for (row = 0u; row < 8u; ++row) {
+        ui_char(7u, 55u + row * 16u, digits[row], UI_COLOR_GRAY);
+        for (col = 0u; col < 16u; ++col) {
+            unsigned int x = 23u + col * 16u;
+            unsigned int y = 51u + row * 16u;
+            uint8_t background;
+            uint8_t foreground;
+
+            address = row * 16u + col;
+            if (address < 0x08u || address > 0x77u) {
+                background = UI_COLOR_BLACK;
+                foreground = UI_COLOR_DARK_GRAY;
+            } else {
+                background = heat_color(ui_heat[address]);
+                foreground = ui_heat[address] >= 48u
+                    ? UI_COLOR_BLACK : UI_COLOR_WHITE;
+            }
+            ui_fill_rect(x, y, 14u, 13u, background);
+            if (address == ui_last_address &&
+                ui_last_result != HAZARD3_SAO_OK) {
+                ui_box(x, y, 14u, 13u, UI_COLOR_ORANGE);
+            }
+            ui_hex8(x + 1u, y + 3u, (uint8_t)address, foreground);
+        }
+    }
+}
+
+static void draw_log_gui(void)
+{
+    size_t i;
+    size_t index;
+
+    ui_text(310u, 29u, "TRANSACTION LOG", UI_COLOR_CYAN);
+    ui_box(306u, 44u, 200u, 132u, UI_COLOR_DARK_GRAY);
+    for (i = 0u; i < ui_event_used; ++i) {
+        index = (ui_event_head + UI_LOG_COUNT - ui_event_used + i)
+            % UI_LOG_COUNT;
+        draw_event_high(312u, 51u + (unsigned int)i * 15u,
+            &ui_events[index]);
+    }
+}
+
+static void draw_waveform_gui(void)
+{
+    unsigned int x = 42u;
+    unsigned int i;
+    unsigned int bit;
+    unsigned int cell = 4u;
+    int sda_high = 1;
+
+    ui_text(6u, 184u, "LOGICAL TRACE", UI_COLOR_CYAN);
+    ui_text(6u, 199u, "SDA", UI_COLOR_WHITE);
+    ui_text(6u, 225u, "SCL", UI_COLOR_WHITE);
+    ui_hline(40u, 505u, 202u, UI_COLOR_DARK_GRAY);
+    ui_hline(40u, 505u, 228u, UI_COLOR_DARK_GRAY);
+
+    for (i = 0u; i < ui_trace_used && x < 502u; ++i) {
+        const struct ui_trace_item* item = &ui_trace[i];
+
+        if (item->kind == TRACE_START) {
+            wave_segment(&x, 3u, 199u, 1, UI_COLOR_YELLOW);
+            wave_transition(x, 199u, 1, 0, UI_COLOR_YELLOW);
+            sda_high = 0;
+            wave_segment(&x, 3u, 199u, 0, UI_COLOR_YELLOW);
+            ui_hline(x - 6u, x, 225u, UI_COLOR_CYAN);
+            continue;
+        }
+        if (item->kind == TRACE_STOP) {
+            wave_segment(&x, 3u, 199u, 0, UI_COLOR_YELLOW);
+            wave_transition(x, 199u, 0, 1, UI_COLOR_YELLOW);
+            sda_high = 1;
+            wave_segment(&x, 3u, 199u, 1, UI_COLOR_YELLOW);
+            ui_hline(x - 6u, x, 225u, UI_COLOR_CYAN);
+            continue;
+        }
+        if (item->kind != TRACE_BYTE) {
+            continue;
+        }
+
+        for (bit = 0u; bit < 9u && x + cell < 506u; ++bit) {
+            int next_sda;
+            uint8_t sda_color = UI_COLOR_YELLOW;
+            uint8_t scl_color = UI_COLOR_CYAN;
+
+            if (bit < 8u) {
+                next_sda =
+                    (item->value & (uint8_t)(0x80u >> bit)) != 0u;
+            } else {
+                next_sda = item->ack == TRACE_ACK ? 0 : 1;
+                if (item->ack == TRACE_ACK) {
+                    sda_color = UI_COLOR_GREEN;
+                } else if (item->ack == TRACE_MASTER_NACK) {
+                    sda_color = UI_COLOR_ORANGE;
+                } else {
+                    sda_color = UI_COLOR_RED;
+                }
+            }
+            if (next_sda != sda_high) {
+                wave_transition(x, 199u, sda_high, next_sda, sda_color);
+            }
+            sda_high = next_sda;
+            wave_segment(&x, cell, 199u, sda_high, sda_color);
+
+            ui_hline(x - cell, x - cell + 1u, 234u, scl_color);
+            ui_vline(x - cell + 1u, 228u, 234u, scl_color);
+            ui_hline(x - cell + 1u, x - 1u, 228u, scl_color);
+            ui_vline(x - 1u, 228u, 234u, scl_color);
+        }
+    }
+}
+
+static void draw_header_gui(void)
+{
+    uint32_t status = hazard3_sao_status();
+
+    ui_fill_rect(0u, 0u, UI_GUI_WIDTH, 24u, UI_COLOR_NAVY);
+    ui_text(6u, 2u, "HAZARD3 I2CDRIVER", UI_COLOR_WHITE);
+    ui_text(126u, 2u,
+        ui_i2c_hz == UI_I2C_400KHZ ? "400 KHZ" : "100 KHZ",
+        UI_COLOR_YELLOW);
+    ui_text(184u, 2u, "SDA", UI_COLOR_GRAY);
+    ui_char(208u, 2u,
+        (status & HAZARD3_SAO_STATUS_SDA) != 0u ? '1' : '0',
+        UI_COLOR_GREEN);
+    ui_text(224u, 2u, "SCL", UI_COLOR_GRAY);
+    ui_char(248u, 2u,
+        (status & HAZARD3_SAO_STATUS_SCL) != 0u ? '1' : '0',
+        UI_COLOR_GREEN);
+    ui_text(270u, 2u, "ACTIVE MASTER", UI_COLOR_CYAN);
+    ui_text(464u, 2u, "512X300", UI_COLOR_YELLOW);
+    ui_text(6u, 13u, ui_message,
+        ui_last_result == HAZARD3_SAO_OK
+            ? UI_COLOR_GREEN : UI_COLOR_ORANGE);
+}
+
+static void draw_footer_gui(void)
+{
+    size_t i;
+    unsigned int x;
+
+    ui_fill_rect(0u, 258u, UI_GUI_WIDTH, 42u, UI_COLOR_NAVY);
+    if (ui_prompt_mode == PROMPT_NONE) {
+        ui_text(6u, 264u,
+            "S SCAN  P PROBE  R READ  W WRITE  X RECOVER  1/4 SPEED",
+            UI_COLOR_WHITE);
+        ui_text(6u, 278u,
+            "H 512/320  G 400 TEST  C CLEAR  Q EXIT",
+            UI_COLOR_GRAY);
+        ui_text(274u, 278u,
+            "TRACE: INITIATED TRAFFIC ONLY",
+            UI_COLOR_DARK_GRAY);
+        return;
+    }
+
+    if (ui_prompt_mode == PROMPT_PROBE) {
+        ui_text(6u, 264u, "PROBE ADDR HEX: ", UI_COLOR_WHITE);
+        x = 102u;
+    } else if (ui_prompt_mode == PROMPT_READ) {
+        ui_text(6u, 264u, "READ ADDR REG HEX: ", UI_COLOR_WHITE);
+        x = 120u;
+    } else {
+        ui_text(6u, 264u, "WRITE ADDR REG VALUE HEX: ", UI_COLOR_WHITE);
+        x = 156u;
+    }
+    for (i = 0u; i < ui_prompt_length; ++i) {
+        ui_char(x + (unsigned int)i * 6u, 264u,
+            "0123456789ABCDEF"[ui_prompt_digits[i]], UI_COLOR_YELLOW);
+    }
+    ui_text(6u, 280u,
+        "ENTER EXECUTES  BACKSPACE EDITS  ESC CANCELS",
+        UI_COLOR_GRAY);
+}
+
 static void draw_header(void)
 {
     uint32_t status = hazard3_sao_status();
@@ -1127,7 +1379,7 @@ static void draw_header(void)
     ui_text(147u, 3u, "SCL", UI_COLOR_GRAY);
     ui_char(163u, 3u, (status & HAZARD3_SAO_STATUS_SCL) != 0u ? '1' : '0', UI_COLOR_GREEN);
     ui_text(173u, 3u, "ACTIVE MASTER", UI_COLOR_CYAN);
-    ui_text(231u, 3u, ui_high_resolution != 0 ? "400X240" : "320X200", UI_COLOR_YELLOW);
+    ui_text(231u, 3u, "320X200", UI_COLOR_YELLOW);
     ui_text(3u, 11u, ui_message, ui_last_result == HAZARD3_SAO_OK ? UI_COLOR_GREEN : UI_COLOR_ORANGE);
 }
 
@@ -1138,7 +1390,7 @@ static void draw_footer(void)
 
     ui_fill_rect(0u, 181u, UI_WIDTH, 19u, UI_COLOR_NAVY);
     if (ui_prompt_mode == PROMPT_NONE) {
-        ui_text(3u, 184u, "S SCAN P PROBE R READ W WRITE X RECOVER 1/4 SPEED H RES C CLEAR Q EXIT", UI_COLOR_WHITE);
+        ui_text(3u, 184u, "S SCAN P PROBE R READ W WRITE X RECOVER 1/4 SPEED H 512 Q EXIT", UI_COLOR_WHITE);
         ui_text(3u, 192u, "TRACE IS INITIATED TRAFFIC - PASSIVE CAPTURE NEEDS FPGA FIFO", UI_COLOR_GRAY);
         return;
     }
@@ -1161,6 +1413,14 @@ static void draw_footer(void)
 static void draw_screen(void)
 {
     ui_clear(UI_COLOR_BLACK);
+    if (ui_gui_resolution != 0) {
+        draw_header_gui();
+        draw_heatmap_gui();
+        draw_log_gui();
+        draw_waveform_gui();
+        draw_footer_gui();
+        return;
+    }
     if (ui_high_resolution != 0) {
         draw_header_high();
         draw_heatmap_high();
@@ -1390,9 +1650,9 @@ static int handle_prompt_key(uint8_t key)
     return 0;
 }
 
-/* GCC 12.2.0 used by the Hazard3 toolchain can ICE when it turns a bit-11
- * test into a direct 0x800 mask. Keep this helper out of line and make the
- * shifted value volatile so GCC must perform the shift before testing bit 0. */
+/* GCC 12.2.0 used by the Hazard3 toolchain can ICE when it turns a direct
+ * capability-bit mask into an RTL constant. Keep these helpers out of line and
+ * test bit zero after shifting. */
 static __attribute__((noinline)) int video_high_resolution_supported(void)
 {
     uint32_t status = HAZARD3_VIDEO_STATUS;
@@ -1401,7 +1661,32 @@ static __attribute__((noinline)) int video_high_resolution_supported(void)
     return (shifted_status & 1u) != 0u;
 }
 
+static __attribute__((noinline)) int video_gui_resolution_supported(void)
+{
+    uint32_t status = HAZARD3_VIDEO_STATUS;
+    volatile uint32_t shifted_status = status >> 13u;
+
+    return (shifted_status & 1u) != 0u;
+}
+
 static void toggle_resolution(void)
+{
+    if (ui_gui_resolution == 0 && !video_gui_resolution_supported()) {
+        set_message("512X300 GUI NOT SUPPORTED BY FPGA", HAZARD3_SAO_ERR_REJECTED);
+        return;
+    }
+
+    ui_gui_resolution = ui_gui_resolution == 0 ? 1 : 0;
+    ui_high_resolution = 0;
+    ui_palette_uploaded_mask = 0u;
+    set_message(
+        ui_gui_resolution != 0
+            ? "HDMI SOURCE 512X300 GUI - EXACT 2X"
+            : "HDMI SOURCE 320X200",
+        HAZARD3_SAO_OK);
+}
+
+static void toggle_400_resolution(void)
 {
     if (ui_high_resolution == 0 && !video_high_resolution_supported()) {
         set_message("400X240 NOT SUPPORTED BY FPGA", HAZARD3_SAO_ERR_REJECTED);
@@ -1409,9 +1694,12 @@ static void toggle_resolution(void)
     }
 
     ui_high_resolution = ui_high_resolution == 0 ? 1 : 0;
+    ui_gui_resolution = 0;
     ui_palette_uploaded_mask = 0u;
     set_message(
-        ui_high_resolution != 0 ? "HDMI SOURCE 400X240 NATIVE" : "HDMI SOURCE 320X200",
+        ui_high_resolution != 0
+            ? "HDMI SOURCE 400X240 TEST"
+            : "HDMI SOURCE 320X200",
         HAZARD3_SAO_OK);
 }
 
@@ -1442,6 +1730,9 @@ static int handle_idle_key(uint8_t key)
         return 1;
     case 'H':
         toggle_resolution();
+        return 1;
+    case 'G':
+        toggle_400_resolution();
         return 1;
     case 'C':
         for (key = 0u; key < 128u; ++key) {
@@ -1476,6 +1767,7 @@ static void initialize_state(void)
     ui_i2c_hz = UI_I2C_100KHZ;
     ui_palette_uploaded_mask = 0u;
     ui_high_resolution = 0;
+    ui_gui_resolution = 0;
     ui_back_buffer = (status & HAZARD3_VIDEO_STATUS_INTERNAL_BUFFER) != 0u ? 0u : 1u;
     ui_last_address = 0xffu;
     ui_last_reg = 0u;
@@ -1502,7 +1794,7 @@ void hazard3_i2cdriver_hdmi_run(void)
 
     initialize_state();
     hazard3_sao_init(HAZARD3_SYS_CLK_HZ, UI_I2C_100KHZ);
-    hazard3_console_puts("I2CDriver HDMI active. S scan, P probe, R read, W write, X recover, 1/4 speed, H resolution, C clear, Q exit.\r\n");
+    hazard3_console_puts("I2CDriver HDMI active. S scan, P probe, R read, W write, X recover, 1/4 speed, H 512/320, G 400 test, C clear, Q exit.\r\n");
     if (!refresh_screen()) {
         hazard3_console_puts("I2CDriver HDMI: initial HDMI presentation failed.\r\n");
         return;
@@ -1517,17 +1809,12 @@ void hazard3_i2cdriver_hdmi_run(void)
         int redraw = 0;
 
         if (received != 0) {
-            if (key == UI_SCREEN_SNIP_CAPABILITY_REQUEST) {
-                hazard3_console_putc(UI_SCREEN_SNIP_CAPABILITY_ACK);
-                continue;
-            }
             if (key == UI_SCREEN_SNIP_REQUEST) {
                 screen_snip_send();
                 continue;
             }
             if (key == 0x18u || key == (uint8_t)'q' || key == (uint8_t)'Q' ||
                 (key == 0x1bu && ui_prompt_mode == PROMPT_NONE)) {
-                screen_snip_cache_save();
                 running = 0;
                 continue;
             }
