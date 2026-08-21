@@ -1,9 +1,20 @@
-# Hazard3-Doom WebSerial UART Console
+# Hazard3-Doom Web Console
 
-A dependency-free static web app for connecting to the Hazard3-Doom UART from a browser using the Web Serial API.
+A dependency-free static web app for the Hazard3-Doom UART console and ULX3S FPGA programming from a Chromium-based browser using Web Serial and WebUSB.
+
+Windows users need to change drivers from default **FTDI** to **WinUSB** to use the WebUSB programmer.
+
+![Zadig FTDI to WinUSB](../docs/images/Zadig-FTDI-to-WinUSB.png)
+
+To change it back to default, find the **`ULX3S`** device in the `Universal Serial Bus devices` in Windows Device Manager.
+Click "Update" and allow Windows to search for default drivers. Be sure to disconnect from the Web console when changing drivers.
+
+![Windows set default USB from WinUSB](../docs/images/Windows-set-default-USB-from-WinUSB.png)
 
 ## Features
 
+- Program ULX3S ECP5 FPGA SRAM from a `.bit` or `.svf` file through the board's US1 FT231X JTAG interface using WebUSB.
+- Probe and verify ECP5 12F/25F/45F/85F JTAG IDCODEs before programming.
 - Connect/disconnect using the browser's serial-port picker.
 - Enumerate all serial ports already authorized for this site and select which one Reconnect opens.
 - Reconnect to the selected previously authorized port.
@@ -32,7 +43,7 @@ A dependency-free static web app for connecting to the Hazard3-Doom UART from a 
 
 ## Run locally
 
-Web Serial requires a secure context. `localhost` is suitable for local development.
+Web Serial and WebUSB require a secure context. `localhost` is suitable for local development.
 
 From this directory:
 
@@ -50,7 +61,7 @@ py -m http.server 8000
 
 ## GitHub Pages
 
-The files can be served unchanged by GitHub Pages. HTTPS satisfies the secure-context requirement for Web Serial.
+The files can be served unchanged by GitHub Pages. HTTPS satisfies the secure-context requirement for Web Serial and WebUSB.
 
 A convenient repository layout is:
 
@@ -62,7 +73,7 @@ docs/
         styles.css
 ```
 
-The app does not send UART data to a server. JavaScript communicates directly with the serial device selected in the browser permission dialog.
+The app does not send UART or FPGA programming data to a server. JavaScript communicates directly with the devices selected in the browser permission dialogs.
 
 ## HDMI screen snip
 
@@ -111,7 +122,7 @@ The terminal transport is intentionally generic. Project-specific features can b
 1. Parse monitor status into cards instead of only showing text.
 2. Add SD status/load controls when the exact resident-monitor commands are finalized.
 3. Add SAO probe/read/write forms with validated I2C address/register fields.
-4. Add firmware/FPGA identification and board-health summary.
+4. Add a board-health summary that combines monitor status with the new JTAG identification result.
 5. Add command profiles for different Hazard3-Doom monitor revisions.
 6. Add optional ANSI terminal emulation with xterm.js if the resident monitor begins using cursor-control sequences.
 
@@ -121,3 +132,84 @@ The UART console uses a local-only classic terminal font stack and CRT-style gre
 phosphor treatment. No web font is downloaded. If an IBM/VGA or VT220-style font
 is already installed locally it is preferred; otherwise the page falls back to
 Lucida Console / Courier New / monospace.
+
+## FPGA web flasher
+
+The page now includes a collapsible **FPGA web flasher** in the Serial connection panel. It is independent of the Hazard3 UART terminal: the UART continues to use Web Serial and the external USB-to-UART adapter, while FPGA programming uses WebUSB and the ULX3S `US1` FT231X interface.
+
+The first implementation deliberately programs **ECP5 SRAM only**. The programmed image runs immediately but is lost when the board loses power. It does not erase or rewrite the ULX3S SPI configuration flash.
+
+### Programming flow
+
+1. Serve the page from HTTPS or `localhost` in current Chrome/Edge.
+2. Expand **FPGA web flasher**.
+3. Select the Hazard3-Doom `.bit` file built for the target ULX3S FPGA, or a pre-generated `.svf` file.
+4. Click **Connect ULX3S USB** and select the FTDI/ULX3S device attached to `US1`.
+5. Click **Probe JTAG**. The page recognizes these ECP5 IDCODEs:
+   - `0x21111043` - LFE5U-12F
+   - `0x41111043` - LFE5U-25F
+   - `0x41112043` - LFE5U-45F
+   - `0x41113043` - LFE5U-85F
+6. Click **Program FPGA SRAM**.
+
+For `.bit` files, the browser extracts the ECP5 IDCODE from the bitstream and converts the image to the same SRAM-programming SVF sequence produced by Project Trellis `tools/bit_to_svf.py`. The programming button probes IDCODE again immediately before programming. If the image target does not match the attached FPGA, the browser refuses to continue. Normal SVF `TDO`/`MASK` comparisons are also enforced while the programming stream executes.
+
+The implementation uses the ULX3S FT231X synchronous bit-bang JTAG mapping used by `fujprog`:
+
+```text
+TCK  0x20
+TMS  0x40
+TDI  0x80
+TDO  0x08
+```
+
+The WebUSB FTDI transport uses 1 Mbaud synchronous bit-bang mode and a 1 ms latency timer. Each JTAG clock is emitted as TCK-low followed by TCK-high, with TDO samples returned by the synchronous FTDI read path.
+
+### `.bit` and SVF input
+
+The normal path is now to select the built Hazard3-Doom `.bit` file directly. The browser implements the Project Trellis `tools/bit_to_svf.py` conversion internally, including IDCODE extraction, bit reversal, ECP5 configuration setup, status checks, and the 8000-bit maximum SDR chunks.
+
+Pre-generated SVF remains supported for testing and interoperability. Project Trellis can generate the same stream explicitly:
+
+```bash
+python3 /path/to/prjtrellis/tools/bit_to_svf.py \
+    bin/fpga_ulx3s-121.bit \
+    bin/fpga_ulx3s-121.svf
+```
+
+Use the exact bitstream that was built for the board being programmed. The browser reads the ECP5 target ID from the bitstream itself and still verifies the physical JTAG ID immediately before programming; it does not guess the FPGA variant from the filename.
+
+### WebUSB / driver notes
+
+WebUSB and Web Serial are separate browser APIs. The existing UART console can remain connected to the external USB-to-UART adapter while the flasher uses ULX3S `US1`.
+
+Close `fujprog`, OpenOCD, `openFPGALoader`, or any other program that owns the ULX3S FTDI interface before connecting the browser. On Windows, direct WebUSB access may require a WinUSB-compatible driver binding for the FT231X interface. Changing that binding can make tools that expect the normal FTDI/D2XX driver unavailable until the driver is changed back, so do not change the driver casually on a working development machine.
+
+If the browser can see the FTDI device but cannot claim/open it, treat that as a host-driver/ownership issue rather than a Hazard3 UART problem.
+
+### Supported SVF subset
+
+The parser implements the subset used by the normal ECP5 SRAM-programming stream:
+
+- `SIR`, `SDR` with `TDI`, optional `TDO`, `MASK`, and all-ones `SMASK`
+- `STATE`
+- `RUNTEST` with `TCK` and/or `SEC`, plus optional `ENDSTATE`
+- `ENDIR` (`IRPAUSE` or `IDLE`)
+- `ENDDR` (`DRPAUSE` or `IDLE`)
+- zero-length `HIR`, `HDR`, `TIR`, and `TDR`
+- `FREQUENCY` as a hint (ignored because the FT231X rate is fixed by the browser transport)
+- non-driving `TRST OFF`, `TRST Z`, and `TRST ABSENT`
+
+Unsupported commands stop programming with an explicit error instead of being silently ignored.
+
+### Why persistent SPI flash is not enabled yet
+
+A browser write to configuration flash is persistent and therefore has a larger failure cost than loading FPGA SRAM. The UI intentionally stops at temporary SRAM programming until the WebUSB/JTAG path has been exercised on both the ULX3S 12F and 85F boards. After that validation, persistent flash can be added as a second, separately confirmed workflow rather than overloading the safe temporary-program button.
+
+Implementation references:
+
+- ULX3S manual/programming documentation: https://github.com/emard/ulx3s/blob/master/doc/MANUAL.md
+- fujprog FT231X/JTAG implementation: https://github.com/kost/fujprog
+- Project Trellis: https://github.com/YosysHQ/prjtrellis
+- FTDI synchronous bit-bang behavior: https://www.ftdichip.com/Support/Knowledgebase/synchronousbitbangmode.htm
+- WebUSB API: https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API

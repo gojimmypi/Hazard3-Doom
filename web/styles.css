@@ -707,3 +707,203 @@ input[type="text"] {
 .terminal-footer {
     color: var(--terminal-dim);
 }
+
+/* ULX3S WebUSB/JTAG FPGA programmer. Kept inside the serial panel so the
+ * existing desktop terminal/control grid does not gain another permanent row. */
+.flasher-section {
+    margin-top: 0.85rem;
+    border: 1px solid #45685a;
+    border-radius: 10px;
+    background: #111a18;
+}
+
+.flasher-section > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 2.65rem;
+    padding: 0.65rem 0.8rem;
+    cursor: pointer;
+    color: var(--accent-strong);
+    font-weight: 800;
+    list-style: none;
+}
+
+.flasher-section > summary::-webkit-details-marker {
+    display: none;
+}
+
+.flasher-section > summary::before {
+    content: "+";
+    width: 1rem;
+    margin-right: 0.2rem;
+    color: var(--accent);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.flasher-section[open] > summary::before {
+    content: "-";
+}
+
+.flasher-section > summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+.summary-tag {
+    margin-left: auto;
+    border: 1px solid #45685a;
+    border-radius: 999px;
+    padding: 0.2rem 0.5rem;
+    color: var(--muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.flasher-body {
+    max-height: min(54vh, 520px);
+    overflow: auto;
+    border-top: 1px solid #30483f;
+    padding: 0.85rem;
+}
+
+.flasher-intro,
+.flasher-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(250px, 0.8fr);
+    gap: 1rem;
+}
+
+.flasher-intro h3 {
+    margin-bottom: 0.35rem;
+    color: var(--text);
+}
+
+.flasher-state {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-content: start;
+    gap: 0.35rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel-2);
+    padding: 0.65rem 0.75rem;
+    font-size: 0.74rem;
+}
+
+.flasher-state span {
+    color: var(--muted);
+}
+
+.flasher-state strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.flasher-state strong.ok {
+    color: var(--accent-strong);
+}
+
+.flasher-state strong.error {
+    color: var(--danger);
+}
+
+.flasher-grid {
+    margin-top: 0.8rem;
+}
+
+.svf-picker,
+.flasher-checklist {
+    display: grid;
+    align-content: start;
+    gap: 0.42rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel-2);
+    padding: 0.75rem;
+}
+
+.svf-picker > span,
+.flasher-checklist > strong {
+    color: var(--muted);
+    font-size: 0.73rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.svf-picker input[type="file"] {
+    width: 100%;
+    color: var(--text);
+}
+
+.svf-picker small {
+    color: var(--muted);
+}
+
+.flasher-checklist span {
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.flasher-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+}
+
+.flasher-progress-row {
+    display: grid;
+    grid-template-columns: minmax(140px, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    color: var(--muted);
+    font-size: 0.74rem;
+}
+
+.flasher-progress-row progress {
+    width: 100%;
+    height: 0.75rem;
+    accent-color: var(--accent);
+}
+
+.flasher-log {
+    min-height: 5.5rem;
+    max-height: 10rem;
+    margin: 0.75rem 0 0;
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #080d0b;
+    color: #b8e8cd;
+    padding: 0.65rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.7rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+
+.flasher-note {
+    margin-top: 0.65rem;
+    color: #d4caa0;
+    font-size: 0.76rem;
+}
+
+@media (max-width: 760px) {
+    .flasher-intro,
+    .flasher-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .flasher-progress-row {
+        grid-template-columns: 1fr;
+    }
+
+    .flasher-body {
+        max-height: none;
+    }
+}

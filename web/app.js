@@ -655,8 +655,7 @@ async function connect() {
     }
 
     try {
-        // Intentionally unfiltered: allow any serial port exposed by the browser.
-        const port = await navigator.serial.requestPort({ filters: [] });
+        const port = await navigator.serial.requestPort();
         await refreshAuthorizedPorts(port);
         await openPort(port);
     } catch (error) {

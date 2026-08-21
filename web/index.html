@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#171a21">
     <title>Hazard3-Doom UART Console</title>
-    <link rel="stylesheet" href="styles.css?v=20260819-r5">
+    <link rel="stylesheet" href="styles.css?v=20260821-r1">
 </head>
 <body>
     <header class="app-header">
@@ -104,6 +104,60 @@
                     </select>
                 </label>
             </div>
+
+            <details id="fpgaFlasher" class="flasher-section">
+                <summary>FPGA web flasher <span class="summary-tag">ULX3S US1 / JTAG</span></summary>
+                <div class="flasher-body">
+                    <div class="flasher-intro">
+                        <div>
+                            <h3>Program Hazard3-Doom from the browser</h3>
+                            <p>Uses WebUSB to drive the ULX3S FT231X JTAG interface directly. This first version programs FPGA SRAM from a Hazard3-Doom .bit file or an SVF file, so the image is temporary and is lost when the board powers off.</p>
+                        </div>
+                        <div class="flasher-state">
+                            <span>USB/JTAG</span>
+                            <strong id="flasherDeviceStatus">Not connected</strong>
+                            <span>FPGA</span>
+                            <strong id="flasherIdcode">Not probed</strong>
+                        </div>
+                    </div>
+
+                    <div id="flasherUnsupportedNotice" class="notice error hidden" role="alert">
+                        WebUSB is not available in this browser. Use a current Chromium-based browser and serve this page from HTTPS or localhost.
+                    </div>
+
+                    <div class="flasher-grid">
+                        <label class="svf-picker">
+                            <span>Hazard3-Doom FPGA image (.bit or .svf)</span>
+                            <input id="svfFileInput" type="file" accept=".bit,.svf,application/octet-stream,text/plain">
+                            <strong id="svfFileName">No FPGA image selected</strong>
+                            <small id="svfFileDetails"></small>
+                        </label>
+
+                        <div class="flasher-checklist">
+                            <strong>Before programming</strong>
+                            <span>Use the ULX3S <code>US1</code> USB connector.</span>
+                            <span>Close fujprog, OpenOCD, and other programs using US1.</span>
+                            <span>The browser derives or verifies the ECP5 target ID before programming.</span>
+                        </div>
+                    </div>
+
+                    <div class="flasher-actions">
+                        <button id="flasherConnectButton" type="button" class="secondary">Connect ULX3S USB</button>
+                        <button id="flasherProbeButton" type="button" class="secondary" disabled>Probe JTAG</button>
+                        <button id="flasherProgramButton" type="button" class="primary" disabled>Program FPGA SRAM</button>
+                        <button id="flasherDisconnectButton" type="button" class="secondary" disabled>Disconnect USB</button>
+                    </div>
+
+                    <div class="flasher-progress-row">
+                        <progress id="flasherProgress" max="100" value="0"></progress>
+                        <span id="flasherProgressLabel">Idle</span>
+                    </div>
+
+                    <pre id="flasherLog" class="flasher-log" aria-live="polite" aria-label="FPGA flasher status log"></pre>
+
+                    <p class="flasher-note"><strong>Persistent SPI flash is intentionally not written by this first implementation.</strong> Verify browser/JTAG programming on both ULX3S 12F and 85F before enabling a permanent-flash workflow.</p>
+                </div>
+            </details>
         </section>
 
         <section class="panel terminal-panel" aria-labelledby="terminal-title">
@@ -207,10 +261,11 @@
     </main>
 
     <footer class="app-footer">
-        <span>Hazard3-Doom WebSerial controller</span>
-        <span>Serial data stays between this browser and the selected device.</span>
+        <span>Hazard3-Doom Web controller</span>
+        <span>UART and FPGA programming data stay between this browser and the selected devices.</span>
     </footer>
 
     <script src="app.js?v=20260819-r5" defer></script>
+    <script src="flasher.js?v=20260821-r1" defer></script>
 </body>
 </html>
