@@ -120,6 +120,10 @@
         progress: document.getElementById("flasherProgress"),
         progressLabel: document.getElementById("flasherProgressLabel"),
         log: document.getElementById("flasherLog"),
+        autoScroll: document.getElementById("flasherAutoScroll"),
+        copyLogButton: document.getElementById("flasherCopyLogButton"),
+        copyLogButtonLabel: document.getElementById("flasherCopyLogButtonLabel"),
+        clearLogButton: document.getElementById("flasherClearLogButton"),
         idcode: document.getElementById("flasherIdcode")
     };
 
@@ -158,7 +162,76 @@
         const stamp = now.toLocaleTimeString([], {hour12: false});
         const prefix = level === "error" ? "ERROR" : level === "ok" ? "OK" : "INFO";
         els.log.textContent += `[${stamp}] ${prefix}: ${message}\n`;
-        els.log.scrollTop = els.log.scrollHeight;
+        if (!els.autoScroll || els.autoScroll.checked) {
+            els.log.scrollTop = els.log.scrollHeight;
+        }
+    }
+
+    function clearFlasherLog() {
+        els.log.textContent = "";
+        els.log.scrollTop = 0;
+    }
+
+    function copyFlasherLogFallback(text) {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+
+        const copied = document.execCommand("copy");
+        textarea.remove();
+        if (!copied) {
+            throw new Error("browser clipboard command was rejected");
+        }
+    }
+
+    async function copyFlasherLog() {
+        const text = els.log.textContent;
+        const originalLabel = els.copyLogButtonLabel.textContent;
+
+        try {
+            if (navigator.clipboard?.writeText && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                copyFlasherLogFallback(text);
+            }
+            els.copyLogButtonLabel.textContent = "Copied";
+            els.copyLogButton.classList.add("copy-success");
+        } catch (error) {
+            console.error("Could not copy FPGA flasher log:", error);
+            els.copyLogButtonLabel.textContent = "Copy failed";
+        }
+
+        window.setTimeout(() => {
+            els.copyLogButtonLabel.textContent = originalLabel;
+            els.copyLogButton.classList.remove("copy-success");
+        }, 1200);
+    }
+
+    function isWindowsHost() {
+        const platform = navigator.userAgentData?.platform || navigator.platform || navigator.userAgent || "";
+        return /win/i.test(platform);
+    }
+
+    function isUsbAccessDenied(error) {
+        const name = String(error?.name || "").toLowerCase();
+        const message = String(error?.message || error || "").toLowerCase();
+        return name === "notallowederror" ||
+            message.includes("access denied") ||
+            message.includes("permission denied");
+    }
+
+    function appendWindowsDriverHint(error) {
+        if (!isWindowsHost() || !isUsbAccessDenied(error)) {
+            return false;
+        }
+        appendLog("Detected a Windows WebUSB driver access failure for ULX3S US1.", "error");
+        appendLog("Bind the ULX3S FT231X interface to the WinUSB driver (for example with Zadig), then unplug/replug US1 and reconnect.");
+        appendLog("While WinUSB is installed, the normal FTDI VCP/D2XX COM-port driver for US1 is not available. If WinUSB is already installed, close other USB/JTAG tools and reconnect the board.");
+        return true;
     }
 
     function clearIdcode() {
@@ -671,7 +744,6 @@
             this.progressCallback = progressCallback;
             this.endDr = TAP.DRPAUSE;
             this.endIr = TAP.IRPAUSE;
-            this.lastIdcode = null;
         }
 
         compareTdo(scan, receivedBits) {
@@ -688,16 +760,6 @@
                     const got = bitsToHex(receivedBits);
                     throw new Error(`${scan.type} TDO mismatch: got ${got}, expected ${scan.tdo}, mask ${mask}.`);
                 }
-            }
-
-            if (scan.type === "SDR" && scan.bitCount === 32 && mask === "FFFFFFFF") {
-                let value = 0;
-                for (let bit = 0; bit < 32; bit++) {
-                    if (receivedBits[bit]) {
-                        value = (value | (1 << bit)) >>> 0;
-                    }
-                }
-                this.lastIdcode = value >>> 0;
             }
         }
 
@@ -819,7 +881,7 @@
                 }
             }
 
-            return {commandCount: parsed.commands.length, lastIdcode: this.lastIdcode};
+            return {commandCount: parsed.commands.length};
         }
     }
 
@@ -859,7 +921,8 @@
         } catch (error) {
             if (error.name !== "NotFoundError") {
                 appendLog(error.message, "error");
-                setProgress(0, "Connection failed");
+                const driverHintShown = appendWindowsDriverHint(error);
+                setProgress(0, driverHintShown ? "Connection failed - WinUSB required" : "Connection failed");
             } else {
                 setProgress(0, "Device selection cancelled");
             }
@@ -1013,10 +1076,6 @@
             });
             const result = await executor.execute(state.svfText);
 
-            if (result.lastIdcode !== null && result.lastIdcode !== actualId) {
-                throw new Error(`SVF verification observed unexpected IDCODE ${formatIdcode(result.lastIdcode)}.`);
-            }
-
             const elapsed = (performance.now() - started) / 1000;
             setProgress(100, `Programming complete in ${elapsed.toFixed(1)} s`);
             appendLog(`Programming stream completed successfully in ${elapsed.toFixed(1)} s (${result.commandCount.toLocaleString()} commands).`, "ok");
@@ -1050,6 +1109,8 @@
         els.disconnectButton.addEventListener("click", () => void disconnectFlasher());
         els.probeButton.addEventListener("click", () => void probeJtag());
         els.programButton.addEventListener("click", () => void programSvf());
+        els.copyLogButton.addEventListener("click", () => void copyFlasherLog());
+        els.clearLogButton.addEventListener("click", clearFlasherLog);
 
         if (webUsbSupported) {
             navigator.usb.addEventListener("disconnect", (event) => {

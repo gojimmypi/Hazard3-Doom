@@ -153,7 +153,20 @@
                         <span id="flasherProgressLabel">Idle</span>
                     </div>
 
-                    <pre id="flasherLog" class="flasher-log" aria-live="polite" aria-label="FPGA flasher status log"></pre>
+                    <div class="flasher-log-toolbar">
+                        <strong>Flasher log</strong>
+                        <div class="flasher-log-actions">
+                            <label class="check-control"><input id="flasherAutoScroll" type="checkbox" checked> Auto-scroll</label>
+                            <button id="flasherCopyLogButton" type="button" class="secondary icon-button" title="Copy all FPGA flasher log contents to the clipboard" aria-label="Copy all FPGA flasher log contents to the clipboard">
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M8 7V4h10a2 2 0 0 1 2 2v11h-3v3H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2Zm2 0h5a2 2 0 0 1 2 2v6h1V6H10v1Zm-4 2v9h9V9H6Z"/>
+                                </svg>
+                                <span id="flasherCopyLogButtonLabel">Copy log</span>
+                            </button>
+                            <button id="flasherClearLogButton" type="button" class="secondary">Clear log</button>
+                        </div>
+                    </div>
+                    <pre id="flasherLog" class="flasher-log" tabindex="0" aria-live="polite" aria-label="FPGA flasher status log"></pre>
 
                     <p class="flasher-note"><strong>Persistent SPI flash is intentionally not written by this first implementation.</strong> Verify browser/JTAG programming on both ULX3S 12F and 85F before enabling a permanent-flash workflow.</p>
                 </div>

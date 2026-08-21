@@ -871,11 +871,39 @@ input[type="text"] {
     accent-color: var(--accent);
 }
 
+.flasher-log-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    color: var(--muted);
+    font-size: 0.74rem;
+}
+
+.flasher-log-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.flasher-log-actions button {
+    padding: 0.38rem 0.6rem;
+    font-size: 0.74rem;
+}
+
 .flasher-log {
     min-height: 5.5rem;
-    max-height: 10rem;
-    margin: 0.75rem 0 0;
-    overflow: auto;
+    height: 10rem;
+    max-height: 24rem;
+    margin: 0.35rem 0 0;
+    overflow-x: auto;
+    overflow-y: scroll;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    resize: vertical;
     border: 1px solid var(--border);
     border-radius: 8px;
     background: #080d0b;

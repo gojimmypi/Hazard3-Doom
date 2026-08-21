@@ -183,9 +183,11 @@ Use the exact bitstream that was built for the board being programmed. The brows
 
 WebUSB and Web Serial are separate browser APIs. The existing UART console can remain connected to the external USB-to-UART adapter while the flasher uses ULX3S `US1`.
 
-Close `fujprog`, OpenOCD, `openFPGALoader`, or any other program that owns the ULX3S FTDI interface before connecting the browser. On Windows, direct WebUSB access may require a WinUSB-compatible driver binding for the FT231X interface. Changing that binding can make tools that expect the normal FTDI/D2XX driver unavailable until the driver is changed back, so do not change the driver casually on a working development machine.
+Close `fujprog`, OpenOCD, `openFPGALoader`, or any other program that owns the ULX3S FTDI interface before connecting the browser. On Windows, direct WebUSB access requires the ULX3S FT231X interface to use the WinUSB driver rather than the normal FTDI VCP/D2XX driver. Changing that binding makes tools that expect the normal FTDI/D2XX driver unavailable until the driver is changed back.
 
-If the browser can see the FTDI device but cannot claim/open it, treat that as a host-driver/ownership issue rather than a Hazard3 UART problem.
+If Windows returns `Access denied` while opening the selected FT231X, the flasher log detects that condition and tells the user to bind the ULX3S FT231X interface to WinUSB (for example with Zadig), unplug/replug `US1`, and reconnect. If WinUSB is already installed, close other USB/JTAG tools and reconnect the board.
+
+The flasher log has its own vertical scrollbar, can be resized vertically, and normally follows new messages. Uncheck **Auto-scroll** to inspect earlier output without being pulled back to the newest line. **Copy log** copies the complete current flasher log to the clipboard, and **Clear log** removes the displayed flasher history without interrupting an active programming operation.
 
 ### Supported SVF subset
 
