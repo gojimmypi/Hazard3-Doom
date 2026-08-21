@@ -56,3 +56,24 @@ for the HDMI interface. ``S`` scans, ``P`` probes, ``R`` reads one register,
 100/400 kHz, ``C`` clears display state, and ``Q`` exits. See
 :doc:`../user-guide/i2cdriver` for operand entry, safety notes, and logical
 trace behavior.
+
+Web Serial reserved control bytes
+---------------------------------
+
+These raw bytes are part of the browser screen-snip transport rather than
+resident-monitor text commands:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Byte
+     - Purpose
+   * - ``0x1c``
+     - Screen-snip capability query.
+   * - ``0x06``
+     - Capability ACK from a supported active display application.
+   * - ``0x1d``
+     - Screen-snip capture request.
+
+See :doc:`../user-guide/web-serial` for the complete ``H3SNIP1`` protocol and
+state machine.

@@ -20,6 +20,7 @@ Start here
 * :doc:`getting-started/quick-start` - get a board running with the minimum number of steps.
 * :doc:`getting-started/build` - build the FPGA, resident monitor, and Doom image.
 * :doc:`user-guide/sd-card` - configure standalone cold boot from micro-SD.
+* :doc:`user-guide/web-serial` - use the browser UART console and capture supported HDMI screens as PNG files.
 * :doc:`user-guide/i2cdriver` - scan and inspect the SAO I2C bus on HDMI.
 * :doc:`user-guide/jtag-debugging` - debug Hazard3 through OpenOCD/GDB or VisualGDB.
 * :doc:`architecture/hazard3/index` - learn the Hazard3 RISC-V processor, pipeline, ISA configuration, CSRs, buses, and debug architecture.

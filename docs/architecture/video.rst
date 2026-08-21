@@ -37,6 +37,20 @@ The HDMI/video control register block begins at:
    0x4000C000
 
 
+Web Serial screen snip path
+---------------------------
+
+The Web Serial screenshot feature is intentionally above the physical HDMI
+encoder. It does not capture TMDS and does not depend on a general-purpose EBR
+readback path. A supported active application serializes its indexed source
+frame plus the RGB332 palette over UART using the ``H3SNIP1`` protocol. The
+browser then reconstructs the advertised ``1024x600`` raster with
+nearest-neighbor source mapping and encodes the PNG locally.
+
+This keeps the wire payload compact relative to a full RGB framebuffer and lets
+the same browser parser accept Doom sources and I2C GUI sources with different
+geometries. See :doc:`../user-guide/web-serial` for the complete protocol.
+
 Non-Doom users of the video path
 --------------------------------
 

@@ -5,6 +5,7 @@ User Guide
    :maxdepth: 1
 
    monitor
+   web-serial
    doom
    sd-card
    sao

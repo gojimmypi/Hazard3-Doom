@@ -23,6 +23,15 @@ Core Doom commands
    * - ``c``
      - Print SD/FAT boot status and counters.
 
+Web Serial screen snip capability
+---------------------------------
+
+The resident monitor itself does not acknowledge the Web Serial screen-snip
+capability query. The browser therefore keeps **Screen snip** disabled at the
+monitor prompt. Capability is reported only after a supported display
+application such as Doom or the I2CDriver HDMI GUI owns the UART. See
+:doc:`web-serial`.
+
 SAO / I2C HDMI diagnostics
 --------------------------
 

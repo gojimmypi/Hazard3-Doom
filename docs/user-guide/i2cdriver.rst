@@ -216,6 +216,23 @@ The last analyzer frame can remain on HDMI until Doom or another monitor video
 operation presents a new frame. The UART monitor prompt is the authoritative
 indication that the GUI has exited.
 
+Web Serial screen snip
+----------------------
+
+The browser Web Serial console can capture the current I2CDriver HDMI screen
+when the running GUI implements the screen-snip capability handshake. The GUI
+intercepts the reserved control bytes before ordinary key/prompt processing, so
+a screen request is not interpreted as an I2C command.
+
+Current screen-snip source modes can be serialized as ``320x200`` or
+``400x240``. Every ``H3SNIP1`` pixel is an 8-bit palette index. The 16 GUI
+palette entries are transmitted first and the remaining palette entries are
+zero.
+
+See :doc:`web-serial` for the exact ``0x1c`` capability query, ``0x06`` ACK,
+``0x1d`` capture request, payload sizes, RGB332 format, timeout behavior, and
+PNG reconstruction.
+
 Build and test workflow
 -----------------------
 

@@ -81,3 +81,47 @@ Check both the superproject and submodule state:
    git -C third_party/doomgeneric branch --show-current
 
 A clean superproject does not imply that a submodule is on the branch or commit you expected.
+
+Screen snip button remains disabled
+-----------------------------------
+
+Hover the disabled control and read its status text. The browser requires a
+capability ACK from the firmware mode that currently owns UART input. The
+resident monitor intentionally does not acknowledge the query. Launch updated
+Doom or ``i2c gui``/``sao gui`` and hover the control again to force a new
+probe.
+
+If the screen is visibly Doom or the I2C GUI but the button remains disabled,
+make sure the corresponding application was rebuilt with the capability handler
+for raw query byte ``0x1c`` and ACK byte ``0x06``. Updating only ``web/app.js``
+does not add firmware support.
+
+In particular, an I2C GUI source that already handles ``0x1d`` screen capture
+but lacks ``0x1c``/``0x06`` capability handling will remain disabled by design.
+Merge the capability handler into that same current I2C GUI source rather than
+replacing newer resolution/framebuffer work with an older screen-snip file.
+
+Screen snip starts but times out
+--------------------------------
+
+A successful capability preflight is followed by raw request byte ``0x1d``.
+The browser then waits up to 30 seconds for a valid ``H3SNIP1`` header and its
+complete binary payload. Verify that no other terminal owns the UART and that
+the serial connection remains at the expected baud rate.
+
+At 115200 8-N-1, uncompressed captures are intentionally slow: approximately
+5.6 seconds for ``320x200`` and 8.4 seconds for ``400x240`` before small protocol/software overhead. A pause in Doom or the GUI
+during that transfer is expected.
+
+Binary garbage appears in the terminal during screen snip
+---------------------------------------------------------
+
+The Web Serial application must consume exactly 256 palette bytes plus the
+``pixel_bytes`` declared by the validated ``H3SNIP1`` header without passing
+those bytes through the terminal ``TextDecoder``. Binary output in the terminal
+usually indicates a mismatched web/firmware protocol revision or a malformed
+header. Use matching ``web/app.js`` and firmware implementations and verify that
+``palette_bytes`` is 256 and ``pixel_bytes`` equals
+``source_width * source_height``.
+
+See :doc:`user-guide/web-serial` for the full transport specification.
