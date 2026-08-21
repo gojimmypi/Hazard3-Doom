@@ -5,7 +5,8 @@ A dependency-free static web app for connecting to the Hazard3-Doom UART from a 
 ## Features
 
 - Connect/disconnect using the browser's serial-port picker.
-- Reconnect to a previously authorized port.
+- Enumerate all serial ports already authorized for this site and select which one Reconnect opens.
+- Reconnect to the selected previously authorized port.
 - Configurable baud rate, data bits, parity, stop bits, and line ending.
 - Live UART receive terminal with a bounded 1,000,000-character scrollback buffer.
 - Command entry with Up/Down command history.
@@ -93,6 +94,8 @@ If the Hazard3-Doom monitor expects a different line ending, select LF, CR, or N
 ## Browser notes
 
 Web Serial is not implemented in every browser. The app checks for `navigator.serial` and displays an error if the API is unavailable.
+
+`navigator.serial.getPorts()` returns ports for which this site already has permission; it is not an unrestricted enumeration of every Windows COM port. Use **Connect** to open the browser picker and grant/select another serial port. The Web Serial API exposes USB VID/PID information to the page but does not provide the Windows `COMx` name, so the authorized-port selector labels ports by position and VID/PID. Only one port is opened by this UART terminal at a time.
 
 Useful references:
 

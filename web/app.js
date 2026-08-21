@@ -14,6 +14,7 @@ const SCREEN_SNIP_MAX_DISPLAY_PIXELS = 4_000_000;
 
 const state = {
     port: null,
+    authorizedPorts: [],
     reader: null,
     readLoopPromise: null,
     keepReading: false,
@@ -39,6 +40,7 @@ const els = {
     unsupportedNotice: document.getElementById("unsupportedNotice"),
     connectButton: document.getElementById("connectButton"),
     reconnectButton: document.getElementById("reconnectButton"),
+    authorizedPort: document.getElementById("authorizedPort"),
     baudRate: document.getElementById("baudRate"),
     dataBits: document.getElementById("dataBits"),
     parity: document.getElementById("parity"),
@@ -204,6 +206,8 @@ function setConnectionUi(connected, detail = "") {
     [els.baudRate, els.dataBits, els.parity, els.stopBits].forEach((control) => {
         control.disabled = connected;
     });
+    els.authorizedPort.disabled = connected || state.authorizedPorts.length === 0;
+    els.reconnectButton.disabled = connected || state.authorizedPorts.length === 0;
 
     if (detail) {
         els.portDetails.textContent = detail;
@@ -257,9 +261,9 @@ function serialOptions() {
     };
 }
 
-function describePort(port) {
+function portIdentity(port, index) {
     const info = port.getInfo();
-    const parts = [`${Number(els.baudRate.value).toLocaleString()} baud`, `${els.dataBits.value}${els.parity.value === "none" ? "N" : els.parity.value[0].toUpperCase()}${els.stopBits.value}`];
+    const parts = [`Authorized port ${index + 1}`];
 
     if (info.usbVendorId !== undefined) {
         parts.push(`VID 0x${info.usbVendorId.toString(16).padStart(4, "0")}`);
@@ -269,6 +273,79 @@ function describePort(port) {
     }
 
     return parts.join(" | ");
+}
+
+function describePort(port) {
+    const info = port.getInfo();
+    const parts = [`${Number(els.baudRate.value).toLocaleString()} baud`, `${els.dataBits.value}${els.parity.value === "none" ? "N" : els.parity.value[0].toUpperCase()}${els.stopBits.value}`];
+    const index = state.authorizedPorts.indexOf(port);
+
+    if (index >= 0) {
+        parts.unshift(`Authorized port ${index + 1}`);
+    }
+    if (info.usbVendorId !== undefined) {
+        parts.push(`VID 0x${info.usbVendorId.toString(16).padStart(4, "0")}`);
+    }
+    if (info.usbProductId !== undefined) {
+        parts.push(`PID 0x${info.usbProductId.toString(16).padStart(4, "0")}`);
+    }
+
+    return parts.join(" | ");
+}
+
+function updateAuthorizedPortDetails() {
+    if (state.port) {
+        return;
+    }
+
+    if (state.authorizedPorts.length === 0) {
+        els.portDetails.textContent = "No authorized serial ports. Click Connect to choose one.";
+        return;
+    }
+
+    const selectedIndex = Number(els.authorizedPort.value);
+    const selectedPort = state.authorizedPorts[selectedIndex];
+    if (!selectedPort) {
+        els.portDetails.textContent = `${state.authorizedPorts.length} authorized serial ports are available.`;
+        return;
+    }
+
+    const suffix = state.authorizedPorts.length === 1
+        ? "Click Connect to grant/select another port."
+        : "Choose a port above, then click Reconnect.";
+    els.portDetails.textContent = `${portIdentity(selectedPort, selectedIndex)}. ${suffix}`;
+}
+
+async function refreshAuthorizedPorts(preferredPort = null) {
+    const previousPort = state.authorizedPorts[Number(els.authorizedPort.value)] || null;
+    const ports = await navigator.serial.getPorts();
+    state.authorizedPorts = ports;
+    els.authorizedPort.replaceChildren();
+
+    if (ports.length === 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "No authorized ports";
+        els.authorizedPort.append(option);
+    } else {
+        ports.forEach((port, index) => {
+            const option = document.createElement("option");
+            option.value = String(index);
+            option.textContent = portIdentity(port, index);
+            els.authorizedPort.append(option);
+        });
+
+        let selectedIndex = preferredPort ? ports.indexOf(preferredPort) : -1;
+        if (selectedIndex < 0 && previousPort) {
+            selectedIndex = ports.indexOf(previousPort);
+        }
+        els.authorizedPort.value = String(selectedIndex >= 0 ? selectedIndex : 0);
+    }
+
+    els.authorizedPort.disabled = Boolean(state.port) || ports.length === 0;
+    els.reconnectButton.disabled = Boolean(state.port) || ports.length === 0;
+    updateAuthorizedPortDetails();
+    return ports;
 }
 
 function appendSerialBytes(bytes) {
@@ -579,6 +656,7 @@ async function connect() {
 
     try {
         const port = await navigator.serial.requestPort();
+        await refreshAuthorizedPorts(port);
         await openPort(port);
     } catch (error) {
         if (error.name !== "NotFoundError") {
@@ -593,16 +671,19 @@ async function reconnect() {
     }
 
     try {
-        const ports = await navigator.serial.getPorts();
+        const ports = await refreshAuthorizedPorts();
         if (ports.length === 0) {
             appendSystem("No previously authorized serial port is available. Use Connect first.");
             return;
         }
-        if (ports.length > 1) {
-            appendSystem(`Found ${ports.length} authorized ports. Use Connect to choose one.`);
+
+        const selectedIndex = Number(els.authorizedPort.value);
+        const port = ports[selectedIndex];
+        if (!port) {
+            appendSystem("Select an authorized serial port first.");
             return;
         }
-        await openPort(ports[0]);
+        await openPort(port);
     } catch (error) {
         appendSystem(`Reconnect failed: ${error.message}`);
     }
@@ -897,6 +978,7 @@ function commandHistoryKey(event) {
 function wireEvents() {
     els.connectButton.addEventListener("click", connect);
     els.reconnectButton.addEventListener("click", reconnect);
+    els.authorizedPort.addEventListener("change", updateAuthorizedPortDetails);
     els.clearButton.addEventListener("click", clearTerminal);
     els.downloadButton.addEventListener("click", downloadLog);
     els.copyButton.addEventListener("click", copyTerminalContents);
@@ -960,12 +1042,16 @@ function wireEvents() {
     }
 
     if (serialSupported) {
+        navigator.serial.addEventListener("connect", () => {
+            void refreshAuthorizedPorts();
+        });
         navigator.serial.addEventListener("disconnect", async (event) => {
             const disconnectedPort = event.port || event.target;
             if (disconnectedPort === state.port) {
                 appendSystem("Device disconnected by the operating system.");
                 await disconnect();
             }
+            await refreshAuthorizedPorts();
         });
     }
 
@@ -988,12 +1074,7 @@ async function initialize() {
     }
 
     try {
-        const authorizedPorts = await navigator.serial.getPorts();
-        if (authorizedPorts.length === 1) {
-            els.portDetails.textContent = "One previously authorized serial port is available. Click Reconnect.";
-        } else if (authorizedPorts.length > 1) {
-            els.portDetails.textContent = `${authorizedPorts.length} previously authorized serial ports are available. Click Connect to choose one.`;
-        }
+        await refreshAuthorizedPorts();
     } catch (error) {
         appendSystem(`Could not enumerate authorized ports: ${error.message}`);
     }
