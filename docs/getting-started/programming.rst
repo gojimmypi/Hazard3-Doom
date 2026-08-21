@@ -8,6 +8,16 @@ Temporary FPGA load
 
 A normal volatile FPGA programming command is ideal while testing a new bitstream. It configures the ECP5 immediately but is lost when power is removed.
 
+For ULX3S, the browser-based :doc:`../user-guide/web-flasher` can perform this
+temporary load directly from a ``.bit`` or compatible ``.svf`` file through
+``US1``. The browser probes the physical ECP5 JTAG ID, verifies that a ``.bit``
+file targets the same FPGA variant, executes the Project Trellis SRAM
+programming sequence, and starts the new image immediately.
+
+The WebUSB flasher does not modify persistent SPI flash. On Windows its direct
+access to the FT231X requires the WinUSB driver; see the flasher guide before
+changing the USB driver binding.
+
 Persistent FPGA configuration
 -----------------------------
 

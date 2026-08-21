@@ -43,9 +43,18 @@ Important outputs include:
 3. Program the FPGA for a test run
 ----------------------------------
 
-Use the project's normal ULX3S programming flow to load ``fpga_ulx3s.bit`` temporarily while validating a build. A volatile FPGA load does **not** survive removal of power.
+For ULX3S, the Hazard3-Doom web application can load ``fpga_ulx3s.bit``
+directly into FPGA SRAM through the board's ``US1`` FT231X JTAG interface.
+Expand **FPGA web flasher**, select the ``.bit`` file, connect the ULX3S USB
+device, probe JTAG, and choose **Program FPGA SRAM**.
 
-For a permanent standalone installation, see :doc:`programming` and :doc:`../user-guide/sd-card`.
+On Windows, this WebUSB path requires the ULX3S FT231X interface to use the
+WinUSB driver. See :doc:`../user-guide/web-flasher` for the complete setup,
+driver, target-verification, and troubleshooting procedure.
+
+A volatile FPGA load does **not** survive removal of power. Other ULX3S
+programming tools can still be used when preferred. For a permanent standalone
+installation, see :doc:`programming` and :doc:`../user-guide/sd-card`.
 
 4. Load Doom over UART
 ----------------------

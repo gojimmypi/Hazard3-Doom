@@ -6,6 +6,7 @@ User Guide
 
    monitor
    web-serial
+   web-flasher
    doom
    sd-card
    sao

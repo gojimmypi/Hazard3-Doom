@@ -5,6 +5,11 @@ Hazard3-Doom includes a dependency-free browser console in the ``web/``
 directory. It uses the browser Web Serial API to talk directly to the board's
 UART and can also request a screen snip from supported HDMI applications.
 
+The same web application also contains a separate WebUSB FPGA programmer for
+the ULX3S ``US1`` FT231X JTAG interface. Web Serial and WebUSB are independent
+transports: the UART console remains on its serial adapter while the FPGA
+programmer talks to JTAG. See :doc:`web-flasher`.
+
 The screen-snip path does not capture TMDS, read pixels back from the physical
 HDMI connector, or require a server. The active firmware application sends the
 indexed source frame and palette over UART. JavaScript reconstructs the full
