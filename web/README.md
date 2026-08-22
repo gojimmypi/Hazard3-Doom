@@ -1,6 +1,6 @@
 # Hazard3-Doom Web Console
 
-A dependency-free static web app for the Hazard3-Doom UART console and ULX3S FPGA programming from a Chromium-based browser using Web Serial and WebUSB.
+A dependency-free static web app for the Hazard3-Doom UART console, H3D image loading, and ULX3S FPGA programming from a Chromium-based browser using Web Serial and WebUSB.
 
 Windows users need to change drivers from default **FTDI** to **WinUSB** to use the WebUSB programmer.
 
@@ -18,6 +18,7 @@ Click "Update" and allow Windows to search for default drivers. Be sure to disco
 - Connect/disconnect using the browser's serial-port picker.
 - Enumerate all serial ports already authorized for this site and select which one Reconnect opens.
 - Reconnect to the selected previously authorized port.
+- Validate and upload packaged `.h3d` Doom images over UART using the monitor H3L handshake, with optional launch after upload.
 - Configurable baud rate, data bits, parity, stop bits, and line ending.
 - Live UART receive terminal with a bounded 1,000,000-character scrollback buffer.
 - Command entry with Up/Down command history.
@@ -74,6 +75,26 @@ docs/
 ```
 
 The app does not send UART or FPGA programming data to a server. JavaScript communicates directly with the devices selected in the browser permission dialogs.
+
+## Doom H3D UART uploader
+
+The collapsible **Doom H3D uploader** loads a packaged `.h3d` Doom image through the same Web Serial connection used by the UART terminal. It does not write the SD card. The resident monitor must be active at its `>` prompt; if Doom is running, stop Doom first and wait for the prompt before starting the upload.
+
+The browser validates the fixed 64-byte `H3D1` package header, format version, CRC32 flag, reserved words, package length, and payload CRC32 before sending anything. It then follows the same H3L handshake as `doom/upload-doom-image.py`:
+
+```text
+browser -> l
+monitor -> H3L READY\r\n
+browser -> 64-byte H3D header
+monitor -> header summary
+monitor -> H3L DATA\r\n
+browser -> raw H3D payload bytes
+monitor -> H3L OK ...\r\n
+```
+
+The payload is sent in 4096-byte browser writes while the page shows transfer progress. Normal UART command controls and screen-snip capability probes are suspended during the binary transfer so no unrelated byte can be inserted into the H3D payload. The monitor still performs its own header and CRC validation before accepting the image.
+
+**Launch with `j` after upload** is optional and disabled by default. When selected, the browser sends the monitor's raw `j` command only after `H3L OK` is received.
 
 ## HDMI screen snip
 

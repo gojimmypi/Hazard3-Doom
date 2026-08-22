@@ -171,6 +171,53 @@
                     <p class="flasher-note"><strong>Persistent SPI flash is intentionally not written by this first implementation.</strong> Verify browser/JTAG programming on both ULX3S 12F and 85F before enabling a permanent-flash workflow.</p>
                 </div>
             </details>
+
+            <details id="h3dUploader" class="flasher-section">
+                <summary>Doom H3D uploader <span class="summary-tag">UART / H3L</span></summary>
+                <div class="flasher-body">
+                    <div class="flasher-intro">
+                        <div>
+                            <h3>Load a Doom image over UART</h3>
+                            <p>Select a packaged <code>.h3d</code> image and send it directly to the resident monitor. The browser validates the H3D header and payload CRC32 before transfer. This loads SDRAM only; it does not modify the SD card.</p>
+                        </div>
+                        <div class="flasher-state">
+                            <span>Protocol</span>
+                            <strong>H3L over Web Serial</strong>
+                            <span>Monitor</span>
+                            <strong>Use from the &gt; prompt</strong>
+                        </div>
+                    </div>
+
+                    <div class="flasher-grid">
+                        <label class="svf-picker">
+                            <span>Hazard3-Doom image (.h3d)</span>
+                            <input id="h3dFileInput" type="file" accept=".h3d,application/octet-stream">
+                            <strong id="h3dFileName">No H3D image selected</strong>
+                            <small id="h3dFileDetails"></small>
+                        </label>
+
+                        <div class="flasher-checklist">
+                            <strong>Upload flow</strong>
+                            <span>1. Connect the UART terminal.</span>
+                            <span>2. Stop Doom first if it is currently running.</span>
+                            <span>3. Select a valid packaged H3D image.</span>
+                            <span>4. Upload; the browser performs the H3L READY/DATA/OK handshake.</span>
+                            <label class="check-control"><input id="h3dLaunchAfterUpload" type="checkbox"> Launch with <code>j</code> after upload</label>
+                        </div>
+                    </div>
+
+                    <div class="flasher-actions">
+                        <button id="h3dUploadButton" type="button" class="primary" disabled>Upload H3D</button>
+                    </div>
+
+                    <div class="flasher-progress-row">
+                        <progress id="h3dProgress" max="100" value="0"></progress>
+                        <span id="h3dProgressLabel">Idle</span>
+                    </div>
+
+                    <p class="flasher-note"><strong>The H3L loader must own the UART.</strong> If Doom is running, use Stop Doom first and wait for the resident monitor <code>&gt;</code> prompt before uploading.</p>
+                </div>
+            </details>
         </section>
 
         <section class="panel terminal-panel" aria-labelledby="terminal-title">
@@ -278,7 +325,7 @@
         <span>UART and FPGA programming data stay between this browser and the selected devices.</span>
     </footer>
 
-    <script src="app.js?v=20260819-r5" defer></script>
+    <script src="app.js?v=20260822-r6" defer></script>
     <script src="flasher.js?v=20260821-r1" defer></script>
 </body>
 </html>
