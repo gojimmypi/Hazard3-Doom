@@ -10,7 +10,9 @@ set -euo pipefail
 # Examples:
 #
 #   ./scripts/sweep-ulx4m-ld.sh 55
+#
 #   SWEEP_JOBS=2 ./scripts/sweep-ulx4m-ld.sh 1-32
+#
 #   SWEEP_JOBS=2 ./scripts/sweep-ulx4m-ld.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

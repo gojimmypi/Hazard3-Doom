@@ -68,7 +68,7 @@ jobs:
           status=0
           while IFS= read -r -d '' script; do
               if [[ ! -x "${script}" ]]; then
-                  echo "::error file=${script}::Shell script is not executable: ${script}"
+                  echo "::error file=${script},title=Missing executable bit::${script} is tracked without executable permission. Fix with: git update-index --chmod=+x ${script}"
                   status=1
               fi
           done < <(git ls-files -z -- 'scripts/*.sh' 'doom/*.sh')
@@ -96,21 +96,56 @@ jobs:
         run: |
           status=0
 
-          report_failure() {
+          {
+              echo "## Quality check summary"
+              echo
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          report_result() {
               local name="$1"
               local outcome="$2"
+              local guidance="$3"
 
-              if [[ "${outcome}" != "success" ]]; then
-                  echo "::error::${name} failed (outcome: ${outcome})"
-                  status=1
+              if [[ "${outcome}" == "success" ]]; then
+                  printf -- '- [PASS] %s\n' "${name}" >> "${GITHUB_STEP_SUMMARY}"
+                  return
               fi
+
+              printf -- '- [FAIL] **%s**: %s\n' \
+                  "${name}" "${guidance}" >> "${GITHUB_STEP_SUMMARY}"
+              echo "::error title=${name} failed::${guidance}"
+              status=1
           }
 
-          report_failure "Script-check dependency installation" "${INSTALL_SCRIPT_CHECKS_OUTCOME}"
-          report_failure "ShellCheck" "${SHELLCHECK_OUTCOME}"
-          report_failure "Executable permission check" "${EXECUTABLE_PERMISSIONS_OUTCOME}"
-          report_failure "Python syntax check" "${PYTHON_SYNTAX_OUTCOME}"
-          report_failure "Host-tool tests" "${HOST_TOOL_TESTS_OUTCOME}"
+          report_result \
+              "Script-check dependency installation" \
+              "${INSTALL_SCRIPT_CHECKS_OUTCOME}" \
+              "Could not install ShellCheck. Open the 'Install script checks' step for the package-manager error."
+
+          report_result \
+              "ShellCheck" \
+              "${SHELLCHECK_OUTCOME}" \
+              "ShellCheck found one or more shell-script issues. Open the 'Check shell scripts' step for exact filenames, line numbers, rule IDs, and suggested fixes."
+
+          report_result \
+              "Executable permission check" \
+              "${EXECUTABLE_PERMISSIONS_OUTCOME}" \
+              "One or more tracked .sh files are missing the Git executable bit. Open 'Check executable permissions' for each filename and the exact git update-index --chmod=+x command."
+
+          report_result \
+              "Python syntax check" \
+              "${PYTHON_SYNTAX_OUTCOME}" \
+              "Python syntax validation failed. Open the 'Check Python syntax' step for the file and syntax error."
+
+          report_result \
+              "Host-tool tests" \
+              "${HOST_TOOL_TESTS_OUTCOME}" \
+              "One or more host-tool unit tests failed. Open the 'Run host-tool tests' step for the failing test and traceback."
+
+          if (( status != 0 )); then
+              echo
+              echo "One or more quality checks failed. See the annotations above and the Job Summary for corrective actions."
+          fi
 
           exit "${status}"
 

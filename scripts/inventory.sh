@@ -9,6 +9,18 @@ set -euo pipefail
 # The generated manifest files are excluded from their own inventory so that
 # repeated runs over an unchanged Git index produce identical content.
 
+# Run shellcheck to ensure this is a good script.
+# Specify the executable shell checker you want to use:
+MY_SHELLCHECK="shellcheck"
+
+# Check if the executable is available in the PATH
+if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
+    # Run your command here
+    shellcheck "$0" || exit 1
+else
+    echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
+fi
+
 usage()
 {
     cat <<'USAGE'
@@ -285,7 +297,7 @@ total_bytes=0
 
 while IFS= read -r -d '' repo_path; do
     if [[ -n "${TARGET_PREFIX}" ]]; then
-        rel_path="${repo_path#${TARGET_PREFIX}}"
+        rel_path="${repo_path#"${TARGET_PREFIX}"}"
     else
         rel_path="${repo_path}"
     fi
@@ -374,7 +386,7 @@ done < "${LIST_TMP}"
     echo "|---|---:|---|---|---|"
 
     tail -n +2 "${TSV_TMP}" | while IFS=$'\t' read -r path bytes hash component kind; do
-        printf '| `%s` | %s | `%s` | %s | %s |\n' \
+        printf "| \`%s\` | %s | \`%s\` | %s | %s |\n" \
             "$(markdown_escape "${path}")" \
             "${bytes}" \
             "${hash}" \
@@ -395,10 +407,10 @@ if [[ "${mode}" == "check" ]]; then
         committed="${pair#*:}"
 
         if [[ ! -f "${committed}" ]]; then
-            echo "Missing inventory manifest: ${committed#${TARGET_DIR}/}" >&2
+            echo "Missing inventory manifest: ${committed#"${TARGET_DIR}"/}" >&2
             status=1
         elif ! cmp -s -- "${generated}" "${committed}"; then
-            echo "Inventory manifest is stale: ${committed#${TARGET_DIR}/}" >&2
+            echo "Inventory manifest is stale: ${committed#"${TARGET_DIR}"/}" >&2
             status=1
         fi
     done
