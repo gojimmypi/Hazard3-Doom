@@ -14,8 +14,7 @@ SYNTH_DIR="${HAZARD3_ROOT}/example_soc/synth"
 BOARD_BUILD_DIR="${ROOT_DIR}/build/ulx3s"
 MONITOR_BUILD_DIR="${HAZARD3_BUILD_DIR:-${ROOT_DIR}/build}"
 DOOM_BUILD_DIR="${HAZARD3_DOOM_BUILD_DIR:-${ROOT_DIR}/build/doom-image}"
-FPGA_SOURCE="${SYNTH_DIR}/fpga_ulx3s.bit"
-FPGA_OUTPUT="${BOARD_BUILD_DIR}/fpga_ulx3s.bit"
+FPGA_OUTPUT="${ROOT_DIR}/build/fpga_ulx3s.bit"
 MONITOR_OUTPUT="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.elf"
 MONITOR_BIN="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.bin"
 BOOT_HEX="${HAZARD3_ROOT}/example_soc/soc/hazard3-boot-monitor.hex"
@@ -117,8 +116,7 @@ HAZARD3_ROOT="${HAZARD3_ROOT}" \
     "${ROOT_DIR}/scripts/build-ulx3s-85f-bitstream.sh"
 
 mkdir -p "${BOARD_BUILD_DIR}"
-require_file "${FPGA_SOURCE}"
-cp "${FPGA_SOURCE}" "${FPGA_OUTPUT}"
+require_file "${FPGA_OUTPUT}"
 printf '%s\n' "${VIDEO_PROFILE}" > "${BOARD_BUILD_DIR}/video-profile.txt"
 
 printf '\nBuilding the shared 64 MiB Doom image...\n'

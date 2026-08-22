@@ -34,13 +34,11 @@ jobs:
           - name: ULX3S 85F
             board: ulx3s-85f
             command: ./scripts/build-ulx3s-doom.sh
-            bitstream: build/ulx3s/fpga_ulx3s.bit
-            pnr_log: third_party/Hazard3/example_soc/synth/pnr.log
+            fpga_name: fpga_ulx3s
           - name: ULX4M-LD 85F
             board: ulx4m-ld-85f
             command: ./scripts/build-ulx4m-ld-doom.sh
-            bitstream: build/fpga_ulx4m_ld.bit
-            pnr_log: build/fpga_ulx4m_ld.pnr.log
+            fpga_name: fpga_ulx4m_ld
 
     steps:
       - name: Check out repository
@@ -113,7 +111,14 @@ jobs:
           # known timing misses do not hide synthesis, packaging, or integration failures.
           ${{ matrix.command }}
 
-          test -s "${{ matrix.bitstream }}"
+          test -s "build/${{ matrix.fpga_name }}.bit"
+          test -s "build/${{ matrix.fpga_name }}.config"
+          test -s "build/${{ matrix.fpga_name }}.svf"
+          test -s "build/${{ matrix.fpga_name }}.pnr.log"
+          test -s "build/${{ matrix.fpga_name }}.synth.log"
+          if [[ "${{ matrix.fpga_name }}" == "fpga_ulx4m_ld" ]]; then
+              test -s "build/${{ matrix.fpga_name }}.seed"
+          fi
           test -s build/hazard3-boot-monitor.elf
           test -s build/doom-image/hazard3-doom.h3d
 
@@ -123,7 +128,7 @@ jobs:
         with:
           name: ${{ matrix.board }}-${{ github.sha }}
           path: |
-            ${{ matrix.bitstream }}
+            build/${{ matrix.fpga_name }}.*
             build/source_status.log
             build/hazard3-boot-monitor.elf
             build/hazard3-boot-monitor.map
@@ -132,11 +137,6 @@ jobs:
             build/doom-image/hazard3-doom.h3d
             build/hazard3-boot-monitor.bin
             third_party/Hazard3/example_soc/soc/hazard3-boot-monitor.hex
-            third_party/Hazard3/example_soc/synth/synth.log
-            ${{ matrix.pnr_log }}
-            build/fpga_ulx4m_ld.config
-            build/fpga_ulx4m_ld.svf
-            build/fpga_ulx4m_ld.seed
           if-no-files-found: warn
           retention-days: 14
           compression-level: 0

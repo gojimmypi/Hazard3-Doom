@@ -786,7 +786,7 @@ jobs:
           The complete ULX3S board build, including the FPGA bitstream, is made
           separately by `./scripts/build-ulx3s-doom.sh`. Its FPGA output is:
 
-          `build/ulx3s/fpga_ulx3s.bit`
+          `build/fpga_ulx3s.bit`
 
           That bitstream is not included in this `windows-bash-builds-*` CI
           artifact unless the workflow is separately changed to upload it.

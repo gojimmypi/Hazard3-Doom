@@ -1,4 +1,10 @@
 #!/bin/bash
+#
+# Copyright (c) 2026 gojimmypi
+# SPDX-License-Identifier: Apache-2.0
+#
+# file: scripts/build-ulx4m-ld-doom.sh
+#
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -8,7 +14,7 @@ SYNTH_DIR="${HAZARD3_ROOT}/example_soc/synth"
 MONITOR_BUILD_DIR="${HAZARD3_BUILD_DIR:-${ROOT_DIR}/build}"
 DOOM_BUILD_DIR="${HAZARD3_DOOM_BUILD_DIR:-${ROOT_DIR}/build/doom-image}"
 FPGA_OUTPUT="${ROOT_DIR}/build/fpga_ulx4m_ld.bit"
-MONITOR_OUTPUT="${MONITOR_BUILD_DIR}/hazard3-test.elf"
+MONITOR_OUTPUT="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.elf"
 DOOM_OUTPUT="${DOOM_BUILD_DIR}/hazard3-doom.h3d"
 LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM/generated"
 
@@ -18,8 +24,7 @@ MY_SHELLCHECK="shellcheck"
 
 # Check if the executable is available in the PATH
 if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
-    # Run your command here
-    shellcheck "$0" || exit 1
+    "${MY_SHELLCHECK}" -x "${BASH_SOURCE[0]}" >&2 || exit 1
 else
     echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
 fi
@@ -68,17 +73,19 @@ require_file "${LITEDRAM_DIR}/litedram_ulx4m_cpu_sram.init"
 require_executable "${ROOT_DIR}/scripts/build.sh"
 require_executable "${ROOT_DIR}/doom/build-doom-image.sh"
 
-printf 'Building the Hazard3 ULX4M-LD 85F FPGA target...\n'
-HAZARD3_ROOT="${HAZARD3_ROOT}" \
-    "${ROOT_DIR}/scripts/build-ulx4m-ld-bitstream.sh"
-
-require_file "${FPGA_OUTPUT}"
-
-printf '\nBuilding the shared 50 MHz monitor with the 64 MiB map...\n'
+printf 'Building the shared 50 MHz monitor with the 64 MiB map...\n'
 HAZARD3_BUILD_DIR="${MONITOR_BUILD_DIR}" \
 HAZARD3_MEMORY_PROFILE=64m \
 HAZARD3_SYS_CLK_HZ=50000000 \
     "${ROOT_DIR}/scripts/build.sh"
+
+require_file "${MONITOR_OUTPUT}"
+
+printf '\nBuilding the Hazard3 ULX4M-LD 85F FPGA target...\n'
+HAZARD3_ROOT="${HAZARD3_ROOT}" \
+    "${ROOT_DIR}/scripts/build-ulx4m-ld-bitstream.sh"
+
+require_file "${FPGA_OUTPUT}"
 
 printf '\nBuilding the shared 64 MiB Doom image...\n'
 HAZARD3_DOOM_BUILD_DIR="${DOOM_BUILD_DIR}" \

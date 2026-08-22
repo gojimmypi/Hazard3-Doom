@@ -1,171 +1,22 @@
 #!/bin/bash
 #
+# Copyright (c) 2026 gojimmypi
+# SPDX-License-Identifier: Apache-2.0
+#
 # file: scripts/build-ulx3s-85f-bitstream.sh
 #
-# Build the ULX3S 85F bitstream using nextpnr's analytical placer.
-# The pinned fpgascripts submodule uses randomized SA placement, which
-# routes this design extremely slowly.
-#
-# The third_party/Hazard3/scripts directory is an old, pinned submodule.
-# Run nextpnr directly with its analytical placer and a fixed seed.
+# ULX3S 85F entry point for the shared Hazard3-Doom ECP5 build flow.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
-HAZARD3_ROOT="${HAZARD3_ROOT:-${REPO_ROOT}/third_party/Hazard3}"
-HAZARD3_SYNTH="${HAZARD3_ROOT}/example_soc/synth"
-BITSTREAM_OUTPUT="${HAZARD3_SYNTH}/fpga_ulx3s.bit"
-ALLOW_TIMING_FAILURE="${ALLOW_TIMING_FAILURE:-0}"
-FORCE_BITSTREAM_REBUILD="${FORCE_BITSTREAM_REBUILD:-0}"
-HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
-SYNTH_PROFILE_STAMP="${HAZARD3_SYNTH}/fpga_ulx3s.video-profile"
+COMMON_SCRIPT="${SCRIPT_DIR}/build-ecp5-bitstream-common.sh"
 
-NEXTPNR_SEED="${NEXTPNR_SEED:-55}"
-
-# See scripts/sweep.sh results:
-#
-# |   Seed |          `clk_sys` |
-# | -----: | -----------------: |
-# | **178** | **55.89 MHz PASS** |
-# |    185 |     55.11 MHz PASS |
-# |    197 |     54.45 MHz PASS |
-# |    112 |     54.32 MHz PASS |
-# |    179 |     54.28 MHz PASS |
-# |     46 |     54.27 MHz PASS |
-# |    232 |     54.26 MHz PASS |
-# |     26 |     54.22 MHz PASS |
-# |     12 |     54.21 MHz PASS |
-# |     64 |     53.82 MHz PASS |
-
-# Run shellcheck to ensure this is a good script.
-# Specify the executable shell checker you want to use:
 MY_SHELLCHECK="shellcheck"
-
-# Check if the executable is available in the PATH
-if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
-    # Run your command here
-    shellcheck "$0" || exit 1
+if command -v "${MY_SHELLCHECK}" >/dev/null 2>&1; then
+    shellcheck "$0" "${COMMON_SCRIPT}" || exit 1
 else
-    echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
+    echo "${MY_SHELLCHECK} is not installed. Please install it if changes to this script have been made."
 fi
 
-require_tool()
-{
-    local tool="$1"
-
-    command -v "${tool}" >/dev/null 2>&1 || {
-        echo "Missing required tool: ${tool}" >&2
-        exit 1
-    }
-}
-
-case "${ALLOW_TIMING_FAILURE}" in
-0)
-    timing_options=()
-    ;;
-1)
-    timing_options=(--timing-allow-fail)
-    ;;
-*)
-    echo "ALLOW_TIMING_FAILURE must be 0 or 1" >&2
-    exit 1
-    ;;
-esac
-
-case "${FORCE_BITSTREAM_REBUILD}" in
-0|1)
-    ;;
-*)
-    echo "FORCE_BITSTREAM_REBUILD must be 0 or 1" >&2
-    exit 1
-    ;;
-esac
-
-case "${HAZARD3_HDMI_EXTENDED_MODES}" in
-0)
-    VIDEO_PROFILE="standard"
-    ;;
-1)
-    VIDEO_PROFILE="extended"
-    ;;
-*)
-    echo "HAZARD3_HDMI_EXTENDED_MODES must be 0 or 1" >&2
-    exit 1
-    ;;
-esac
-
-current_video_profile=""
-if [[ -f "${SYNTH_PROFILE_STAMP}" ]]; then
-    read -r current_video_profile < "${SYNTH_PROFILE_STAMP}" || true
-fi
-
-if [[ "${current_video_profile}" != "${VIDEO_PROFILE}" ]]; then
-    if [[ -n "${current_video_profile}" ]]; then
-        printf 'HDMI video profile changed: %s -> %s\n' \
-            "${current_video_profile}" "${VIDEO_PROFILE}"
-    else
-        printf 'HDMI video profile is not recorded; rebuilding for %s mode.\n' \
-            "${VIDEO_PROFILE}"
-    fi
-    rm -f \
-        "${HAZARD3_SYNTH}/fpga_ulx3s.json" \
-        "${HAZARD3_SYNTH}/fpga_ulx3s.config" \
-        "${HAZARD3_SYNTH}/fpga_ulx3s.bit" \
-        "${HAZARD3_SYNTH}/fpga_ulx3s.svf"
-fi
-
-printf 'HDMI video profile: %s (extended modes=%s)\n' \
-    "${VIDEO_PROFILE}" "${HAZARD3_HDMI_EXTENDED_MODES}"
-
-require_tool stat
-if [[ -s "${BITSTREAM_OUTPUT}" && "${FORCE_BITSTREAM_REBUILD}" == 0 ]]; then
-    printf '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n'
-    printf 'Reusing existing ULX3S 85F bitstream in %s\n' "${BITSTREAM_OUTPUT}"
-    printf 'nextpnr was not run!!!\n'
-    stat -c 'bitstream:  %n (modified %y, %s bytes)' -- "${BITSTREAM_OUTPUT}"
-    printf 'Set FORCE_BITSTREAM_REBUILD=1 to rebuild it.\n'
-    printf '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n'
-    exit 0
-fi
-
-require_tool make
-require_tool yosys
-require_tool nextpnr-ecp5
-require_tool ecppack
-
-# Yosys is called indirectly here.
-make -C "${HAZARD3_SYNTH}" -f ULX3S.mk \
-    HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES}" synth
-printf '%s\n' "${VIDEO_PROFILE}" > "${SYNTH_PROFILE_STAMP}"
-
-# Run P&R directly instead of the pinned fpgascripts recipe.
-(
-    cd "${HAZARD3_SYNTH}"
-
-    printf 'nextpnr seed: %s\n' "${NEXTPNR_SEED}"
-    if [[ "${ALLOW_TIMING_FAILURE}" == 1 ]]; then
-        printf 'WARNING: timing failure is allowed for this development build.\n' >&2
-    fi
-
-    nextpnr-ecp5 \
-        --seed "${NEXTPNR_SEED}" \
-        --placer heap \
-        --um5g-85k \
-        --package CABGA381 \
-        --lpf fpga_ulx3s.lpf \
-        --json fpga_ulx3s.json \
-        --textcfg fpga_ulx3s.config \
-        "${timing_options[@]}" \
-        --quiet \
-        --log pnr.log
-
-    ecppack \
-        --compress \
-        --svf fpga_ulx3s.svf \
-        --idcode 0x41113043 \
-        fpga_ulx3s.config \
-        fpga_ulx3s.bit
-)
-
-printf 'ULX3S 85F bitstream: %s\n' "${BITSTREAM_OUTPUT}"
+exec "${COMMON_SCRIPT}" ulx3s-85f "$@"

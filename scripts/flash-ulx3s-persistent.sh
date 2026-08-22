@@ -7,7 +7,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 HAZARD3_ROOT="${HAZARD3_ROOT:-${ROOT_DIR}/third_party/Hazard3}"
-BITSTREAM="${ROOT_DIR}/build/ulx3s/fpga_ulx3s.bit"
+BITSTREAM="${ROOT_DIR}/build/fpga_ulx3s.bit"
 
 command -v ujprog >/dev/null 2>&1 || {
     echo "Missing required tool: ujprog" >&2
