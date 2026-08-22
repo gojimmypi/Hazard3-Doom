@@ -1,0 +1,48 @@
+# Hazard3-Doom Inventory
+
+This manifest identifies every Git-tracked file under `bin/`,
+except the generated `INVENTORY.*` manifest files themselves.
+Ignored and untracked local files are intentionally not inventoried.
+
+It is intended to support integrity verification, reproducibility, release
+auditing, and exact identification of tracked artifacts. A hash identifies
+the bytes in a file; it does not by itself establish provenance or intent.
+
+Git source: current index (`git ls-files --cached`)
+
+Files inventoried: 21
+
+Total bytes: 37190446
+
+## Verification
+
+```bash
+(cd bin && sha256sum -c INVENTORY.sha256)
+```
+
+The `component` column is an identification aid. Any entry marked `REVIEW`
+should be identified before a public release.
+
+| Path | Bytes | SHA-256 | Component | Kind |
+|---|---:|---|---|---|
+| `README.md` | 4058 | `4565917669e20f054f73f2a4c200b2c3e0fcbb15fa139fcd9d7762477928a555` | REVIEW | Markdown documentation |
+| `fpga_ulx3s_hdmi_doom.bit` | 866114 | `7c5cb73e940cdb1a1d885fbfef7d17232486ada85eecb5f9221e5d7b68db5cf2` | Hazard3-Doom project output | FPGA bitstream |
+| `fujprog-v48-win64.exe` | 212992 | `376be3f349c5cac35496f6cb8eaf75867e7f1ab3d8ecf7e5ddb43040eec272d5` | fujprog | Windows executable |
+| `gdb/README.md` | 217 | `2b83faba2c959cf9cc8180176279792e1185723f120bbfaeb54d9689eeb58f47` | xPack GNU RISC-V Embedded GCC/GDB runtime | Markdown documentation |
+| `gdb/libgcc_s_seh-1.dll` | 184227 | `61252331a388c1092649b561555f815e3a93175f8c33f819f6e09a1f0e3039c7` | xPack GNU RISC-V Embedded GCC/GDB runtime | Windows DLL |
+| `gdb/libgmp-10.dll` | 653118 | `ab27b24fbb7d7c7d479433f4d60109bfe688f36e7f8535c44a9c6f3fb64d7d49` | xPack GNU RISC-V Embedded GCC/GDB runtime | Windows DLL |
+| `gdb/libmpc-3.dll` | 129298 | `48c0c3beb7b42776f6e8ae276220903df714bfcfe90a38734b8fd248f6be41ed` | xPack GNU RISC-V Embedded GCC/GDB runtime | Windows DLL |
+| `gdb/libmpfr-6.dll` | 2843593 | `71f3f7e25bba07f9ff5d6824b7feb8e3c98cf218a368f487148ca273e3be3e92` | xPack GNU RISC-V Embedded GCC/GDB runtime | Windows DLL |
+| `gdb/libncursesw6.dll` | 434679 | `fb1cb5b72a291a953b73b41c627739dc5421b0b786b20189d899caff4182c589` | xPack GNU RISC-V Embedded GCC/GDB runtime | Windows DLL |
+| `gdb/libstdc++-6.dll` | 2331374 | `4aaf37ca1d39eba1da2a100f769e6348dd166f7485038401f9c6f056c9469d04` | xPack GNU RISC-V Embedded GCC/GDB runtime | Windows DLL |
+| `gdb/libzstd.dll` | 1172128 | `8146fc49b033d69051d8a4625a794737e20fe6cdc37dea825c13528946d02aaf` | xPack GNU RISC-V Embedded GCC/GDB runtime | Windows DLL |
+| `gdb/riscv-none-elf-gdb.exe` | 8753822 | `2a7082b0401e55b21d175e1239c64044a8956513414b141ae928c5933fbffeb4` | xPack GNU RISC-V Embedded GCC/GDB runtime | Windows executable |
+| `hazard3-doom.h3d` | 586336 | `b7cf400621cad22b3fb3c06cafbcb5f9354744559ee296bffd9e73c38442b1db` | Hazard3-Doom project output | Hazard3-Doom image |
+| `hazard3-test.elf` | 227912 | `d2abab8d70b32ae5ef8d59179eee5fcc9747530896e2aa8653bd5db9b0e439d6` | Hazard3-Doom project output | ELF image |
+| `hazard3-test.map` | 19695 | `10706f95b12b79215d01d596aa1046bce7880d976c0c52b73731eac29657c531` | Hazard3-Doom project output | Linker map |
+| `libftdi1.dll` | 272504 | `a78e1a41e18ae01b1a8e78dd16bfb6ed21a2b35809f18dec65a888ccede093ac` | libftdi | Windows DLL |
+| `libusb-1.0.dll` | 234930 | `e811df196a8e4e2ee18bcd224d7f6421736fafc78fe20419d76165692668926b` | libusb | Windows DLL |
+| `openFPGALoader.exe` | 6967851 | `88f6755a08fea726204002c0c47e275c3f322092e633142e7fe5360c3de52519` | openFPGALoader | Windows executable |
+| `openocd.exe` | 4490254 | `10567f01d37c66a0975537960d66e61f7b4e2a17eb2c9637e2c2cbc569f70c79` | OpenOCD | Windows executable |
+| `putty.exe` | 1647912 | `fc6f9dbdf4b9f8dd1f5f3a74cb6e55119d3fe2c9db52436e10ba07842e6c3d7c` | PuTTY | Windows executable |
+| `zadig-2.5.exe` | 5157432 | `78a1a26854fbc848284588a62c7fbec9c652f6a3218ba543783d369265df00d6` | Zadig/libwdi | Windows executable |

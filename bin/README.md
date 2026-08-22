@@ -68,3 +68,5 @@ Load the Hazard3 firmware and start a GDB debugging session (required OpenOCD to
 ## Third-party software
 
 The utilities in this directory remain subject to their respective upstream licenses. Consult each upstream project for source code, license terms, and updated releases.
+
+See [LICENSES](../LICENSES)
