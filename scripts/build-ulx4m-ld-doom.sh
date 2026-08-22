@@ -5,12 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 HAZARD3_ROOT="${HAZARD3_ROOT:-${ROOT_DIR}/third_party/Hazard3}"
 SYNTH_DIR="${HAZARD3_ROOT}/example_soc/synth"
-BOARD_BUILD_DIR="${ROOT_DIR}/build/ulx4m-ld"
 MONITOR_BUILD_DIR="${HAZARD3_BUILD_DIR:-${ROOT_DIR}/build}"
 DOOM_BUILD_DIR="${HAZARD3_DOOM_BUILD_DIR:-${ROOT_DIR}/build/doom-image}"
-FPGA_SOURCE="${SYNTH_DIR}/fpga_ulx4m_ld.bit"
-FPGA_OUTPUT="${BOARD_BUILD_DIR}/fpga_ulx4m_ld.bit"
-MONITOR_OUTPUT="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.elf"
+FPGA_OUTPUT="${ROOT_DIR}/build/fpga_ulx4m_ld.bit"
+MONITOR_OUTPUT="${MONITOR_BUILD_DIR}/hazard3-test.elf"
 DOOM_OUTPUT="${DOOM_BUILD_DIR}/hazard3-doom.h3d"
 LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM/generated"
 
@@ -74,9 +72,7 @@ printf 'Building the Hazard3 ULX4M-LD 85F FPGA target...\n'
 HAZARD3_ROOT="${HAZARD3_ROOT}" \
     "${ROOT_DIR}/scripts/build-ulx4m-ld-bitstream.sh"
 
-mkdir -p "${BOARD_BUILD_DIR}"
-require_file "${FPGA_SOURCE}"
-cp "${FPGA_SOURCE}" "${FPGA_OUTPUT}"
+require_file "${FPGA_OUTPUT}"
 
 printf '\nBuilding the shared 50 MHz monitor with the 64 MiB map...\n'
 HAZARD3_BUILD_DIR="${MONITOR_BUILD_DIR}" \
