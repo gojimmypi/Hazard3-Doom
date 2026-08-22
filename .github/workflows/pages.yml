@@ -7,7 +7,11 @@ name: Deploy Web UI to GitHub Pages
 #    gojimmypi: from develop branch
 #    ulx3s:     from main branch
 #    others:    not published
-
+#
+# Be sure to enable GH Pages:
+#
+# Settings - Pages - Build and deployment - Source - GitHub Actions
+#-
 on:
     push:
         branches:
