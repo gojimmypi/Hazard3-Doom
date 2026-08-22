@@ -1,0 +1,57 @@
+name: Deploy Web UI to GitHub Pages
+
+# Publishes the contents of Hazard3-Doom/web as the root of the GitHub Pages site:
+# https://[repo-owner].github.io/Hazard3-Doom/
+#
+# For repo owners:
+#    gojimmypi: from develop branch
+#    ulx3s:     from main branch
+#    others:    not published
+
+on:
+    push:
+        branches:
+            - develop
+            - main
+        paths:
+            - "web/**"
+            - ".github/workflows/pages.yml"
+
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+
+concurrency:
+    group: pages
+    cancel-in-progress: true
+
+jobs:
+    deploy:
+        if: >
+            (github.repository == 'gojimmypi/Hazard3-Doom' && github.ref_name == 'develop') ||
+            (github.repository == 'ulx3s/Hazard3-Doom' && github.ref_name == 'main')
+
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Configure Pages
+              uses: actions/configure-pages@v5
+
+            - name: Upload web UI
+              uses: actions/upload-pages-artifact@v4
+              with:
+                  path: web
+
+            - name: Deploy
+              id: deployment
+              uses: actions/deploy-pages@v4
