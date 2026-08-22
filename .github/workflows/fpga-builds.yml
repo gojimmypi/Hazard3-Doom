@@ -35,10 +35,12 @@ jobs:
             board: ulx3s-85f
             command: ./scripts/build-ulx3s-doom.sh
             bitstream: build/ulx3s/fpga_ulx3s.bit
+            pnr_log: third_party/Hazard3/example_soc/synth/pnr.log
           - name: ULX4M-LD 85F
             board: ulx4m-ld-85f
             command: ./scripts/build-ulx4m-ld-doom.sh
-            bitstream: build/ulx4m-ld/fpga_ulx4m_ld.bit
+            bitstream: build/fpga_ulx4m_ld.bit
+            pnr_log: build/fpga_ulx4m_ld.pnr.log
 
     steps:
       - name: Check out repository
@@ -131,7 +133,10 @@ jobs:
             build/hazard3-boot-monitor.bin
             third_party/Hazard3/example_soc/soc/hazard3-boot-monitor.hex
             third_party/Hazard3/example_soc/synth/synth.log
-            third_party/Hazard3/example_soc/synth/pnr.log
+            ${{ matrix.pnr_log }}
+            build/fpga_ulx4m_ld.config
+            build/fpga_ulx4m_ld.svf
+            build/fpga_ulx4m_ld.seed
           if-no-files-found: warn
           retention-days: 14
           compression-level: 0

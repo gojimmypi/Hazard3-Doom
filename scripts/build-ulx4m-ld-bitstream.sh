@@ -135,6 +135,8 @@ mkdir -p "${BUILD_DIR}"
 require_tool make
 require_tool yosys
 require_tool nextpnr-ecp5
+require_tool grep
+require_tool awk
 require_tool ecppack
 require_file "${HAZARD3_SYNTH}/ULX4M_LD_85F.mk"
 require_file "${HAZARD3_SYNTH}/fpga_ulx4m_ld.lpf"
@@ -147,6 +149,34 @@ require_file "${LITEDRAM_DIR}/litedram_ulx4m_cpu_sram.init"
 make -C "${HAZARD3_SYNTH}" -f ULX4M_LD_85F.mk synth
 
 require_file "${HAZARD3_SYNTH}/fpga_ulx4m_ld.json"
+require_file "${HAZARD3_SYNTH}/synth.log"
+
+# ULX4M-LD cannot fit the extended 400x240/512x300 framebuffer alongside
+# LiteDRAM. Verify the synthesized hierarchy selected the standard 64-bank
+# framebuffer before running the much more expensive place-and-route stage.
+if ! grep -Eq \
+    "Used module:.*ulx3s_frame_ram\\BANK_COUNT=s32'00000000000000000000000001000000" \
+    "${HAZARD3_SYNTH}/synth.log"; then
+    echo "ERROR: ULX4M-LD did not synthesize the standard 320x200 framebuffer." >&2
+    echo "Expected ulx3s_frame_ram BANK_COUNT=64 (EXTENDED_VIDEO_MODES=0)." >&2
+    echo "Check the Hazard3 commit pinned by third_party/Hazard3." >&2
+    grep -E "Used module:.*ulx3s_frame_ram\\BANK_COUNT=" \
+        "${HAZARD3_SYNTH}/synth.log" >&2 || true
+    exit 1
+fi
+
+ebr_used="$(awk '$2 == "DP16KD" {used=$1} END {print used}' \
+    "${HAZARD3_SYNTH}/synth.log")"
+if [[ -z "${ebr_used}" ]]; then
+    echo "ERROR: Could not determine ULX4M-LD DP16KD usage from synth.log." >&2
+    exit 1
+fi
+if (( ebr_used > 208 )); then
+    echo "ERROR: ULX4M-LD synthesis uses ${ebr_used} DP16KD blocks; device limit is 208." >&2
+    exit 1
+fi
+printf 'ULX4M-LD synthesis check: standard framebuffer, %s/208 DP16KD.\n' \
+    "${ebr_used}"
 
 recorded_seed=""
 if [[ -f "${SEED_STAMP}" ]]; then
