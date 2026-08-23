@@ -105,6 +105,7 @@ remove_build_tree()
 }
 
 run_make_clean ULX3S.mk
+run_make_clean ULX3S_12F.mk
 run_make_clean ULX4M_LD_85F.mk
 remove_build_tree "${BUILD_DIR}"
 

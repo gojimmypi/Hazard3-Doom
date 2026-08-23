@@ -5,7 +5,8 @@ Hazard3-Doom ULX3S and ULX4M-LD targets.
 
 ## Quick Start
 
-- `build-ulx3s-doom.sh` - Builds the complete ULX3S Doom target: bitstream, monitor, and Doom image.
+- `build-ulx3s-doom.sh` - Builds the complete ULX3S 85F Doom target: bitstream, monitor, and Doom image.
+- `build-ulx3s-12f-doom.sh` - Builds the compact ULX3S 12F target with SDRAM line-buffered HDMI.
 - `build-ulx4m-ld-doom.sh` - Builds the complete ULX4M-LD Doom target: bitstream, monitor, and Doom image.
 
 Existing nonempty FPGA bitstreams are reused and displayed with their modification
@@ -17,12 +18,45 @@ See the full Quick Start overview at https://ulx3s.github.io/ulx-doom/
 
 - `build.sh` - Builds the shared Hazard3 monitor firmware.
 - `build-ulx3s-85f-bitstream.sh` - Builds or reuses the ULX3S 85F FPGA bitstream.
-- `build-ulx3s-doom.sh` - Builds the complete ULX3S Doom target.
+- `build-ulx3s-doom.sh` - Builds the complete ULX3S 85F Doom target.
+- `build-ulx3s-12f-bitstream.sh` - Builds or reuses the ULX3S 12F FPGA bitstream.
+- `build-ulx3s-12f-doom.sh` - Builds the complete compact ULX3S 12F target.
 - `build-ulx4m-ld-bitstream.sh` - Builds or reuses the ULX4M-LD 85F FPGA bitstream.
 - `build-ulx4m-ld-doom.sh` - Builds the complete ULX4M-LD Doom target.
 - `build-xpack.cmd` - Builds the Hazard3 firmware on Windows using the configured xPack RISC-V GCC toolchain.
 - `sweep-peek.sh` - Runs a placement-only nextpnr seed scan without routing or bitstream generation. Use it to quickly rank candidate seeds before a full sweep.
 - `sweep.sh` - Runs the full FPGA build, placement, routing, timing analysis, and bitstream generation for every configured nextpnr seed.
+
+### ULX3S 12F compact target
+
+The 12F and 85F use the same ULX3S board wrapper, pin constraints, clocks, CPU
+ISA, SD interface and SAO/ESP32 peripherals. The 12F device profile changes only
+the EBR-heavy storage architecture: the monitor and completed video frames move
+to external SDRAM, the unified cache is 32 KiB, and HDMI uses two small line
+buffers plus the existing indexed palette RAM.
+
+Build the default 64 MiB SDRAM profile with:
+
+```bash
+./scripts/build-ulx3s-12f-doom.sh
+```
+
+For a 32 MiB SDRAM population, keep FPGA, monitor and Doom maps matched:
+
+```bash
+HAZARD3_MEMORY_PROFILE=32m ./scripts/build-ulx3s-12f-doom.sh
+```
+
+The 12F does not have enough EBR for the resident 85F monitor. After programming
+the FPGA and starting OpenOCD, load the monitor into its uncached SDRAM region:
+
+```bash
+./scripts/load-firmware-12f.sh
+```
+
+The normal monitor UART, SD, SAO and Doom workflows then apply. The 12F profile
+intentionally supports the standard 320x200 Doom/video path only; 400x240 Doom
+and 512x300 GUI modes remain features of the larger framebuffer profile.
 
 ### ULX3S HDMI framebuffer profiles
 
@@ -118,6 +152,7 @@ changes such as framebuffer size, EBR usage, or other FPGA resource changes.
 - `hazard3-debug.gdb` - Provides GDB commands for connecting to and debugging Hazard3 through OpenOCD.
 - `load-firmware.bat` - Loads and starts the monitor firmware through GDB and OpenOCD on Windows.
 - `load-firmware.sh` - Loads and starts the monitor firmware through GDB and OpenOCD on Linux or WSL.
+- `load-firmware-12f.sh` - Loads the ULX3S 12F SDRAM-resident monitor after FPGA configuration.
 - `load-fpga-bitstream.bat` - Programs the FPGA with a generated or prebuilt bitstream on Windows.
 - `start-openocd.bat` - Starts the OpenOCD server with the repository configuration on Windows.
 - `start-openocd.sh` - Starts the OpenOCD server with the repository configuration on Linux or WSL.

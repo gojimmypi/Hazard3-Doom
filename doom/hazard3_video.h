@@ -37,6 +37,7 @@
 #define HAZARD3_MEMORY_CORE_BUILD_ID_ULX4M_LD   0x32343132u
 #define HAZARD3_MEMORY_ADAPTER_BUILD_ID_ULX4M_LD 0x41444c35u
 #define HAZARD3_FPGA_BUILD_ID_ULX3S             0x554c5035u
+#define HAZARD3_FPGA_BUILD_ID_ULX3S_12F         0x554c3132u
 #define HAZARD3_MEMORY_CORE_BUILD_ID_ULX3S       0x53445235u
 #define HAZARD3_MEMORY_ADAPTER_BUILD_ID_ULX3S    0x41485335u
 #define HAZARD3_FIRMWARE_BUILD_ID                0x48335235u
@@ -134,7 +135,14 @@ typedef struct {
 #define HAZARD3_VIDEO_DIRECT_ADDRESS_HIGH_RES_FLAG     0x80000000u
 
 #define HAZARD3_DOOM_SCREENBUFFER_BASE        0x00010000u
-/* The resident monitor always reserves exactly the original on-chip screen. */
+/*
+ * The 12F compact target cannot reserve a 64 KiB on-chip Doom screen. Its
+ * monitor occupies the first 256 KiB of SDRAM, and Doom renders into the next
+ * cacheable 64 KiB region before copying completed frames to the uncached
+ * video aperture.
+ */
+#define HAZARD3_DOOM_SCREENBUFFER_12F_BASE    \
+    (HAZARD3_SDRAM_PHYSICAL_BASE + 0x00040000u)
 #define HAZARD3_DOOM_SCREENBUFFER_BYTES       HAZARD3_VIDEO_STANDARD_BYTES
 
 #ifdef HAZARD3_VIDEO_HIGH_RES

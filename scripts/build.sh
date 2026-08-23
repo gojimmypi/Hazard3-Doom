@@ -12,6 +12,7 @@ OBJCOPY="${TOOLCHAIN_PREFIX}objcopy"
 OUTPUT_ELF="${BUILD_DIR}/hazard3-boot-monitor.elf"
 OUTPUT_MAP="${BUILD_DIR}/hazard3-boot-monitor.map"
 OUTPUT_BIN="${BUILD_DIR}/hazard3-boot-monitor.bin"
+LINKER_SCRIPT="${HAZARD3_MONITOR_LINKER_SCRIPT:-${SRC_DIR}/link.ld}"
 
 # Run shellcheck to ensure this is a good script.
 # Specify the executable shell checker you want to use:
@@ -90,7 +91,7 @@ require_file "${SRC_DIR}/fat_ro.c"
 require_file "${SRC_DIR}/fat_ro.h"
 require_file "${SRC_DIR}/sd_boot.c"
 require_file "${SRC_DIR}/sd_boot.h"
-require_file "${SRC_DIR}/link.ld"
+require_file "${LINKER_SCRIPT}"
 require_file "${DOOM_DIR}/hazard3_sao.c"
 require_file "${DOOM_DIR}/hazard3_sao.h"
 
@@ -117,7 +118,7 @@ printf 'Monitor output: %s
     -fno-builtin \
     -nostdlib \
     -nostartfiles \
-    -Wl,-T,"${SRC_DIR}/link.ld" \
+    -Wl,-T,"${LINKER_SCRIPT}" \
     -Wl,--gc-sections \
     -Wl,-Map,"${OUTPUT_MAP}" \
     -I"${ROOT_DIR}" \

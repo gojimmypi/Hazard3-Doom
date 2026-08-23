@@ -145,7 +145,9 @@ void DG_Init(void)
             video_high_resolution_supported(status));
 
     hazard3_console_puts(
-        "Doom platform: indexed renderer + direct block-RAM HDMI initialized\r\n");
+        direct_video_available
+            ? "Doom platform: indexed renderer + direct block-RAM HDMI initialized\r\n"
+            : "Doom platform: indexed renderer + SDRAM scanout HDMI initialized\r\n");
 #ifdef HAZARD3_VIDEO_HIGH_RES
     hazard3_console_puts(
         "  renderer: 320x200; HDMI source: 400x240 EXPERIMENTAL\r\n");
@@ -155,7 +157,7 @@ void DG_Init(void)
     hazard3_console_puts(
         direct_video_available
             ? "  presentation path: direct APB-to-EBR\r\n"
-            : "  presentation path: legacy SDRAM staging/DMA\r\n");
+            : "  presentation path: SDRAM staging / hardware scanout\r\n");
     if (!video_available) {
         hazard3_console_puts("Doom HDMI performance interface: FAIL\r\n");
     }
@@ -503,7 +505,9 @@ void DG_DrawFrame(void)
     if (draw_frame_count == 1u) {
         hazard3_console_puts(
             video_available
-                ? "Doom renderer: first direct block-RAM frame queued\r\n"
+                ? (direct_video_available
+                    ? "Doom renderer: first direct block-RAM frame queued\r\n"
+                    : "Doom renderer: first SDRAM scanout frame queued\r\n")
                 : "Doom renderer: first headless frame completed\r\n");
     }
 }

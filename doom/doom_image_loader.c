@@ -462,6 +462,14 @@ int doom_image_loader_load_stream(doom_image_stream_read_fn read_fn,
     return 1;
 }
 
+static uint32_t doom_screenbuffer_base(void)
+{
+    if (HAZARD3_VIDEO_FPGA_BUILD_ID == HAZARD3_FPGA_BUILD_ID_ULX3S_12F)
+        return HAZARD3_DOOM_SCREENBUFFER_12F_BASE;
+
+    return HAZARD3_DOOM_SCREENBUFFER_BASE;
+}
+
 int doom_image_loader_launch(void)
 {
     typedef int32_t (*doom_entry_fn_t)(const hazard3_monitor_services_t* services);
@@ -486,7 +494,7 @@ int doom_image_loader_launch(void)
         .wad_limit = HAZARD3_DOOM_WAD_LIMIT,
         .wad_bytes = doom_wad_loader_bytes(),
         .wad_name = doom_wad_loader_name(),
-        .screen_base = HAZARD3_DOOM_SCREENBUFFER_BASE,
+        .screen_base = doom_screenbuffer_base(),
         .screen_bytes = HAZARD3_DOOM_SCREENBUFFER_BYTES
     };
     doom_entry_fn_t entry;

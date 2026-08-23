@@ -321,7 +321,8 @@ static int is_ulx4m_ld_build(uint32_t fpga_build_id)
 
 static int is_ulx3s_build(uint32_t fpga_build_id)
 {
-    return fpga_build_id == HAZARD3_FPGA_BUILD_ID_ULX3S;
+    return fpga_build_id == HAZARD3_FPGA_BUILD_ID_ULX3S ||
+        fpga_build_id == HAZARD3_FPGA_BUILD_ID_ULX3S_12F;
 }
 
 static int build_ids_match(uint32_t fpga_build_id,
@@ -616,7 +617,9 @@ static void video_write_test_pattern(void)
     ++video_pattern_runs;
     video_pattern_last_elapsed_ms = system_ticks - start_ticks;
 
-    uart_puts("  block-RAM present: ");
+    uart_puts(HAZARD3_VIDEO_FPGA_BUILD_ID == HAZARD3_FPGA_BUILD_ID_ULX3S_12F
+        ? "  SDRAM line-buffered present: "
+        : "  block-RAM present: ");
     uart_puts(presented ? "PASS" : "FAIL");
     uart_puts(" elapsed_ms=");
     uart_put_hex32(video_pattern_last_elapsed_ms);
@@ -2002,7 +2005,11 @@ static void console_init(void)
     uart_puts("\r\n");
     uart_puts("UART: board serial RX / TX, 115200 8N1\r\n");
     uart_puts("CPU: 50 MHz Hazard3, Timer: 10 ms machine interrupt\r\n");
-    uart_puts("Internal screen: 0x00010000-0x0001F9FF (320x200 indexed)\r\n");
+    if (HAZARD3_VIDEO_FPGA_BUILD_ID == HAZARD3_FPGA_BUILD_ID_ULX3S_12F) {
+        uart_puts("Doom screen: 0x20040000-0x2004F9FF external SDRAM (320x200 indexed)\r\n");
+    } else {
+        uart_puts("Internal screen: 0x00010000-0x0001F9FF (320x200 indexed)\r\n");
+    }
     uart_puts("Board LEDs: target-specific heartbeat and timer status\r\n");
     uart_puts("SDRAM profile: ");
     uart_puts(HAZARD3_SDRAM_PROFILE_NAME);
@@ -2025,7 +2032,11 @@ static void console_init(void)
     uart_puts(", video reserve at ");
     uart_put_hex32(HAZARD3_VIDEO_BASE);
     uart_puts("\r\n");
-    uart_puts("HDMI: 1024x600 full-panel scale, direct block-RAM double buffer\r\n");
+    if (HAZARD3_VIDEO_FPGA_BUILD_ID == HAZARD3_FPGA_BUILD_ID_ULX3S_12F) {
+        uart_puts("HDMI: 1024x600 full-panel scale, SDRAM + two-line EBR scanout\r\n");
+    } else {
+        uart_puts("HDMI: 1024x600 full-panel scale, direct block-RAM double buffer\r\n");
+    }
     uart_puts("Doom: l=UART image, w=UART IWAD, j=launch, b=SD boot\r\n");
 }
 

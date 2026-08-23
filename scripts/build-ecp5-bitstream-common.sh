@@ -104,6 +104,76 @@ reuse_ulx3s_bitstream_if_allowed()
     fi
 }
 
+prepare_ulx3s_12f_profile()
+{
+    local recorded_profile=""
+
+    case "${HAZARD3_MEMORY_PROFILE}" in
+    32m|64m)
+        ;;
+    *)
+        echo "HAZARD3_MEMORY_PROFILE must be 32m or 64m for ULX3S 12F" >&2
+        exit 1
+        ;;
+    esac
+
+    if [[ -f "${SYNTH_PROFILE_STAMP}" ]]; then
+        read -r recorded_profile < "${SYNTH_PROFILE_STAMP}" || true
+    fi
+
+    if [[ "${recorded_profile}" != "${HAZARD3_MEMORY_PROFILE}" ]]; then
+        if [[ -n "${recorded_profile}" ]]; then
+            printf 'ULX3S 12F SDRAM profile changed: %s -> %s\n' \
+                "${recorded_profile}" "${HAZARD3_MEMORY_PROFILE}"
+        else
+            printf 'ULX3S 12F SDRAM profile is not recorded; rebuilding for %s.\n' \
+                "${HAZARD3_MEMORY_PROFILE}"
+        fi
+        rm -f \
+            "${NETLIST}" \
+            "${CONFIG_OUTPUT}" \
+            "${BITSTREAM_OUTPUT}" \
+            "${SVF_OUTPUT}" \
+            "${SEED_STAMP}" \
+            "${HAZARD3_SYNTH}/${FPGA_NAME}.config" \
+            "${HAZARD3_SYNTH}/${FPGA_NAME}.bit" \
+            "${HAZARD3_SYNTH}/${FPGA_NAME}.svf"
+    fi
+
+    printf 'ULX3S 12F profile: compact 320x200, %s SDRAM\n' \
+        "${HAZARD3_MEMORY_PROFILE}"
+}
+
+reuse_ulx3s_12f_bitstream_if_allowed()
+{
+    local recorded_seed=""
+
+    if [[ -f "${SEED_STAMP}" ]]; then
+        read -r recorded_seed < "${SEED_STAMP}" || true
+    fi
+
+    if [[ -s "${BITSTREAM_OUTPUT}" && "${FORCE_BITSTREAM_REBUILD}" == 0 ]]; then
+        if [[ "${recorded_seed}" == "${NEXTPNR_SEED}" &&
+              "${BITSTREAM_OUTPUT}" -nt "${NETLIST}" ]]; then
+            printf 'Reusing existing ULX3S 12F bitstream built with seed %s and %s SDRAM profile.\n' \
+                "${NEXTPNR_SEED}" "${HAZARD3_MEMORY_PROFILE}"
+            stat -c '  %n (modified %y, %s bytes)' -- "${BITSTREAM_OUTPUT}"
+            printf 'Set FORCE_BITSTREAM_REBUILD=1 to rebuild it.\n'
+            exit 0
+        fi
+
+        if [[ -z "${recorded_seed}" ]]; then
+            printf 'Existing ULX3S 12F bitstream has no seed stamp. Rebuilding with seed %s.\n' \
+                "${NEXTPNR_SEED}"
+        elif [[ "${recorded_seed}" != "${NEXTPNR_SEED}" ]]; then
+            printf 'Existing ULX3S 12F bitstream used seed %s; requested seed is %s. Rebuilding.\n' \
+                "${recorded_seed}" "${NEXTPNR_SEED}"
+        else
+            printf 'Synthesized ULX3S 12F netlist is newer than the existing bitstream. Rebuilding.\n'
+        fi
+    fi
+}
+
 reuse_ulx4m_bitstream_if_allowed()
 {
     local recorded_seed=""
@@ -136,26 +206,42 @@ reuse_ulx4m_bitstream_if_allowed()
 
 run_synthesis()
 {
-    if [[ "${BOARD_ID}" == "ulx3s-85f" ]]; then
+    case "${BOARD_ID}" in
+    ulx3s-85f)
         if ! make -C "${HAZARD3_SYNTH}" -f "${MAKEFILE}" \
             HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES}" synth; then
             copy_synth_log
             exit 1
         fi
-    else
+        ;;
+    ulx3s-12f)
+        if ! make -C "${HAZARD3_SYNTH}" -f "${MAKEFILE}" \
+            HAZARD3_MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE}" \
+            HAZARD3_HDMI_EXTENDED_MODES=0 synth; then
+            copy_synth_log
+            exit 1
+        fi
+        ;;
+    *)
         if ! make -C "${HAZARD3_SYNTH}" -f "${MAKEFILE}" synth; then
             copy_synth_log
             exit 1
         fi
-    fi
+        ;;
+    esac
 
     require_file "${NETLIST}"
     require_file "${SYNTH_SOURCE_LOG}"
     copy_synth_log
 
-    if [[ "${BOARD_ID}" == "ulx3s-85f" ]]; then
+    case "${BOARD_ID}" in
+    ulx3s-85f)
         printf '%s\n' "${VIDEO_PROFILE}" > "${SYNTH_PROFILE_STAMP}"
-    fi
+        ;;
+    ulx3s-12f)
+        printf '%s\n' "${HAZARD3_MEMORY_PROFILE}" > "${SYNTH_PROFILE_STAMP}"
+        ;;
+    esac
 }
 
 validate_ulx4m_synthesis()
@@ -187,6 +273,36 @@ validate_ulx4m_synthesis()
         exit 1
     fi
     printf 'ULX4M-LD synthesis check: standard framebuffer, %s/208 DP16KD.\n' \
+        "${ebr_used}"
+}
+
+validate_ulx3s_12f_synthesis()
+{
+    local ebr_used
+
+    ebr_used="$(awk '$2 == "DP16KD" {used=$1} END {print used}' \
+        "${SYNTH_SOURCE_LOG}")"
+    if [[ -z "${ebr_used}" ]]; then
+        echo "ERROR: Could not determine ULX3S 12F DP16KD usage from synth.log." >&2
+        exit 1
+    fi
+    if (( ebr_used > 32 )); then
+        echo "ERROR: ULX3S 12F synthesis uses ${ebr_used} DP16KD blocks; LFE5U-12F limit is 32." >&2
+        echo "The 12F build must use the compact SDRAM scanout/cache profile before nextpnr." >&2
+        exit 1
+    fi
+
+    # A full 85F-style frame RAM is a configuration error even if some future
+    # optimization happened to squeeze its reported EBR usage. Catch it here
+    # before starting nextpnr.
+    if grep -Fq "ulx3s_frame_ram\BANK_COUNT=" "${SYNTH_SOURCE_LOG}"; then
+        echo "ERROR: ULX3S 12F synthesized the full EBR framebuffer hierarchy." >&2
+        echo "Expected ulx3s_hdmi_sdram_scanout selected by HAZARD3_ULX3S_12F." >&2
+        grep -F "ulx3s_frame_ram\BANK_COUNT=" "${SYNTH_SOURCE_LOG}" >&2 || true
+        exit 1
+    fi
+
+    printf 'ULX3S 12F synthesis check: compact profile, %s/32 DP16KD.\n' \
         "${ebr_used}"
 }
 
@@ -234,6 +350,18 @@ ulx3s-85f)
     HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
     SYNTH_PROFILE_STAMP="${HAZARD3_SYNTH}/fpga_ulx3s.video-profile"
     ;;
+ulx3s-12f)
+    DISPLAY_NAME="ULX3S 12F"
+    FPGA_NAME="fpga_ulx3s_12f"
+    MAKEFILE="ULX3S_12F.mk"
+    LPF="${HAZARD3_SYNTH}/fpga_ulx3s.lpf"
+    IDCODE="0x21111043"
+    NEXTPNR_SEED="${NEXTPNR_SEED:-55}"
+    PNR_DEVICE_ARGS=(--12k --package CABGA381)
+    HAZARD3_MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE:-64m}"
+    SYNTH_PROFILE_STAMP="${HAZARD3_SYNTH}/fpga_ulx3s_12f.memory-profile"
+    SEED_STAMP="${BUILD_DIR}/fpga_ulx3s_12f.seed"
+    ;;
 ulx4m-ld-85f)
     DISPLAY_NAME="ULX4M-LD 85F"
     FPGA_NAME="fpga_ulx4m_ld"
@@ -247,7 +375,7 @@ ulx4m-ld-85f)
     ;;
 *)
     echo "Unknown ECP5 board target: ${BOARD_ID:-<empty>}" >&2
-    echo "Expected ulx3s-85f or ulx4m-ld-85f." >&2
+    echo "Expected ulx3s-85f, ulx3s-12f, or ulx4m-ld-85f." >&2
     exit 2
     ;;
 esac
@@ -259,6 +387,9 @@ CONFIG_OUTPUT="${BUILD_DIR}/${FPGA_NAME}.config"
 SVF_OUTPUT="${BUILD_DIR}/${FPGA_NAME}.svf"
 PNR_LOG="${BUILD_DIR}/${FPGA_NAME}.pnr.log"
 SYNTH_LOG="${BUILD_DIR}/${FPGA_NAME}.synth.log"
+CONFIG_TEMP="${CONFIG_OUTPUT}.tmp.$$"
+BITSTREAM_TEMP="${BITSTREAM_OUTPUT}.tmp.$$"
+SVF_TEMP="${SVF_OUTPUT}.tmp.$$"
 
 case "${ALLOW_TIMING_FAILURE}" in
 0)
@@ -289,24 +420,38 @@ require_tool make
 require_tool yosys
 require_tool nextpnr-ecp5
 require_tool ecppack
+require_file "${HAZARD3_SYNTH}/${MAKEFILE}"
+require_file "${LPF}"
 
 if [[ "${BOARD_ID}" == "ulx4m-ld-85f" ]]; then
     require_tool grep
     require_tool awk
-    require_file "${HAZARD3_SYNTH}/${MAKEFILE}"
-    require_file "${LPF}"
     require_file "${LITEDRAM_DIR}/litedram_ulx4m_cpu.v"
     require_file "${LITEDRAM_DIR}/litedram_ulx4m_cpu_rom.init"
     require_file "${LITEDRAM_DIR}/litedram_ulx4m_cpu_sram.init"
+fi
+
+if [[ "${BOARD_ID}" == "ulx3s-12f" ]]; then
+    require_tool grep
+    require_tool awk
+    require_file "${HAZARD3_ROOT}/example_soc/soc/cache_tags_zero_12f.hex"
+    require_file "${HAZARD3_ROOT}/example_soc/soc/hazard3-12f-bootstrap.hex"
 fi
 
 if [[ "${BOARD_ID}" == "ulx3s-85f" ]]; then
     prepare_ulx3s_video_profile
     reuse_ulx3s_bitstream_if_allowed
 fi
+if [[ "${BOARD_ID}" == "ulx3s-12f" ]]; then
+    prepare_ulx3s_12f_profile
+fi
 
 run_synthesis
 
+if [[ "${BOARD_ID}" == "ulx3s-12f" ]]; then
+    validate_ulx3s_12f_synthesis
+    reuse_ulx3s_12f_bitstream_if_allowed
+fi
 if [[ "${BOARD_ID}" == "ulx4m-ld-85f" ]]; then
     validate_ulx4m_synthesis
     reuse_ulx4m_bitstream_if_allowed
@@ -317,6 +462,13 @@ if [[ "${ALLOW_TIMING_FAILURE}" == 1 ]]; then
     printf 'WARNING: timing failure is allowed for this development build.\n' >&2
 fi
 
+cleanup_temporary_outputs()
+{
+    rm -f "${CONFIG_TEMP}" "${BITSTREAM_TEMP}" "${SVF_TEMP}"
+}
+trap cleanup_temporary_outputs EXIT
+cleanup_temporary_outputs
+
 (
     cd "${HAZARD3_SYNTH}"
 
@@ -326,20 +478,27 @@ fi
         "${PNR_DEVICE_ARGS[@]}" \
         --lpf "${LPF}" \
         --json "${NETLIST}" \
-        --textcfg "${CONFIG_OUTPUT}" \
+        --textcfg "${CONFIG_TEMP}" \
         "${timing_options[@]}" \
         --quiet \
         --log "${PNR_LOG}"
 
     ecppack \
         --compress \
-        --svf "${SVF_OUTPUT}" \
+        --svf "${SVF_TEMP}" \
         --idcode "${IDCODE}" \
-        "${CONFIG_OUTPUT}" \
-        "${BITSTREAM_OUTPUT}"
+        "${CONFIG_TEMP}" \
+        "${BITSTREAM_TEMP}"
 )
 
-if [[ "${BOARD_ID}" == "ulx4m-ld-85f" ]]; then
+# Promote a matched config/SVF/bitstream set only after both P&R and packaging
+# succeed. The canonical P&R log intentionally records the latest attempt,
+# including a failed one.
+mv -f "${CONFIG_TEMP}" "${CONFIG_OUTPUT}"
+mv -f "${SVF_TEMP}" "${SVF_OUTPUT}"
+mv -f "${BITSTREAM_TEMP}" "${BITSTREAM_OUTPUT}"
+
+if [[ -n "${SEED_STAMP:-}" ]]; then
     printf '%s\n' "${NEXTPNR_SEED}" > "${SEED_STAMP}"
 fi
 
@@ -351,7 +510,7 @@ rm -f \
     "${HAZARD3_SYNTH}/pnr.log"
 
 printf '%s bitstream: %s\n' "${DISPLAY_NAME}" "${BITSTREAM_OUTPUT}"
-if [[ "${BOARD_ID}" == "ulx4m-ld-85f" ]]; then
-    printf 'ULX4M-LD seed stamp: %s (seed %s)\n' \
-        "${SEED_STAMP}" "${NEXTPNR_SEED}"
+if [[ -n "${SEED_STAMP:-}" ]]; then
+    printf '%s seed stamp: %s (seed %s)\n' \
+        "${DISPLAY_NAME}" "${SEED_STAMP}" "${NEXTPNR_SEED}"
 fi

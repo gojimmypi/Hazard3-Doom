@@ -41,6 +41,13 @@ static char* doom_arguments[] = {
 #endif
 };
 
+static int screen_service_is_valid(const hazard3_monitor_services_t* services)
+{
+    return services->screen_bytes >= HAZARD3_DOOM_SCREENBUFFER_BYTES &&
+        (services->screen_base == HAZARD3_DOOM_SCREENBUFFER_BASE ||
+         services->screen_base == HAZARD3_DOOM_SCREENBUFFER_12F_BASE);
+}
+
 static int services_are_valid(const hazard3_monitor_services_t* services)
 {
     return services != (const hazard3_monitor_services_t*)0 &&
@@ -59,8 +66,7 @@ static int services_are_valid(const hazard3_monitor_services_t* services)
         services->video_limit == HAZARD3_VIDEO_LIMIT &&
         services->video_limit - services->video_base >=
             HAZARD3_VIDEO_MINIMUM_RESERVE_BYTES &&
-        services->screen_base == HAZARD3_DOOM_SCREENBUFFER_BASE &&
-        services->screen_bytes >= HAZARD3_DOOM_SCREENBUFFER_BYTES &&
+        screen_service_is_valid(services) &&
         services->wad_base == HAZARD3_DOOM_WAD_BASE &&
         services->wad_limit == HAZARD3_DOOM_WAD_LIMIT &&
         services->wad_bytes >= 12u &&
