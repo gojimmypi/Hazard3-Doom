@@ -10,9 +10,9 @@ the bytes in a file; it does not by itself establish provenance or intent.
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 45
+Files inventoried: 46
 
-Total bytes: 207057
+Total bytes: 206867
 
 ## Verification
 
@@ -29,11 +29,12 @@ should be identified before a public release.
 | `apply-doom-noncombat.py` | 6057 | `93001efa46ed2df74634c6bbb76119a1fcbe1bff93dd48ce611f699e7075b460` | REVIEW | File |
 | `build-coremark.sh` | 6171 | `95a454f34d447eb4d9f41ea5e387facbca47414a74ec81a9f2bd5a9fe0d34ccb` | REVIEW | Shell script |
 | `build-doom-noncombat.sh` | 2973 | `cd0b6151525408307004004cee09d41097956dcc70b9f80de7aeb70763931dec` | REVIEW | Shell script |
+| `build-ecp5-bitstream-common.sh` | 11015 | `cab983a564e7eb7ad8a17a8220fb04c5b70fecbcc1a6e5a115f280e1a3c577f1` | REVIEW | Shell script |
 | `build-supercon10-wad.py` | 6291 | `a00aa8684ba11c76860d8f236e8edf67c13819196c8c1b1c6a3bd55f262bfb68` | REVIEW | File |
-| `build-ulx3s-85f-bitstream.sh` | 4917 | `08a48554f20bb4f00d5528f12da8e3947332b122c0c9559bb2ca3291994ef831` | REVIEW | Shell script |
-| `build-ulx3s-doom.sh` | 4499 | `94f562a535901970020778628e59f2070db8ae4fe5e4915da2f55c4aaa27ff30` | REVIEW | Shell script |
-| `build-ulx4m-ld-bitstream.sh` | 7631 | `c2d0e2f233959e8e5270e50872bf4b6ae311d50cb89545750fec7c6c00db9083` | REVIEW | Shell script |
-| `build-ulx4m-ld-doom.sh` | 3022 | `382df5f7851f9965e415372ddaad4e6d8358b0501d07356d462d1b2b30f62095` | REVIEW | Shell script |
+| `build-ulx3s-85f-bitstream.sh` | 633 | `199c2454083736cbf40fe86ce81a6d12d24b248133dd0628bf2832e7db08aaf5` | REVIEW | Shell script |
+| `build-ulx3s-doom.sh` | 4419 | `b962d362f1ac7b142ca73fca3e7cd89787bf6876b2dd5889d44459fc0b7cba81` | REVIEW | Shell script |
+| `build-ulx4m-ld-bitstream.sh` | 638 | `5e49066502e2220edb7c027f285118422c1ca5ff2dcd95d3eff51002bd6c5c66` | REVIEW | Shell script |
+| `build-ulx4m-ld-doom.sh` | 3180 | `b2de7f348e0b8aa9f5a6796bb87eb716b728598ef516e486043b627a189f5a66` | REVIEW | Shell script |
 | `build-xpack.cmd` | 7822 | `2647bfa096a2215027ab82a850a027b891a5976b98eb1b4fdffd252812e37e16` | REVIEW | File |
 | `build.sh` | 3813 | `7d803b8f56f3405240306a943c377cdcc7e5e3df407f338e387d8df100bcd008` | REVIEW | Shell script |
 | `check-executable.sh` | 1779 | `6d6a9d586c3ec823dc338dfea275578f2d20c51154354460702ae58faf735c47` | REVIEW | Shell script |
@@ -42,7 +43,7 @@ should be identified before a public release.
 | `check-wsl-visualgdb.ps1` | 7766 | `150eaf3accccdcc72cdc894a9f300af4b21b0c4a199e8608138375d222ca64e2` | REVIEW | File |
 | `check_submodules.bat` | 7730 | `950816fde912121b827f6304422e587f48d3080197475285583463581685bf02` | REVIEW | File |
 | `doomgeneric-version.sh` | 686 | `daebcc02d2f76f7e7950b759a75972ee9ae0b4a614ced798de8df5d17c220c37` | REVIEW | Shell script |
-| `flash-ulx3s-persistent.sh` | 896 | `39f01a793faf459d7613cc48b4fa5de28f6fa9d453637755c218c81c011d4970` | REVIEW | Shell script |
+| `flash-ulx3s-persistent.sh` | 890 | `73583b480788e9ae086596f34c7edf2a3739cf374ca8c3fbf7a0fbd20b27b1ef` | REVIEW | Shell script |
 | `full-clean.sh` | 2968 | `260aace69c679723e53ceaf613cffc8cc780f7787dcc81cd09781fb677713bac` | REVIEW | Shell script |
 | `gdb/load-hazard3-test-elf.gdb` | 111 | `6427733c16353906f606306f483d3ce9f2f1ad11d29fbb4f3a3fc7de26afbba9` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `gdb/sao-probe.gdb` | 1395 | `3b9203f6b8a272b311819998287ed0309bd350b21171370499e649e078bf75fe` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
