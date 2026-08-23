@@ -25,6 +25,8 @@ jobs:
     name: Quality checks
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    env:
+      QUALITY_LOG_DIR: ${{ runner.temp }}/quality-checks
 
     steps:
       - name: Check out repository
@@ -41,8 +43,15 @@ jobs:
         id: install_script_checks
         continue-on-error: true
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends shellcheck
+          mkdir -p "${QUALITY_LOG_DIR}"
+          set +e
+          {
+              sudo apt-get update
+              sudo apt-get install --yes --no-install-recommends shellcheck
+          } 2>&1 | tee "${QUALITY_LOG_DIR}/install-script-checks.log"
+          status=${PIPESTATUS[0]}
+          set -e
+          exit "${status}"
 
       # These checks are independent. Record each result instead of stopping
       # at the first failure, then fail the job once all checks have run.
@@ -51,38 +60,74 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
+          mkdir -p "${QUALITY_LOG_DIR}"
+          log="${QUALITY_LOG_DIR}/shellcheck.log"
           mapfile -d '' scripts < <(
-              git ls-files -z -- 'scripts/*.sh' 'doom/*.sh'
+              git ls-files -z -- 'scripts/*.sh' 'doom/*.sh' '.github/scripts/*.sh'
           )
           if (( ${#scripts[@]} == 0 )); then
+              echo "No shell scripts found." | tee "${log}"
               echo "::error::No shell scripts found."
               exit 1
           fi
-          shellcheck -x "${scripts[@]}"
+
+          set +e
+          shellcheck -x "${scripts[@]}" 2>&1 | tee "${log}"
+          status=${PIPESTATUS[0]}
+          set -e
+          exit "${status}"
 
       - name: Check executable permissions
         id: executable_permissions
         continue-on-error: true
         shell: bash
         run: |
+          mkdir -p "${QUALITY_LOG_DIR}"
+          log="${QUALITY_LOG_DIR}/executable-permissions.log"
+          : > "${log}"
           status=0
+
           while IFS= read -r -d '' script; do
-              if [[ ! -x "${script}" ]]; then
-                  echo "::error file=${script},title=Missing executable bit::${script} is tracked without executable permission. Fix with: git update-index --chmod=+x ${script}"
+              mode="$(git ls-files --stage -- "${script}" | awk '{print $1}')"
+              if [[ "${mode}" != "100755" ]]; then
+                  {
+                      printf 'Missing Git executable bit: %s\n' "${script}"
+                      printf 'Current Git mode: %s\n' "${mode:-untracked}"
+                      printf 'Fix: git update-index --chmod=+x "%s"\n' "${script}"
+                      printf 'Verify: git ls-files --stage -- "%s"\n\n' "${script}"
+                  } | tee -a "${log}"
+                  echo "::error file=${script},title=Missing executable bit::Fix: git update-index --chmod=+x ${script}"
                   status=1
               fi
           done < <(git ls-files -z -- 'scripts/*.sh' 'doom/*.sh')
+
+          if (( status == 0 )); then
+              echo "All tracked scripts/*.sh and doom/*.sh files have Git mode 100755." > "${log}"
+          fi
+
           exit "${status}"
 
       - name: Check Python syntax
         id: python_syntax
         continue-on-error: true
-        run: python -m compileall -q doom tests
+        run: |
+          mkdir -p "${QUALITY_LOG_DIR}"
+          set +e
+          python -m compileall -q doom tests 2>&1 | tee "${QUALITY_LOG_DIR}/python-syntax.log"
+          status=${PIPESTATUS[0]}
+          set -e
+          exit "${status}"
 
       - name: Run host-tool tests
         id: host_tool_tests
         continue-on-error: true
-        run: python -m unittest discover -s tests -v
+        run: |
+          mkdir -p "${QUALITY_LOG_DIR}"
+          set +e
+          python -m unittest discover -s tests -v 2>&1 | tee "${QUALITY_LOG_DIR}/host-tool-tests.log"
+          status=${PIPESTATUS[0]}
+          set -e
+          exit "${status}"
 
       - name: Report quality check failures
         if: always()
@@ -93,61 +138,7 @@ jobs:
           EXECUTABLE_PERMISSIONS_OUTCOME: ${{ steps.executable_permissions.outcome }}
           PYTHON_SYNTAX_OUTCOME: ${{ steps.python_syntax.outcome }}
           HOST_TOOL_TESTS_OUTCOME: ${{ steps.host_tool_tests.outcome }}
-        run: |
-          status=0
-
-          {
-              echo "## Quality check summary"
-              echo
-          } >> "${GITHUB_STEP_SUMMARY}"
-
-          report_result() {
-              local name="$1"
-              local outcome="$2"
-              local guidance="$3"
-
-              if [[ "${outcome}" == "success" ]]; then
-                  printf -- '- [PASS] %s\n' "${name}" >> "${GITHUB_STEP_SUMMARY}"
-                  return
-              fi
-
-              printf -- '- [FAIL] **%s**: %s\n' \
-                  "${name}" "${guidance}" >> "${GITHUB_STEP_SUMMARY}"
-              echo "::error title=${name} failed::${guidance}"
-              status=1
-          }
-
-          report_result \
-              "Script-check dependency installation" \
-              "${INSTALL_SCRIPT_CHECKS_OUTCOME}" \
-              "Could not install ShellCheck. Open the 'Install script checks' step for the package-manager error."
-
-          report_result \
-              "ShellCheck" \
-              "${SHELLCHECK_OUTCOME}" \
-              "ShellCheck found one or more shell-script issues. Open the 'Check shell scripts' step for exact filenames, line numbers, rule IDs, and suggested fixes."
-
-          report_result \
-              "Executable permission check" \
-              "${EXECUTABLE_PERMISSIONS_OUTCOME}" \
-              "One or more tracked .sh files are missing the Git executable bit. Open 'Check executable permissions' for each filename and the exact git update-index --chmod=+x command."
-
-          report_result \
-              "Python syntax check" \
-              "${PYTHON_SYNTAX_OUTCOME}" \
-              "Python syntax validation failed. Open the 'Check Python syntax' step for the file and syntax error."
-
-          report_result \
-              "Host-tool tests" \
-              "${HOST_TOOL_TESTS_OUTCOME}" \
-              "One or more host-tool unit tests failed. Open the 'Run host-tool tests' step for the failing test and traceback."
-
-          if (( status != 0 )); then
-              echo
-              echo "One or more quality checks failed. See the annotations above and the Job Summary for corrective actions."
-          fi
-
-          exit "${status}"
+        run: bash .github/scripts/report-quality-checks.sh
 
   visual-studio-windows:
     name: Visual Studio native Windows validation
