@@ -14,6 +14,17 @@ and consumed as a pinned submodule under `third_party/Hazard3`. The Doom applica
 
 See the Quick Start and overview: https://ulx3s.github.io/ulx-doom/
 
+## Objective
+
+Hazard3-Doom is an educational and experimental FPGA/RISC-V project.
+
+It is provided for learning, research, development, and experimentation.
+Hardware designs and software are provided without warranty. Users are
+responsible for evaluating the suitability and safety of the project for
+their intended application.
+
+See the applicable [licenses](./LICENSES/README.md) for the complete warranty and liability terms.
+
 ## Repository scope
 
 Included here:
@@ -404,3 +415,15 @@ public release.
 
 Do not commit or redistribute commercial Doom IWAD files. Obtain an IWAD
 legally and keep it outside Git or under the ignored `wads/` directory.
+
+### Discord channel
+
+- [https://discord.gg/qwMUk6W](https://discord.gg/qwMUk6W) (problems/question/general chat)
+
+### Gitter channel
+
+- [https://gitter.im/ulx3s/Lobby](https://gitter.im/ulx3s/Lobby) (Focused on development)
+
+### Email
+
+- [ulx3s.fpga@gmail.com](ulx3s.fpga@gmail.com) (If you do not use chats)

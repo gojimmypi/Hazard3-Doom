@@ -26,3 +26,18 @@ See the repository root `README.md` for setup, build, upload, memory-map, and co
 | FPS        |      19.77 |       10.05 |
 | heap used  |  6,336,512 |   6,434,816 |
 | heap free  | 35,606,528 |  35,508,224 |
+
+## ULX3S Chat and support
+
+### Discord channel
+
+- [https://discord.gg/qwMUk6W](https://discord.gg/qwMUk6W) (problems/question/general chat)
+
+### Gitter channel
+
+- [https://gitter.im/ulx3s/Lobby](https://gitter.im/ulx3s/Lobby) (Focused on development)
+
+### Email
+
+- [ulx3s.fpga@gmail.com](ulx3s.fpga@gmail.com) (If you do not use chats)
+

@@ -14,3 +14,17 @@ python -m sphinx -W --keep-going -b html docs docs/_build/html
 Open `docs/_build/html/index.html`.
 
 The repository-root `.readthedocs.yaml` is the build configuration used by Read the Docs.
+
+## ULX3S Chat and support
+
+### Discord channel
+
+- [https://discord.gg/qwMUk6W](https://discord.gg/qwMUk6W) (problems/question/general chat)
+
+### Gitter channel
+
+- [https://gitter.im/ulx3s/Lobby](https://gitter.im/ulx3s/Lobby) (Focused on development)
+
+### Email
+
+- [ulx3s.fpga@gmail.com](ulx3s.fpga@gmail.com) (If you do not use chats)
