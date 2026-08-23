@@ -357,8 +357,8 @@ ulx3s-12f)
     LPF="${HAZARD3_SYNTH}/fpga_ulx3s.lpf"
     IDCODE="0x21111043"
     NEXTPNR_SEED="${NEXTPNR_SEED:-55}"
-    PNR_DEVICE_ARGS=(--12k --package CABGA381)
-    HAZARD3_MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE:-64m}"
+    PNR_DEVICE_ARGS=(--12k --speed 6 --package CABGA381)
+    HAZARD3_MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE:-32m}"
     SYNTH_PROFILE_STAMP="${HAZARD3_SYNTH}/fpga_ulx3s_12f.memory-profile"
     SEED_STAMP="${BUILD_DIR}/fpga_ulx3s_12f.seed"
     ;;

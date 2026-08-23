@@ -91,6 +91,7 @@
     (SDRAM_BANK_COUNT - 1u) + 2u)
 
 #define SDRAM_DIAGNOSTIC_BYTES     (1024u * 1024u)
+#define SDRAM_12F_MONITOR_PROTECTED_BYTES (256u * 1024u)
 #define SDRAM_DOOM_IMAGE_BYTES     (3u * 1024u * 1024u)
 #define SDRAM_VIDEO_RESERVED_BYTES (4u * 1024u * 1024u)
 #define VIDEO_FRAMEBUFFER_BASE     HAZARD3_VIDEO_FRAMEBUFFER0_BASE
@@ -116,8 +117,20 @@
 #error "SDRAM_RANDOM_TEST_BYTES must fit within one SDRAM bank"
 #endif
 
+#if SDRAM_RANDOM_TEST_BYTES + SDRAM_12F_MONITOR_PROTECTED_BYTES > SDRAM_BANK_BYTES
+#error "The shifted 12F random test must fit within one SDRAM bank"
+#endif
+
 #if SDRAM_FULL_TEST_BYTES > SDRAM_DIAGNOSTIC_BYTES
 #error "The sequential SDRAM test must stay below the heap"
+#endif
+
+#if SDRAM_12F_MONITOR_PROTECTED_BYTES >= SDRAM_DIAGNOSTIC_BYTES
+#error "The 12F monitor protection must leave diagnostic SDRAM available"
+#endif
+
+#if (3u * SDRAM_12F_MONITOR_PROTECTED_BYTES) >= SDRAM_DIAGNOSTIC_BYTES
+#error "The 12F sparse-test reference must fit in diagnostic SDRAM"
 #endif
 
 #if SDRAM_DOOM_IMAGE_LIMIT > SDRAM_HEAP_LIMIT
@@ -291,7 +304,7 @@ static void console_print_help(void)
 {
     uart_puts("\r\nCommands:\r\n");
     uart_puts("  h or ?  help\r\n");
-    uart_puts("  m       destructive reserved 1 MiB SDRAM test (heap-safe)\r\n");
+    uart_puts("  m       destructive reserved SDRAM sequential test (heap-safe)\r\n");
     uart_puts("  a       sparse ");
     uart_puts(HAZARD3_SDRAM_PROFILE_NAME);
     uart_puts(" address/bank alias test\r\n");
@@ -824,6 +837,42 @@ void hazard3_heap_reset(void)
     sdram_heap_reset();
 }
 
+static uint32_t sdram_protected_low_bytes(void)
+{
+    if (HAZARD3_VIDEO_FPGA_BUILD_ID == HAZARD3_FPGA_BUILD_ID_ULX3S_12F) {
+        return SDRAM_12F_MONITOR_PROTECTED_BYTES;
+    }
+
+    return 0u;
+}
+
+static uint32_t sdram_sequential_test_base(void)
+{
+    return SDRAM_BASE + sdram_protected_low_bytes();
+}
+
+static uint32_t sdram_sequential_test_bytes(uint32_t requested_bytes)
+{
+    uint32_t available_bytes = SDRAM_DIAGNOSTIC_BYTES -
+        sdram_protected_low_bytes();
+
+    return requested_bytes < available_bytes ? requested_bytes : available_bytes;
+}
+
+static uint32_t sdram_sparse_reference_offset(void)
+{
+    uint32_t protected_bytes = sdram_protected_low_bytes();
+
+    /*
+     * The 12F monitor executes from physical SDRAM 0x20000000-0x2003ffff.
+     * Its diagnostic alias therefore must not probe the equivalent low
+     * addresses. Use bits 18 and 19 as the reference point so XOR-testing
+     * either of those bits remains at or above the protected boundary.
+     * Other targets retain the historical zero-based sparse test.
+     */
+    return protected_bytes == 0u ? 0u : protected_bytes * 3u;
+}
+
 static int sdram_destructive_test_allowed(const char* test_name)
 {
     if (!external_memory_require_ready(test_name)) {
@@ -872,11 +921,11 @@ static int sdram_check_word(
     return 1;
 }
 
-static int sdram_width_test(void)
+static int sdram_width_test(uint32_t base_address)
 {
-    volatile uint32_t* const word = (volatile uint32_t*)SDRAM_BASE;
-    volatile uint16_t* const halfwords = (volatile uint16_t*)SDRAM_BASE;
-    volatile uint8_t* const bytes = (volatile uint8_t*)SDRAM_BASE;
+    volatile uint32_t* const word = (volatile uint32_t*)(uintptr_t)base_address;
+    volatile uint16_t* const halfwords = (volatile uint16_t*)(uintptr_t)base_address;
+    volatile uint8_t* const bytes = (volatile uint8_t*)(uintptr_t)base_address;
     int passed = 1;
 
     *word = 0x11223344u;
@@ -910,9 +959,12 @@ static int sdram_width_test(void)
     return passed;
 }
 
-static uint32_t sdram_pattern_value(uint32_t word_index, uint32_t pattern)
+static uint32_t sdram_pattern_value(
+    uint32_t base_address,
+    uint32_t word_index,
+    uint32_t pattern)
 {
-    uint32_t byte_address = SDRAM_BASE + word_index * sizeof(uint32_t);
+    uint32_t byte_address = base_address + word_index * sizeof(uint32_t);
 
     switch (pattern) {
     case SDRAM_PATTERN_ZERO:
@@ -946,20 +998,26 @@ static const char* sdram_pattern_name(uint32_t pattern)
     }
 }
 
-static int sdram_pattern_test(uint32_t byte_count, uint32_t pattern)
+static int sdram_pattern_test(
+    uint32_t base_address,
+    uint32_t byte_count,
+    uint32_t pattern)
 {
-    volatile uint32_t* const words = (volatile uint32_t*)SDRAM_BASE;
+    volatile uint32_t* const words =
+        (volatile uint32_t*)(uintptr_t)base_address;
     uint32_t word_count = byte_count / sizeof(uint32_t);
     uint32_t failures_before = sdram_last_failures;
 
     for (uint32_t i = 0u; i < word_count; ++i) {
-        words[i] = sdram_pattern_value(i, pattern);
+        words[i] = sdram_pattern_value(base_address, i, pattern);
     }
 
     memory_barrier();
 
     for (uint32_t i = 0u; i < word_count; ++i) {
-        (void)sdram_check_word(&words[i], sdram_pattern_value(i, pattern));
+        (void)sdram_check_word(
+            &words[i],
+            sdram_pattern_value(base_address, i, pattern));
     }
 
     return sdram_last_failures == failures_before;
@@ -1010,6 +1068,7 @@ static uint32_t sdram_sparse_offset(uint32_t point)
 {
     uint32_t address_bit_count = 0u;
     uint32_t byte_count = SDRAM_SIZE_BYTES;
+    uint32_t reference_offset = sdram_sparse_reference_offset();
 
     while (byte_count > sizeof(uint32_t)) {
         byte_count >>= 1u;
@@ -1017,11 +1076,11 @@ static uint32_t sdram_sparse_offset(uint32_t point)
     }
 
     if (point == 0u) {
-        return 0u;
+        return reference_offset;
     }
 
     if (point <= address_bit_count) {
-        return 1u << (point + 1u);
+        return reference_offset ^ (1u << (point + 1u));
     }
 
     point -= address_bit_count + 1u;
@@ -1173,7 +1232,7 @@ static int sdram_run_random_test(void)
     int passed = 1;
 
     uart_puts("\r\nSDRAM pseudorandom test: base=");
-    uart_put_hex32(SDRAM_BASE);
+    uart_put_hex32(SDRAM_BASE + sdram_protected_low_bytes());
     uart_puts(" bytes_per_bank=");
     uart_put_hex32(SDRAM_RANDOM_TEST_BYTES);
     uart_puts(" banks=");
@@ -1184,7 +1243,8 @@ static int sdram_run_random_test(void)
         SDRAM_RANDOM_TEST_BYTES * SDRAM_RANDOM_TEST_PASSES);
 
     for (uint32_t pass = 0u; pass < SDRAM_RANDOM_TEST_PASSES; ++pass) {
-        uint32_t base_offset = pass * SDRAM_BANK_BYTES;
+        uint32_t base_offset = pass * SDRAM_BANK_BYTES +
+            sdram_protected_low_bytes();
         uint32_t seed = 0x13579bdfu ^ (0x9e3779b9u * (pass + 1u));
         int pass_passed;
 
@@ -1215,19 +1275,21 @@ static int sdram_run_random_test(void)
 
 static int sdram_run_test(uint32_t byte_count, const char* description)
 {
+    uint32_t base_address = sdram_sequential_test_base();
+    uint32_t test_bytes = sdram_sequential_test_bytes(byte_count);
     uint32_t start_ticks;
     int passed;
 
     uart_puts("\r\n");
     uart_puts(description);
     uart_puts(": base=");
-    uart_put_hex32(SDRAM_BASE);
+    uart_put_hex32(base_address);
     uart_puts(" bytes=");
-    uart_put_hex32(byte_count);
+    uart_put_hex32(test_bytes);
     uart_puts("\r\n  access widths: ");
 
-    start_ticks = sdram_test_begin(byte_count);
-    passed = sdram_width_test();
+    start_ticks = sdram_test_begin(test_bytes);
+    passed = sdram_width_test(base_address);
     uart_puts(passed ? "PASS\r\n" : "FAIL\r\n");
 
     for (uint32_t pattern = 0u; pattern < SDRAM_PATTERN_COUNT; ++pattern) {
@@ -1237,7 +1299,7 @@ static int sdram_run_test(uint32_t byte_count, const char* description)
         uart_puts(sdram_pattern_name(pattern));
         uart_puts(": ");
 
-        pattern_passed = sdram_pattern_test(byte_count, pattern);
+        pattern_passed = sdram_pattern_test(base_address, test_bytes, pattern);
         uart_puts(pattern_passed ? "PASS\r\n" : "FAIL\r\n");
         passed &= pattern_passed;
     }
@@ -1258,7 +1320,7 @@ static int sdram_run_qualification(void)
 
     sequential_passed = sdram_run_test(
         SDRAM_FULL_TEST_BYTES,
-        "SDRAM destructive 1 MiB sequential test");
+        "SDRAM destructive diagnostic-window sequential test");
     sparse_passed = sdram_run_sparse_test();
     random_passed = sdram_run_random_test();
 
@@ -1750,10 +1812,10 @@ static void console_poll(void)
         case 'm':
         case 'M':
             if (external_memory_require_ready(
-                "the destructive 1 MiB external-memory test")) {
+                "the destructive diagnostic-window external-memory test")) {
                 (void)sdram_run_test(
                     SDRAM_FULL_TEST_BYTES,
-                    "SDRAM destructive 1 MiB sequential test");
+                    "SDRAM destructive diagnostic-window sequential test");
             }
             uart_puts("> ");
             break;

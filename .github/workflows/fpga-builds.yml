@@ -35,10 +35,26 @@ jobs:
             board: ulx3s-85f
             command: ./scripts/build-ulx3s-doom.sh
             fpga_name: fpga_ulx3s
+            monitor_dir: build
+            doom_dir: build/doom-image
+            seed_required: false
+            boot_init: third_party/Hazard3/example_soc/soc/hazard3-boot-monitor.hex
+          - name: ULX3S 12F
+            board: ulx3s-12f
+            command: ./scripts/build-ulx3s-12f-doom.sh
+            fpga_name: fpga_ulx3s_12f
+            monitor_dir: build/ulx3s-12f/monitor
+            doom_dir: build/ulx3s-12f/doom-image
+            seed_required: true
+            boot_init: third_party/Hazard3/example_soc/soc/hazard3-12f-bootstrap.hex
           - name: ULX4M-LD 85F
             board: ulx4m-ld-85f
             command: ./scripts/build-ulx4m-ld-doom.sh
             fpga_name: fpga_ulx4m_ld
+            monitor_dir: build
+            doom_dir: build/doom-image
+            seed_required: true
+            boot_init: third_party/Hazard3/example_soc/soc/hazard3-boot-monitor.hex
 
     steps:
       - name: Check out repository
@@ -116,11 +132,12 @@ jobs:
           test -s "build/${{ matrix.fpga_name }}.svf"
           test -s "build/${{ matrix.fpga_name }}.pnr.log"
           test -s "build/${{ matrix.fpga_name }}.synth.log"
-          if [[ "${{ matrix.fpga_name }}" == "fpga_ulx4m_ld" ]]; then
+          if [[ "${{ matrix.seed_required }}" == "true" ]]; then
               test -s "build/${{ matrix.fpga_name }}.seed"
           fi
-          test -s build/hazard3-boot-monitor.elf
-          test -s build/doom-image/hazard3-doom.h3d
+          test -s "${{ matrix.monitor_dir }}/hazard3-boot-monitor.elf"
+          test -s "${{ matrix.doom_dir }}/hazard3-doom.h3d"
+          test -s "${{ matrix.boot_init }}"
 
       - name: Upload build artifacts and timing logs
         if: always()
@@ -130,13 +147,13 @@ jobs:
           path: |
             build/${{ matrix.fpga_name }}.*
             build/source_status.log
-            build/hazard3-boot-monitor.elf
-            build/hazard3-boot-monitor.map
-            build/doom-image/hazard3-doom.elf
-            build/doom-image/hazard3-doom.map
-            build/doom-image/hazard3-doom.h3d
-            build/hazard3-boot-monitor.bin
-            third_party/Hazard3/example_soc/soc/hazard3-boot-monitor.hex
+            ${{ matrix.monitor_dir }}/hazard3-boot-monitor.elf
+            ${{ matrix.monitor_dir }}/hazard3-boot-monitor.map
+            ${{ matrix.monitor_dir }}/hazard3-boot-monitor.bin
+            ${{ matrix.doom_dir }}/hazard3-doom.elf
+            ${{ matrix.doom_dir }}/hazard3-doom.map
+            ${{ matrix.doom_dir }}/hazard3-doom.h3d
+            ${{ matrix.boot_init }}
           if-no-files-found: warn
           retention-days: 14
           compression-level: 0

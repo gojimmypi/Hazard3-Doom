@@ -16,7 +16,7 @@ REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 HAZARD3_ROOT="${HAZARD3_ROOT:-${REPO_ROOT}/third_party/Hazard3}"
 SYNTH_DIR="${HAZARD3_ROOT}/example_soc/synth"
 SWEEP_JOBS="${SWEEP_JOBS:-4}"
-HAZARD3_MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE:-64m}"
+HAZARD3_MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE:-32m}"
 
 NETLIST="${SYNTH_DIR}/fpga_ulx3s_12f.json"
 LPF="${SYNTH_DIR}/fpga_ulx3s.lpf"
@@ -36,7 +36,7 @@ Usage: $0 SEED [SEED ...]
 Route one or more nextpnr seeds for the ULX3S 12F Hazard3-Doom build.
 Seeds must be decimal values from 1 through 260.
 SWEEP_JOBS=N runs up to N routes concurrently (default: 4).
-HAZARD3_MEMORY_PROFILE=32m|64m selects the SDRAM profile (default: 64m).
+HAZARD3_MEMORY_PROFILE=32m|64m selects the SDRAM profile (default: 32m).
 
 Examples:
     $0 55
