@@ -14,7 +14,18 @@ OpenOCD
 -------
 
 The project keeps its OpenOCD configuration under ``openocd/`` and helper
-scripts under ``scripts/``. A typical workflow is:
+scripts under ``scripts/``. On Windows, the current ULX3S ``ft232r`` OpenOCD
+path has been verified with both **WinUSB** and **libusbK** on the on-board
+FT231X. WinUSB is the preferred development binding when the same machine also
+uses the Hazard3-Doom WebUSB FPGA flasher. The default FTDI VCP/D2XX binding is
+for FTDI-native tools such as Windows ``fujprog`` and is not the OpenOCD
+libusb path.
+
+GDB connects to OpenOCD over TCP, normally ``localhost:3333``. It therefore
+inherits the USB compatibility of the OpenOCD process; GDB itself does not
+open the FT231X. See :doc:`web-flasher` for the driver compatibility matrix.
+
+A typical workflow is:
 
 #. Connect the ULX3S through its normal USB/JTAG interface.
 #. Start OpenOCD with the project configuration.

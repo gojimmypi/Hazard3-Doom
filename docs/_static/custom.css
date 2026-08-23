@@ -11,3 +11,38 @@
 .rst-content .admonition-title {
     font-weight: 700;
 }
+
+/* Driver compatibility indicators used by the ULX3S USB matrix. */
+.compat-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+}
+
+.compat-table th,
+.compat-table td {
+    border: 1px solid #d6d6d6;
+    padding: 0.45em 0.6em;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.compat-table th:first-child,
+.compat-table td:first-child {
+    text-align: left;
+}
+
+.compat-dot {
+    display: inline-block;
+    width: 0.8em;
+    height: 0.8em;
+    border-radius: 50%;
+    margin-right: 0.35em;
+    vertical-align: -0.05em;
+}
+
+.compat-yes { background: #2e9d50; }
+.compat-warn { background: #d89b00; }
+.compat-no { background: #c43d3d; }
+.compat-na { background: #7f8c8d; }
+

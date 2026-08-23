@@ -28,7 +28,24 @@ current browser origin has already been authorized to use. It is not a list of
 every COM port installed in Windows.
 
 If relaunching the updated browser does not restore the port, continue with
-:ref:`web-serial-no-compatible-devices`.
+:ref:`web-serial-no-compatible-devices`. In particular, if Chrome logged that
+the COM port was removed during a debug session, physically unplug/reconnect the
+external USB-UART adapter. Stopping OpenOCD alone may not trigger the Windows /
+Chrome serial-device re-enumeration needed to make the port selectable again.
+
+Can OpenOCD use WinUSB on the ULX3S?
+------------------------------------
+
+Yes, with the current Hazard3-Doom ULX3S setup. The project's OpenOCD path uses
+the ``ft232r`` adapter through libusb and has been verified with the on-board
+FT231X bound to WinUSB. libusbK also works for OpenOCD, but is no longer a
+mandatory driver choice. GDB connects to OpenOCD over TCP and therefore works
+through whichever FT231X binding OpenOCD successfully uses.
+
+WinUSB is especially convenient because it also satisfies the browser WebUSB
+FPGA/JTAG flasher. The normal FTDI VCP/D2XX driver is still needed by FTDI-native
+applications such as Windows ``fujprog``. See :doc:`user-guide/web-flasher` for
+the compatibility matrix.
 
 Why does the FPGA WebUSB flasher need WinUSB on Windows?
 --------------------------------------------------------

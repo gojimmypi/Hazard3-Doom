@@ -68,16 +68,19 @@ a full ``1024x600`` PNG. The implementation is split between three layers:
 
 #. The browser probes the active UART consumer to determine whether it supports
    screen snip.
-#. Doom or the I2CDriver HDMI GUI serializes its current indexed source image and
-   RGB332 palette over UART.
+#. The resident monitor (when its cached test frame is valid), Doom, or the
+   I2CDriver HDMI GUI serializes its indexed source image and RGB332 palette
+   over UART.
 #. The browser removes the binary transfer from the terminal stream, expands the
    indexed source to the advertised display size, encodes a PNG with the Canvas
    API, and starts a local download.
 
-The resident monitor itself is not a screen-snip provider. It does not expose a
-framebuffer readback service for this purpose. Screen snip is therefore enabled
-only while a firmware application that owns an exact software representation of
-the displayed frame reports support.
+The current resident monitor can also be a screen-snip provider. After a
+successful monitor test-pattern presentation it stores a validated cached copy
+of that RGB332 frame in reserved SDRAM and can serialize that cache on request.
+Doom and the I2CDriver HDMI GUI provide their own active-screen implementations.
+A loaded-but-not-running ``.h3d`` image does not provide capability merely by
+being present in SDRAM.
 
 Capability detection
 --------------------
@@ -100,13 +103,16 @@ Reserved bytes are:
      - Sent by the browser to ask whether the active firmware screen supports the screen-snip protocol.
    * - ``0x06``
      - Capability ACK
-     - Returned by a supported Doom or I2CDriver HDMI implementation. The browser consumes this byte and does not display it in the terminal.
+     - Returned by the current monitor when its cached frame is valid, or by a supported Doom/I2CDriver HDMI implementation. The browser consumes this byte and does not display it in the terminal.
    * - ``0x1d``
      - Capture request
      - Sent only after capability has been confirmed. The active screen provider responds with an ``H3SNIP1`` frame.
 
-The browser waits up to 750 ms for the capability ACK. If the ACK is not seen,
-capability is marked unavailable and the capture request is not sent.
+An individual capability probe waits up to 750 ms for an ACK. Around runtime
+transitions such as a Doom launch, the web application keeps a longer
+reacquisition window and retries while the new UART consumer initializes. This
+prevents an early probe during Doom startup from permanently leaving the button
+disabled. A capture request is sent only after capability has been confirmed.
 
 The screen-snip state is reflected in both button enablement and hover text:
 
@@ -123,12 +129,12 @@ The screen-snip state is reflected in both button enablement and hover text:
    * - Checking
      - Disabled
      - A capability query is in progress.
-   * - Unsupported or resident monitor
+   * - Unsupported / no valid capture
      - Disabled
-     - The active firmware screen did not report capture support.
-   * - Supported Doom/I2C screen
+     - The current UART consumer did not report a valid capture source.
+   * - Supported monitor/Doom/I2C screen
      - Enabled
-     - The current HDMI display can be downloaded as a ``1024x600`` PNG.
+     - The reported HDMI source can be downloaded as a ``1024x600`` PNG.
    * - Capture in progress
      - Disabled, labelled ``Capturing...``
      - A binary screen transfer is currently being received.
@@ -157,19 +163,20 @@ If capture is currently unavailable, moving the pointer over the Screen snip
 control initiates another probe. This lets the UI recover automatically if the
 firmware mode changed by some path the browser did not observe.
 
-The **Stop Doom** ``Ctrl-X`` control and the I2C GUI ``Q`` control immediately
-mark screen snip unavailable because those operations return control to the
-resident monitor. A click on **Screen snip** also performs a final capability
-preflight before sending ``0x1d``. That protects against stale UI state if the
-active firmware changed since the last successful probe.
+The **Stop Doom** ``Ctrl-X`` control and the I2C GUI ``Q`` control trigger
+capability reacquisition because those operations return UART ownership to the
+resident monitor. The monitor may ACK if its cached frame remains valid. A
+click on **Screen snip** also performs a final capability preflight before
+sending ``0x1d``. That protects against stale UI state if the active firmware
+changed since the last successful probe.
 
 
 UART command routing and the ``H`` key
 --------------------------------------
 
-Screen-snip support does not require any change to the resident monitor's
-``console_poll()`` command table. In particular, the monitor keeps ``H`` as a
-Help key::
+The resident monitor handles the reserved ``0x1c`` capability query and ``0x1d``
+capture request before ordinary console command parsing. Normal printable keys
+remain unchanged; in particular, the monitor keeps ``H`` as a Help key::
 
    case 'h':
    case 'H':
@@ -184,9 +191,11 @@ UART byte before the resident-monitor switch and consumes GUI keys such as
 would create an undefined linker reference; returning a value from
 ``console_poll()``, which returns ``void``, is also invalid.
 
-The screen-snip capability byte ``0x1c`` and capture byte ``0x1d`` are handled
-inside the active Doom or I2C GUI input path for the same reason: capability
-must describe the application that currently owns the display and UART input.
+Doom and the I2C GUI also intercept ``0x1c`` and ``0x1d`` inside their active
+input paths, so capability follows whichever runtime currently owns UART input.
+The I2C GUI must ACK ``0x1c`` as well as implement ``0x1d``; otherwise the
+browser correctly leaves **Screen snip** disabled even though a capture handler
+exists.
 
 Wire protocol
 -------------

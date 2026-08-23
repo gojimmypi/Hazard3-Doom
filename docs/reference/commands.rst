@@ -71,7 +71,7 @@ resident-monitor text commands:
    * - ``0x1c``
      - Screen-snip capability query.
    * - ``0x06``
-     - Capability ACK from a supported active display application.
+     - Capability ACK from a supported monitor cache or active display application.
    * - ``0x1d``
      - Screen-snip capture request.
 

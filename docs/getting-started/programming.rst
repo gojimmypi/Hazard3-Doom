@@ -15,8 +15,10 @@ file targets the same FPGA variant, executes the Project Trellis SRAM
 programming sequence, and starts the new image immediately.
 
 The WebUSB flasher does not modify persistent SPI flash. On Windows its direct
-access to the FT231X requires the WinUSB driver; see the flasher guide before
-changing the USB driver binding.
+access to the FT231X requires the WinUSB driver. The same WinUSB binding has
+also been verified with the project's ULX3S OpenOCD/GDB path, so a debug
+workflow does not inherently require switching to libusbK. See the flasher
+guide's driver compatibility matrix before changing the USB binding.
 
 Persistent FPGA configuration
 -----------------------------

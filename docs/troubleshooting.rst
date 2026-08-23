@@ -74,9 +74,19 @@ before changing hardware or USB serial drivers.
 #. Close PuTTY, upload scripts, IDE serial monitors, or other programs that may
    already own the port.
 #. Open ``chrome://device-log``, enable the Serial and USB categories, and
-   unplug/reconnect the adapter. If Chrome logs ``Serial device added`` for the
-   expected COM port but the chooser remains empty, the problem is inside the
-   browser rather than the Hazard3-Doom serial filter.
+   inspect whether the expected COM port was removed but never added again.
+   During one verified debug session, Chrome logged ``Serial device removed:
+   path=COM7`` and did not recover after OpenOCD was merely stopped, even though
+   PuTTY could still open the port. Physically unplugging and reconnecting the
+   external USB-UART adapter forced Windows/Chrome re-enumeration and restored
+   the Web Serial chooser.
+#. If debug activity preceded the failure, close PuTTY and other serial owners,
+   stop OpenOCD, then physically disconnect/reconnect **the external USB-UART
+   adapter**. Stopping OpenOCD alone may release its FT231X/JTAG handle without
+   causing Chrome to rediscover the independent COM port.
+#. After reconnecting, ``chrome://device-log`` should show both the USB device
+   and a fresh ``Serial device added`` event for the expected COM port. Use
+   **Connect** in the web UI to invoke the browser chooser.
 #. Do not use ``navigator.serial.getPorts()`` as a complete Windows COM-port
    inventory. It returns only ports already authorized for the current browser
    origin. Use **Connect** to grant access to another port.
@@ -148,11 +158,20 @@ video frame to replace the last analyzer image.
 OpenOCD cannot see a working Hazard3 debug module
 -------------------------------------------------
 
+* On Windows ULX3S, use a current OpenOCD build with ``ft232r`` support and bind
+  the on-board FT231X to **WinUSB** or **libusbK**. The current project setup
+  has been verified with WinUSB; libusbK is not mandatory.
+* Do not confuse the ULX3S ``US1`` FT231X/JTAG driver with the separate external
+  USB-UART COM-port driver used by Web Serial.
 * Reduce the JTAG clock.
 * Ensure only one GDB client is attached.
 * Verify the FPGA bitstream is the expected Hazard3 build.
 * Verify the ELF matches the running hardware/monitor build.
 * Distinguish ECP5 TAP connectivity from Hazard3 debug-module connectivity.
+
+If the same FT231X also needs the browser FPGA flasher, prefer WinUSB so both
+OpenOCD/GDB and WebUSB work without another driver swap. Restore the FTDI
+VCP/D2XX driver only when a tool such as Windows ``fujprog`` requires it.
 
 Build suddenly changes because of submodules
 --------------------------------------------

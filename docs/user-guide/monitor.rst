@@ -26,10 +26,16 @@ Core Doom commands
 Web Serial screen snip capability
 ---------------------------------
 
-The resident monitor itself does not acknowledge the Web Serial screen-snip
-capability query. The browser therefore keeps **Screen snip** disabled at the
-monitor prompt. Capability is reported only after a supported display
-application such as Doom or the I2CDriver HDMI GUI owns the UART. See
+The current resident monitor participates in the Web Serial screen-snip
+protocol. After it successfully presents the monitor RGB332 test pattern, it
+keeps a validated cached copy in reserved SDRAM. A ``0x1c`` capability query
+returns ACK while that cache is valid, and ``0x1d`` serializes the cached frame.
+
+Uploading an ``.h3d`` image with ``l`` only stores and validates the executable
+in SDRAM; it does **not** run that image or activate Doom's own screen-snip
+handler. Doom becomes the active screen provider only after ``j`` launches the
+image and its UART/HDMI loop begins running. The I2CDriver HDMI GUI similarly
+becomes an active provider while ``i2c gui`` / ``sao gui`` owns the UART. See
 :doc:`web-serial`.
 
 SAO / I2C HDMI diagnostics
