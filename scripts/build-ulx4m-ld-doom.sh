@@ -15,6 +15,8 @@ MONITOR_BUILD_DIR="${HAZARD3_BUILD_DIR:-${ROOT_DIR}/build}"
 DOOM_BUILD_DIR="${HAZARD3_DOOM_BUILD_DIR:-${ROOT_DIR}/build/doom-image}"
 FPGA_OUTPUT="${ROOT_DIR}/build/fpga_ulx4m_ld.bit"
 MONITOR_OUTPUT="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.elf"
+MONITOR_BIN="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.bin"
+BOOT_HEX="${HAZARD3_ROOT}/example_soc/soc/hazard3-boot-monitor.hex"
 DOOM_OUTPUT="${DOOM_BUILD_DIR}/hazard3-doom.h3d"
 LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM/generated"
 
@@ -62,6 +64,7 @@ require_tool()
 }
 
 require_tool make
+require_tool python3
 require_file "${SYNTH_DIR}/ULX4M_LD_85F.mk"
 require_file "${HAZARD3_ROOT}/scripts/synth_ecp5.mk"
 require_executable "${HAZARD3_ROOT}/scripts/listfiles"
@@ -71,6 +74,7 @@ require_file "${LITEDRAM_DIR}/litedram_ulx4m_cpu.v"
 require_file "${LITEDRAM_DIR}/litedram_ulx4m_cpu_rom.init"
 require_file "${LITEDRAM_DIR}/litedram_ulx4m_cpu_sram.init"
 require_executable "${ROOT_DIR}/scripts/build.sh"
+require_executable "${ROOT_DIR}/scripts/make-boot-hex.py"
 require_executable "${ROOT_DIR}/doom/build-doom-image.sh"
 
 printf 'Building the shared 50 MHz monitor with the 64 MiB map...\n'
@@ -80,8 +84,14 @@ HAZARD3_SYS_CLK_HZ=50000000 \
     "${ROOT_DIR}/scripts/build.sh"
 
 require_file "${MONITOR_OUTPUT}"
+require_file "${MONITOR_BIN}"
 
-printf '\nBuilding the Hazard3 ULX4M-LD 85F FPGA target...\n'
+printf '\nEmbedding the resident monitor into ULX4M EBR initialization...\n'
+"${ROOT_DIR}/scripts/make-boot-hex.py" \
+    "${MONITOR_BIN}" "${BOOT_HEX}" --bytes 0x10000 --load-address 0x40
+require_file "${BOOT_HEX}"
+
+printf '\nBuilding the Hazard3 ULX4M-LD 85F FPGA target with cold-boot monitor...\n'
 HAZARD3_ROOT="${HAZARD3_ROOT}" \
     "${ROOT_DIR}/scripts/build-ulx4m-ld-bitstream.sh"
 
@@ -95,8 +105,10 @@ HAZARD3_MEMORY_PROFILE=64m \
 require_file "${FPGA_OUTPUT}"
 require_file "${MONITOR_OUTPUT}"
 require_file "${DOOM_OUTPUT}"
+require_file "${BOOT_HEX}"
 
 printf '\nULX4M-LD 85F Doom build complete.\n'
 printf '  FPGA:    %s\n' "${FPGA_OUTPUT}"
 printf '  Monitor: %s\n' "${MONITOR_OUTPUT}"
 printf '  Doom:    %s\n' "${DOOM_OUTPUT}"
+printf '  Boot HEX:%s\n' "${BOOT_HEX}"

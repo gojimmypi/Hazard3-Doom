@@ -7,6 +7,10 @@
 # When changing, refresh and confirm:
 #
 #   git submodule sync -- third_party/Hazard3
+#   git -C third_party/Hazard3 stash push -u -m "Hazard3 local changes before upstream update 20YY-MM-DD"
+#
+#   git -C third_party/Hazard3 switch ulx-doom-dev 2>/dev/null || git -C third_party/Hazard3 switch -c ulx-doom-dev --track origin/ulx-doom-dev
+#
 #   git submodule update --init --remote third_party/Hazard3
 #   git -C third_party/Hazard3 remote -v
 #   git -C third_party/Hazard3 branch --show-current
