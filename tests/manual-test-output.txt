@@ -1,0 +1,193 @@
+
+Hazard3 ECP5 board boot
+firmware_build=H3-DoomPerformance-R5-20260716 firmware_build_id=0x48335235
+UART: board serial RX / TX, 115200 8N1
+CPU: 50 MHz Hazard3, Timer: 10 ms machine interrupt
+Doom screen: 0x20040000-0x2004F9FF external SDRAM (320x200 indexed)
+Board LEDs: target-specific heartbeat and timer status
+SDRAM profile: 32 MiB, physical base=0x20000000, uncached diagnostics alias=0x24000000
+Doom image: 0x20100000-0x203FFFFF
+Heap: 0x20400000-0x20FFFFFF
+IWAD: 0x21000000-0x21BFFFFF, video reserve at 0x21C00000
+HDMI: 1024x600 full-panel scale, SDRAM + two-line EBR scanout
+Doom: l=UART image, w=UART IWAD, j=launch, b=SD boot
+External memory initialization: waiting up to 5 seconds...
+External memory initialization: READY
+
+SDRAM boot quick test: base=0x24040000 bytes=0x00010000
+  access widths: PASS
+  pattern zero: PASS
+  pattern ones: PASS
+  pattern address: PASS
+  pattern inverse address: PASS
+  result: PASS elapsed_ms=0x0000029E
+
+HDMI framebuffer test pattern: base=0x21C00000 bytes=0x0000FA00 format=RGB332
+  SDRAM line-buffered present: PASS elapsed_ms=0x000002C6 dma_cycles=0x00000000
+ULX3S cold boot: trying micro-SD...
+SD boot: initializing micro-SD...
+sd_initialized=YES type=SDHC/SDXC ocr=0xC0FF8000
+fat_type=FAT32 partition_lba=0x00002000 sectors_per_cluster=0x00000010
+SD boot: loading DOOM.H3D bytes=0x00090130
+
+H3L SD header
+  load=0x20100000 bytes=0x000900F0 entry=0x20100000
+  bss=0x201900F0 bss_bytes=0x0003B890 crc32=0x5EE248EE
+H3L SD OK elapsed_ms=0x0000A5BE
+SD boot: loading DOOM.WAD bytes=0x004006B4
+H3W SD DATA name=DOOM.WAD bytes=0x004006B4
+H3W SD OK elapsed_ms=0x0001D97A crc32=0x162B696A lumps=0x000004F0
+SD boot: image and IWAD ready
+
+Launching Doom image from SDRAM entry=0x20100000 IWAD=DOOM.WAD
+Doom image: incompatible monitor service table or missing IWAD
+Doom image returned status=0x00000001 elapsed_ms=0x0000000A
+Doom UART captured=0x00000000 overflows=0x00000000
+Restart image preserved; enter j to restart without uploading.
+Type h or ? for help.
+>
+Commands:
+  h or ?  help
+  m       destructive reserved SDRAM sequential test (heap-safe)
+  a       sparse 32 MiB address/bank alias test
+  r       pseudorandom 1 MiB test in each SDRAM bank
+  q       complete SDRAM qualification suite
+  k       SDRAM heap allocation/stress test
+  d       Doom platform memory/timer smoke test
+  x       execute copied RV32 code from SDRAM
+  l       receive a packaged Doom image over UART
+  w       receive an IWAD into reserved SDRAM
+  j       launch/restart the validated Doom image and IWAD
+  b       load DOOM.H3D + DOOM1.WAD from micro-SD and launch
+  c       micro-SD/FAT boot status
+  f       rewrite/present the 320x200 RGB332 HDMI test frame
+  z       reset heap; invalidates every heap pointer
+  s       status
+  v       version
+  sao info                 bridge ID/version/status
+  sao gui                  I2CDriver-style HDMI interface
+  sao recover              I2C bus recovery
+  sao scan                 scan I2C addresses 0x08..0x77
+  sao probe <addr>         probe one 7-bit I2C address
+  sao read <addr> <reg>    read one 8-bit register
+  sao write <a> <r> <v>    write one 8-bit register
+  i2c scan                 alias for sao scan
+  i2c gui                  alias for sao gui
+Other characters are echoed.
+>
+SDRAM destructive diagnostic-window sequential test: base=0x24040000 bytes=0x000C0000
+  access widths: PASS
+  pattern zero: PASS
+  pattern ones: PASS
+  pattern address: PASS
+  pattern inverse address: PASS
+  result: PASS elapsed_ms=0x000024A4
+>
+SDRAM sparse 32 MiB address/bank alias test: base=0x24000000 bytes=0x02000000 points=0x0000001D
+  unique values: PASS
+  inverse values: PASS
+  result: PASS elapsed_ms=0x0000000A
+>
+SDRAM pseudorandom test: base=0x24040000 bytes_per_bank=0x00100000 banks=0x00000004
+  pass 0x00000001 base=0x24040000 seed=0x8D60E266: PASS
+  pass 0x00000002 base=0x24840000 seed=0x2F3968AD: PASS
+  pass 0x00000003 base=0x25040000 seed=0xC9F1F6F4: PASS
+  pass 0x00000004 base=0x25840000 seed=0x6B8A7D3B: PASS
+  result: PASS elapsed_ms=0x0000411E
+>
+=== SDRAM qualification suite ===
+
+SDRAM destructive diagnostic-window sequential test: base=0x24040000 bytes=0x000C0000
+  access widths: PASS
+  pattern zero: PASS
+  pattern ones: PASS
+  pattern address: PASS
+  pattern inverse address: PASS
+  result: PASS elapsed_ms=0x000024A4
+
+SDRAM sparse 32 MiB address/bank alias test: base=0x24000000 bytes=0x02000000 points=0x0000001D
+  unique values: PASS
+  inverse values: PASS
+  result: PASS elapsed_ms=0x0000000A
+
+SDRAM pseudorandom test: base=0x24040000 bytes_per_bank=0x00100000 banks=0x00000004
+  pass 0x00000001 base=0x24040000 seed=0x8D60E266: PASS
+  pass 0x00000002 base=0x24840000 seed=0x2F3968AD: PASS
+  pass 0x00000003 base=0x25040000 seed=0xC9F1F6F4: PASS
+  pass 0x00000004 base=0x25840000 seed=0x6B8A7D3B: PASS
+  result: PASS elapsed_ms=0x00004114
+=== SDRAM qualification: PASS ===
+>
+SDRAM heap test: base=0x20400000 limit=0x21000000 bytes=0x00C00000
+  small allocations: PASS
+  16-byte alignment: PASS
+  small block patterns: PASS
+  4 MiB allocation/pattern: PASS
+  prior-block preservation: PASS
+  bounds rejection: PASS
+  result: PASS elapsed_ms=0x00001DD8 used=0x00411190 remaining=0x007EEE70
+>
+REFUSED: the SDRAM heap is already active.
+Run z first; every existing heap pointer will become invalid.
+>
+sd_boot_runs=0x00000001 failures=0x00000000 mounted=YES
+sd_initialized=YES type=SDHC/SDXC ocr=0xC0FF8000
+fat_type=FAT32 partition_lba=0x00002000 sectors_per_cluster=0x00000010
+SD FAT root (8.3):
+  BUILD-~1  bytes=0x0000012F
+  INSTRU~1.TXT  bytes=0x000008CA
+  RECOVE~1.CMD  bytes=0x00000028
+  RECOVERY.ELF  bytes=0x00087618
+  RECOVERY.IMG  bytes=0x00200CF0
+  RECOVERY.RFS  bytes=0x0134CFFB
+  RECOVE~1  bytes=0x00000000
+  RECOVE~1.IMG  bytes=0x0020C718
+  RISCOS~1.BIN  bytes=0x00002600
+  DEFAULTS  <DIR>
+  OS  <DIR>
+  BOOTCODE.BIN  bytes=0x000045C0
+  SYSTEM~1  <DIR>
+  NEWTEX~1.TXT  bytes=0x00000000
+  ULX3S-~1.CON  bytes=0x00000080
+  DOOM.WAD  bytes=0x004006B4
+  DOOM.H3D  bytes=0x00090130
+root_entries=0x00000011
+sd_h3d_bytes=0x00090130 sd_wad_bytes=0x004006B4 wad=DOOM.WAD
+>
+HDMI framebuffer test pattern: base=0x21C00000 bytes=0x0000FA00 format=RGB332
+  SDRAM line-buffered present: PASS elapsed_ms=0x00000316 dma_cycles=0x00000000
+>
+SDRAM heap reset. All previous heap pointers are invalid.
+> s
+system_ticks=0x0008FA34 timer_irq_count=0x0000E5D2 unexpected_traps=0x00000000
+last_mcause=0x80000007 last_mepc=0x20000174 last_mtval=0x00000000
+uart_rx_count=0x0000000E uart_tx_count=0x000019FC uart_fstat=0x06000102
+doom_uart_capture_received=0x00000000 overflows=0x00000000 enabled=NO
+sdram_runs=0x00000007 failed_runs=0x00000000 total_failures=0x00000000 words_checked=0x00390089
+sdram_last_bytes=0x00400000 last_failures=0x00000000 elapsed_ms=0x00004114 result=PASS
+random_passes=0x00000008 last_random_seed=0x6B8A7D3B qualification_runs=0x00000001
+qualification_failures=0x00000000 pass_mask=0x00000007 last_qualification=PASS
+heap_base=0x20400000 heap_limit=0x21000000 heap_current=0x20400000
+heap_used=0x00000000 heap_remaining=0x00C00000 high_water=0x00000000
+heap_allocations=0x00000000 failed_allocations=0x00000000 resets=0x00000002
+heap_test_runs=0x00000001 heap_test_failures=0x00000000 heap_last_elapsed_ms=0x00001DD8 heap_last_result=PASS
+doom_smoke_runs=0x00000000 failures=0x00000000 elapsed_ms=0x00000000 heap_used=0x00000000 result=NOT RUN
+sdram_exec_runs=0x00000000 failures=0x00000000 elapsed_ms=0x00000000 timer_hits=0x00000000 payload_bytes=0x00000000 result=NOT RUN
+sdram_exec_actual=0x00000000 expected=0x00000000
+video_framebuffer_base=0x21C00000 bytes=0x0000FA00 pattern_runs=0x00000002 elapsed_ms=0x00000316
+external_memory_ready=YES video_status=0x00000030 frame_count=0x0000BF9A dma_cycles=0x00000000 presents=0x00000002
+firmware_build=H3-DoomPerformance-R5-20260716 firmware_id=0x48335235 fpga_id=0x554C3132 ddr_core_id=0x53445235 ddr_adapter_id=0x41485335 build_match=YES
+memory_controller=ULX3S-SDR-SDRAM memory_status=0x5344001D marker=VALID init_done=YES init_error=NO pll_locked=YES user_clock_ready=YES ready=YES adapter_state=0x00000000 wb_error=NO
+doom_image_loaded=NO receive_runs=0x00000001 receive_failures=0x00000000 receive_elapsed_ms=0x0000A5BE restart_ready=NO restores=0x00000002
+doom_image_bytes=0x000900F0 entry=0x20100000 bss_bytes=0x0003B890
+doom_image_crc_expected=0x5EE248EE actual=0x5EE248EE backup=0x00000000 backup_crc=0x00000000
+doom_launch_runs=0x00000001 launch_failures=0x00000001 launch_elapsed_ms=0x0000000A last_return=0x00000001
+doom_wad_loaded=NO receive_runs=0x00000001 receive_failures=0x00000000 receive_elapsed_ms=0x0001D97A
+doom_wad_name=DOOM.WAD bytes=0x004006B4 lumps=0x000004F0 directory=0x003FB7B4
+doom_wad_crc_expected=0x162B696A actual=0x162B696A
+>
+firmware_build=H3-DoomPerformance-R5-20260716 firmware_id=0x48335235
+fpga_id=0x554C3132 ddr_core_id=0x53445235 ddr_adapter_id=0x41485335 build_match=YES
+memory_controller=ULX3S-SDR-SDRAM
+>
+>
