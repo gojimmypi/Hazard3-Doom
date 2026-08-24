@@ -15,15 +15,20 @@
         </div>
         <div class="header-actions">
             <nav class="project-links" aria-label="Hazard3-Doom project links">
+                <button class="project-link"
+                        type="button"
+                        onclick="navigator.clipboard.writeText('chrome://device-log/'); alert('Copied chrome://device-log/ - paste it into a new Chrome tab.')">
+                    Device Log
+                </button>
                 <a class="project-link" href="https://github.com/ulx3s/Hazard3-Doom" target="_blank" rel="noopener noreferrer">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M8.7 16.8 3.9 12l4.8-4.8 1.4 1.4L6.7 12l3.4 3.4-1.4 1.4Zm6.6 0-1.4-1.4 3.4-3.4-3.4-3.4 1.4-1.4 4.8 4.8-4.8 4.8ZM10.8 19l2.8-14 2 .4-2.8 14-2-.4Z"/>
+                        <path d="M8.7 16.8 3.9 12l4.8-4.8 1.4 1.4L6.7 12l3.4 3.4-1.4 1.4Zm6.6 0-1.4-1.4 3.4-3.4-3.4-3.4 1.4-1.4 4.8 4.8-4.8 4.8ZM10.8 19l2.8-14 2 .4-2.8 14-2-.4Z" />
                     </svg>
                     <span>GitHub Source</span>
                 </a>
                 <a class="project-link docs-link" href="https://hazard3-doom.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M5 3h11a3 3 0 0 1 3 3v15H7a4 4 0 0 1-4-4V5a2 2 0 0 1 2-2Zm0 2v9.5A4 4 0 0 1 7 14h10V6a1 1 0 0 0-1-1H5Zm2 11a2 2 0 1 0 0 4h10v-4H7Z"/>
+                        <path d="M5 3h11a3 3 0 0 1 3 3v15H7a4 4 0 0 1-4-4V5a2 2 0 0 1 2-2Zm0 2v9.5A4 4 0 0 1 7 14h10V6a1 1 0 0 0-1-1H5Zm2 11a2 2 0 1 0 0 4h10v-4H7Z" />
                     </svg>
                     <span>Read the Docs</span>
                 </a>
@@ -159,7 +164,7 @@
                             <label class="check-control"><input id="flasherAutoScroll" type="checkbox" checked> Auto-scroll</label>
                             <button id="flasherCopyLogButton" type="button" class="secondary icon-button" title="Copy all FPGA flasher log contents to the clipboard" aria-label="Copy all FPGA flasher log contents to the clipboard">
                                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                                    <path d="M8 7V4h10a2 2 0 0 1 2 2v11h-3v3H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2Zm2 0h5a2 2 0 0 1 2 2v6h1V6H10v1Zm-4 2v9h9V9H6Z"/>
+                                    <path d="M8 7V4h10a2 2 0 0 1 2 2v11h-3v3H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2Zm2 0h5a2 2 0 0 1 2 2v6h1V6H10v1Zm-4 2v9h9V9H6Z" />
                                 </svg>
                                 <span id="flasherCopyLogButtonLabel">Copy log</span>
                             </button>
@@ -232,7 +237,7 @@
                     <button id="downloadButton" type="button" class="secondary">Save log</button>
                     <button id="copyButton" type="button" class="secondary icon-button" title="Copy all UART terminal contents to the clipboard" aria-label="Copy all UART terminal contents to the clipboard">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M8 7V4h10a2 2 0 0 1 2 2v11h-3v3H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2Zm2 0h5a2 2 0 0 1 2 2v6h1V6H10v1Zm-4 2v9h9V9H6Z"/>
+                            <path d="M8 7V4h10a2 2 0 0 1 2 2v11h-3v3H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2Zm2 0h5a2 2 0 0 1 2 2v6h1V6H10v1Zm-4 2v9h9V9H6Z" />
                         </svg>
                         <span id="copyButtonLabel">Copy UART</span>
                     </button>
