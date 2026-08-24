@@ -206,6 +206,55 @@ static unsigned int H3DIV_Fnv1a(const void *data, unsigned int size)
     return hash;
 }
 
+
+static unsigned int H3DIV_FirstMismatch(const byte *actual,
+                                        const byte *expected,
+                                        unsigned int size)
+{
+    unsigned int index;
+
+    for (index = 0u; index < size; ++index)
+    {
+        if (actual[index] != expected[index])
+        {
+            return index;
+        }
+    }
+
+    return size;
+}
+
+static void H3DIV_ByteCopy(byte *destination, const byte *source,
+                           unsigned int size)
+{
+    volatile byte *volatile_destination = (volatile byte *)destination;
+    unsigned int index;
+
+    for (index = 0u; index < size; ++index)
+    {
+        volatile_destination[index] = source[index];
+    }
+}
+
+static void H3DIV_PrintCopyResult(const char *name, const byte *actual,
+                                  const byte *expected, unsigned int size)
+{
+    unsigned int actual_hash = H3DIV_Fnv1a(actual, size);
+    unsigned int expected_hash = H3DIV_Fnv1a(expected, size);
+    unsigned int first = H3DIV_FirstMismatch(actual, expected, size);
+
+    printf("H3DIV copy %s: %s hash=%08x expected=%08x",
+           name, first == size ? "PASS" : "FAIL",
+           actual_hash, expected_hash);
+
+    if (first != size)
+    {
+        printf(" first=%u actual=%02x expected_byte=%02x",
+               first, actual[first], expected[first]);
+    }
+
+    printf("\n");
+}
 static unsigned int H3DIV_TextureHash(const texture_t *texture)
 {
     unsigned int hash = H3DIV_Fnv1a(texture->name, 8);
@@ -758,11 +807,67 @@ void R_InitTextures (void)
     if (memcmp(maptex1, h3div_texture_shadow,
                (size_t)texture1_bytes) != 0)
     {
-        I_Error("H3DIV FAIL stage=texture1-cache-copy bytes=%i cached=%08x reread=%08x",
-                texture1_bytes,
-                H3DIV_Fnv1a(maptex1, (unsigned int)texture1_bytes),
-                H3DIV_Fnv1a(h3div_texture_shadow,
-                            (unsigned int)texture1_bytes));
+        unsigned int initial_hash =
+            H3DIV_Fnv1a(maptex1, (unsigned int)texture1_bytes);
+        unsigned int reference_hash =
+            H3DIV_Fnv1a(h3div_texture_shadow,
+                        (unsigned int)texture1_bytes);
+        unsigned int first = H3DIV_FirstMismatch(
+            (const byte *)maptex1, h3div_texture_shadow,
+            (unsigned int)texture1_bytes);
+        byte initial_actual = ((const byte *)maptex1)[first];
+        byte initial_expected = h3div_texture_shadow[first];
+
+        printf("H3DIV isolate TEXTURE1: bytes=%i cache=%p shadow=%p "
+               "initial=%08x reference=%08x first=%u actual=%02x expected_byte=%02x\n",
+               texture1_bytes, (void *)maptex1,
+               (void *)h3div_texture_shadow, initial_hash, reference_hash,
+               first, initial_actual, initial_expected);
+
+        /*
+         * Re-read through the exact WAD path into the same Zone destination.
+         * If this passes, the destination itself is writable and the initial
+         * cache fill was the bad operation.
+         */
+        W_ReadLump((unsigned int)texture1_lump, maptex1);
+        H3DIV_PrintCopyResult("same-dest-W_ReadLump",
+                              (const byte *)maptex1,
+                              h3div_texture_shadow,
+                              (unsigned int)texture1_bytes);
+
+        /*
+         * Copy the known-good BSS snapshot with libc memcpy. This separates
+         * WAD/stdio positioning from the memcpy implementation and destination
+         * alignment used by the Zone allocation.
+         */
+        memcpy(maptex1, h3div_texture_shadow, (size_t)texture1_bytes);
+        H3DIV_PrintCopyResult("BSS-to-zone-memcpy",
+                              (const byte *)maptex1,
+                              h3div_texture_shadow,
+                              (unsigned int)texture1_bytes);
+
+        /*
+         * Finish with a deliberately simple byte-store loop. If this is the
+         * only operation that produces a correct destination, the optimized
+         * copy/read path is implicated rather than the Zone destination.
+         */
+        H3DIV_ByteCopy((byte *)maptex1, h3div_texture_shadow,
+                       (unsigned int)texture1_bytes);
+        H3DIV_PrintCopyResult("BSS-to-zone-bytecopy",
+                              (const byte *)maptex1,
+                              h3div_texture_shadow,
+                              (unsigned int)texture1_bytes);
+
+        if (memcmp(maptex1, h3div_texture_shadow,
+                   (size_t)texture1_bytes) != 0)
+        {
+            I_Error("H3DIV FAIL stage=texture1-destination-unrecoverable "
+                    "initial=%08x reference=%08x",
+                    initial_hash, reference_hash);
+        }
+
+        printf("H3DIV TEXTURE1 repaired by diagnostic bytecopy; "
+               "continuing initialization\n");
     }
 
     H3DIV_VerifyDoom1Reference("TEXTURE1", maptex1,

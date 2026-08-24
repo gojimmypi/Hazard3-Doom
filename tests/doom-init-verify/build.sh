@@ -11,8 +11,17 @@ rm -rf "${PREPARED_DIR}"
 mkdir -p "${PREPARED_DIR}" "${DOOM_BUILD_DIR}"
 cp -a "${SOURCE_DIR}/." "${PREPARED_DIR}/"
 cp "${SCRIPT_DIR}/r_data.c" "${PREPARED_DIR}/r_data.c"
+cp "${SCRIPT_DIR}/w_file_stdc.c" "${PREPARED_DIR}/w_file_stdc.c"
 
-printf 'Building Doom initialization verifier\n'
+printf 'Preparing diagnostic DoomGeneric tree:\n'
+printf '  override r_data.c\n'
+printf '    purpose: Doom WAD/cache/texture integrity instrumentation\n'
+printf '  override w_file_stdc.c\n'
+printf '    purpose: force memory-backed WAD FILE stream unbuffered\n'
+printf '\nDiagnostic mode:\n'
+printf '  WAD stdio buffering: DISABLED\n'
+printf '  TEXTURE1 integrity checks: ENABLED\n'
+printf '\nBuilding Doom initialization verifier (unbuffered WAD stdio A/B)\n'
 printf '  source: %s\n' "${PREPARED_DIR}"
 printf '  output: %s\n' "${DOOM_BUILD_DIR}"
 printf '  profile: 32m\n'
