@@ -7,6 +7,7 @@
 #include "hazard3_monitor_services.h"
 
 void hazard3_monitor_services_bind(const hazard3_monitor_services_t* services);
+void hazard3_image_exit(int status);
 void hazard3_console_putc(uint8_t value);
 void hazard3_console_puts(const char* text);
 void hazard3_console_put_hex32(uint32_t value);

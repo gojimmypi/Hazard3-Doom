@@ -89,6 +89,7 @@ void _exit(int status)
     hazard3_console_puts("\r\nDoom image exited, status=");
     hazard3_console_put_hex32((uint32_t)status);
     hazard3_console_puts("\r\n");
+    hazard3_image_exit(status);
     for (;;) { __asm__ volatile ("wfi"); }
 }
 
