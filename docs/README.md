@@ -2,6 +2,8 @@
 
 This directory contains the Sphinx documentation for Hazard3-Doom.
 
+See [app.readthedocs.org/dashboard](https://app.readthedocs.org/dashboard/) for publishing status.
+
 ## Local build
 
 ```bash
