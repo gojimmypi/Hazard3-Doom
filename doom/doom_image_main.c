@@ -1,4 +1,3 @@
-#include <setjmp.h>
 #include <stdint.h>
 
 #include "doom_image_format.h"
@@ -41,18 +40,6 @@ static char* doom_arguments[] = {
     argument_map
 #endif
 };
-
-static jmp_buf doom_exit_context;
-static volatile int32_t doom_exit_status;
-static volatile int doom_exit_armed;
-
-void hazard3_image_exit(int status)
-{
-    if (doom_exit_armed != 0) {
-        doom_exit_status = (int32_t)status;
-        longjmp(doom_exit_context, 1);
-    }
-}
 
 static int screen_service_is_valid(const hazard3_monitor_services_t* services)
 {
@@ -137,14 +124,6 @@ int32_t doom_image_main(const hazard3_monitor_services_t* services)
 
     doom_arguments[2] = (char*)services->wad_name;
     hazard3_doom_input_reset();
-    if (setjmp(doom_exit_context) != 0) {
-        doom_exit_armed = 0;
-        hazard3_console_puts("Doom image returning to monitor, status=");
-        hazard3_console_put_hex32((uint32_t)doom_exit_status);
-        hazard3_console_puts("\r\n");
-        return doom_exit_status;
-    }
-    doom_exit_armed = 1;
     hazard3_console_puts("  entering Doom WAD discovery and initialization\r\n");
     doomgeneric_Create(
         (int)(sizeof(doom_arguments) / sizeof(doom_arguments[0])),
@@ -168,7 +147,6 @@ int32_t doom_image_main(const hazard3_monitor_services_t* services)
     frame_count = hazard3_doom_draw_frame_count();
     if (frame_count == 0u) {
         hazard3_console_puts("Doom HDMI framebuffer milestone: FAIL\r\n");
-        doom_exit_armed = 0;
         return 3;
     }
 
@@ -209,6 +187,5 @@ int32_t doom_image_main(const hazard3_monitor_services_t* services)
     hazard3_console_puts(" heap_remaining=");
     hazard3_console_put_hex32(hazard3_heap_remaining());
     hazard3_console_puts("\r\nDoom playable-performance milestone: PASS\r\n");
-    doom_exit_armed = 0;
     return 0;
 }

@@ -528,6 +528,7 @@ int doom_image_loader_launch(void)
     hazard3_console_puts(services.wad_name);
     hazard3_console_puts("\r\n");
     drain_uart_rx();
+    hazard3_console_puts("  transferring control to Doom...\r\n");
     hazard3_console_input_capture_begin();
     start_ticks = hazard3_ticks_ms();
     result = entry(&services);

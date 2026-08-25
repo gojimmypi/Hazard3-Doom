@@ -21,6 +21,7 @@ printf '    purpose: force memory-backed WAD FILE stream unbuffered\n'
 printf '\nDiagnostic mode:\n'
 printf '  WAD stdio buffering: DISABLED\n'
 printf '  TEXTURE1 integrity checks: ENABLED\n'
+printf '  fatal exit recovery: ENTRY-FRAME ASSEMBLY (no setjmp)\n'
 printf '\nBuilding Doom initialization verifier (unbuffered WAD stdio A/B)\n'
 printf '  source: %s\n' "${PREPARED_DIR}"
 printf '  output: %s\n' "${DOOM_BUILD_DIR}"
