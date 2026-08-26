@@ -1,12 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
+echo "This test is specific to the ULX3S 12F at this time"
+
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
 SOURCE_DIR="${ROOT_DIR}/third_party/doomgeneric/doomgeneric"
 PREPARED_DIR="${ROOT_DIR}/build/doom-init-verify/doomgeneric-source"
 DOOM_BUILD_DIR="${ROOT_DIR}/build/doom-init-verify/doom-image"
 MONITOR_BUILD_DIR="${ROOT_DIR}/build/ulx3s-12f/monitor"
+HAZARD3_SYS_CLK_HZ="${HAZARD3_SYS_CLK_HZ:-40000000}"
 
 rm -rf "${PREPARED_DIR}"
 mkdir -p "${PREPARED_DIR}" "${DOOM_BUILD_DIR}"
@@ -29,7 +32,7 @@ printf '\nBuilding matching ULX3S-12F monitor\n'
 HAZARD3_BUILD_DIR="${MONITOR_BUILD_DIR}" \
 HAZARD3_MONITOR_LINKER_SCRIPT="${ROOT_DIR}/src/link-12f-sdram.ld" \
 HAZARD3_MEMORY_PROFILE=32m \
-HAZARD3_SYS_CLK_HZ=50000000 \
+HAZARD3_SYS_CLK_HZ=40000000 \
     "${ROOT_DIR}/scripts/build.sh"
 
 printf '\nBuilding Doom initialization verifier (direct WAD transport check)\n'

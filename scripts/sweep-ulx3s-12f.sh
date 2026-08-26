@@ -280,7 +280,7 @@ fi
     printf 'placer=heap\n'
     printf 'full_route=1\n'
     printf 'hazard3_memory_profile=%s\n' "${HAZARD3_MEMORY_PROFILE}"
-    printf 'clk_sys_required_mhz=50.00\n'
+    printf 'clk_sys_required_mhz=40.00\n'
     printf 'clk_video_required_mhz=50.00\n'
     printf 'clk_tmds_required_mhz=250.00\n'
     printf 'dp16kd_used=%s\n' "${ebr_used}"
@@ -345,7 +345,7 @@ run_seed()
     clk_tmds="$(extract_clock "${pnr_log}" "clk_tmds_x5")"
 
     timing_status="FAIL"
-    if clock_at_least "${clk_sys}" 50.00 &&
+    if clock_at_least "${clk_sys}" 40.00 &&
        clock_at_least "${clk_video}" 50.00 &&
        clock_at_least "${clk_tmds}" 250.00; then
         timing_status="PASS"

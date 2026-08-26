@@ -318,8 +318,8 @@ validate_ulx3s_12f_system_timing()
     fi
 
     printf 'ULX3S 12F system timing: %s\n' "${timing_line}"
-    if [[ "${timing_line}" != *"PASS at 50.00 MHz"* ]]; then
-        echo "ERROR: ULX3S 12F clk_sys does not meet 50 MHz." >&2
+    if [[ "${timing_line}" != *"PASS at 40.00 MHz"* ]]; then
+        echo "ERROR: ULX3S 12F clk_sys does not meet 40 MHz." >&2
         exit 1
     fi
 }
@@ -374,7 +374,7 @@ ulx3s-12f)
     MAKEFILE="ULX3S_12F.mk"
     LPF="${HAZARD3_SYNTH}/fpga_ulx3s.lpf"
     IDCODE="0x21111043"
-    NEXTPNR_SEED="${NEXTPNR_SEED:-55}"
+    NEXTPNR_SEED="${NEXTPNR_SEED:-65}"
     PNR_DEVICE_ARGS=(--12k --speed 6 --package CABGA381)
     HAZARD3_MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE:-32m}"
     SYNTH_PROFILE_STAMP="${HAZARD3_SYNTH}/fpga_ulx3s_12f.memory-profile"

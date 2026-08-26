@@ -59,7 +59,7 @@ printf 'Building ULX3S 12F monitor in external SDRAM (%s profile)...\n' "${MEMOR
 HAZARD3_BUILD_DIR="${MONITOR_BUILD_DIR}" \
 HAZARD3_MONITOR_LINKER_SCRIPT="${ROOT_DIR}/src/link-12f-sdram.ld" \
 HAZARD3_MEMORY_PROFILE="${MEMORY_PROFILE}" \
-HAZARD3_SYS_CLK_HZ=50000000 \
+HAZARD3_SYS_CLK_HZ=40000000 \
     "${ROOT_DIR}/scripts/build.sh"
 require_file "${MONITOR_OUTPUT}"
 
