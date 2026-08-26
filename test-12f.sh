@@ -1,6 +1,6 @@
 rm -f third_party/Hazard3/example_soc/synth/fpga_ulx3s_12f.json
 
-HAZARD3_MEMORY_PROFILE=64m \
+HAZARD3_MEMORY_PROFILE=32m \
     make -C third_party/Hazard3/example_soc/synth \
     -f ULX3S_12F.mk synth
 

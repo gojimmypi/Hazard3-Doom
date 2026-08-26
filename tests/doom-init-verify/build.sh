@@ -6,6 +6,7 @@ ROOT_DIR="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
 SOURCE_DIR="${ROOT_DIR}/third_party/doomgeneric/doomgeneric"
 PREPARED_DIR="${ROOT_DIR}/build/doom-init-verify/doomgeneric-source"
 DOOM_BUILD_DIR="${ROOT_DIR}/build/doom-init-verify/doom-image"
+MONITOR_BUILD_DIR="${ROOT_DIR}/build/ulx3s-12f/monitor"
 
 rm -rf "${PREPARED_DIR}"
 mkdir -p "${PREPARED_DIR}" "${DOOM_BUILD_DIR}"
@@ -15,14 +16,23 @@ cp "${SCRIPT_DIR}/w_file_stdc.c" "${PREPARED_DIR}/w_file_stdc.c"
 
 printf 'Preparing diagnostic DoomGeneric tree:\n'
 printf '  override r_data.c\n'
-printf '    purpose: Doom WAD/cache/texture integrity instrumentation\n'
+printf '    purpose: TEXTURE1 cache and texture progress markers\n'
 printf '  override w_file_stdc.c\n'
-printf '    purpose: force memory-backed WAD FILE stream unbuffered\n'
+printf '    purpose: direct SDRAM WAD read transport verification\n'
 printf '\nDiagnostic mode:\n'
 printf '  WAD stdio buffering: DISABLED\n'
-printf '  TEXTURE1 integrity checks: ENABLED\n'
+printf '  TEXTURE1 integrity checks: DISABLED\n'
+printf '  TEXTURE1 source/destination transport check: ENABLED\n'
+printf '  texture construction/lookup progress markers: ENABLED\n'
 printf '  fatal exit recovery: ENTRY-FRAME ASSEMBLY (no setjmp)\n'
-printf '\nBuilding Doom initialization verifier (unbuffered WAD stdio A/B)\n'
+printf '\nBuilding matching ULX3S-12F monitor\n'
+HAZARD3_BUILD_DIR="${MONITOR_BUILD_DIR}" \
+HAZARD3_MONITOR_LINKER_SCRIPT="${ROOT_DIR}/src/link-12f-sdram.ld" \
+HAZARD3_MEMORY_PROFILE=32m \
+HAZARD3_SYS_CLK_HZ=50000000 \
+    "${ROOT_DIR}/scripts/build.sh"
+
+printf '\nBuilding Doom initialization verifier (direct WAD transport check)\n'
 printf '  source: %s\n' "${PREPARED_DIR}"
 printf '  output: %s\n' "${DOOM_BUILD_DIR}"
 printf '  profile: 32m\n'
@@ -35,3 +45,5 @@ HAZARD3_DOOM_BUILD_DIR="${DOOM_BUILD_DIR}" \
 
 printf '\nDiagnostic H3D: %s\n' \
     "${DOOM_BUILD_DIR}/hazard3-doom.h3d"
+printf 'Matching monitor: %s\n' \
+    "${MONITOR_BUILD_DIR}/hazard3-boot-monitor.elf"

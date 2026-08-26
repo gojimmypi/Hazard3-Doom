@@ -1,6 +1,48 @@
 Frequently Asked Questions
 ==========================
 
+ULX3S Board Not Recognized
+--------------------------
+
+Be sure the USB-A to Micro-USB is connected to `US`, the connector on the same end of the board as the SD Card.
+
+Use short, quality cables. It must not be a "charge only" cable.
+
+Try a direct connection, without and hubs.
+
+Blank HDMI Display
+------------------
+
+If the display sat powered without an active HDMI signal for some time, it may not be woken up at the first video
+signal. Try removing power and waiting a few seconds before trying again. The behavior was observed with the
+Elecrow 7" HDMI screen.
+
+"monitor" command not supported by this target.
+-----------------------------------------------
+
+See next section: You can't do that when your target is `exec'
+
+You can't do that when your target is `exec'
+--------------------------------------------
+
+If you see an error similar to this when loading Console Monitor firmware with gdb,
+make sure OpenOCD is running and listening on the expected port (default: 3333)
+
+$ ./scripts/load-firmware-12f.sh
+Calling /mnt/c/workspace/Hazard3-Doom/scripts/load-firmware.sh \
+-rwxr-xr-x 1 gojimmypi gojimmypi 316036 Aug 25 12:10 hazard3-boot-monitor.elf
+localhost:3333: Connection timed out.
+"monitor" command not supported by this target.
+You can't do that when your target is `exec'
+Section .vectors, range 0x20000040 -- 0x20000076: matched.
+Section .text, range 0x20000078 -- 0x2000bacb: matched.
+Section .srodata.bar_colors.1, range 0x2000bacc -- 0x2000bad4: matched.
+Section .data, range 0x2000bad4 -- 0x2000badc: matched.
+No registers.
+
+You can't do that when your target is `exec'
+
+
 Web Serial reports no compatible devices, but Windows sees my COM port. What should I try first?
 --------------------------------------------------------------------------------------------------
 

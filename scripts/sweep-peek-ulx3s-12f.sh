@@ -3,11 +3,11 @@
 # Copyright (c) 2026 gojimmypi
 # SPDX-License-Identifier: Apache-2.0
 #
-# File: scripts/sweep-ulx3s-12f.sh
+# File: scripts/sweep-peek-ulx3s-12f.sh
 #
-# Route ULX3S 12F nextpnr seeds against one synthesized compact-profile
-# netlist and record final routed clock timing. The netlist and LPF are
-# read-only inputs while seed-specific routes may run concurrently.
+# Run placement-only ULX3S 12F nextpnr seed checks against one synthesized
+# compact-profile netlist. Use the ranked results to select a small set of
+# seeds for the full routed scripts/sweep-ulx3s-12f.sh sweep.
 
 set -euo pipefail
 
@@ -23,7 +23,7 @@ LPF="${SYNTH_DIR}/fpga_ulx3s.lpf"
 MAKEFILE="${SYNTH_DIR}/ULX3S_12F.mk"
 SYNTH_LOG="${SYNTH_DIR}/synth.log"
 SYNTH_PROFILE_STAMP="${SYNTH_DIR}/fpga_ulx3s_12f.memory-profile"
-SWEEP_DIR="${REPO_ROOT}/build/ulx3s-12f-seed-sweep/${HAZARD3_MEMORY_PROFILE}"
+SWEEP_DIR="${REPO_ROOT}/build/ulx3s-12f-placement-sweep/${HAZARD3_MEMORY_PROFILE}"
 
 usage()
 {
@@ -33,9 +33,9 @@ Usage: $0 SEED [SEED ...]
        $0 START-END
        $0 --all
 
-Route one or more nextpnr seeds for the ULX3S 12F Hazard3-Doom build.
+Run placement-only timing checks for ULX3S 12F nextpnr seeds.
 Seeds must be decimal values from 1 through 260.
-SWEEP_JOBS=N runs up to N routes concurrently (default: 4).
+SWEEP_JOBS=N runs up to N placements concurrently (default: 4).
 HAZARD3_MEMORY_PROFILE=32m|64m selects the SDRAM profile (default: 32m).
 
 Examples:
@@ -89,8 +89,6 @@ extract_clock()
     local clock="$2"
     local value
 
-    # nextpnr reports timing after placement and again after routing. Keep the
-    # final match so the CSV contains routed, not placement-only, timing.
     value="$(
         grep "Max frequency for clock.*${clock}" "${log}" 2>/dev/null |
             tail -n 1 |
@@ -102,16 +100,6 @@ extract_clock()
     fi
 
     printf '%s\n' "${value}"
-}
-
-clock_at_least()
-{
-    local value="$1"
-    local minimum="$2"
-
-    [[ "${value}" =~ ^[0-9]+([.][0-9]+)?$ ]] || return 1
-    awk -v value="${value}" -v minimum="${minimum}" \
-        'BEGIN { exit !(value >= minimum) }'
 }
 
 if (( $# == 0 )); then
@@ -140,6 +128,7 @@ declare -A seen_seeds=()
 if (( $# == 1 )) && [[ "$1" == "--all" ]]; then
     mapfile -t seeds < <(seq 1 260)
     results_file="${SWEEP_DIR}/results.csv"
+    ranked_file="${SWEEP_DIR}/ranked.csv"
 else
     for arg in "$@"; do
         if [[ "${arg}" == "--all" ]]; then
@@ -178,19 +167,21 @@ else
 
     if (( ${#seeds[@]} == 1 )); then
         results_file="${SWEEP_DIR}/results-seed-${seeds[0]}.csv"
+        ranked_file="${SWEEP_DIR}/ranked-seed-${seeds[0]}.csv"
     else
         results_file="${SWEEP_DIR}/results-selected.csv"
+        ranked_file="${SWEEP_DIR}/ranked-selected.csv"
     fi
 fi
 
 require_tool make
 require_tool yosys
 require_tool nextpnr-ecp5
-require_tool ecppack
 require_tool sha256sum
 require_tool awk
 require_tool grep
 require_tool sed
+require_tool sort
 require_file "${MAKEFILE}"
 require_file "${LPF}"
 require_file "${HAZARD3_ROOT}/example_soc/soc/cache_tags_zero_12f.hex"
@@ -227,9 +218,8 @@ fi
 printf 'ULX3S 12F profile: compact 320x200, %s SDRAM\n' \
     "${HAZARD3_MEMORY_PROFILE}"
 
-# Synthesize once before starting concurrent routes. make tracks the Verilog,
-# compact cache-tag preload, bootstrap preload, and memory-profile inputs. This
-# is a no-op when the existing synthesized netlist is already current.
+# Synthesize once before starting concurrent placement checks. This is a no-op
+# when the compact-profile synthesized netlist is already current.
 make -C "${SYNTH_DIR}" -f ULX3S_12F.mk \
     HAZARD3_MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE}" \
     HAZARD3_HDMI_EXTENDED_MODES=0 synth
@@ -276,48 +266,35 @@ fi
 {
     printf 'target=ulx3s-12f\n'
     printf 'device=12k\n'
+    printf 'speed=6\n'
     printf 'package=CABGA381\n'
     printf 'placer=heap\n'
-    printf 'full_route=1\n'
+    printf 'full_route=0\n'
     printf 'hazard3_memory_profile=%s\n' "${HAZARD3_MEMORY_PROFILE}"
-    printf 'clk_sys_required_mhz=50.00\n'
-    printf 'clk_video_required_mhz=50.00\n'
-    printf 'clk_tmds_required_mhz=250.00\n'
     printf 'dp16kd_used=%s\n' "${ebr_used}"
     printf 'netlist_sha256=%s\n' "${netlist_sha256}"
     printf 'netlist=fpga_ulx3s_12f.json\n'
     printf 'generated_utc=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 } > "${SWEEP_DIR}/metadata.txt"
 
-printf 'ULX3S 12F routed sweep netlist SHA256: %s\n' "${netlist_sha256}"
-printf 'ULX3S 12F routed sweep directory: %s\n' "${SWEEP_DIR}"
-printf 'Routing %d seed(s):' "${#seeds[@]}"
+printf 'ULX3S 12F placement sweep netlist SHA256: %s\n' "${netlist_sha256}"
+printf 'ULX3S 12F placement sweep directory: %s\n' "${SWEEP_DIR}"
+printf 'Checking %d seed(s):' "${#seeds[@]}"
 printf ' %s' "${seeds[@]}"
 printf '\n'
-printf 'Concurrent route jobs: %s\n' "${SWEEP_JOBS}"
+printf 'Concurrent placement jobs: %s\n' "${SWEEP_JOBS}"
 
 run_seed()
 {
     local seed="$1"
-    local pnr_log="${SWEEP_DIR}/pnr-${seed}.log"
-    local failed_log="${SWEEP_DIR}/pnr-${seed}-failed.log"
-    local config="${SWEEP_DIR}/fpga_ulx3s_12f-${seed}.config"
-    local svf="${SWEEP_DIR}/fpga_ulx3s_12f-${seed}.svf"
-    local bit="${SWEEP_DIR}/fpga_ulx3s_12f-${seed}.bit"
+    local pnr_log="${SWEEP_DIR}/placement-${seed}.log"
+    local failed_log="${SWEEP_DIR}/placement-${seed}-failed.log"
     local result="${SWEEP_DIR}/result-seed-${seed}.csv"
-    local clk_sys clk_video clk_tmds timing_status
+    local clk_sys clk_video clk_tmds
 
-    printf '\nTrying nextpnr seed %s\n' "${seed}"
+    printf 'Checking placement seed %s\n' "${seed}"
 
-    # Prevent an unsuccessful rerun from being mistaken for artifacts from an
-    # earlier run of the same seed.
-    rm -f \
-        "${pnr_log}" \
-        "${failed_log}" \
-        "${config}" \
-        "${svf}" \
-        "${bit}" \
-        "${result}"
+    rm -f "${pnr_log}" "${failed_log}" "${result}"
 
     if ! nextpnr-ecp5 \
         --seed "${seed}" \
@@ -327,16 +304,15 @@ run_seed()
         --package CABGA381 \
         --lpf "${LPF}" \
         --json "${NETLIST}" \
-        --textcfg "${config}" \
         --timing-allow-fail \
+        --no-route \
         --quiet \
         --log "${pnr_log}"; then
-        printf '%d,ERROR,ERROR,ERROR,ERROR\n' "${seed}" > "${result}"
-        printf 'Seed %s nextpnr failed; see %s\n' "${seed}" "${pnr_log}" >&2
+        printf '%d,ERROR,ERROR,ERROR\n' "${seed}" > "${result}"
+        printf 'Seed %s placement failed; see %s\n' "${seed}" "${pnr_log}" >&2
         if [[ -f "${pnr_log}" ]]; then
             mv "${pnr_log}" "${failed_log}"
         fi
-        rm -f "${config}" "${svf}" "${bit}"
         return 1
     fi
 
@@ -344,51 +320,12 @@ run_seed()
     clk_video="$(extract_clock "${pnr_log}" "clk_video_pix")"
     clk_tmds="$(extract_clock "${pnr_log}" "clk_tmds_x5")"
 
-    timing_status="FAIL"
-    if clock_at_least "${clk_sys}" 50.00 &&
-       clock_at_least "${clk_video}" 50.00 &&
-       clock_at_least "${clk_tmds}" 250.00; then
-        timing_status="PASS"
-    fi
+    printf '%d,%s,%s,%s\n' \
+        "${seed}" "${clk_sys}" "${clk_video}" "${clk_tmds}" > "${result}"
+    rm -f "${failed_log}"
 
-    if ! ecppack \
-        --compress \
-        --svf "${svf}" \
-        --idcode 0x21111043 \
-        "${config}" \
-        "${bit}"; then
-        printf '%d,%s,%s,%s,PACK_ERROR\n' \
-            "${seed}" "${clk_sys}" "${clk_video}" "${clk_tmds}" > "${result}"
-        printf 'Seed %s ecppack failed.\n' "${seed}" >&2
-        if [[ -f "${pnr_log}" ]]; then
-            mv "${pnr_log}" "${failed_log}"
-        fi
-        rm -f "${config}" "${svf}" "${bit}"
-        return 1
-    fi
-
-    if [[ ! -s "${pnr_log}" || ! -s "${bit}" ]]; then
-        printf '%d,%s,%s,%s,ARTIFACT_ERROR\n' \
-            "${seed}" "${clk_sys}" "${clk_video}" "${clk_tmds}" > "${result}"
-        printf 'Seed %s completed but expected artifacts are missing or empty.\n' \
-            "${seed}" >&2
-        if [[ -f "${pnr_log}" ]]; then
-            mv "${pnr_log}" "${failed_log}"
-        fi
-        rm -f "${config}" "${svf}" "${bit}"
-        return 1
-    fi
-
-    printf '%d,%s,%s,%s,%s\n' \
-        "${seed}" "${clk_sys}" "${clk_video}" "${clk_tmds}" "${timing_status}" \
-        > "${result}"
-
-    # Match scripts/sweep.sh: retain the useful routed log and testable bitstream,
-    # but remove intermediate config/SVF files.
-    rm -f "${failed_log}" "${config}" "${svf}"
-
-    printf 'Seed %s: clk_sys=%s MHz, clk_video=%s MHz, clk_tmds=%s MHz, %s\n' \
-        "${seed}" "${clk_sys}" "${clk_video}" "${clk_tmds}" "${timing_status}"
+    printf 'Seed %s placement: clk_sys=%s MHz, clk_video=%s MHz, clk_tmds=%s MHz\n' \
+        "${seed}" "${clk_sys}" "${clk_video}" "${clk_tmds}"
 }
 
 for seed in "${seeds[@]}"; do
@@ -418,21 +355,28 @@ while (( running > 0 )); do
 done
 
 {
-    printf 'seed,clk_sys_mhz,clk_video_mhz,clk_tmds_mhz,timing_status\n'
+    printf 'seed,clk_sys_mhz,clk_video_mhz,clk_tmds_mhz\n'
     for seed in "${seeds[@]}"; do
         result="${SWEEP_DIR}/result-seed-${seed}.csv"
         if [[ -f "${result}" ]]; then
             cat "${result}"
         else
-            printf '%d,MISSING,MISSING,MISSING,MISSING\n' "${seed}"
+            printf '%d,MISSING,MISSING,MISSING\n' "${seed}"
             run_status=1
         fi
     done
 } > "${results_file}"
 
+{
+    printf 'seed,clk_sys_mhz,clk_video_mhz,clk_tmds_mhz\n'
+    tail -n +2 "${results_file}" |
+        awk -F, '$2 ~ /^[0-9]+([.][0-9]+)?$/' |
+        sort -t, -k2,2nr -k1,1n
+} > "${ranked_file}"
+
 echo
 echo "Results: ${results_file}"
+echo "Ranked by placement clk_sys: ${ranked_file}"
+echo "Placement estimates rank seeds only; use scripts/sweep-ulx3s-12f.sh for final routed timing."
 
-# Timing FAIL is a valid sweep result and does not make the script fail.
-# Return nonzero only for real synthesis, nextpnr, packaging, or artifact errors.
 exit "${run_status}"

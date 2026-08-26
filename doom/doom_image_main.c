@@ -74,6 +74,20 @@ static int services_are_valid(const hazard3_monitor_services_t* services)
         services->wad_name != (const char*)0;
 }
 
+static void print_wad_header(const hazard3_monitor_services_t* services)
+{
+    const volatile uint8_t* header =
+        (const volatile uint8_t*)(uintptr_t)services->wad_base;
+    uint32_t header_word = (uint32_t)header[0] |
+        ((uint32_t)header[1] << 8) |
+        ((uint32_t)header[2] << 16) |
+        ((uint32_t)header[3] << 24);
+
+    hazard3_console_puts("  H3DIV direct IWAD header=");
+    hazard3_console_put_hex32(header_word);
+    hazard3_console_puts("\r\n");
+}
+
 int32_t doom_image_main(const hazard3_monitor_services_t* services)
 {
     uint32_t start_ticks;
@@ -123,6 +137,7 @@ int32_t doom_image_main(const hazard3_monitor_services_t* services)
     }
 
     doom_arguments[2] = (char*)services->wad_name;
+    print_wad_header(services);
     hazard3_doom_input_reset();
     hazard3_console_puts("  entering Doom WAD discovery and initialization\r\n");
     doomgeneric_Create(

@@ -2,12 +2,14 @@
 // Copyright(C) 1993-1996 Id Software, Inc.
 // Copyright(C) 2005-2014 Simon Howard
 //
-// Diagnostic variant for Hazard3-Doom: force the in-memory WAD stdio stream
-// unbuffered so every W_StdC_Read() fseek/fread pair reaches the underlying
-// _lseek/_read implementation directly. This is intentionally test-only.
+// Diagnostic variant for Hazard3-Doom: expose the already memory-resident WAD
+// as mapped data, bypassing both newlib stdio and the redundant Zone lump cache.
 //
 
 #include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include "hazard3_platform.h"
 #include "m_misc.h"
 #include "w_file.h"
 #include "z_zone.h"
@@ -15,107 +17,104 @@
 typedef struct
 {
     wad_file_t wad;
-    FILE *fstream;
 } stdc_wad_file_t;
 
 extern wad_file_class_t stdc_wad_file;
 
-#define H3DIV_WAD_TRACE_LIMIT 8u
+#define H3DIV_DOOM1_TEXTURE1_BYTES 9234u
+#define H3DIV_DOOM1_TEXTURE1_FNV1A 0x7bfce9c1u
 
-static unsigned int h3div_wad_read_count;
+static uint32_t H3DIV_Fnv1aSource(const volatile uint8_t *data, size_t size)
+{
+    uint32_t hash = 2166136261u;
+
+    while (size-- != 0u)
+    {
+        hash ^= *data++;
+        hash *= 16777619u;
+    }
+
+    return hash;
+}
+
+static uint32_t H3DIV_Fnv1aBuffer(const uint8_t *data, size_t size)
+{
+    uint32_t hash = 2166136261u;
+
+    while (size-- != 0u)
+    {
+        hash ^= *data++;
+        hash *= 16777619u;
+    }
+
+    return hash;
+}
 
 static wad_file_t *W_StdC_OpenFile(char *path)
 {
     stdc_wad_file_t *result;
-    FILE *fstream;
-
-    printf("H3DIV WAD open begin path=%s\n", path);
-    fstream = fopen(path, "rb");
-
-    if (fstream == NULL)
-    {
-        printf("H3DIV WAD open FAIL\n");
-        return NULL;
-    }
-
-    printf("H3DIV WAD open PASS\n");
-
-    // Hazard3 diagnostic A/B: the WAD is already resident in SDRAM and the
-    // custom _lseek/_read backend is seekable. Disable newlib FILE buffering
-    // and fseek read-ahead/seek optimization for this stream only.
-    printf("H3DIV WAD setvbuf begin\n");
-    if (setvbuf(fstream, NULL, _IONBF, 0) != 0)
-    {
-        printf("H3DIV WAD setvbuf FAIL\n");
-        fclose(fstream);
-        return NULL;
-    }
-
-    printf("H3DIV WAD setvbuf PASS\n");
 
     result = Z_Malloc(sizeof(stdc_wad_file_t), PU_STATIC, 0);
     result->wad.file_class = &stdc_wad_file;
-    result->wad.mapped = NULL;
-    printf("H3DIV WAD file-length begin\n");
-    result->wad.length = M_FileLength(fstream);
-    printf("H3DIV WAD file-length PASS\n");
-    result->fstream = fstream;
+    result->wad.mapped = (byte *)(uintptr_t)hazard3_wad_base();
+    result->wad.length = hazard3_wad_bytes();
+
+    printf("H3DIV WAD direct open path=%s bytes=%u\n",
+           path, (unsigned int)result->wad.length);
 
     return &result->wad;
 }
 
 static void W_StdC_CloseFile(wad_file_t *wad)
 {
-    stdc_wad_file_t *stdc_wad;
-
-    stdc_wad = (stdc_wad_file_t *) wad;
-
-    fclose(stdc_wad->fstream);
-    Z_Free(stdc_wad);
+    Z_Free(wad);
 }
 
 size_t W_StdC_Read(wad_file_t *wad, unsigned int offset,
                    void *buffer, size_t buffer_len)
 {
-    stdc_wad_file_t *stdc_wad;
-    size_t result;
-    unsigned int trace_index;
-    int trace;
+    uint32_t wad_bytes = hazard3_wad_bytes();
+    const volatile uint8_t *source;
+    uint32_t source_hash = 0u;
+    uint32_t destination_hash;
+    size_t first_mismatch = buffer_len;
+    size_t index;
 
-    stdc_wad = (stdc_wad_file_t *) wad;
-    trace_index = h3div_wad_read_count++;
-    trace = trace_index < H3DIV_WAD_TRACE_LIMIT;
-
-    if (trace)
+    (void)wad;
+    if (offset > wad_bytes || buffer_len > wad_bytes - offset)
     {
-        printf("H3DIV WAD read=%u begin offset=%u bytes=%u\n",
-               trace_index, offset, (unsigned int)buffer_len);
-    }
-
-    if (fseek(stdc_wad->fstream, offset, SEEK_SET) != 0)
-    {
-        if (trace)
-        {
-            printf("H3DIV WAD read=%u fseek FAIL\n", trace_index);
-        }
         return 0;
     }
 
-    if (trace)
+    source = (const volatile uint8_t *)(uintptr_t)(hazard3_wad_base() + offset);
+    if (buffer_len == H3DIV_DOOM1_TEXTURE1_BYTES)
     {
-        printf("H3DIV WAD read=%u fseek PASS\n", trace_index);
+        source_hash = H3DIV_Fnv1aSource(source, buffer_len);
     }
 
-    result = fread(buffer, 1, buffer_len, stdc_wad->fstream);
+    memcpy(buffer, (const void *)source, buffer_len);
 
-    if (trace)
+    if (buffer_len == H3DIV_DOOM1_TEXTURE1_BYTES)
     {
-        printf("H3DIV WAD read=%u fread=%u expected=%u\n",
-               trace_index, (unsigned int)result,
-               (unsigned int)buffer_len);
+        const uint8_t *destination = buffer;
+
+        destination_hash = H3DIV_Fnv1aBuffer(destination, buffer_len);
+        for (index = 0u; index < buffer_len; ++index)
+        {
+            if (destination[index] != source[index])
+            {
+                first_mismatch = index;
+                break;
+            }
+        }
+
+        printf("H3DIV TEXTURE1 transport offset=%08x bytes=%u source=%08x destination=%08x expected=%08x first=%u\n",
+               offset, (unsigned int)buffer_len, source_hash,
+               destination_hash, H3DIV_DOOM1_TEXTURE1_FNV1A,
+               (unsigned int)first_mismatch);
     }
 
-    return result;
+    return buffer_len;
 }
 
 wad_file_class_t stdc_wad_file =

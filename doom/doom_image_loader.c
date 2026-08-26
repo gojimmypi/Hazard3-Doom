@@ -513,6 +513,7 @@ int doom_image_loader_launch(void)
             "\r\nNo validated IWAD is loaded. Use the WAD uploader first.\r\n");
         return 0;
     }
+    hazard3_console_puts("\r\nDoom launch requested; restoring image...\r\n");
     hazard3_heap_reset();
     if (!restore_image_from_backup()) {
         ++launch_failure_count;

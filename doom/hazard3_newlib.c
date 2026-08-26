@@ -15,6 +15,7 @@
 
 static uint32_t memory_wad_position;
 static int memory_wad_is_open;
+static uint32_t h3div_wad_read_trace_count;
 
 static int path_matches_wad(const char* path)
 {
@@ -189,15 +190,41 @@ ssize_t _read(int file, void* buffer, size_t byte_count)
         return -1;
     }
     if (file == MEMORY_WAD_FILE_DESCRIPTOR && memory_wad_is_open != 0) {
+        uint32_t source_address = hazard3_wad_base() + memory_wad_position;
         uint32_t remaining = hazard3_wad_bytes() - memory_wad_position;
         size_t copy_count = byte_count;
+        int trace;
+        uint32_t source_word = 0u;
         if (copy_count > (size_t)remaining) {
             copy_count = (size_t)remaining;
         }
+        trace = h3div_wad_read_trace_count++ == 0u && copy_count >= 4u;
+        if (trace) {
+            const uint8_t* source =
+                (const uint8_t*)(uintptr_t)source_address;
+            source_word = (uint32_t)source[0] |
+                ((uint32_t)source[1] << 8) |
+                ((uint32_t)source[2] << 16) |
+                ((uint32_t)source[3] << 24);
+        }
         memcpy(
             buffer,
-            (const void*)(uintptr_t)(hazard3_wad_base() + memory_wad_position),
+            (const void*)(uintptr_t)source_address,
             copy_count);
+        if (trace) {
+            const uint8_t* destination = (const uint8_t*)buffer;
+            uint32_t destination_word = (uint32_t)destination[0] |
+                ((uint32_t)destination[1] << 8) |
+                ((uint32_t)destination[2] << 16) |
+                ((uint32_t)destination[3] << 24);
+            hazard3_console_puts("H3DIV _read source=");
+            hazard3_console_put_hex32(source_address);
+            hazard3_console_puts(" word=");
+            hazard3_console_put_hex32(source_word);
+            hazard3_console_puts(" destination=");
+            hazard3_console_put_hex32(destination_word);
+            hazard3_console_puts("\r\n");
+        }
         memory_wad_position += (uint32_t)copy_count;
         return (ssize_t)copy_count;
     }

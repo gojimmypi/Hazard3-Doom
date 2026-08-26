@@ -18,8 +18,6 @@
 //
 
 #include <stdio.h>
-#include <stddef.h>
-#include <string.h>
 
 #include "deh_main.h"
 #include "i_swap.h"
@@ -165,217 +163,6 @@ fixed_t*	spritetopoffset;
 lighttable_t	*colormaps;
 
 
-/*
- * H3DIV: Doom initialization verifier.
- *
- * All verifier storage is static image BSS. It does not consume Doom Zone
- * memory, so the allocator order used by R_InitTextures remains unchanged.
- */
-#define H3DIV_MAX_TEXTURES       256
-#define H3DIV_MAX_PNAMES_BYTES  4096
-#define H3DIV_MAX_TEXTURE_BYTES 16384
-
-#define H3DIV_DOOM1_PNAMES_SIZE       2804u
-#define H3DIV_DOOM1_PNAMES_FNV1A      0x70dcd40au
-#define H3DIV_DOOM1_TEXTURE1_SIZE     9234u
-#define H3DIV_DOOM1_TEXTURE1_FNV1A    0x7bfce9c1u
-
-static byte h3div_pnames_shadow[H3DIV_MAX_PNAMES_BYTES] __attribute__((aligned(4)));
-static byte h3div_texture_shadow[H3DIV_MAX_TEXTURE_BYTES] __attribute__((aligned(4)));
-static texture_t *h3div_texture_ptr[H3DIV_MAX_TEXTURES];
-static unsigned int h3div_texture_hash[H3DIV_MAX_TEXTURES];
-static unsigned int h3div_raw_hash[H3DIV_MAX_TEXTURES];
-static unsigned int h3div_raw_offset[H3DIV_MAX_TEXTURES];
-static char h3div_texture_name[H3DIV_MAX_TEXTURES][9];
-static short h3div_texture_width[H3DIV_MAX_TEXTURES];
-static short h3div_texture_height[H3DIV_MAX_TEXTURES];
-static short h3div_texture_patchcount[H3DIV_MAX_TEXTURES];
-static int h3div_recorded_textures;
-
-static unsigned int H3DIV_Fnv1a(const void *data, unsigned int size)
-{
-    const byte *p = (const byte *)data;
-    unsigned int hash = 2166136261u;
-
-    while (size-- != 0u)
-    {
-        hash ^= *p++;
-        hash *= 16777619u;
-    }
-
-    return hash;
-}
-
-
-static unsigned int H3DIV_FirstMismatch(const byte *actual,
-                                        const byte *expected,
-                                        unsigned int size)
-{
-    unsigned int index;
-
-    for (index = 0u; index < size; ++index)
-    {
-        if (actual[index] != expected[index])
-        {
-            return index;
-        }
-    }
-
-    return size;
-}
-
-static void H3DIV_ByteCopy(byte *destination, const byte *source,
-                           unsigned int size)
-{
-    volatile byte *volatile_destination = (volatile byte *)destination;
-    unsigned int index;
-
-    for (index = 0u; index < size; ++index)
-    {
-        volatile_destination[index] = source[index];
-    }
-}
-
-static void H3DIV_PrintCopyResult(const char *name, const byte *actual,
-                                  const byte *expected, unsigned int size)
-{
-    unsigned int actual_hash = H3DIV_Fnv1a(actual, size);
-    unsigned int expected_hash = H3DIV_Fnv1a(expected, size);
-    unsigned int first = H3DIV_FirstMismatch(actual, expected, size);
-
-    printf("H3DIV copy %s: %s hash=%08x expected=%08x",
-           name, first == size ? "PASS" : "FAIL",
-           actual_hash, expected_hash);
-
-    if (first != size)
-    {
-        printf(" first=%u actual=%02x expected_byte=%02x",
-               first, actual[first], expected[first]);
-    }
-
-    printf("\n");
-}
-static unsigned int H3DIV_TextureHash(const texture_t *texture)
-{
-    unsigned int hash = H3DIV_Fnv1a(texture->name, 8);
-    int i;
-
-    hash ^= (unsigned short)texture->width;
-    hash *= 16777619u;
-    hash ^= (unsigned short)texture->height;
-    hash *= 16777619u;
-    hash ^= (unsigned short)texture->patchcount;
-    hash *= 16777619u;
-
-    for (i = 0; i < texture->patchcount; ++i)
-    {
-        hash ^= (unsigned short)texture->patches[i].originx;
-        hash *= 16777619u;
-        hash ^= (unsigned short)texture->patches[i].originy;
-        hash *= 16777619u;
-        hash ^= (unsigned int)texture->patches[i].patch;
-        hash *= 16777619u;
-    }
-
-    return hash;
-}
-
-static unsigned int H3DIV_MapTextureBytes(const maptexture_t *texture)
-{
-    int patchcount = SHORT(texture->patchcount);
-
-    if (patchcount <= 0 || patchcount > 1024)
-    {
-        I_Error("H3DIV FAIL stage=raw-patchcount name=%.8s patchcount=%i",
-                texture->name, patchcount);
-    }
-
-    return (unsigned int)offsetof(maptexture_t, patches)
-         + (unsigned int)patchcount * (unsigned int)sizeof(mappatch_t);
-}
-
-static void H3DIV_VerifyDoom1Reference(const char *name,
-                                      const void *data,
-                                      unsigned int size)
-{
-    unsigned int actual = H3DIV_Fnv1a(data, size);
-    unsigned int expected = 0u;
-
-    if (size == H3DIV_DOOM1_PNAMES_SIZE &&
-        !strncmp(name, "PNAMES", 8))
-    {
-        expected = H3DIV_DOOM1_PNAMES_FNV1A;
-    }
-    else if (size == H3DIV_DOOM1_TEXTURE1_SIZE &&
-             !strncmp(name, "TEXTURE1", 8))
-    {
-        expected = H3DIV_DOOM1_TEXTURE1_FNV1A;
-    }
-
-    if (expected != 0u && actual != expected)
-    {
-        I_Error("H3DIV FAIL stage=known-wad-hash lump=%s bytes=%u expected=%08x actual=%08x",
-                name, size, expected, actual);
-    }
-
-    printf("H3DIV lump %s: PASS bytes=%u fnv1a=%08x%s\n",
-           name, size, actual, expected != 0u ? " reference=DOOM1" : "");
-}
-
-static void H3DIV_VerifyTextureObject(int texnum, const char *stage)
-{
-    texture_t *texture;
-    unsigned int actual_hash;
-    int alias = -1;
-    int i;
-
-    if (texnum < 0 || texnum >= h3div_recorded_textures)
-    {
-        I_Error("H3DIV FAIL stage=%s bad-texnum=%i recorded=%i",
-                stage, texnum, h3div_recorded_textures);
-    }
-
-    texture = textures[texnum];
-
-    if (texture != h3div_texture_ptr[texnum])
-    {
-        for (i = 0; i < h3div_recorded_textures; ++i)
-        {
-            if (texture == h3div_texture_ptr[i])
-            {
-                alias = i;
-                break;
-            }
-        }
-
-        I_Error("H3DIV FAIL stage=%s tex=%i expected=%.8s expected_ptr=%p actual_ptr=%p aliases_tex=%i",
-                stage, texnum, h3div_texture_name[texnum],
-                h3div_texture_ptr[texnum], texture, alias);
-    }
-
-    if (memcmp(texture->name, h3div_texture_name[texnum], 8) != 0 ||
-        texture->width != h3div_texture_width[texnum] ||
-        texture->height != h3div_texture_height[texnum] ||
-        texture->patchcount != h3div_texture_patchcount[texnum])
-    {
-        I_Error("H3DIV FAIL stage=%s tex=%i expected=%.8s %ix%i p=%i actual=%.8s %ix%i p=%i",
-                stage, texnum, h3div_texture_name[texnum],
-                h3div_texture_width[texnum], h3div_texture_height[texnum],
-                h3div_texture_patchcount[texnum], texture->name,
-                texture->width, texture->height, texture->patchcount);
-    }
-
-    actual_hash = H3DIV_TextureHash(texture);
-
-    if (actual_hash != h3div_texture_hash[texnum])
-    {
-        I_Error("H3DIV FAIL stage=%s tex=%i name=%.8s expected_hash=%08x actual_hash=%08x",
-                stage, texnum, h3div_texture_name[texnum],
-                h3div_texture_hash[texnum], actual_hash);
-    }
-}
-
-
 //
 // MAPTEXTURE_T CACHING
 // When a texture is first needed,
@@ -507,8 +294,8 @@ void R_GenerateComposite (int texnum)
 void R_GenerateLookup (int texnum)
 {
     texture_t*		texture;
-    byte*		patchcount;
-    texpatch_t*		patch;
+    byte*		patchcount;	// patchcount[texture->width]
+    texpatch_t*		patch;	
     patch_t*		realpatch;
     int			x;
     int			x1;
@@ -516,121 +303,74 @@ void R_GenerateLookup (int texnum)
     int			i;
     short*		collump;
     unsigned short*	colofs;
-    unsigned int        composite_columns = 0u;
-
-    H3DIV_VerifyTextureObject(texnum, "lookup-entry");
+	
     texture = textures[texnum];
 
+    // Composited texture not created yet.
     texturecomposite[texnum] = 0;
+    
     texturecompositesize[texnum] = 0;
-
-    if (texturecompositesize[texnum] != 0)
-    {
-        I_Error("H3DIV FAIL stage=composite-zero tex=%i name=%.8s actual=%08x",
-                texnum, texture->name,
-                (unsigned int)texturecompositesize[texnum]);
-    }
-
     collump = texturecolumnlump[texnum];
     colofs = texturecolumnofs[texnum];
-
+    
+    // Now count the number of columns
+    //  that are covered by more than one patch.
+    // Fill in the lump / offset, so columns
+    //  with only a single patch are all done.
     patchcount = (byte *) Z_Malloc(texture->width, PU_STATIC, &patchcount);
     memset (patchcount, 0, texture->width);
+    patch = texture->patches;
 
     for (i=0 , patch = texture->patches;
-         i<texture->patchcount;
-         i++, patch++)
+	 i<texture->patchcount;
+	 i++, patch++)
     {
-        H3DIV_VerifyTextureObject(texnum, "lookup-pre-cache");
-        realpatch = W_CacheLumpNum (patch->patch, PU_CACHE);
-        H3DIV_VerifyTextureObject(texnum, "lookup-post-cache");
+	realpatch = W_CacheLumpNum (patch->patch, PU_CACHE);
+	x1 = patch->originx;
+	x2 = x1 + SHORT(realpatch->width);
+	
+	if (x1 < 0)
+	    x = 0;
+	else
+	    x = x1;
 
-        if (texturecompositesize[texnum] != 0)
-        {
-            I_Error("H3DIV FAIL stage=composite-mutated-during-cache tex=%i patch=%i actual=%08x",
-                    texnum, i, (unsigned int)texturecompositesize[texnum]);
-        }
-
-        x1 = patch->originx;
-        x2 = x1 + SHORT(realpatch->width);
-
-        if (x1 < 0)
-            x = 0;
-        else
-            x = x1;
-
-        if (x2 > texture->width)
-            x2 = texture->width;
-
-        for ( ; x<x2 ; x++)
-        {
-            patchcount[x]++;
-            collump[x] = patch->patch;
-            colofs[x] = LONG(realpatch->columnofs[x-x1])+3;
-        }
+	if (x2 > texture->width)
+	    x2 = texture->width;
+	for ( ; x<x2 ; x++)
+	{
+	    patchcount[x]++;
+	    collump[x] = patch->patch;
+	    colofs[x] = LONG(realpatch->columnofs[x-x1])+3;
+	}
     }
-
-    H3DIV_VerifyTextureObject(texnum, "lookup-before-scan");
-
-    if (texturecompositesize[texnum] != 0)
-    {
-        I_Error("H3DIV FAIL stage=composite-mutated-before-scan tex=%i name=%.8s actual=%08x",
-                texnum, texture->name,
-                (unsigned int)texturecompositesize[texnum]);
-    }
-
+	
     for (x=0 ; x<texture->width ; x++)
     {
-        if (!patchcount[x])
-        {
-            I_Error("H3DIV FAIL stage=column-uncovered tex=%i name=%.8s x=%i width=%i",
-                    texnum, texture->name, x, texture->width);
-        }
-
-        if (patchcount[x] > 1)
-        {
-            unsigned int expected_size =
-                composite_columns *
-                (unsigned int)(unsigned short)texture->height;
-
-            if ((unsigned int)texturecompositesize[texnum] != expected_size)
-            {
-                I_Error("H3DIV FAIL stage=composite-pre tex=%i name=%.8s x=%i expected=%08x actual=%08x columns=%u",
-                        texnum, texture->name, x, expected_size,
-                        (unsigned int)texturecompositesize[texnum],
-                        composite_columns);
-            }
-
-            collump[x] = -1;
-            colofs[x] = texturecompositesize[texnum];
-
-            if (texturecompositesize[texnum] >
-                0x10000-texture->height)
-            {
-                I_Error("H3DIV FAIL stage=composite-overflow tex=%i name=%.8s x=%i size=%08x height=%i columns=%u",
-                        texnum, texture->name, x,
-                        (unsigned int)texturecompositesize[texnum],
-                        texture->height, composite_columns);
-            }
-
-            texturecompositesize[texnum] += texture->height;
-            ++composite_columns;
-
-            if ((unsigned int)texturecompositesize[texnum] !=
-                composite_columns *
-                (unsigned int)(unsigned short)texture->height)
-            {
-                I_Error("H3DIV FAIL stage=composite-post tex=%i name=%.8s x=%i actual=%08x columns=%u",
-                        texnum, texture->name, x,
-                        (unsigned int)texturecompositesize[texnum],
-                        composite_columns);
-            }
-        }
+	if (!patchcount[x])
+	{
+	    I_Error ("H3DIV FAIL stage=lookup-column tex=%i name=%.8s x=%i",
+		     texnum, texture->name, x);
+	}
+	
+	if (patchcount[x] > 1)
+	{
+	    // Use the cached block.
+	    collump[x] = -1;	
+	    colofs[x] = texturecompositesize[texnum];
+	    
+	    if (texturecompositesize[texnum] > 0x10000-texture->height)
+	    {
+		I_Error ("R_GenerateLookup: texture %i is >64k",
+			 texnum);
+	    }
+	    
+	    texturecompositesize[texnum] += texture->height;
+	}
     }
 
-    H3DIV_VerifyTextureObject(texnum, "lookup-exit");
     Z_Free(patchcount);
 }
+
 
 
 
@@ -719,13 +459,13 @@ void R_InitTextures (void)
     int*		maptex;
     int*		maptex2;
     int*		maptex1;
-
+    
     char		name[9];
     char*		names;
     char*		name_p;
-
+    
     int*		patchlookup;
-
+    
     int			totalwidth;
     int			nummappatches;
     int			offset;
@@ -735,235 +475,69 @@ void R_InitTextures (void)
     int			numtextures2;
 
     int*		directory;
-
+    
     int			temp1;
     int			temp2;
     int			temp3;
-    int                 pnames_lump;
-    int                 pnames_bytes;
-    int                 texture1_lump;
-    int                 texture1_bytes;
 
+    
+    // Load the patch names from pnames.lmp.
     name[8] = 0;
-
-    /*
-     * Verify PNAMES through Doom's real WAD path. The second read goes into
-     * static image BSS, so this adds no Zone allocation and does not perturb
-     * the heap layout used by R_InitTextures.
-     */
-    pnames_lump = W_GetNumForName(DEH_String("PNAMES"));
-    pnames_bytes = W_LumpLength(pnames_lump);
-
-    if (pnames_bytes <= 0 || pnames_bytes > H3DIV_MAX_PNAMES_BYTES)
-    {
-        I_Error("H3DIV FAIL stage=pnames-size bytes=%i max=%i",
-                pnames_bytes, H3DIV_MAX_PNAMES_BYTES);
-    }
-
-    names = W_CacheLumpNum(pnames_lump, PU_STATIC);
-    W_ReadLump((unsigned int)pnames_lump, h3div_pnames_shadow);
-
-    if (memcmp(names, h3div_pnames_shadow, (size_t)pnames_bytes) != 0)
-    {
-        I_Error("H3DIV FAIL stage=pnames-cache-copy bytes=%i cached=%08x reread=%08x",
-                pnames_bytes,
-                H3DIV_Fnv1a(names, (unsigned int)pnames_bytes),
-                H3DIV_Fnv1a(h3div_pnames_shadow,
-                            (unsigned int)pnames_bytes));
-    }
-
-    H3DIV_VerifyDoom1Reference("PNAMES", names, (unsigned int)pnames_bytes);
-
-    nummappatches = LONG(*((int *)names));
+    names = W_CacheLumpName (DEH_String("PNAMES"), PU_STATIC);
+    nummappatches = LONG ( *((int *)names) );
     name_p = names + 4;
-    patchlookup = Z_Malloc(nummappatches*sizeof(*patchlookup),
-                           PU_STATIC, NULL);
+    patchlookup = Z_Malloc(nummappatches*sizeof(*patchlookup), PU_STATIC, NULL);
 
     for (i = 0; i < nummappatches; i++)
     {
         M_StringCopy(name, name_p + i * 8, sizeof(name));
         patchlookup[i] = W_CheckNumForName(name);
     }
-
     W_ReleaseLumpName(DEH_String("PNAMES"));
 
-    /*
-     * Cache TEXTURE1 exactly as stock Doom does, then independently reread it
-     * into static BSS. This separates a bad cache/read copy from corruption
-     * that occurs later while texture objects are being constructed.
-     */
-    texture1_lump = W_GetNumForName(DEH_String("TEXTURE1"));
-    texture1_bytes = W_LumpLength(texture1_lump);
-
-    if (texture1_bytes <= 0 || texture1_bytes > H3DIV_MAX_TEXTURE_BYTES)
+    // Load the map texture definitions from textures.lmp.
+    // The data is contained in one or two lumps,
+    //  TEXTURE1 for shareware, plus TEXTURE2 for commercial.
+    maptex = maptex1 = W_CacheLumpName (DEH_String("TEXTURE1"), PU_STATIC);
+    numtextures1 = LONG(*maptex);
+    maxoff = W_LumpLength (W_GetNumForName (DEH_String("TEXTURE1")));
+    directory = maptex+1;
+    printf ("H3DIV TEXTURE1 cache count=%i dir0=%08x bytes=%08x\n",
+            numtextures1, (unsigned int)LONG(*directory),
+            (unsigned int)maxoff);
+	
+    if (W_CheckNumForName (DEH_String("TEXTURE2")) != -1)
     {
-        I_Error("H3DIV FAIL stage=texture1-size bytes=%i max=%i",
-                texture1_bytes, H3DIV_MAX_TEXTURE_BYTES);
-    }
-
-    maptex = maptex1 = W_CacheLumpNum(texture1_lump, PU_STATIC);
-    W_ReadLump((unsigned int)texture1_lump, h3div_texture_shadow);
-
-    if (memcmp(maptex1, h3div_texture_shadow,
-               (size_t)texture1_bytes) != 0)
-    {
-        unsigned int initial_hash =
-            H3DIV_Fnv1a(maptex1, (unsigned int)texture1_bytes);
-        unsigned int reference_hash =
-            H3DIV_Fnv1a(h3div_texture_shadow,
-                        (unsigned int)texture1_bytes);
-        unsigned int first = H3DIV_FirstMismatch(
-            (const byte *)maptex1, h3div_texture_shadow,
-            (unsigned int)texture1_bytes);
-        byte initial_actual = ((const byte *)maptex1)[first];
-        byte initial_expected = h3div_texture_shadow[first];
-
-        printf("H3DIV isolate TEXTURE1: bytes=%i cache=%p shadow=%p "
-               "initial=%08x reference=%08x first=%u actual=%02x expected_byte=%02x\n",
-               texture1_bytes, (void *)maptex1,
-               (void *)h3div_texture_shadow, initial_hash, reference_hash,
-               first, initial_actual, initial_expected);
-
-        /*
-         * Re-read through the exact WAD path into the same Zone destination.
-         * If this passes, the destination itself is writable and the initial
-         * cache fill was the bad operation.
-         */
-        W_ReadLump((unsigned int)texture1_lump, maptex1);
-        H3DIV_PrintCopyResult("same-dest-W_ReadLump",
-                              (const byte *)maptex1,
-                              h3div_texture_shadow,
-                              (unsigned int)texture1_bytes);
-
-        /*
-         * Copy the known-good BSS snapshot with libc memcpy. This separates
-         * WAD/stdio positioning from the memcpy implementation and destination
-         * alignment used by the Zone allocation.
-         */
-        memcpy(maptex1, h3div_texture_shadow, (size_t)texture1_bytes);
-        H3DIV_PrintCopyResult("BSS-to-zone-memcpy",
-                              (const byte *)maptex1,
-                              h3div_texture_shadow,
-                              (unsigned int)texture1_bytes);
-
-        /*
-         * Finish with a deliberately simple byte-store loop. If this is the
-         * only operation that produces a correct destination, the optimized
-         * copy/read path is implicated rather than the Zone destination.
-         */
-        H3DIV_ByteCopy((byte *)maptex1, h3div_texture_shadow,
-                       (unsigned int)texture1_bytes);
-        H3DIV_PrintCopyResult("BSS-to-zone-bytecopy",
-                              (const byte *)maptex1,
-                              h3div_texture_shadow,
-                              (unsigned int)texture1_bytes);
-
-        if (memcmp(maptex1, h3div_texture_shadow,
-                   (size_t)texture1_bytes) != 0)
-        {
-            I_Error("H3DIV FAIL stage=texture1-destination-unrecoverable "
-                    "initial=%08x reference=%08x",
-                    initial_hash, reference_hash);
-        }
-
-        printf("H3DIV TEXTURE1 repaired by diagnostic bytecopy; "
-               "continuing initialization\n");
-    }
-
-    H3DIV_VerifyDoom1Reference("TEXTURE1", maptex1,
-                              (unsigned int)texture1_bytes);
-
-    numtextures1 = LONG(*maptex1);
-    maxoff = texture1_bytes;
-    directory = maptex1 + 1;
-
-    if (numtextures1 <= 0 || numtextures1 > H3DIV_MAX_TEXTURES)
-    {
-        I_Error("H3DIV FAIL stage=texture-count count=%i max=%i",
-                numtextures1, H3DIV_MAX_TEXTURES);
-    }
-
-    if (numtextures1 != LONG(*((int *)h3div_texture_shadow)))
-    {
-        I_Error("H3DIV FAIL stage=texture-count-copy cached=%i reread=%i",
-                numtextures1,
-                LONG(*((int *)h3div_texture_shadow)));
-    }
-
-    /*
-     * Pre-scan the independent TEXTURE1 copy before any texture-object Zone
-     * allocations occur. These offsets/hashes are our immutable reference.
-     */
-    for (i = 0; i < numtextures1; ++i)
-    {
-        int shadow_offset =
-            LONG(((int *)h3div_texture_shadow)[1 + i]);
-        maptexture_t *shadow_texture;
-        unsigned int shadow_bytes;
-
-        if (shadow_offset < (int)(sizeof(int) +
-            (unsigned int)numtextures1 * sizeof(int)) ||
-            shadow_offset >= texture1_bytes)
-        {
-            I_Error("H3DIV FAIL stage=shadow-directory tex=%i offset=%08x bytes=%i",
-                    i, (unsigned int)shadow_offset, texture1_bytes);
-        }
-
-        shadow_texture =
-            (maptexture_t *)(h3div_texture_shadow + shadow_offset);
-        shadow_bytes = H3DIV_MapTextureBytes(shadow_texture);
-
-        if ((unsigned int)shadow_offset + shadow_bytes >
-            (unsigned int)texture1_bytes)
-        {
-            I_Error("H3DIV FAIL stage=shadow-texture-bounds tex=%i name=%.8s offset=%08x size=%u lump=%i",
-                    i, shadow_texture->name,
-                    (unsigned int)shadow_offset, shadow_bytes,
-                    texture1_bytes);
-        }
-
-        h3div_raw_offset[i] = (unsigned int)shadow_offset;
-        h3div_raw_hash[i] =
-            H3DIV_Fnv1a(shadow_texture, shadow_bytes);
-    }
-
-    if (W_CheckNumForName(DEH_String("TEXTURE2")) != -1)
-    {
-        /*
-         * The current ULX3S-12F reproducer uses DOOM1.WAD/shareware, which
-         * has no TEXTURE2. Refuse a different IWAD instead of silently
-         * weakening this diagnostic.
-         */
-        I_Error("H3DIV FAIL stage=unsupported-iwad reason=TEXTURE2-present");
+	maptex2 = W_CacheLumpName (DEH_String("TEXTURE2"), PU_STATIC);
+	numtextures2 = LONG(*maptex2);
+	maxoff2 = W_LumpLength (W_GetNumForName (DEH_String("TEXTURE2")));
     }
     else
     {
-        maptex2 = NULL;
-        numtextures2 = 0;
-        maxoff2 = 0;
+	maptex2 = NULL;
+	numtextures2 = 0;
+	maxoff2 = 0;
     }
-
     numtextures = numtextures1 + numtextures2;
-
+	
     textures = Z_Malloc (numtextures * sizeof(*textures), PU_STATIC, 0);
-    texturecolumnlump = Z_Malloc (numtextures * sizeof(*texturecolumnlump),
-                                  PU_STATIC, 0);
-    texturecolumnofs = Z_Malloc (numtextures * sizeof(*texturecolumnofs),
-                                 PU_STATIC, 0);
-    texturecomposite = Z_Malloc (numtextures * sizeof(*texturecomposite),
-                                 PU_STATIC, 0);
-    texturecompositesize = Z_Malloc (
-        numtextures * sizeof(*texturecompositesize), PU_STATIC, 0);
-    texturewidthmask = Z_Malloc (
-        numtextures * sizeof(*texturewidthmask), PU_STATIC, 0);
-    textureheight = Z_Malloc (
-        numtextures * sizeof(*textureheight), PU_STATIC, 0);
+    texturecolumnlump = Z_Malloc (numtextures * sizeof(*texturecolumnlump), PU_STATIC, 0);
+    texturecolumnofs = Z_Malloc (numtextures * sizeof(*texturecolumnofs), PU_STATIC, 0);
+    texturecomposite = Z_Malloc (numtextures * sizeof(*texturecomposite), PU_STATIC, 0);
+    texturecompositesize = Z_Malloc (numtextures * sizeof(*texturecompositesize), PU_STATIC, 0);
+    texturewidthmask = Z_Malloc (numtextures * sizeof(*texturewidthmask), PU_STATIC, 0);
+    textureheight = Z_Malloc (numtextures * sizeof(*textureheight), PU_STATIC, 0);
 
     totalwidth = 0;
-
-    temp1 = W_GetNumForName (DEH_String("S_START"));
+    
+    //	Really complex printing shit...
+    temp1 = W_GetNumForName (DEH_String("S_START"));  // P_???????
     temp2 = W_GetNumForName (DEH_String("S_END")) - 1;
     temp3 = ((temp2-temp1+63)/64) + ((numtextures+63)/64);
+
+    // If stdout is a real console, use the classic vanilla "filling
+    // up the box" effect, which uses backspace to "step back" inside
+    // the box.  If stdout is a file, don't draw the box.
 
     if (I_ConsoleStdout())
     {
@@ -974,177 +548,87 @@ void R_InitTextures (void)
         for (i = 0; i < temp3 + 10; i++)
             printf("\b");
     }
-
-    h3div_recorded_textures = 0;
-
+	
     for (i=0 ; i<numtextures ; i++, directory++)
     {
-        int *expected_directory;
-        int shadow_offset;
-        maptexture_t *shadow_texture;
-        unsigned int raw_bytes;
-        unsigned int cached_raw_hash;
+	printf ("H3DIV construct begin tex=%i\n", i);
+	if (!(i&63))
+	    printf (".");
 
-        if (!(i&63))
-            printf (".");
+	if (i == numtextures1)
+	{
+	    // Start looking in second texture file.
+	    maptex = maptex2;
+	    maxoff = maxoff2;
+	    directory = maptex+1;
+	}
+		
+	offset = LONG(*directory);
 
-        if (i == numtextures1)
-        {
-            maptex = maptex2;
-            maxoff = maxoff2;
-            directory = maptex+1;
-        }
+	if (offset > maxoff)
+	    I_Error ("H3DIV FAIL stage=texture-directory tex=%i offset=%08x maxoff=%08x count=%i",
+		     i, (unsigned int)offset, (unsigned int)maxoff,
+		     numtextures);
+	
+	mtexture = (maptexture_t *) ( (byte *)maptex + offset);
 
-        expected_directory = maptex1 + 1 + i;
+	texture = textures[i] =
+	    Z_Malloc (sizeof(texture_t)
+		      + sizeof(texpatch_t)*(SHORT(mtexture->patchcount)-1),
+		      PU_STATIC, 0);
+	
+	texture->width = SHORT(mtexture->width);
+	texture->height = SHORT(mtexture->height);
+	texture->patchcount = SHORT(mtexture->patchcount);
+	
+	memcpy (texture->name, mtexture->name, sizeof(texture->name));
+	mpatch = &mtexture->patches[0];
+	patch = &texture->patches[0];
 
-        if (directory != expected_directory)
-        {
-            I_Error("H3DIV FAIL stage=directory-pointer tex=%i expected=%p actual=%p",
-                    i, expected_directory, directory);
-        }
+	for (j=0 ; j<texture->patchcount ; j++, mpatch++, patch++)
+	{
+	    patch->originx = SHORT(mpatch->originx);
+	    patch->originy = SHORT(mpatch->originy);
+	    patch->patch = patchlookup[SHORT(mpatch->patch)];
+	    if (patch->patch == -1)
+	    {
+		I_Error ("R_InitTextures: Missing patch in texture %s",
+			 texture->name);
+	    }
+	}		
+	texturecolumnlump[i] = Z_Malloc (texture->width*sizeof(**texturecolumnlump), PU_STATIC,0);
+	texturecolumnofs[i] = Z_Malloc (texture->width*sizeof(**texturecolumnofs), PU_STATIC,0);
 
-        shadow_offset = (int)h3div_raw_offset[i];
-        offset = LONG(*directory);
+	j = 1;
+	while (j*2 <= texture->width)
+	    j<<=1;
 
-        if (offset != shadow_offset)
-        {
-            I_Error("H3DIV FAIL stage=directory-word tex=%i expected=%08x actual=%08x dir=%p",
-                    i, (unsigned int)shadow_offset,
-                    (unsigned int)offset, directory);
-        }
-
-        if (offset > maxoff)
-        {
-            I_Error("H3DIV FAIL stage=directory-range tex=%i offset=%08x max=%08x",
-                    i, (unsigned int)offset, (unsigned int)maxoff);
-        }
-
-        mtexture = (maptexture_t *)((byte *)maptex + offset);
-        shadow_texture =
-            (maptexture_t *)(h3div_texture_shadow + shadow_offset);
-        raw_bytes = H3DIV_MapTextureBytes(shadow_texture);
-
-        if (memcmp(mtexture, shadow_texture, raw_bytes) != 0)
-        {
-            I_Error("H3DIV FAIL stage=raw-texture-copy tex=%i expected=%.8s cached=%.8s bytes=%u expected_hash=%08x actual_hash=%08x",
-                    i, shadow_texture->name, mtexture->name, raw_bytes,
-                    h3div_raw_hash[i],
-                    H3DIV_Fnv1a(mtexture, raw_bytes));
-        }
-
-        cached_raw_hash = H3DIV_Fnv1a(mtexture, raw_bytes);
-
-        if (cached_raw_hash != h3div_raw_hash[i])
-        {
-            I_Error("H3DIV FAIL stage=raw-texture-hash tex=%i name=%.8s expected=%08x actual=%08x",
-                    i, shadow_texture->name, h3div_raw_hash[i],
-                    cached_raw_hash);
-        }
-
-        texture = textures[i] =
-            Z_Malloc (sizeof(texture_t)
-                      + sizeof(texpatch_t)*(SHORT(mtexture->patchcount)-1),
-                      PU_STATIC, 0);
-
-        texture->width = SHORT(mtexture->width);
-        texture->height = SHORT(mtexture->height);
-        texture->patchcount = SHORT(mtexture->patchcount);
-
-        memcpy (texture->name, mtexture->name, sizeof(texture->name));
-        mpatch = &mtexture->patches[0];
-        patch = &texture->patches[0];
-
-        for (j=0 ; j<texture->patchcount ; j++, mpatch++, patch++)
-        {
-            int pnames_index = SHORT(mpatch->patch);
-
-            if (pnames_index < 0 || pnames_index >= nummappatches)
-            {
-                I_Error("H3DIV FAIL stage=patch-index tex=%i name=%.8s patch=%i pnames_index=%i count=%i",
-                        i, texture->name, j, pnames_index,
-                        nummappatches);
-            }
-
-            patch->originx = SHORT(mpatch->originx);
-            patch->originy = SHORT(mpatch->originy);
-            patch->patch = patchlookup[pnames_index];
-
-            if (patch->patch == -1)
-            {
-                I_Error ("R_InitTextures: Missing patch in texture %s",
-                         texture->name);
-            }
-        }
-
-        h3div_texture_ptr[i] = texture;
-        h3div_texture_width[i] = texture->width;
-        h3div_texture_height[i] = texture->height;
-        h3div_texture_patchcount[i] = texture->patchcount;
-        memcpy(h3div_texture_name[i], texture->name, 8);
-        h3div_texture_name[i][8] = '\0';
-        h3div_texture_hash[i] = H3DIV_TextureHash(texture);
-        h3div_recorded_textures = i + 1;
-
-        H3DIV_VerifyTextureObject(i, "constructed");
-
-        texturecolumnlump[i] = Z_Malloc (
-            texture->width*sizeof(**texturecolumnlump), PU_STATIC,0);
-        H3DIV_VerifyTextureObject(i, "after-columnlump-alloc");
-
-        texturecolumnofs[i] = Z_Malloc (
-            texture->width*sizeof(**texturecolumnofs), PU_STATIC,0);
-        H3DIV_VerifyTextureObject(i, "after-columnofs-alloc");
-
-        /*
-         * Recheck the raw directory entry after the allocations. If Zone
-         * activity or another write mutated the cached TEXTURE1 bytes, report
-         * it at the texture where the first difference becomes visible.
-         */
-        if (LONG(*directory) != shadow_offset ||
-            memcmp(mtexture, shadow_texture, raw_bytes) != 0)
-        {
-            I_Error("H3DIV FAIL stage=raw-mutated-after-alloc tex=%i expected=%.8s",
-                    i, shadow_texture->name);
-        }
-
-        j = 1;
-        while (j*2 <= texture->width)
-            j<<=1;
-
-        texturewidthmask[i] = j-1;
-        textureheight[i] = texture->height<<FRACBITS;
-
-        totalwidth += texture->width;
+	texturewidthmask[i] = j-1;
+	textureheight[i] = texture->height<<FRACBITS;
+		
+	totalwidth += texture->width;
     }
-
-    /*
-     * Validate the complete pointer/object table before releasing TEXTURE1.
-     */
-    for (i = 0; i < numtextures; ++i)
-    {
-        H3DIV_VerifyTextureObject(i, "table-complete");
-    }
-
-    printf("H3DIV texture construction: PASS textures=%i\n", numtextures);
 
     Z_Free(patchlookup);
 
     W_ReleaseLumpName(DEH_String("TEXTURE1"));
+    if (maptex2)
+        W_ReleaseLumpName(DEH_String("TEXTURE2"));
+    
+    // Precalculate whatever possible.	
 
-    for (i = 0; i < numtextures; ++i)
-    {
-        H3DIV_VerifyTextureObject(i, "pre-lookup");
-        R_GenerateLookup(i);
-        H3DIV_VerifyTextureObject(i, "post-lookup");
-    }
-
-    printf("H3DIV texture lookup: PASS textures=%i\n", numtextures);
-
-    texturetranslation = Z_Malloc (
-        (numtextures+1)*sizeof(*texturetranslation), PU_STATIC, 0);
 
     for (i=0 ; i<numtextures ; i++)
-        texturetranslation[i] = i;
+    {
+	printf ("H3DIV lookup begin tex=%i\n", i);
+	R_GenerateLookup (i);
+    }
+    
+    // Create translation table for global animation.
+    texturetranslation = Z_Malloc ((numtextures+1)*sizeof(*texturetranslation), PU_STATIC, 0);
+    
+    for (i=0 ; i<numtextures ; i++)
+	texturetranslation[i] = i;
 
     GenerateTextureHashTable();
 }
@@ -1430,7 +914,3 @@ void R_PrecacheLevel (void)
 
     Z_Free(spritepresent);
 }
-
-
-
-

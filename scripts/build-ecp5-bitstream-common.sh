@@ -306,6 +306,24 @@ validate_ulx3s_12f_synthesis()
         "${ebr_used}"
 }
 
+validate_ulx3s_12f_system_timing()
+{
+    local timing_line
+
+    timing_line="$(grep "Max frequency for clock.*clk_sys" "${PNR_LOG}" |
+        tail -n 1)"
+    if [[ -z "${timing_line}" ]]; then
+        echo "ERROR: Could not find the final ULX3S 12F clk_sys timing result." >&2
+        exit 1
+    fi
+
+    printf 'ULX3S 12F system timing: %s\n' "${timing_line}"
+    if [[ "${timing_line}" != *"PASS at 50.00 MHz"* ]]; then
+        echo "ERROR: ULX3S 12F clk_sys does not meet 50 MHz." >&2
+        exit 1
+    fi
+}
+
 # ULX3S seed reference from scripts/sweep.sh:
 #
 # |   Seed |          `clk_sys` |
@@ -482,6 +500,10 @@ cleanup_temporary_outputs
         "${timing_options[@]}" \
         --quiet \
         --log "${PNR_LOG}"
+
+    if [[ "${BOARD_ID}" == "ulx3s-12f" ]]; then
+        validate_ulx3s_12f_system_timing
+    fi
 
     ecppack \
         --compress \

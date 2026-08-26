@@ -45,6 +45,7 @@ require_file "${SOURCE_ROOT}/doomgeneric/doomgeneric.c"
 require_file "${SOURCE_ROOT}/doomgeneric/doomgeneric.h"
 require_file "${SOURCE_ROOT}/doomgeneric/doomkeys.h"
 require_file "${SOURCE_ROOT}/doomgeneric/i_video.h"
+require_file "${SOURCE_ROOT}/doomgeneric/w_file_stdc.c"
 
 git -C "${SOURCE_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
     echo "DoomGeneric is not a Git checkout: ${SOURCE_ROOT}" >&2
@@ -79,5 +80,10 @@ require_file "${DESTINATION_ROOT}/doomgeneric/doomgeneric.c"
 require_file "${DESTINATION_ROOT}/doomgeneric/doomgeneric.h"
 require_file "${DESTINATION_ROOT}/doomgeneric/doomkeys.h"
 require_file "${DESTINATION_ROOT}/doomgeneric/i_video.h"
+
+# Always restore the stock backend in an existing prepared tree. This removes
+# any stale diagnostic/experimental override left by an earlier build.
+cp "${SOURCE_ROOT}/doomgeneric/w_file_stdc.c" \
+    "${DESTINATION_ROOT}/doomgeneric/w_file_stdc.c"
 
 printf '%s\n' "${DESTINATION_ROOT}/doomgeneric"
