@@ -67,19 +67,21 @@ and a libusb Windows backend, such as the xPack build used by this project.
 
 .. raw:: html
 
-   <table class="compat-table">
-     <thead>
-       <tr><th>Tool / path</th><th>WinUSB</th><th>FTDI VCP/D2XX</th><th>libusbK</th></tr>
-     </thead>
-     <tbody>
-       <tr><td>OpenOCD (ULX3S FT231X JTAG)</td><td><span class="compat-dot compat-yes"></span>Works</td><td><span class="compat-dot compat-no"></span>No</td><td><span class="compat-dot compat-yes"></span>Works</td></tr>
-       <tr><td>GDB through OpenOCD</td><td><span class="compat-dot compat-yes"></span>Works</td><td><span class="compat-dot compat-no"></span>No OpenOCD transport</td><td><span class="compat-dot compat-yes"></span>Works</td></tr>
-       <tr><td>Hazard3-Doom WebUSB FPGA/JTAG flasher</td><td><span class="compat-dot compat-yes"></span>Works</td><td><span class="compat-dot compat-no"></span>No</td><td><span class="compat-dot compat-no"></span>No</td></tr>
-       <tr><td>Windows fujprog / FTDI D2XX tools</td><td><span class="compat-dot compat-no"></span>No</td><td><span class="compat-dot compat-yes"></span>Works</td><td><span class="compat-dot compat-no"></span>No</td></tr>
-       <tr><td>Hazard3-Doom Web Serial UART (external CH340/CH341, CP210x, FTDI UART, etc.)</td><td><span class="compat-dot compat-na"></span>N/A</td><td><span class="compat-dot compat-na"></span>N/A</td><td><span class="compat-dot compat-na"></span>N/A</td></tr>
-       <tr><td>PuTTY / normal COM-port UART on the external adapter</td><td><span class="compat-dot compat-na"></span>N/A</td><td><span class="compat-dot compat-na"></span>N/A</td><td><span class="compat-dot compat-na"></span>N/A</td></tr>
-     </tbody>
-   </table>
+    <table class="compat-table">
+        <thead>
+            <tr>       <th>Tool / path</th>                                                               <th>WinUSB</th>                                  <th>FTDI VCP/D2XX</th>                                                             <th>libusbK</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>OpenOCD (ULX3S FT231X JTAG)</td>           <td><span class="compat-dot compat-yes"> </span>Works</td> <td><span class="compat-dot compat-no">  </span>No</td>                   <td><span class="compat-dot compat-yes"> </span>Works</td></tr>
+            <tr><td>GDB through OpenOCD</td>                   <td><span class="compat-dot compat-yes"> </span>Works</td> <td><span class="compat-dot compat-no">  </span>No OpenOCD transport</td> <td><span class="compat-dot compat-yes"> </span>Works</td></tr>
+            <tr><td>Hazard3-Doom WebUSB FPGA/JTAG flasher</td> <td><span class="compat-dot compat-yes"> </span>Works</td> <td><span class="compat-dot compat-no">  </span>No</td>                   <td><span class="compat-dot compat-no">  </span>No</td></tr>
+            <tr><td>Windows fujprog / FTDI D2XX tools</td>     <td><span class="compat-dot compat-no">  </span>No</td>    <td><span class="compat-dot compat-yes"> </span>Works</td>                <td><span class="compat-dot compat-no">  </span>No</td></tr>
+            <tr><td>Hazard3-Doom Web Serial UART (external
+                    CH340/CH341, CP210x, FTDI UART, etc.)</td> <td><span class="compat-dot compat-na">  </span>N/A</td>   <td><span class="compat-dot compat-na">  </span>N/A</td>                  <td><span class="compat-dot compat-na">  </span>N/A</td></tr>
+            <tr><td>PuTTY / normal COM-port UART
+                    on the external adapter</td>               <td><span class="compat-dot compat-na">  </span>N/A</td>   <td><span class="compat-dot compat-na">  </span>N/A</td>                  <td><span class="compat-dot compat-na">  </span>N/A</td></tr>
+        </tbody>
+    </table>
 
 For Hazard3-Doom development, **WinUSB is the most convenient ULX3S FT231X
 binding when both browser WebUSB programming and OpenOCD/GDB are needed**. The

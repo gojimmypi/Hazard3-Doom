@@ -39,9 +39,9 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SOURCE_STATUS_LOG="${ROOT_DIR}/build/source_status.log"
 
 # Keep this status report self-contained: create the output directory first,
-# then send all subsequent stdout/stderr to the log instead of the caller.
+# then send all subsequent stdout/stderr to both the caller and the log.
 mkdir -p -- "$(dirname "${SOURCE_STATUS_LOG}")"
-exec > "${SOURCE_STATUS_LOG}" 2>&1
+exec > >(tee "${SOURCE_STATUS_LOG}") 2>&1
 printf "Saving git branch history to %s\n" "${SOURCE_STATUS_LOG}"
 
 # Run shellcheck to ensure this is a good script.
@@ -84,6 +84,7 @@ FAMILIES=(
     "Hazard3-Doom|${CURRENT_USER}/Hazard3-Doom|ulx3s/Hazard3-Doom"
     "doomgeneric|${CURRENT_USER}/doomgeneric|ulx3s/doomgeneric|ozkl/doomgeneric"
     "Hazard3|${CURRENT_USER}/Hazard3|ulx3s/Hazard3|Wren6991/Hazard3"
+    "Hazard3-libfpga|${CURRENT_USER}/Hazard3-libfpga|ulx3s/Hazard3-libfpga|Wren6991/libfpga"
 )
 
 declare -A DEFAULT_BRANCHES=()
