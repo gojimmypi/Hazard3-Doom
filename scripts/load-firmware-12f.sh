@@ -19,6 +19,6 @@ else
         >&2
 fi
 
-echo "Calling ${SCRIPT_DIR}/load-firmware.sh \ "
+echo "Calling ${SCRIPT_DIR}/load-firmware.sh with .elf file parameter:"
 ls -al "${ELF}"
 exec "${SCRIPT_DIR}/load-firmware.sh" "${ELF}"

@@ -31,7 +31,7 @@ fi
 
 # The GDB expression $pc must be passed literally rather than expanded by Bash.
 # shellcheck disable=SC2016
-"${GDB}" \
+if "${GDB}" \
     --batch \
     --quiet \
     "${ELF}" \
@@ -45,3 +45,28 @@ fi
     -ex 'set $pc = _start' \
     -ex 'monitor resume' \
     -ex 'disconnect'
+then
+    : # gdb success
+else
+    rc=$?
+
+    printf '%s\n' \
+        "" \
+        "ERROR: GDB failed (exit status ${rc})." \
+        "" \
+        "Check the following:" \
+        "  - OpenOCD is running and listening on localhost:3333." \
+        "  - OpenOCD successfully detected the FPGA/JTAG target." \
+        "  - Another OpenOCD instance is not already running." \
+        "  - PuTTY or another serial/JTAG application is not holding the device." \
+        "  - Hazard3-Doom web console flasher is not connected." \
+        "  - The ULX3S USB device US1 is connected and using the expected driver." \
+        "      (For Windows: WinUSB or libusbK, not FTDI)." \
+        "" \
+        "Useful checks:" \
+        "  pgrep -af openocd" \
+        "  ss -ltnp | grep ':3333'" \
+        "" >&2
+
+    exit "${rc}"
+fi
