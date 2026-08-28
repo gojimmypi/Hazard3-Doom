@@ -9,7 +9,25 @@ version = release
 
 extensions = []
 templates_path = []
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+language = os.environ.get("READTHEDOCS_LANGUAGE", "en").lower().replace("-", "_")
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "hr/**"]
+
+
+def _use_croatian_source(app, docname, source):
+    if language != "hr":
+        return
+
+    translated = os.path.join(os.path.dirname(__file__), "hr", f"{docname}.rst")
+    if not os.path.isfile(translated):
+        raise RuntimeError(f"Missing Croatian documentation source: {translated}")
+
+    app.env.note_dependency(translated)
+    with open(translated, encoding="utf-8") as stream:
+        source[0] = stream.read()
+
+
+def setup(app):
+    app.connect("source-read", _use_croatian_source)
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
@@ -29,5 +47,5 @@ html_context = {
     "github_user": "gojimmypi",
     "github_repo": "Hazard3-Doom",
     "github_version": "develop",
-    "conf_py_path": "/docs/",
+    "conf_py_path": "/docs/hr/" if language == "hr" else "/docs/",
 }

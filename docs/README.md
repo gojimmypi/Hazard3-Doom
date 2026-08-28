@@ -15,7 +15,16 @@ python -m sphinx -W --keep-going -b html docs docs/_build/html
 
 Open `docs/_build/html/index.html`.
 
+Build the Croatian documentation with:
+
+```bash
+READTHEDOCS_LANGUAGE=hr python -m sphinx -W --keep-going -b html docs docs/_build/html-hr
+```
+
+Open `docs/_build/html-hr/index.html`.
+
 The repository-root `.readthedocs.yaml` is the build configuration used by Read the Docs.
+The Croatian Read the Docs project should use language `Croatian (hr)` and be linked as a translation of the English project. Both projects can use the same repository and branch; `docs/conf.py` selects the Croatian source tree from `READTHEDOCS_LANGUAGE`.
 
 ## ULX3S Chat and support
 
