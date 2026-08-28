@@ -33,6 +33,7 @@ Pravila dokumentacije
 * Ne uključujte komercijalni IWAD sadržaj.
 * Ožičenje specifično za pločicu držite u odjeljcima za tu pločicu.
 * Dodajte stavke za otklanjanje poteškoća kada način kvara ima ponovljivu dijagnozu.
+* Prevedeni tekst namijenjen ljudima pod ``docs/<language>/`` je u UTF-8 i treba zadržati izvorne znakove potrebne za taj jezik. Izvorni kod, skripte, CI, nazive datoteka, doslovne naredbe, identifikatore, putanje, protokolarne nizove i drugi tekst namijenjen strojevima ostavite nepromijenjenima osim ako se samo sučelje doista promijeni.
 
 Objavljivanje na Read the Docs
 ------------------------------

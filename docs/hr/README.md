@@ -6,7 +6,7 @@ The files here are not a separate Sphinx project. `docs/conf.py` uses Sphinx's `
 
 When adding or removing an English `.rst` page, make the corresponding change here. The Croatian build intentionally fails if Sphinx reads an English document that has no matching Croatian source file.
 
-Keep code blocks, command names, filenames, addresses, URLs, reStructuredText labels, `:doc:` / `:ref:` targets, image paths, and toctree targets synchronized with the English page unless the referenced resource itself is language-specific.
+Croatian prose is UTF-8 and should use correct Croatian characters such as `č`, `ć`, `đ`, `š`, and `ž`. Keep code blocks, command names, filenames, addresses, URLs, reStructuredText labels, `:doc:` / `:ref:` targets, image paths, protocol strings, and toctree targets synchronized with the English page unless the referenced resource itself is language-specific.
 
 Local build:
 

@@ -33,6 +33,7 @@ Documentation rules
 * Do not include commercial IWAD content.
 * Keep board-specific wiring in board-specific sections.
 * Add troubleshooting entries when a failure mode has a repeatable diagnosis.
+* Translated human-language prose under ``docs/<language>/`` is UTF-8 and should preserve the native characters required by that language. Keep source code, scripts, CI, filenames, command literals, identifiers, paths, protocol strings, and other machine-facing text unchanged unless the underlying interface itself changes.
 
 Read the Docs publishing
 ------------------------

@@ -10,16 +10,31 @@ version = release
 extensions = []
 templates_path = []
 language = os.environ.get("READTHEDOCS_LANGUAGE", "en").lower().replace("-", "_")
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "hr/**"]
+translation_languages = {
+    "fr": "French",
+    "hr": "Croatian",
+}
+translation_language = language.split("_", 1)[0]
+translation_name = translation_languages.get(translation_language)
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    *[f"{code}/**" for code in translation_languages],
+]
 
 
-def _use_croatian_source(app, docname, source):
-    if language != "hr":
+def _use_translated_source(app, docname, source):
+    if translation_name is None:
         return
 
-    translated = os.path.join(os.path.dirname(__file__), "hr", f"{docname}.rst")
+    translated = os.path.join(
+        os.path.dirname(__file__), translation_language, f"{docname}.rst"
+    )
     if not os.path.isfile(translated):
-        raise RuntimeError(f"Missing Croatian documentation source: {translated}")
+        raise RuntimeError(
+            f"Missing {translation_name} documentation source: {translated}"
+        )
 
     app.env.note_dependency(translated)
     with open(translated, encoding="utf-8") as stream:
@@ -27,7 +42,7 @@ def _use_croatian_source(app, docname, source):
 
 
 def setup(app):
-    app.connect("source-read", _use_croatian_source)
+    app.connect("source-read", _use_translated_source)
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
@@ -47,5 +62,7 @@ html_context = {
     "github_user": "gojimmypi",
     "github_repo": "Hazard3-Doom",
     "github_version": "develop",
-    "conf_py_path": "/docs/hr/" if language == "hr" else "/docs/",
+    "conf_py_path": (
+        f"/docs/{translation_language}/" if translation_name is not None else "/docs/"
+    ),
 }

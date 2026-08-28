@@ -18,13 +18,13 @@ Open `docs/_build/html/index.html`.
 
 ## Localization
 
-Project with [multiple languages](https://docs.readthedocs.com/platform/latest/localization.html): 
+Hazard3-Doom uses Read the Docs projects with [multiple languages](https://docs.readthedocs.com/platform/latest/localization.html):
 
-> Each language must have its own project on Read the Docs. You will choose one to be the parent project, and add each of the other projects as “Translations” of the parent project.
+> Each language must have its own project on Read the Docs. You will choose one to be the parent project, and add each of the other projects as "Translations" of the parent project.
 
-Create the new project with the same name and a language suffix, [for example](./images/readthedocs-localization-project.png) `-hr`. 
+Create each translation project from the same repository and branch, with a language suffix in the Read the Docs project name, for example `-hr` or `-fr`.
 
-Add the new project as a [translation](./images/readthedocs-add-translation.png).
+Add each new project as a [translation](./images/readthedocs-add-translation.png) of the English parent project. The [Croatian project setup](./images/readthedocs-localization-project.png) is an example.
 
 Build the Croatian documentation with:
 
@@ -32,10 +32,17 @@ Build the Croatian documentation with:
 READTHEDOCS_LANGUAGE=hr python -m sphinx -W --keep-going -b html docs docs/_build/html-hr
 ```
 
-Open `docs/_build/html-hr/index.html`.
+Build the French documentation with:
 
-The repository-root `.readthedocs.yaml` is the build configuration used by Read the Docs.
-The Croatian Read the Docs project should use language `Croatian (hr)` and be linked as a translation of the English project. Both projects can use the same repository and branch; `docs/conf.py` selects the Croatian source tree from `READTHEDOCS_LANGUAGE`.
+```bash
+READTHEDOCS_LANGUAGE=fr python -m sphinx -W --keep-going -b html docs docs/_build/html-fr
+```
+
+Open `docs/_build/html-hr/index.html` or `docs/_build/html-fr/index.html`.
+
+The repository-root `.readthedocs.yaml` is the build configuration used by Read the Docs. Each translated Read the Docs project should use its matching language and be linked as a translation of the English project. All language projects can use the same repository and branch; `docs/conf.py` selects the translated source tree from `READTHEDOCS_LANGUAGE`.
+
+Translated human-language prose under `docs/<language>/` is UTF-8 and should use the native characters required by that language. Keep source code, scripts, CI, filenames, command literals, identifiers, paths, protocol strings, and other machine-facing text unchanged unless the underlying interface itself changes.
 
 ## ULX3S Chat and support
 

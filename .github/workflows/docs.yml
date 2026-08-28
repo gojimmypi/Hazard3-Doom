@@ -34,3 +34,8 @@ jobs:
         env:
           READTHEDOCS_LANGUAGE: hr
         run: python -m sphinx -W --keep-going -b html docs docs/_build/html-hr
+
+      - name: Build French documentation
+        env:
+          READTHEDOCS_LANGUAGE: fr
+        run: python -m sphinx -W --keep-going -b html docs docs/_build/html-fr
