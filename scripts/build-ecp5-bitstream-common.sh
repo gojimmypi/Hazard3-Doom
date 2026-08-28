@@ -1,8 +1,23 @@
 #!/bin/bash
+# -----------------------------------------------------------------------------
+# File:        build-ecp5-bitstream-common.sh
+# Path:        scripts/build-ecp5-bitstream-common.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Provide the shared ECP5 synthesis and place-and-route flow
+#              used by board-specific build wrappers.
 #
 # Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
 # SPDX-License-Identifier: Apache-2.0
 #
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 # file: scripts/build-ecp5-bitstream-common.sh
 #
 # Shared ECP5 synthesis/place-and-route flow for Hazard3-Doom board wrappers.

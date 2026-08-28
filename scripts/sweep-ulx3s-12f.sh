@@ -1,8 +1,23 @@
 #!/bin/bash
+# -----------------------------------------------------------------------------
+# File:        sweep-ulx3s-12f.sh
+# Path:        scripts/sweep-ulx3s-12f.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Run fully routed ULX3S 12F nextpnr seed sweeps and record
+#              final timing results.
 #
 # Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
 # SPDX-License-Identifier: Apache-2.0
 #
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 # File: scripts/sweep-ulx3s-12f.sh
 #
 # Route ULX3S 12F nextpnr seeds against one synthesized compact-profile

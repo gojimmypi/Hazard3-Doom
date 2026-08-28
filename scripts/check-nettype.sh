@@ -1,8 +1,23 @@
 #!/bin/bash
+# -----------------------------------------------------------------------------
+# File:        check-nettype.sh
+# Path:        scripts/check-nettype.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Validate consistent default_nettype handling in tracked
+#              Verilog source files.
 #
 # Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
 # SPDX-License-Identifier: Apache-2.0
 #
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 # file: scripts/check-nettype.sh
 #
 

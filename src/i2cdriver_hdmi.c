@@ -1,4 +1,22 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/* -----------------------------------------------------------------------------
+ * File:        i2cdriver_hdmi.c
+ * Path:        src/i2cdriver_hdmi.c
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Implement the I2CDriver-inspired interactive HDMI user interface
+ *              over the Hazard3 SAO bus.
+ *
+ * Copyright (c) 2026 gojimmypi
+ *
+ * Licensed under the Apache License, Version 2.0.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * This software is provided under the terms of the applicable license.
+ * See LICENSES/Apache-2.0.txt for the complete license terms.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
 /*
  * Hazard3-Doom I2CDriver-style HDMI user interface.
  *

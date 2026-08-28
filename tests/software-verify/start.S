@@ -1,3 +1,22 @@
+/* -----------------------------------------------------------------------------
+ * File:        start.S
+ * Path:        tests/software-verify/start.S
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Provide the RISC-V startup entry point for the standalone software
+ *              verification payload.
+ *
+ * Copyright (c) 2026 gojimmypi
+ *
+ * Licensed under the Apache License, Version 2.0.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * This software is provided under the terms of the applicable license.
+ * See LICENSES/Apache-2.0.txt for the complete license terms.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
     .section .text.start, "ax", @progbits
     .align 2
     .globl _start

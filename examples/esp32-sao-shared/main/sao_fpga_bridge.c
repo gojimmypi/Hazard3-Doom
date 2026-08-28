@@ -1,4 +1,22 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/* -----------------------------------------------------------------------------
+ * File:        sao_fpga_bridge.c
+ * Path:        examples/esp32-sao-shared/main/sao_fpga_bridge.c
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Implement the ESP32 UART client for the FPGA SAO transaction
+ *              proxy.
+ *
+ * Copyright (c) 2026 gojimmypi
+ *
+ * Licensed under the Apache License, Version 2.0.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * This software is provided under the terms of the applicable license.
+ * See LICENSES/Apache-2.0.txt for the complete license terms.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
 #include "sao_fpga_bridge.h"
 
 #include <stdbool.h>

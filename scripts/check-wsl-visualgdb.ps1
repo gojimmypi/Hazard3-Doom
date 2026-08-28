@@ -1,3 +1,22 @@
+# -----------------------------------------------------------------------------
+# File:        check-wsl-visualgdb.ps1
+# Path:        scripts/check-wsl-visualgdb.ps1
+#
+# Project:     Hazard3-Doom
+# Purpose:     Validate the WSL VisualGDB bridge, paths, commands, and
+#              tracked shell-script line endings.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 

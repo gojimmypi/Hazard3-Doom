@@ -1,7 +1,21 @@
-/*
- * Copyright (c) 2026 Your Name
+/* -----------------------------------------------------------------------------
+ * File:        project.v
+ * Path:        src/project.v
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Implement the Tiny Tapeout FPGA smoke-test wrapper used by the
+ *              Hazard3-Doom repository.
+ *
+ * Copyright (c) 2026 gojimmypi
+ *
+ * Licensed under the Apache License, Version 2.0.
+ *
  * SPDX-License-Identifier: Apache-2.0
- */
+ *
+ * This software is provided under the terms of the applicable license.
+ * See LICENSES/Apache-2.0.txt for the complete license terms.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
 
 `default_nettype none
 

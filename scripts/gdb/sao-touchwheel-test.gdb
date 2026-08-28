@@ -1,3 +1,22 @@
+# -----------------------------------------------------------------------------
+# File:        sao-touchwheel-test.gdb
+# Path:        scripts/gdb/sao-touchwheel-test.gdb
+#
+# Project:     Hazard3-Doom
+# Purpose:     Exercise TouchwheelSAO reads, writes, and status LED control
+#              through the Hazard3 bridge from GDB.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 # This test targets the TouchwheelSAO at 7-bit I2C address 0x54.
 # It reads register 0x00 (touch position), writes register 0x0e (status LED) to 1,
 # reads register 0x0e back, and leaves the status LED on as a visible write test.

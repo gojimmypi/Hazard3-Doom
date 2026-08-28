@@ -1,3 +1,22 @@
+/* -----------------------------------------------------------------------------
+ * File:        doomgeneric_hazard3.c
+ * Path:        doom/doomgeneric_hazard3.c
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Implement the DoomGeneric video, palette, timing, and input
+ *              backend for Hazard3-Doom.
+ *
+ * Copyright (c) 2026 gojimmypi
+ *
+ * Licensed under the GNU General Public License, version 2 or later.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ * This software is provided WITHOUT ANY WARRANTY.
+ * See LICENSES/GPL-2.0.txt for the complete license terms.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
 #include <stdint.h>
 
 #include "doomgeneric.h"

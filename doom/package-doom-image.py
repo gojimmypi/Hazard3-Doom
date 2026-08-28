@@ -1,4 +1,23 @@
 #!/usr/bin/env python3
+# -----------------------------------------------------------------------------
+# File:        package-doom-image.py
+# Path:        doom/package-doom-image.py
+#
+# Project:     Hazard3-Doom
+# Purpose:     Convert a linked Doom ELF image into the Hazard3-Doom loadable H3D
+#              package format.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 import argparse
 import pathlib
 import struct

@@ -1,4 +1,23 @@
 @echo off
+rem -----------------------------------------------------------------------------
+rem File:        check_submodules.bat
+rem Path:        scripts/check_submodules.bat
+rem
+rem Project:     Hazard3-Doom
+rem Purpose:     Check local Git submodule commits and configured remote
+rem              branches from Windows.
+rem
+rem Copyright (c) 2026 gojimmypi
+rem
+rem Licensed under the Apache License, Version 2.0.
+rem
+rem SPDX-License-Identifier: Apache-2.0
+rem
+rem This software is provided under the terms of the applicable license.
+rem See LICENSES/Apache-2.0.txt for the complete license terms.
+rem See LICENSING.md for project licensing policy and scope.
+rem -----------------------------------------------------------------------------
+
 setlocal EnableExtensions EnableDelayedExpansion
 
 rem Check whether each Git submodule is:

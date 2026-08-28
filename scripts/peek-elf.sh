@@ -1,4 +1,22 @@
 #!/usr/bin/env bash
+# -----------------------------------------------------------------------------
+# File:        peek-elf.sh
+# Path:        scripts/peek-elf.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Inspect RISC-V ELF, map, multilib, ISA, ABI, and
+#              runtime-library selection details.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
 
 # Hazard3 CoreMark ELF/toolchain diagnostic helper.
 #

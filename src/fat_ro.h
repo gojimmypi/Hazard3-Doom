@@ -1,3 +1,22 @@
+/* -----------------------------------------------------------------------------
+ * File:        fat_ro.h
+ * Path:        src/fat_ro.h
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Declare the minimal read-only FAT filesystem interface used by
+ *              Hazard3-Doom.
+ *
+ * Copyright (c) 2026 gojimmypi
+ *
+ * Licensed under the Apache License, Version 2.0.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * This software is provided under the terms of the applicable license.
+ * See LICENSES/Apache-2.0.txt for the complete license terms.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
 #ifndef HAZARD3_FAT_RO_H
 #define HAZARD3_FAT_RO_H
 

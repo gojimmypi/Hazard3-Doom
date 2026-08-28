@@ -1,3 +1,22 @@
+/* -----------------------------------------------------------------------------
+ * File:        doom_image_format.h
+ * Path:        doom/doom_image_format.h
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Define the Hazard3-Doom executable image header and in-memory
+ *              image format.
+ *
+ * Copyright (c) 2026 gojimmypi
+ *
+ * Licensed under the Apache License, Version 2.0.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * This software is provided under the terms of the applicable license.
+ * See LICENSES/Apache-2.0.txt for the complete license terms.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
 #ifndef DOOM_IMAGE_FORMAT_H
 #define DOOM_IMAGE_FORMAT_H
 

@@ -13,6 +13,10 @@ Before publishing a Hazard3-Doom release:
   for distributed DoomGeneric/DOOM-derived binaries and other GPL components.
 - Preserve Apache-2.0 notices and any required NOTICE material for
   Apache-licensed source actually redistributed.
+- Preserve CERN-OHL-W-2.0 SPDX identifiers and notices for covered
+  Hazard3-Doom hardware-design source, and ensure distributed Products or
+  generated hardware outputs satisfy the applicable Complete Source/Source
+  Location requirements.
 - Preserve the James Bowman BSD 3-Clause notice if I2CDriver-derived code is
   redistributed; do not imply endorsement.
 - Review `benchmarks/coremark` against EEMBC's current CoreMark source license,

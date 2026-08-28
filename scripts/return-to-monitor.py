@@ -1,4 +1,23 @@
 #!/usr/bin/env python3
+# -----------------------------------------------------------------------------
+# File:        return-to-monitor.py
+# Path:        scripts/return-to-monitor.py
+#
+# Project:     Hazard3-Doom
+# Purpose:     Send Ctrl-X over UART to stop Doom and return control to the
+#              resident monitor.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 """Send Ctrl-X to a running Hazard3-Doom instance and release the UART."""
 
 from __future__ import annotations

@@ -1,3 +1,22 @@
+/* -----------------------------------------------------------------------------
+ * File:        hazard3_platform_image.c
+ * Path:        doom/hazard3_platform_image.c
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Bind the loaded Doom image to resident monitor console, timing,
+ *              heap, and control services.
+ *
+ * Copyright (c) 2026 gojimmypi
+ *
+ * Licensed under the GNU General Public License, version 2 or later.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ * This software is provided WITHOUT ANY WARRANTY.
+ * See LICENSES/GPL-2.0.txt for the complete license terms.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
 #include <stddef.h>
 #include <stdint.h>
 

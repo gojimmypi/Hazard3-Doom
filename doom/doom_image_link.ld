@@ -1,3 +1,22 @@
+/* -----------------------------------------------------------------------------
+ * File:        doom_image_link.ld
+ * Path:        doom/doom_image_link.ld
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Define the link layout for the separately loaded Hazard3-Doom
+ *              executable image.
+ *
+ * Copyright (c) 2026 gojimmypi
+ *
+ * Licensed under the GNU General Public License, version 2 or later.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ * This software is provided WITHOUT ANY WARRANTY.
+ * See LICENSES/GPL-2.0.txt for the complete license terms.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
 OUTPUT_ARCH(riscv)
 ENTRY(_doom_start)
 

@@ -1,4 +1,23 @@
 #!/usr/bin/env bash
+# -----------------------------------------------------------------------------
+# File:        hazard3-doom-source-status.sh
+# Path:        scripts/hazard3-doom-source-status.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Audit Hazard3-Doom and related fork and branch relationships
+#              across configured repositories.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 #
 # File: scripts/hazard3-doom-source-status.sh
 

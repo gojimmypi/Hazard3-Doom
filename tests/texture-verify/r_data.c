@@ -1,3 +1,22 @@
+/* -----------------------------------------------------------------------------
+ * File:        r_data.c
+ * Path:        tests/texture-verify/r_data.c
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Provide a diagnostic DOOM renderer data implementation for texture
+ *              verification.
+ *
+ * Hazard3-Doom modifications: Copyright (c) 2026 gojimmypi
+ *
+ * Licensed under the GNU General Public License, version 2 or later.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ * This software is provided WITHOUT ANY WARRANTY.
+ * See LICENSES/GPL-2.0.txt for the complete license terms.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
 // Copyright(C) 2005-2014 Simon Howard

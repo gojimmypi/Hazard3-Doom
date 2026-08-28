@@ -1,4 +1,23 @@
 #!/usr/bin/env python3
+# -----------------------------------------------------------------------------
+# File:        reference-wad.py
+# Path:        tests/doom-init-verify/reference-wad.py
+#
+# Project:     Hazard3-Doom
+# Purpose:     Generate reference WAD metadata and verification values for Doom
+#              initialization tests.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 import argparse
 import struct
 import sys

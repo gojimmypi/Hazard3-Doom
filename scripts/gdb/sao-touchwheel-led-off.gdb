@@ -1,3 +1,22 @@
+# -----------------------------------------------------------------------------
+# File:        sao-touchwheel-led-off.gdb
+# Path:        scripts/gdb/sao-touchwheel-led-off.gdb
+#
+# Project:     Hazard3-Doom
+# Purpose:     Turn off the TouchwheelSAO status LED through the Hazard3 SAO
+#              bridge from GDB.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 # End any transaction left active by an interrupted test.
 set {unsigned int}0x40009000 = 2
 # Generate START for the TouchwheelSAO register write.

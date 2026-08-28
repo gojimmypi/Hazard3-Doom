@@ -9,10 +9,12 @@ third-party component, generated artifact, and bundled binary remains governed
 by its own copyright notices, SPDX identifiers, upstream license, and Git
 history.
 
-This bundle intentionally does not create a root `LICENSE` or assign a new
-blanket license to original Hazard3-Doom files. Some original files already
-carry Apache-2.0 SPDX headers, but that does not by itself establish that every
-project-original file is Apache-2.0.
+Hazard3-Doom is a multi-license project. The root `LICENSE` provides a concise
+licensing overview, while `../LICENSING.md` defines the applicable project
+licensing policy and scope.
+
+The presence of a license text in this directory does not apply that license
+to unrelated project or third-party material.
 
 See `../ATTRIBUTION.md` for broad acknowledgements.
 
@@ -21,6 +23,7 @@ See `../ATTRIBUTION.md` for broad acknowledgements.
 | File | Component/use |
 |---|---|
 | `Apache-2.0.txt` | Hazard3 and files/components explicitly licensed Apache-2.0 |
+| `CERN-OHL-W-2.0.txt` | Original Hazard3-Doom FPGA/gateware source explicitly licensed CERN-OHL-W-2.0 |
 | `GPL-2.0.txt` | DOOM/DoomGeneric and other exact GPL-2 components as applicable |
 | `BSD-3-Clause-i2cdriver.txt` | James Bowman's I2CDriver |
 | `CoreMark-NOTICE.md` | EEMBC CoreMark attribution/trademark caution |

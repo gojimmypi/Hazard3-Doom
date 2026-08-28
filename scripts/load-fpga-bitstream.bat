@@ -1,4 +1,23 @@
 @echo off
+rem -----------------------------------------------------------------------------
+rem File:        load-fpga-bitstream.bat
+rem Path:        scripts/load-fpga-bitstream.bat
+rem
+rem Project:     Hazard3-Doom
+rem Purpose:     Program a Hazard3-Doom FPGA bitstream from Windows using the
+rem              configured loader.
+rem
+rem Copyright (c) 2026 gojimmypi
+rem
+rem Licensed under the Apache License, Version 2.0.
+rem
+rem SPDX-License-Identifier: Apache-2.0
+rem
+rem This software is provided under the terms of the applicable license.
+rem See LICENSES/Apache-2.0.txt for the complete license terms.
+rem See LICENSING.md for project licensing policy and scope.
+rem -----------------------------------------------------------------------------
+
 setlocal EnableExtensions EnableDelayedExpansion
 
 rem Resolve the repository root from this script's location.

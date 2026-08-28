@@ -1,4 +1,23 @@
 #!/bin/bash
+# -----------------------------------------------------------------------------
+# File:        check-executable.sh
+# Path:        scripts/check-executable.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Check recently changed tracked shell scripts for the Git
+#              executable bit.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 #
 # File: scripts/check-executable.sh
 #

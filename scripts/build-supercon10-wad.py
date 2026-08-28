@@ -1,4 +1,23 @@
 #!/usr/bin/env python3
+# -----------------------------------------------------------------------------
+# File:        build-supercon10-wad.py
+# Path:        scripts/build-supercon10-wad.py
+#
+# Project:     Hazard3-Doom
+# Purpose:     Validate and merge the canonical Supercon PWAD with a local
+#              DOOM1.WAD.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 """Validate and merge the canonical Supercon PWAD into the user's DOOM1.WAD."""
 
 from __future__ import annotations

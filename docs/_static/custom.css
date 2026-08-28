@@ -1,3 +1,22 @@
+/* -----------------------------------------------------------------------------
+ * File:        custom.css
+ * Path:        docs/_static/custom.css
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Provide project-specific Read the Docs presentation tweaks and
+ *              compatibility-table styling.
+ *
+ * Copyright (c) 2026 gojimmypi
+ *
+ * Licensed under the Apache License, Version 2.0.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * This software is provided under the terms of the applicable license.
+ * See LICENSES/Apache-2.0.txt for the complete license terms.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
 /* Small readability tweaks while keeping the stock Read the Docs look. */
 .wy-nav-content {
     max-width: 1100px;

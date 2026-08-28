@@ -1,8 +1,23 @@
 #!/bin/bash
+# -----------------------------------------------------------------------------
+# File:        sweep-peek-ulx3s-12f-best-peek.sh
+# Path:        scripts/sweep-peek-ulx3s-12f-best-peek.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Route a small set of the strongest ULX3S 12F placement-sweep
+#              seed candidates.
 #
 # Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
 # SPDX-License-Identifier: Apache-2.0
 #
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 # File: scripts/sweep-peek-ulx3s-12f.sh
 #
 # Run placement-only ULX3S 12F nextpnr seed checks against one synthesized

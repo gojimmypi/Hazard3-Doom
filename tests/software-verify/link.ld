@@ -1,3 +1,22 @@
+/* -----------------------------------------------------------------------------
+ * File:        link.ld
+ * Path:        tests/software-verify/link.ld
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Define the memory layout used by the standalone software
+ *              verification payload.
+ *
+ * Copyright (c) 2026 gojimmypi
+ *
+ * Licensed under the Apache License, Version 2.0.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * This software is provided under the terms of the applicable license.
+ * See LICENSES/Apache-2.0.txt for the complete license terms.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
 OUTPUT_ARCH(riscv)
 ENTRY(_start)
 

@@ -1,4 +1,23 @@
 #!/bin/bash
+# -----------------------------------------------------------------------------
+# File:        doom_build_flags.sh
+# Path:        doom/doom_build_flags.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Define shared build-time feature flags for Hazard3-Doom Doom
+#              images.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 
 # Shared build flags for the Hazard3 Doom image and size probe.
 #

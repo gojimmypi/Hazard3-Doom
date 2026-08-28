@@ -1,4 +1,23 @@
 #!/bin/bash
+# -----------------------------------------------------------------------------
+# File:        build-size-probe.sh
+# Path:        doom/build-size-probe.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Build a reduced probe used to measure Doom image size and memory
+#              requirements.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

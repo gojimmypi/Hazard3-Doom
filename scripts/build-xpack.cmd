@@ -1,4 +1,23 @@
 @echo off
+rem -----------------------------------------------------------------------------
+rem File:        build-xpack.cmd
+rem Path:        scripts/build-xpack.cmd
+rem
+rem Project:     Hazard3-Doom
+rem Purpose:     Build the Hazard3 resident monitor on native Windows with
+rem              the repository xPack RISC-V toolchain.
+rem
+rem Copyright (c) 2026 gojimmypi
+rem
+rem Licensed under the Apache License, Version 2.0.
+rem
+rem SPDX-License-Identifier: Apache-2.0
+rem
+rem This software is provided under the terms of the applicable license.
+rem See LICENSES/Apache-2.0.txt for the complete license terms.
+rem See LICENSING.md for project licensing policy and scope.
+rem -----------------------------------------------------------------------------
+
 setlocal EnableExtensions
 
 rem Native Windows build for the Hazard3 resident monitor.

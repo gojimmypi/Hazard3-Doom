@@ -1,3 +1,22 @@
+# -----------------------------------------------------------------------------
+# File:        sao-scan.gdb
+# Path:        scripts/gdb/sao-scan.gdb
+#
+# Project:     Hazard3-Doom
+# Purpose:     Define a GDB command for scanning the SAO I2C address range
+#              through the Hazard3 bridge.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 # Define a reusable GDB command named sao-scan.
 define sao-scan
     # End any transaction left active by an interrupted test.

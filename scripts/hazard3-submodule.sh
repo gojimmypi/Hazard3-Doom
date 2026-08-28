@@ -1,4 +1,23 @@
 #!/bin/bash
+# -----------------------------------------------------------------------------
+# File:        hazard3-submodule.sh
+# Path:        scripts/hazard3-submodule.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Inspect, compare, and restore the Hazard3 submodule and its
+#              pinned nested dependencies.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 set -euo pipefail
 
 # Inspect and restore the Hazard3 submodule used by Hazard3-Doom.

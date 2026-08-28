@@ -1,3 +1,22 @@
+/* -----------------------------------------------------------------------------
+ * File:        hazard3_newlib.c
+ * Path:        doom/hazard3_newlib.c
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Provide newlib system-call stubs and memory-backed file access for
+ *              the loaded Doom image.
+ *
+ * Copyright (c) 2026 gojimmypi
+ *
+ * Licensed under the GNU General Public License, version 2 or later.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ * This software is provided WITHOUT ANY WARRANTY.
+ * See LICENSES/GPL-2.0.txt for the complete license terms.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
 #include <errno.h>
 #include <fcntl.h>
 #include <stddef.h>

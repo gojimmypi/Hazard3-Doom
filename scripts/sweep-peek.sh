@@ -1,4 +1,23 @@
 #!/bin/bash
+# -----------------------------------------------------------------------------
+# File:        sweep-peek.sh
+# Path:        scripts/sweep-peek.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Run placement-only ULX3S 85F nextpnr seed sweeps against one
+#              synthesized netlist.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 set -euo pipefail
 
 # File: scripts/sweep-peek.sh

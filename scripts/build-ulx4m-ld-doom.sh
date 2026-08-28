@@ -1,8 +1,23 @@
 #!/bin/bash
+# -----------------------------------------------------------------------------
+# File:        build-ulx4m-ld-doom.sh
+# Path:        scripts/build-ulx4m-ld-doom.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Build the complete ULX4M-LD monitor, FPGA bitstream, and Doom
+#              image.
 #
 # Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
 # SPDX-License-Identifier: Apache-2.0
 #
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 # file: scripts/build-ulx4m-ld-doom.sh
 #
 set -euo pipefail

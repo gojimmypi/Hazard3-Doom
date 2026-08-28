@@ -1,3 +1,22 @@
+/* -----------------------------------------------------------------------------
+ * File:        w_file_stdc_hazard3.c
+ * Path:        doom/w_file_stdc_hazard3.c
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Implement a DoomGeneric WAD backend for the monitor-provided
+ *              memory-resident IWAD.
+ *
+ * Copyright (c) 2026 gojimmypi
+ *
+ * Licensed under the GNU General Public License, version 2 or later.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ * This software is provided WITHOUT ANY WARRANTY.
+ * See LICENSES/GPL-2.0.txt for the complete license terms.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
 //
 // DoomGeneric WAD backend for a monitor-provided, memory-resident IWAD.
 //

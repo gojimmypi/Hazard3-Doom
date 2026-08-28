@@ -1,3 +1,23 @@
+/* -----------------------------------------------------------------------------
+ * File:        tb_apb_sao_bridge.v
+ * Path:        tests/sao-bridge/tb_apb_sao_bridge.v
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Verify APB, I2C, GPIO, timeout, and ESP32 arbitration behavior of
+ *              the SAO bridge.
+ *
+ * Copyright (c) 2026 gojimmypi
+ *
+ * This source describes Open Hardware and is licensed under the CERN
+ * Open Hardware License Version 2 - Weakly Reciprocal.
+ *
+ * SPDX-License-Identifier: CERN-OHL-W-2.0
+ *
+ * This source is provided WITHOUT ANY EXPRESS OR IMPLIED WARRANTY.
+ * See LICENSES/CERN-OHL-W-2.0.txt for the complete license terms.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
 `default_nettype none
 
 `timescale 1ns/1ps

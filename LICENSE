@@ -1,0 +1,13 @@
+Hazard3-Doom is a multi-license project.
+
+Original Hazard3-Doom FPGA hardware designs, gateware, RTL, and related
+hardware-design source explicitly identified as CERN-OHL-W-2.0 are
+licensed under the CERN Open Hardware License Version 2 - Weakly
+Reciprocal.
+
+Other project material and third-party components are subject to their
+respective licenses.
+
+See LICENSING.md for the applicable licensing policy, ATTRIBUTION.md
+for attribution and provenance, and LICENSES/ for license texts and
+third-party notices.

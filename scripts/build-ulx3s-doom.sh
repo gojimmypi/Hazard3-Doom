@@ -1,8 +1,23 @@
 #!/bin/bash
+# -----------------------------------------------------------------------------
+# File:        build-ulx3s-doom.sh
+# Path:        scripts/build-ulx3s-doom.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Build the complete ULX3S 85F monitor, FPGA bitstream, Doom
+#              image, and SD-card staging files.
 #
 # Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
 # SPDX-License-Identifier: Apache-2.0
 #
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 # file: scripts/build-ulx3s-doom.sh
 #
 set -euo pipefail

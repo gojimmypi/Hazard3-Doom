@@ -1,4 +1,23 @@
 @echo off
+rem -----------------------------------------------------------------------------
+rem File:        start-openocd.bat
+rem Path:        scripts/start-openocd.bat
+rem
+rem Project:     Hazard3-Doom
+rem Purpose:     Start the Windows OpenOCD server with the Hazard3-Doom ULX3S
+rem              configuration.
+rem
+rem Copyright (c) 2026 gojimmypi
+rem
+rem Licensed under the Apache License, Version 2.0.
+rem
+rem SPDX-License-Identifier: Apache-2.0
+rem
+rem This software is provided under the terms of the applicable license.
+rem See LICENSES/Apache-2.0.txt for the complete license terms.
+rem See LICENSING.md for project licensing policy and scope.
+rem -----------------------------------------------------------------------------
+
 REM Starts a listening OpenOCD server using ulx3s-openocd.cfg
 setlocal EnableExtensions
 

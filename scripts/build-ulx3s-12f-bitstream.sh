@@ -1,8 +1,23 @@
 #!/bin/bash
+# -----------------------------------------------------------------------------
+# File:        build-ulx3s-12f-bitstream.sh
+# Path:        scripts/build-ulx3s-12f-bitstream.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Build the ULX3S 12F FPGA bitstream through the shared ECP5
+#              flow.
 #
 # Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
 # SPDX-License-Identifier: Apache-2.0
 #
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 # ULX3S 12F entry point for the shared Hazard3-Doom ECP5 build flow.
 
 set -euo pipefail

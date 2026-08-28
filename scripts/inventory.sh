@@ -1,4 +1,23 @@
 #!/usr/bin/env bash
+# -----------------------------------------------------------------------------
+# File:        inventory.sh
+# Path:        scripts/inventory.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Generate deterministic SHA-256 inventories for Git-tracked
+#              files under a selected directory.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 set -euo pipefail
 
 # Inventory Git-tracked files under a selected directory and generate stable SHA-256

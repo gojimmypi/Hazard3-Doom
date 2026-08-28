@@ -1,4 +1,23 @@
 #!/bin/bash
+# -----------------------------------------------------------------------------
+# File:        doom_sources.sh
+# Path:        doom/doom_sources.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Define the upstream DoomGeneric source set used by Hazard3-Doom
+#              builds.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the GNU General Public License, version 2 or later.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# This software is provided WITHOUT ANY WARRANTY.
+# See LICENSES/GPL-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 
 # Source list derived from ozkl/doomgeneric doomgeneric/Makefile.
 # The Xlib platform file is intentionally replaced by doomgeneric_hazard3.c.

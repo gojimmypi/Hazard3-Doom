@@ -1,4 +1,23 @@
 #!/bin/bash
+# -----------------------------------------------------------------------------
+# File:        load-firmware-12f.sh
+# Path:        scripts/load-firmware-12f.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Load the ULX3S 12F SDRAM-resident monitor through a running
+#              GDB/OpenOCD server.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 # Load the ULX3S 12F SDRAM-resident monitor after FPGA configuration.
 set -euo pipefail
 

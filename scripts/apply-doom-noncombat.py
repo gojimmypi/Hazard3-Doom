@@ -1,4 +1,23 @@
 #!/usr/bin/env python3
+# -----------------------------------------------------------------------------
+# File:        apply-doom-noncombat.py
+# Path:        scripts/apply-doom-noncombat.py
+#
+# Project:     Hazard3-Doom
+# Purpose:     Apply the Hazard3 Supercon noncombat source transform to a
+#              prepared DoomGeneric build tree.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 """Apply Hazard3 Supercon noncombat behavior to a prepared DoomGeneric tree."""
 
 from __future__ import annotations
