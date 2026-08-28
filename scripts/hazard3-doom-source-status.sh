@@ -45,7 +45,9 @@ set -euo pipefail
 #
 # It also includes:
 #   - default-to-default comparisons across all related repositories
+#   - explicit project-integration branch comparisons
 #   - same-named branch comparisons across all related repositories
+#   - local submodule gitlink versus working-checkout diagnostics
 #
 # Requirements: Bash 4+, Git, and standard POSIX/GNU userland tools.
 # No GitHub CLI, jq, API token, or local clone is required.
@@ -104,6 +106,11 @@ FAMILIES=(
     "doomgeneric|${CURRENT_USER}/doomgeneric|ulx3s/doomgeneric|ozkl/doomgeneric"
     "Hazard3|${CURRENT_USER}/Hazard3|ulx3s/Hazard3|Wren6991/Hazard3"
     "Hazard3-libfpga|${CURRENT_USER}/Hazard3-libfpga|ulx3s/Hazard3-libfpga|Wren6991/libfpga"
+)
+
+INTEGRATION_COMPARISONS=(
+    "Hazard3|${CURRENT_USER}/Hazard3|ulx-doom-dev|ulx3s/Hazard3|ulx-doom"
+    "Hazard3-libfpga|${CURRENT_USER}/Hazard3-libfpga|ulx-doom-dev|ulx3s/Hazard3-libfpga|ulx-doom"
 )
 
 declare -A DEFAULT_BRANCHES=()
@@ -194,6 +201,37 @@ compare_refs() {
             "$subject_ref...$base_ref"
     )
     printf '%s %s\n' "$subject_only" "$base_only"
+}
+
+gitlink_sha() {
+    local repo_dir="$1"
+    local ref="$2"
+    local path="$3"
+
+    git -C "$repo_dir" ls-tree "$ref" -- "$path" 2>/dev/null |
+        awk '$1 == "160000" { print $3; exit }'
+}
+
+checkout_state() {
+    local repo_dir="$1"
+
+    if [[ -n "$(git -C "$repo_dir" status --porcelain 2>/dev/null)" ]]; then
+        printf 'DIRTY\n'
+    else
+        printf 'CLEAN\n'
+    fi
+}
+
+checkout_branch() {
+    local repo_dir="$1"
+    local branch
+
+    branch="$(git -C "$repo_dir" branch --show-current 2>/dev/null || true)"
+    if [[ -n "$branch" ]]; then
+        printf '%s\n' "$branch"
+    else
+        printf 'DETACHED\n'
+    fi
 }
 
 print_rule() {
@@ -393,6 +431,57 @@ for family_entry in "${FAMILIES[@]}"; do
         printf '(No default-branch comparisons available.)\n'
     fi
 
+    integration_entries=()
+    for integration_entry in "${INTEGRATION_COMPARISONS[@]}"; do
+        IFS='|' read -r integration_family _ <<< "$integration_entry"
+        if [[ "$integration_family" == "$family_name" ]]; then
+            integration_entries+=("$integration_entry")
+        fi
+    done
+
+    if ((${#integration_entries[@]} > 0)); then
+        printf '\n'
+        print_subrule
+        printf 'PROJECT-INTEGRATION BRANCH COMPARISONS ACROSS %s REPOSITORIES\n' "$family_name"
+        print_subrule
+
+        for integration_entry in "${integration_entries[@]}"; do
+            IFS='|' read -r _ left_repo left_branch right_repo right_branch <<< "$integration_entry"
+            left_owner="$(repo_owner "$left_repo")"
+            right_owner="$(repo_owner "$right_repo")"
+            left_ref="refs/remotes/${left_owner}/${left_branch}"
+            right_ref="refs/remotes/${right_owner}/${right_branch}"
+
+            if [[ "${REPO_FETCH_OK[$left_repo]:-0}" != 1 ||
+                  "${REPO_FETCH_OK[$right_repo]:-0}" != 1 ]]; then
+                printf '%s:%s vs %s:%s -> UNAVAILABLE (repository fetch failed)\n' \
+                    "$left_repo" "$left_branch" "$right_repo" "$right_branch"
+                continue
+            fi
+
+            if ! git --git-dir="$family_git_dir" rev-parse --verify --quiet "$left_ref" >/dev/null; then
+                printf '%s:%s vs %s:%s -> UNAVAILABLE (left branch not found)\n' \
+                    "$left_repo" "$left_branch" "$right_repo" "$right_branch"
+                continue
+            fi
+
+            if ! git --git-dir="$family_git_dir" rev-parse --verify --quiet "$right_ref" >/dev/null; then
+                printf '%s:%s vs %s:%s -> UNAVAILABLE (right branch not found)\n' \
+                    "$left_repo" "$left_branch" "$right_repo" "$right_branch"
+                continue
+            fi
+
+            read -r ahead behind < <(
+                compare_refs "$family_git_dir" "$left_ref" "$right_ref"
+            )
+
+            printf '%s:%s vs %s:%s -> AHEAD=%s BEHIND=%s\n' \
+                "$left_repo" "$left_branch" \
+                "$right_repo" "$right_branch" \
+                "$ahead" "$behind"
+        done
+    fi
+
     # Same-named branches across repositories. This section never assumes that
     # differently named branches such as master/stable/ulx-doom are equivalent.
     printf '\n'
@@ -445,3 +534,86 @@ for family_entry in "${FAMILIES[@]}"; do
 
     printf '\n'
 done
+
+print_rule
+printf 'LOCAL SUBMODULE GITLINK AUDIT\n'
+print_rule
+
+HAZARD3_DIR="${ROOT_DIR}/third_party/Hazard3"
+LIBFPGA_DIR="${HAZARD3_DIR}/example_soc/libfpga"
+
+if git -C "$ROOT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    root_head="$(git -C "$ROOT_DIR" rev-parse HEAD)"
+    root_branch="$(checkout_branch "$ROOT_DIR")"
+    root_state="$(checkout_state "$ROOT_DIR")"
+    printf 'Hazard3-Doom working checkout: %s (%s, %s)\n' "$root_head" "$root_branch" "$root_state"
+
+    hazard3_recorded="$(gitlink_sha "$ROOT_DIR" HEAD third_party/Hazard3)"
+    if [[ -n "$hazard3_recorded" ]]; then
+        printf 'Hazard3-Doom recorded Hazard3: %s\n' "$hazard3_recorded"
+    else
+        printf 'Hazard3-Doom recorded Hazard3: UNAVAILABLE\n'
+    fi
+
+    if git -C "$HAZARD3_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        hazard3_working="$(git -C "$HAZARD3_DIR" rev-parse HEAD)"
+        hazard3_branch="$(checkout_branch "$HAZARD3_DIR")"
+        hazard3_state="$(checkout_state "$HAZARD3_DIR")"
+        printf 'Hazard3 working checkout:       %s (%s, %s)\n' "$hazard3_working" "$hazard3_branch" "$hazard3_state"
+
+        if [[ -n "$hazard3_recorded" && "$hazard3_recorded" == "$hazard3_working" ]]; then
+            printf 'Hazard3 checkout vs parent gitlink: MATCH\n'
+        elif [[ -n "$hazard3_recorded" ]]; then
+            printf 'Hazard3 checkout vs parent gitlink: MISMATCH\n'
+        else
+            printf 'Hazard3 checkout vs parent gitlink: UNAVAILABLE\n'
+        fi
+
+        libfpga_recorded_working="$(gitlink_sha "$HAZARD3_DIR" HEAD example_soc/libfpga)"
+        if [[ -n "$libfpga_recorded_working" ]]; then
+            printf 'Hazard3 working HEAD recorded libfpga: %s\n' "$libfpga_recorded_working"
+        else
+            printf 'Hazard3 working HEAD recorded libfpga: UNAVAILABLE\n'
+        fi
+
+        libfpga_recorded_parent=''
+        if [[ -n "$hazard3_recorded" ]] &&
+           git -C "$HAZARD3_DIR" cat-file -e "${hazard3_recorded}^{commit}" 2>/dev/null; then
+            libfpga_recorded_parent="$(gitlink_sha "$HAZARD3_DIR" "$hazard3_recorded" example_soc/libfpga)"
+        fi
+        if [[ -n "$libfpga_recorded_parent" ]]; then
+            printf 'Parent-recorded Hazard3 expected libfpga: %s\n' "$libfpga_recorded_parent"
+        else
+            printf 'Parent-recorded Hazard3 expected libfpga: UNAVAILABLE\n'
+        fi
+
+        if git -C "$LIBFPGA_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            libfpga_working="$(git -C "$LIBFPGA_DIR" rev-parse HEAD)"
+            libfpga_branch="$(checkout_branch "$LIBFPGA_DIR")"
+            libfpga_state="$(checkout_state "$LIBFPGA_DIR")"
+            printf 'libfpga working checkout:             %s (%s, %s)\n' "$libfpga_working" "$libfpga_branch" "$libfpga_state"
+
+            if [[ -n "$libfpga_recorded_working" && "$libfpga_recorded_working" == "$libfpga_working" ]]; then
+                printf 'libfpga checkout vs working Hazard3 gitlink: MATCH\n'
+            elif [[ -n "$libfpga_recorded_working" ]]; then
+                printf 'libfpga checkout vs working Hazard3 gitlink: MISMATCH\n'
+            else
+                printf 'libfpga checkout vs working Hazard3 gitlink: UNAVAILABLE\n'
+            fi
+
+            if [[ -n "$libfpga_recorded_parent" && "$libfpga_recorded_parent" == "$libfpga_working" ]]; then
+                printf 'libfpga checkout vs parent-recorded chain: MATCH\n'
+            elif [[ -n "$libfpga_recorded_parent" ]]; then
+                printf 'libfpga checkout vs parent-recorded chain: MISMATCH\n'
+            else
+                printf 'libfpga checkout vs parent-recorded chain: UNAVAILABLE\n'
+            fi
+        else
+            printf 'libfpga working checkout: UNAVAILABLE\n'
+        fi
+    else
+        printf 'Hazard3 working checkout: UNAVAILABLE\n'
+    fi
+else
+    printf 'Local Hazard3-Doom checkout: UNAVAILABLE\n'
+fi
