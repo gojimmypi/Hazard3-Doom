@@ -33,7 +33,6 @@ DOOM_BUILD_DIR="${HAZARD3_DOOM_BUILD_DIR:-${BOARD_BUILD_DIR}/doom-image}"
 SDCARD_DIR="${BOARD_BUILD_DIR}/sdcard"
 FPGA_OUTPUT="${ROOT_DIR}/build/fpga_ulx3s_12f.bit"
 MONITOR_OUTPUT="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.elf"
-PROGRAMMING_PACKAGE="${BOARD_BUILD_DIR}/hazard3-doom-ulx3s-12f.zip"
 DOOM_OUTPUT="${DOOM_BUILD_DIR}/hazard3-doom.h3d"
 MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE:-32m}"
 VIDEO_RESOLUTION="${HAZARD3_DOOM_HDMI_RESOLUTION:-320x200}"
@@ -69,7 +68,6 @@ require_file "${HAZARD3_ROOT}/example_soc/soc/cache_tags_zero_12f.hex"
 require_file "${HAZARD3_ROOT}/example_soc/soc/hazard3-12f-bootstrap.hex"
 require_executable "${ROOT_DIR}/scripts/build.sh"
 require_executable "${ROOT_DIR}/scripts/build-ulx3s-12f-bitstream.sh"
-require_executable "${ROOT_DIR}/scripts/package-fpga-console-firmware.py"
 require_executable "${ROOT_DIR}/doom/build-doom-image.sh"
 
 printf 'Building ULX3S 12F monitor in external SDRAM (%s profile)...\n' "${MEMORY_PROFILE}"
@@ -86,12 +84,6 @@ HAZARD3_MEMORY_PROFILE="${MEMORY_PROFILE}" \
 HAZARD3_ROOT="${HAZARD3_ROOT}" \
     "${ROOT_DIR}/scripts/build-ulx3s-12f-bitstream.sh"
 require_file "${FPGA_OUTPUT}"
-
-printf '\nPackaging the matched ULX3S 12F FPGA image and console firmware...\n'
-"${ROOT_DIR}/scripts/package-fpga-console-firmware.py" \
-    "${FPGA_OUTPUT}" "${MONITOR_OUTPUT}" "${PROGRAMMING_PACKAGE}" \
-    --board ulx3s-12f
-require_file "${PROGRAMMING_PACKAGE}"
 
 printf '\nBuilding the 320x200 Doom image (%s profile)...\n' "${MEMORY_PROFILE}"
 HAZARD3_DOOM_BUILD_DIR="${DOOM_BUILD_DIR}" \
@@ -112,7 +104,6 @@ fi
 printf '\nULX3S 12F Doom build complete.\n'
 printf '  FPGA:    %s\n' "${FPGA_OUTPUT}"
 printf '  Monitor: %s\n' "${MONITOR_OUTPUT}"
-printf '  Package: %s\n' "${PROGRAMMING_PACKAGE}"
 printf '  Doom:    %s\n' "${DOOM_OUTPUT}"
 printf '  SD H3D:  %s\n' "${SDCARD_DIR}/DOOM.H3D"
 printf '  Profile: %s SDRAM, 320x200 compact scanout\n' "${MEMORY_PROFILE}"
