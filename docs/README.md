@@ -15,6 +15,17 @@ python -m sphinx -W --keep-going -b html docs docs/_build/html
 
 Open `docs/_build/html/index.html`.
 
+
+## Localization
+
+Project with [multiple languages](https://docs.readthedocs.com/platform/latest/localization.html): 
+
+> Each language must have its own project on Read the Docs. You will choose one to be the parent project, and add each of the other projects as “Translations” of the parent project.
+
+Create the new project with the same name and a language suffix, [for example](./images/readthedocs-localization-project.png) `-hr`. 
+
+Add the new project as a [translation](./images/readthedocs-add-translation.png).
+
 Build the Croatian documentation with:
 
 ```bash
