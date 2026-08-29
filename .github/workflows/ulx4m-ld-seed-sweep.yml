@@ -12,6 +12,14 @@ on:
           - "25"
           - "40"
           - "50"
+      placer:
+        description: ULX4M-LD nextpnr placer
+        required: true
+        default: "heap"
+        type: choice
+        options:
+          - "heap"
+          - "sa"
 
 permissions:
   contents: read
@@ -23,6 +31,7 @@ concurrency:
 env:
   OSS_CAD_SUITE_VERSION: "2026-07-20"
   HAZARD3_ULX4M_SYS_CLK_MHZ: ${{ inputs.sys_clk_mhz }}
+  HAZARD3_ULX4M_NEXTPNR_PLACER: ${{ inputs.placer }}
 
 jobs:
   prepare:
@@ -180,6 +189,7 @@ jobs:
               printf 'matrix_jobs=20\n'
               printf 'seeds_per_matrix_job=13\n'
               printf 'matrix_max_parallel=20\n'
+              printf 'placer=%s\n' "${HAZARD3_ULX4M_NEXTPNR_PLACER}"
               printf 'clk_sys_required_mhz=%s.00\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
               printf 'litedram_user_required_mhz=75.01\n'
               printf 'clk_video_required_mhz=50.00\n'
@@ -327,6 +337,9 @@ jobs:
           set -u -o pipefail
 
           sweep_dir="third_party/Hazard3/example_soc/synth/routing-sweep/ulx4m-ld"
+          if [[ "${HAZARD3_ULX4M_NEXTPNR_PLACER}" != "heap" ]]; then
+              sweep_dir="${sweep_dir}-${HAZARD3_ULX4M_NEXTPNR_PLACER}"
+          fi
           artifact_dir="seed-artifact"
           expected_sha="$(awk '{print $1}' reference/netlist.sha256)"
           overall_status=0

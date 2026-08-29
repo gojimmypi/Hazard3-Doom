@@ -42,7 +42,11 @@ LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM/generated"
 SWEEP_JOBS="${SWEEP_JOBS:-2}"
 SWEEP_SKIP_SYNTH="${SWEEP_SKIP_SYNTH:-0}"
 HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-50}"
+HAZARD3_ULX4M_NEXTPNR_PLACER="${HAZARD3_ULX4M_NEXTPNR_PLACER:-heap}"
 SWEEP_DIR="routing-sweep/ulx4m-ld"
+if [[ "${HAZARD3_ULX4M_NEXTPNR_PLACER}" != "heap" ]]; then
+    SWEEP_DIR="${SWEEP_DIR}-${HAZARD3_ULX4M_NEXTPNR_PLACER}"
+fi
 SYNTH_PROFILE_STAMP="${SYNTH_DIR}/fpga_ulx4m_ld.sys-clk-mhz"
 
 usage()
@@ -52,6 +56,7 @@ usage()
     echo "  seed         Route one seed (1-260)" >&2
     echo "  start-end    Route an inclusive seed range (1-260)" >&2
     echo "  SWEEP_JOBS=N Run up to N routed seeds concurrently (default: 2)" >&2
+    echo "  HAZARD3_ULX4M_NEXTPNR_PLACER=heap|sa Select nextpnr placer (default: heap)" >&2
 }
 
 require_tool()
@@ -90,6 +95,15 @@ case "${HAZARD3_ULX4M_SYS_CLK_MHZ}" in
     ;;
 *)
     echo "HAZARD3_ULX4M_SYS_CLK_MHZ must be 25, 40, or 50" >&2
+    exit 1
+    ;;
+esac
+
+case "${HAZARD3_ULX4M_NEXTPNR_PLACER}" in
+heap|sa)
+    ;;
+*)
+    echo "HAZARD3_ULX4M_NEXTPNR_PLACER must be heap or sa" >&2
     exit 1
     ;;
 esac
@@ -209,7 +223,7 @@ mkdir -p "${SWEEP_DIR}"
     printf 'device=um-85k\n'
     printf 'speed=8\n'
     printf 'package=CABGA381\n'
-    printf 'placer=heap\n'
+    printf 'placer=%s\n' "${HAZARD3_ULX4M_NEXTPNR_PLACER}"
     printf 'full_route=1\n'
     printf 'clk_sys_required_mhz=%s.00\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
     printf 'litedram_user_required_mhz=75.01\n'
@@ -264,7 +278,7 @@ run_seed()
     echo "=== routed ULX4M-LD seed ${seed} ==="
 
     if ! nextpnr-ecp5 \
-        --placer heap \
+        --placer "${HAZARD3_ULX4M_NEXTPNR_PLACER}" \
         --um-85k \
         --speed 8 \
         --package CABGA381 \
