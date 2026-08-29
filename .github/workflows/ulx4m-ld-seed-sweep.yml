@@ -172,6 +172,7 @@ jobs:
               third_party/Hazard3/.gitmodules
               third_party/Hazard3/hdl
               third_party/Hazard3/scripts
+              third_party/Hazard3/project_paths.mk
               third_party/Hazard3/example_soc/project_paths.mk
               third_party/Hazard3/example_soc/fpga
               third_party/Hazard3/example_soc/soc
