@@ -40,6 +40,7 @@ HAZARD3_ROOT="${HAZARD3_ROOT:-${REPO_ROOT}/third_party/Hazard3}"
 SYNTH_DIR="${HAZARD3_ROOT}/example_soc/synth"
 LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM/generated"
 SWEEP_JOBS="${SWEEP_JOBS:-2}"
+SWEEP_SKIP_SYNTH="${SWEEP_SKIP_SYNTH:-0}"
 SWEEP_DIR="routing-sweep/ulx4m-ld"
 
 usage()
@@ -136,7 +137,11 @@ fi
 
 # Always ask make to ensure the synthesized netlist is current. This is a no-op
 # when the source dependencies are already up to date.
-make -C "${SYNTH_DIR}" -f ULX4M_LD_85F.mk synth
+if [[ "${SWEEP_SKIP_SYNTH}" != "1" ]]; then
+    # Always ask make to ensure the synthesized netlist is current. This is a no-op
+    # when the source dependencies are already up to date.
+    make -C "${SYNTH_DIR}" -f ULX4M_LD_85F.mk synth
+fi
 
 [[ -s "${SYNTH_DIR}/fpga_ulx4m_ld.json" ]] || {
     echo "Synthesis completed without creating ${SYNTH_DIR}/fpga_ulx4m_ld.json" >&2

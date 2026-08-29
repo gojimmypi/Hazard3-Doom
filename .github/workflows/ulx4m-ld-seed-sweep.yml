@@ -273,6 +273,7 @@ jobs:
 
               set +e
               SWEEP_JOBS=1 \
+              SWEEP_SKIP_SYNTH=1 \
                   ./scripts/sweep-ulx4m-ld.sh "${seed}" \
                   |& tee "${artifact_dir}/console-${seed}.log"
               route_status=${PIPESTATUS[0]}
