@@ -66,6 +66,7 @@ jobs:
           synth_dir="third_party/Hazard3/example_soc/synth"
           litedram_dir="third_party/Hazard3/example_soc/third_party/LiteDRAM/generated"
 
+          touch "${synth_dir}/../soc/hazard3-boot-monitor.hex;
           make -C "${synth_dir}" -f ULX4M_LD_85F.mk synth
 
           test -s "${synth_dir}/fpga_ulx4m_ld.json"
@@ -74,7 +75,6 @@ jobs:
           test -s "${litedram_dir}/litedram_ulx4m_cpu.v"
           test -s "${litedram_dir}/litedram_ulx4m_cpu_rom.init"
           test -f "${litedram_dir}/litedram_ulx4m_cpu_sram.init"
-          touch "${synth_dir}/../soc/hazard3-boot-monitor.hex;
 
       - name: Record sweep reference metadata
         shell: bash
