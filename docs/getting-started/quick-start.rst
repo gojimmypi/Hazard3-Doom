@@ -4,7 +4,7 @@ Quick Start
 Target
 ------
 
-The primary documented target is the **ULX3S 85F** running Hazard3 at 50 MHz with HDMI output. ULX4M-LD and ULX4M-LS profiles are also documented where their memory layout differs.
+The primary documented target is the **ULX3S 85F** running Hazard3 at 50 MHz with HDMI output. The compact ULX3S 12F target and ULX4M-LD/ULX4M-LS profiles are also documented where their clock, video, or memory layout differs.
 
 1. Clone the repository
 -----------------------
@@ -36,7 +36,7 @@ Important outputs include:
 
 .. code-block:: text
 
-   build/ulx3s/fpga_ulx3s.bit
+   build/fpga_ulx3s.bit
    build/hazard3-boot-monitor.elf
    build/doom-image/hazard3-doom.h3d
 

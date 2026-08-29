@@ -119,14 +119,21 @@ DoomGeneric changes by setting `HAZARD3_DOOM_ALLOW_DIRTY_DOOMGENERIC=1`.
 
 ## Board profiles
 
-| Board       | Memory profile | System clock |
-|-------------|---------------:|-------------:|
-| ULX3S 85F    |    `64m`      |       50 MHz |
-| ULX4M-LD 85F |    `64m`      |       50 MHz |
-| ULX4M-LS 85F |    `32m`      |       50 MHz |
+| Board       | Memory profile                  | System clock |
+|-------------|---------------------------------:|-------------:|
+| ULX3S 85F    |    `64m`                         |       50 MHz |
+| ULX3S 12F    |    `32m` default; `64m` optional |       40 MHz |
+| ULX4M-LD 85F |    `64m`                         |       50 MHz |
+| ULX4M-LS 85F |    `32m`                         |       50 MHz |
 
-The `64m` profile is the default. The profile used for the monitor, Doom image,
-and WAD uploader must match.
+The `64m` profile is the default for the 85F targets. The ULX3S 12F wrapper
+defaults to `32m`. The profile used for the monitor, Doom image, and WAD
+uploader must match.
+
+Current release validation uses seed 55 for ULX3S 85F and seed 65 for ULX3S
+12F. ULX4M-LD currently requires an explicit timing waiver to generate a
+development bitstream; see `docs/reference/board-profiles.rst` for the measured
+status and caveats.
 
 
 ## Source and build ownership
@@ -158,18 +165,29 @@ ULX3S 85F:
 ./scripts/build-ulx3s-doom.sh
 ```
 
+ULX3S 12F:
+
+```bash
+./scripts/build-ulx3s-12f-doom.sh
+```
+
 ULX4M-LD 85F:
 
 ```bash
-./scripts/build-ulx4m-ld-doom.sh
+ALLOW_TIMING_FAILURE=1 ./scripts/build-ulx4m-ld-doom.sh
 ```
+
+The ULX4M-LD timing waiver is intentional for the current development target.
+It reports the timing misses but allows the bitstream and Doom package to be
+generated.
 
 The wrappers build the FPGA in the pinned Hazard3 submodule, then copy the final
 bitstream into this repository:
 
 ```text
-build/ulx3s/fpga_ulx3s.bit
-build/ulx4m-ld/fpga_ulx4m_ld.bit
+build/fpga_ulx3s.bit
+build/fpga_ulx3s_12f.bit
+build/fpga_ulx4m_ld.bit
 build/hazard3-boot-monitor.elf
 build/doom-image/hazard3-doom.h3d
 ```

@@ -36,7 +36,10 @@ memorijsku mapu međusobno usklađenima.
 ``scripts/build-ulx4m-ld-doom.sh``
    Potpuni build za ULX4M-LD 85F. Koristi mapu od 64 MiB pri 50 MHz i prije
    builda monitora, ugrađene boot slike, FPGA bitstreama i Doom slike provjerava
-   potrebne generirane LiteDRAM izvore.
+   potrebne generirane LiteDRAM izvore. Trenutačni routed dizajn ima poznate
+   timing promašaje za ``clk_sys`` i LiteDRAM, pa koristite
+   ``ALLOW_TIMING_FAILURE=1`` kada namjerno generirate trenutačni razvojni
+   bitstream.
 
 Primjeri:
 
@@ -44,7 +47,7 @@ Primjeri:
 
    ./scripts/build-ulx3s-doom.sh
    ./scripts/build-ulx3s-12f-doom.sh
-   ./scripts/build-ulx4m-ld-doom.sh
+   ALLOW_TIMING_FAILURE=1 ./scripts/build-ulx4m-ld-doom.sh
 
 Za testiranje drugog Hazard3 checkouta bez promjene Hazard3-Doom gitlinka:
 
@@ -77,6 +80,9 @@ Pomoćni alati za build monitora i bitstreama
 ``scripts/build-ecp5-bitstream-common.sh``
    Interna zajednička implementacija sinteze/place-and-routea koju koriste tri
    omotača za bitstream specifična za pločice. Uobičajeno se ne poziva izravno.
+   ``ALLOW_TIMING_FAILURE=1`` dopušta generiranje bitstreama uz zadržavanje
+   timing promašaja kao vidljivih upozorenja; koristite ga samo za namjerno
+   prihvaćenu razvojnu timing iznimku, poput trenutačnog ULX4M-LD cilja.
 
 ``scripts/make-boot-hex.py``
    Pretvara binarnu datoteku monitora u heksadecimalnu inicijalizacijsku

@@ -4,7 +4,7 @@ Démarrage rapide
 Cible
 -----
 
-La cible principale documentée est l'**ULX3S 85F** exécutant Hazard3 à 50 MHz avec sortie HDMI. Les profils ULX4M-LD et ULX4M-LS sont également documentés lorsque leur organisation mémoire diffère.
+La cible principale documentée est l'**ULX3S 85F** exécutant Hazard3 à 50 MHz avec sortie HDMI. La cible compacte ULX3S 12F et les profils ULX4M-LD/ULX4M-LS sont également documentés lorsque leur horloge, leur vidéo ou leur organisation mémoire diffère.
 
 1. Cloner le dépôt
 ------------------
@@ -36,7 +36,7 @@ Les sorties importantes incluent :
 
 .. code-block:: text
 
-   build/ulx3s/fpga_ulx3s.bit
+   build/fpga_ulx3s.bit
    build/hazard3-boot-monitor.elf
    build/doom-image/hazard3-doom.h3d
 

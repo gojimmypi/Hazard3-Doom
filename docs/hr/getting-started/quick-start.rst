@@ -4,7 +4,7 @@ Brzi početak
 Cilj
 ----
 
-Primarni dokumentirani cilj je **ULX3S 85F** na kojem Hazard3 radi na 50 MHz uz HDMI izlaz. Profili ULX4M-LD i ULX4M-LS također su dokumentirani tamo gdje se razlikuje raspored memorije.
+Primarni dokumentirani cilj je **ULX3S 85F** na kojem Hazard3 radi na 50 MHz uz HDMI izlaz. Kompaktni cilj ULX3S 12F i profili ULX4M-LD/ULX4M-LS također su dokumentirani tamo gdje se razlikuju njihov takt, video ili raspored memorije.
 
 1. Klonirajte repozitorij
 -------------------------
@@ -36,7 +36,7 @@ Važni izlazni artefakti uključuju:
 
 .. code-block:: text
 
-   build/ulx3s/fpga_ulx3s.bit
+   build/fpga_ulx3s.bit
    build/hazard3-boot-monitor.elf
    build/doom-image/hazard3-doom.h3d
 

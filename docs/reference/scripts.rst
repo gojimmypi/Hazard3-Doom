@@ -35,7 +35,9 @@ memory map aligned.
 ``scripts/build-ulx4m-ld-doom.sh``
    Complete ULX4M-LD 85F build. It uses the 64 MiB map at 50 MHz and checks the
    required LiteDRAM generated sources before building the monitor, embedded boot
-   image, FPGA bitstream, and Doom image.
+   image, FPGA bitstream, and Doom image. The current routed design has known
+   ``clk_sys`` and LiteDRAM timing misses, so use ``ALLOW_TIMING_FAILURE=1`` when
+   intentionally generating the current development bitstream.
 
 Examples:
 
@@ -43,7 +45,7 @@ Examples:
 
    ./scripts/build-ulx3s-doom.sh
    ./scripts/build-ulx3s-12f-doom.sh
-   ./scripts/build-ulx4m-ld-doom.sh
+   ALLOW_TIMING_FAILURE=1 ./scripts/build-ulx4m-ld-doom.sh
 
 To test another Hazard3 checkout without changing the Hazard3-Doom gitlink:
 
@@ -76,6 +78,9 @@ Monitor and bitstream build helpers
 ``scripts/build-ecp5-bitstream-common.sh``
    Internal shared synthesis/place-and-route implementation used by the three
    board-specific bitstream wrappers. It is not normally invoked directly.
+   ``ALLOW_TIMING_FAILURE=1`` permits a bitstream to be generated while keeping
+   timing misses visible as warnings; use it only for an intentionally accepted
+   development timing exception such as the current ULX4M-LD target.
 
 ``scripts/make-boot-hex.py``
    Convert a monitor binary into the hexadecimal initialization file consumed by

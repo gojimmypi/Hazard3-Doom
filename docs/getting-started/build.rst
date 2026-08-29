@@ -23,7 +23,12 @@ ULX4M-LD 85F, 64 MiB, 50 MHz:
 
 .. code-block:: bash
 
-   ./scripts/build-ulx4m-ld-doom.sh
+   ALLOW_TIMING_FAILURE=1 ./scripts/build-ulx4m-ld-doom.sh
+
+The current ULX4M-LD route has known ``clk_sys`` and LiteDRAM timing misses.
+``ALLOW_TIMING_FAILURE=1`` keeps those misses visible while allowing a
+development bitstream to be generated; it does not make the constraints pass.
+See :doc:`../reference/board-profiles` for the current validation results.
 
 The 12F wrapper supports either a 32 MiB or 64 MiB SDRAM map, but defaults to
 32 MiB. If the 64 MiB map is selected, keep the monitor and Doom image matched:

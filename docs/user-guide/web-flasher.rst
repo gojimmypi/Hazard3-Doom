@@ -156,7 +156,7 @@ For the standard ULX3S build, the image is typically:
 
 .. code-block:: text
 
-   build/ulx3s/fpga_ulx3s.bit
+   build/fpga_ulx3s.bit
 
 To program it:
 
@@ -247,8 +247,8 @@ Project Trellis can generate an equivalent ECP5 SRAM programming stream with:
 .. code-block:: bash
 
    python3 /path/to/prjtrellis/tools/bit_to_svf.py \
-       build/ulx3s/fpga_ulx3s.bit \
-       build/ulx3s/fpga_ulx3s.svf
+       build/fpga_ulx3s.bit \
+       build/fpga_ulx3s.svf
 
 The browser implements the SVF operations required by the normal Project
 Trellis ECP5 SRAM programming sequence. Unsupported commands stop programming

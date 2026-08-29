@@ -20,7 +20,7 @@ Board Profiles
    * - ULX4M-LD 85F
      - ``64m``
      - 50 MHz
-     - LiteDRAM target
+     - LiteDRAM target; timing waiver required
    * - ULX4M-LS 85F
      - ``32m``
      - 50 MHz documented profile
@@ -29,6 +29,41 @@ Board Profiles
 The monitor, linked Doom image, and SDRAM memory map must agree on the memory
 profile. Complete board build wrappers set their target-specific profile and
 clock automatically.
+
+Current FPGA validation
+-----------------------
+
+The current release was locally rebuilt from the pinned Hazard3 tree with
+Yosys 0.60+70 and the default board seeds. These routed results are regression
+checkpoints, not portable timing guarantees:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 12 40 24
+
+   * - Board
+     - Seed
+     - Routed result
+     - Status
+   * - ULX3S 85F
+     - 55
+     - ``clk_sys`` 51.77 MHz
+     - PASS at 50 MHz
+   * - ULX3S 12F
+     - 65
+     - ``clk_sys`` 42.11 MHz
+     - PASS at 40 MHz
+   * - ULX4M-LD 85F
+     - 232
+     - ``clk_sys`` 43.78 MHz; LiteDRAM 64.65 MHz
+     - FAIL at 50 MHz / 75.01 MHz
+
+The ULX4M-LD build therefore uses ``ALLOW_TIMING_FAILURE=1`` when a development
+bitstream is required. The waiver changes timing failures into reported
+warnings; it does not claim timing closure. Rerun routed timing after material
+RTL, netlist, seed, or toolchain changes. The ULX3S 85F result is specific to
+the timing model selected by the current project flow and should not be compared
+directly with runs that select a different ECP5 timing model.
 
 Primary ULX3S peripheral bases
 ------------------------------

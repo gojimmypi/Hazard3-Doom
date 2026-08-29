@@ -157,7 +157,7 @@ Za standardnu ULX3S izgradnju slika je obično:
 
 .. code-block:: text
 
-   build/ulx3s/fpga_ulx3s.bit
+   build/fpga_ulx3s.bit
 
 Za programiranje:
 
@@ -247,8 +247,8 @@ Project Trellis može generirati ekvivalentan ECP5 SRAM programski tok pomoću:
 .. code-block:: bash
 
    python3 /path/to/prjtrellis/tools/bit_to_svf.py \
-       build/ulx3s/fpga_ulx3s.bit \
-       build/ulx3s/fpga_ulx3s.svf
+       build/fpga_ulx3s.bit \
+       build/fpga_ulx3s.svf
 
 Preglednik implementira SVF operacije potrebne za uobičajeni Project Trellis
 slijed programiranja ECP5 SRAM-a. Nepodržane naredbe zaustavljaju programiranje

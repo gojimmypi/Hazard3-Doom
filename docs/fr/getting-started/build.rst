@@ -23,7 +23,13 @@ ULX4M-LD 85F, 64 Mio, 50 MHz :
 
 .. code-block:: bash
 
-   ./scripts/build-ulx4m-ld-doom.sh
+   ALLOW_TIMING_FAILURE=1 ./scripts/build-ulx4m-ld-doom.sh
+
+Le routage ULX4M-LD actuel présente des échecs de timing connus pour
+``clk_sys`` et LiteDRAM. ``ALLOW_TIMING_FAILURE=1`` conserve ces échecs visibles
+tout en autorisant la génération d'un bitstream de développement ; il ne fait
+pas réussir les contraintes. Voir :doc:`../reference/board-profiles` pour les
+résultats de validation actuels.
 
 Le wrapper 12F prend en charge une cartographie SDRAM 32 Mio ou 64 Mio, mais
 utilise 32 Mio par défaut. Si la cartographie 64 Mio est sélectionnée, gardez le

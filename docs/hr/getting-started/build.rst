@@ -23,7 +23,12 @@ ULX4M-LD 85F, 64 MiB, 50 MHz:
 
 .. code-block:: bash
 
-   ./scripts/build-ulx4m-ld-doom.sh
+   ALLOW_TIMING_FAILURE=1 ./scripts/build-ulx4m-ld-doom.sh
+
+Trenutačni ULX4M-LD routing ima poznate timing promašaje za ``clk_sys`` i
+LiteDRAM. ``ALLOW_TIMING_FAILURE=1`` zadržava te promašaje vidljivima, ali
+omogućuje generiranje razvojnog bitstreama; ne čini da ograničenja prođu.
+Trenutačne rezultate provjere pogledajte u :doc:`../reference/board-profiles`.
 
 Omotna skripta za 12F podržava SDRAM mapu od 32 MiB ili 64 MiB, ali je zadana
 vrijednost 32 MiB. Ako odaberete mapu od 64 MiB, monitor i Doom slika moraju biti

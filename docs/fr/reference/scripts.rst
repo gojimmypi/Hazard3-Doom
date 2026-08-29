@@ -39,7 +39,10 @@ l'image Doom et la cartographie mémoire SDRAM cohérents.
 ``scripts/build-ulx4m-ld-doom.sh``
    Build complet ULX4M-LD 85F. Il utilise la cartographie 64 Mio à 50 MHz et
    vérifie les sources LiteDRAM générées requises avant de construire le
-   moniteur, l'image de boot embarquée, le bitstream FPGA et l'image Doom.
+   moniteur, l'image de boot embarquée, le bitstream FPGA et l'image Doom. Le
+   routage actuel présente des échecs de timing connus pour ``clk_sys`` et
+   LiteDRAM ; utilisez ``ALLOW_TIMING_FAILURE=1`` lorsque vous générez
+   intentionnellement le bitstream de développement actuel.
 
 Exemples :
 
@@ -47,7 +50,7 @@ Exemples :
 
    ./scripts/build-ulx3s-doom.sh
    ./scripts/build-ulx3s-12f-doom.sh
-   ./scripts/build-ulx4m-ld-doom.sh
+   ALLOW_TIMING_FAILURE=1 ./scripts/build-ulx4m-ld-doom.sh
 
 Pour tester un autre checkout Hazard3 sans modifier le gitlink Hazard3-Doom :
 
@@ -80,7 +83,10 @@ Outils de build du moniteur et du bitstream
 ``scripts/build-ecp5-bitstream-common.sh``
    Implémentation interne partagée de synthèse/place-and-route utilisée par les
    trois wrappers de bitstream spécifiques aux cartes. Elle n'est normalement
-   pas appelée directement.
+   pas appelée directement. ``ALLOW_TIMING_FAILURE=1`` permet de générer un
+   bitstream tout en conservant les échecs de timing visibles comme
+   avertissements ; réservez-le à une exception de timing de développement
+   explicitement acceptée, comme la cible ULX4M-LD actuelle.
 
 ``scripts/make-boot-hex.py``
    Convertit un binaire du moniteur en fichier d'initialisation hexadécimal
