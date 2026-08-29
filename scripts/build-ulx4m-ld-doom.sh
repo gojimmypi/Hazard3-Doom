@@ -34,6 +34,7 @@ MONITOR_BIN="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.bin"
 BOOT_HEX="${HAZARD3_ROOT}/example_soc/soc/hazard3-boot-monitor.hex"
 DOOM_OUTPUT="${DOOM_BUILD_DIR}/hazard3-doom.h3d"
 LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM/generated"
+HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-50}"
 
 # Run shellcheck to ensure this is a good script.
 # Specify the executable shell checker you want to use:
@@ -78,6 +79,16 @@ require_tool()
     }
 }
 
+case "${HAZARD3_ULX4M_SYS_CLK_MHZ}" in
+25|40|50)
+    ;;
+*)
+    echo "HAZARD3_ULX4M_SYS_CLK_MHZ must be 25, 40, or 50" >&2
+    exit 1
+    ;;
+esac
+HAZARD3_ULX4M_SYS_CLK_HZ=$((HAZARD3_ULX4M_SYS_CLK_MHZ * 1000000))
+
 require_tool make
 require_tool python3
 require_file "${SYNTH_DIR}/ULX4M_LD_85F.mk"
@@ -92,10 +103,11 @@ require_executable "${ROOT_DIR}/scripts/build.sh"
 require_executable "${ROOT_DIR}/scripts/make-boot-hex.py"
 require_executable "${ROOT_DIR}/doom/build-doom-image.sh"
 
-printf 'Building the shared 50 MHz monitor with the 64 MiB map...\n'
+printf 'Building the shared %s MHz monitor with the 64 MiB map...\n' \
+    "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
 HAZARD3_BUILD_DIR="${MONITOR_BUILD_DIR}" \
 HAZARD3_MEMORY_PROFILE=64m \
-HAZARD3_SYS_CLK_HZ=50000000 \
+HAZARD3_SYS_CLK_HZ="${HAZARD3_ULX4M_SYS_CLK_HZ}" \
     "${ROOT_DIR}/scripts/build.sh"
 
 require_file "${MONITOR_OUTPUT}"
@@ -108,6 +120,7 @@ require_file "${BOOT_HEX}"
 
 printf '\nBuilding the Hazard3 ULX4M-LD 85F FPGA target with cold-boot monitor...\n'
 HAZARD3_ROOT="${HAZARD3_ROOT}" \
+HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
     "${ROOT_DIR}/scripts/build-ulx4m-ld-bitstream.sh"
 
 require_file "${FPGA_OUTPUT}"

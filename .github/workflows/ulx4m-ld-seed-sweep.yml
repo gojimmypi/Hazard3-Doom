@@ -2,6 +2,16 @@ name: ULX4M-LD 85F seed sweep
 
 on:
   workflow_dispatch:
+    inputs:
+      sys_clk_mhz:
+        description: ULX4M-LD Hazard3 system clock
+        required: true
+        default: "40"
+        type: choice
+        options:
+          - "25"
+          - "40"
+          - "50"
 
 permissions:
   contents: read
@@ -12,6 +22,7 @@ concurrency:
 
 env:
   OSS_CAD_SUITE_VERSION: "2026-07-20"
+  HAZARD3_ULX4M_SYS_CLK_MHZ: ${{ inputs.sys_clk_mhz }}
 
 jobs:
   prepare:
@@ -91,11 +102,29 @@ jobs:
           litedram_dir="third_party/Hazard3/example_soc/third_party/LiteDRAM/generated"
 
           touch "${synth_dir}/../soc/hazard3-boot-monitor.hex"
-          make -C "${synth_dir}" -f ULX4M_LD_85F.mk synth
+          DEFINES="HAZARD3_ULX4M_SYS_CLK_MHZ=${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
+              make -C "${synth_dir}" -f ULX4M_LD_85F.mk synth
+          printf '%s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
+              > "${synth_dir}/fpga_ulx4m_ld.sys-clk-mhz"
 
           test -s "${synth_dir}/fpga_ulx4m_ld.json"
           test -s "${synth_dir}/fpga_ulx4m_ld.lpf"
           test -s "${synth_dir}/synth.log"
+          if [[ "${HAZARD3_ULX4M_SYS_CLK_MHZ}" == "25" ]]; then
+              if grep -Eq \
+                  "Used module:[[:space:]]+\\\\pll_25_(40|50)$" \
+                  "${synth_dir}/synth.log"; then
+                  echo "ULX4M-LD 25 MHz profile unexpectedly uses a system PLL." >&2
+                  exit 1
+              fi
+          else
+              grep -Eq \
+                  "Used module:[[:space:]]+\\\\pll_25_${HAZARD3_ULX4M_SYS_CLK_MHZ}$" \
+                  "${synth_dir}/synth.log"
+          fi
+          grep -Fq \
+              "Parameter \\CLK_MHZ = ${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
+              "${synth_dir}/synth.log"
           test -s "${litedram_dir}/litedram_ulx4m_cpu.v"
           test -s "${litedram_dir}/litedram_ulx4m_cpu_rom.init"
           test -f "${litedram_dir}/litedram_ulx4m_cpu_sram.init"
@@ -151,7 +180,7 @@ jobs:
               printf 'matrix_jobs=20\n'
               printf 'seeds_per_matrix_job=13\n'
               printf 'matrix_max_parallel=20\n'
-              printf 'clk_sys_required_mhz=50.00\n'
+              printf 'clk_sys_required_mhz=%s.00\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
               printf 'litedram_user_required_mhz=75.01\n'
               printf 'clk_video_required_mhz=50.00\n'
               printf 'clk_tmds_required_mhz=250.00\n'
@@ -417,6 +446,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import csv
+          import os
           from pathlib import Path
 
           root = Path("final")
@@ -425,7 +455,7 @@ jobs:
           summary_md = root / "summary.md"
 
           requirements = {
-              "clk_sys_mhz": 50.00,
+              "clk_sys_mhz": float(os.environ["HAZARD3_ULX4M_SYS_CLK_MHZ"]),
               "litedram_user_mhz": 75.01,
               "clk_video_mhz": 50.00,
               "clk_tmds_mhz": 250.00,
@@ -572,7 +602,7 @@ jobs:
               "",
               "Required clocks:",
               "",
-              "- clk_sys: 50.00 MHz",
+              f"- clk_sys: {requirements['clk_sys_mhz']:.2f} MHz",
               "- LiteDRAM user: 75.01 MHz",
               "- video pixel: 50.00 MHz",
               "- TMDS x5: 250.00 MHz",

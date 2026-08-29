@@ -41,7 +41,9 @@ SYNTH_DIR="${HAZARD3_ROOT}/example_soc/synth"
 LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM/generated"
 SWEEP_JOBS="${SWEEP_JOBS:-2}"
 SWEEP_SKIP_SYNTH="${SWEEP_SKIP_SYNTH:-0}"
+HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-50}"
 SWEEP_DIR="routing-sweep/ulx4m-ld"
+SYNTH_PROFILE_STAMP="${SYNTH_DIR}/fpga_ulx4m_ld.sys-clk-mhz"
 
 usage()
 {
@@ -82,6 +84,15 @@ if [[ ! "${SWEEP_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
     usage
     exit 1
 fi
+
+case "${HAZARD3_ULX4M_SYS_CLK_MHZ}" in
+25|40|50)
+    ;;
+*)
+    echo "HAZARD3_ULX4M_SYS_CLK_MHZ must be 25, 40, or 50" >&2
+    exit 1
+    ;;
+esac
 
 if (( $# == 0 )); then
     mapfile -t seeds < <(seq 1 260)
@@ -138,9 +149,19 @@ fi
 # Always ask make to ensure the synthesized netlist is current. This is a no-op
 # when the source dependencies are already up to date.
 if [[ "${SWEEP_SKIP_SYNTH}" != "1" ]]; then
+    recorded_profile=""
+    if [[ -f "${SYNTH_PROFILE_STAMP}" ]]; then
+        read -r recorded_profile < "${SYNTH_PROFILE_STAMP}" || true
+    fi
+    if [[ "${recorded_profile}" != "${HAZARD3_ULX4M_SYS_CLK_MHZ}" ]]; then
+        rm -f "${SYNTH_DIR}/fpga_ulx4m_ld.json"
+    fi
+
     # Always ask make to ensure the synthesized netlist is current. This is a no-op
     # when the source dependencies are already up to date.
-    make -C "${SYNTH_DIR}" -f ULX4M_LD_85F.mk synth
+    DEFINES="${DEFINES:+${DEFINES} }HAZARD3_ULX4M_SYS_CLK_MHZ=${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
+        make -C "${SYNTH_DIR}" -f ULX4M_LD_85F.mk synth
+    printf '%s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}" > "${SYNTH_PROFILE_STAMP}"
 else
     printf 'Using existing synthesized netlist; synthesis skipped.\n'
 fi
@@ -149,6 +170,26 @@ fi
     echo "Synthesis completed without creating ${SYNTH_DIR}/fpga_ulx4m_ld.json" >&2
     exit 1
 }
+require_file "${SYNTH_DIR}/synth.log"
+if [[ "${HAZARD3_ULX4M_SYS_CLK_MHZ}" == 25 ]]; then
+    if grep -Eq \
+        "Used module:[[:space:]]+\\\\pll_25_(40|50)$" \
+        "${SYNTH_DIR}/synth.log"; then
+        echo "ULX4M-LD 25 MHz profile unexpectedly uses a system PLL." >&2
+        exit 1
+    fi
+elif ! grep -Eq \
+    "Used module:[[:space:]]+\\\\pll_25_${HAZARD3_ULX4M_SYS_CLK_MHZ}$" \
+    "${SYNTH_DIR}/synth.log"; then
+    echo "ULX4M-LD netlist does not use the requested ${HAZARD3_ULX4M_SYS_CLK_MHZ} MHz system PLL." >&2
+    exit 1
+fi
+if ! grep -Fq \
+    "Parameter \\CLK_MHZ = ${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
+    "${SYNTH_DIR}/synth.log"; then
+    echo "ULX4M-LD netlist CLK_MHZ does not match the requested system clock." >&2
+    exit 1
+fi
 
 netlist_sha256="$(sha256sum "${SYNTH_DIR}/fpga_ulx4m_ld.json" | awk '{print $1}')"
 if [[ -n "${netlist_sha256_before}" &&
@@ -170,7 +211,7 @@ mkdir -p "${SWEEP_DIR}"
     printf 'package=CABGA381\n'
     printf 'placer=heap\n'
     printf 'full_route=1\n'
-    printf 'clk_sys_required_mhz=50.00\n'
+    printf 'clk_sys_required_mhz=%s.00\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
     printf 'litedram_user_required_mhz=75.01\n'
     printf 'clk_video_required_mhz=50.00\n'
     printf 'clk_tmds_required_mhz=250.00\n'
@@ -245,7 +286,7 @@ run_seed()
     init_clk="$(extract_clock "${log}" "init_clk")"
 
     timing_status="FAIL"
-    if clock_at_least "${clk_sys}" 50.00 &&
+    if clock_at_least "${clk_sys}" "${HAZARD3_ULX4M_SYS_CLK_MHZ}.00" &&
        clock_at_least "${litedram_user}" 75.01 &&
        clock_at_least "${clk_video}" 50.00 &&
        clock_at_least "${clk_tmds}" 250.00 &&

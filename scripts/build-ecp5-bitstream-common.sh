@@ -159,6 +159,45 @@ prepare_ulx3s_12f_profile()
         "${HAZARD3_MEMORY_PROFILE}"
 }
 
+prepare_ulx4m_clock_profile()
+{
+    local recorded_profile=""
+
+    case "${HAZARD3_ULX4M_SYS_CLK_MHZ}" in
+    25|40|50)
+        ;;
+    *)
+        echo "HAZARD3_ULX4M_SYS_CLK_MHZ must be 25, 40, or 50" >&2
+        exit 1
+        ;;
+    esac
+
+    if [[ -f "${SYNTH_PROFILE_STAMP}" ]]; then
+        read -r recorded_profile < "${SYNTH_PROFILE_STAMP}" || true
+    fi
+
+    if [[ "${recorded_profile}" != "${HAZARD3_ULX4M_SYS_CLK_MHZ}" ]]; then
+        if [[ -n "${recorded_profile}" ]]; then
+            printf 'ULX4M-LD system clock changed: %s MHz -> %s MHz\n' \
+                "${recorded_profile}" "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
+        else
+            printf 'ULX4M-LD system clock is not recorded; rebuilding for %s MHz.\n' \
+                "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
+        fi
+        rm -f \
+            "${NETLIST}" \
+            "${CONFIG_OUTPUT}" \
+            "${BITSTREAM_OUTPUT}" \
+            "${SVF_OUTPUT}" \
+            "${SEED_STAMP}" \
+            "${HAZARD3_SYNTH}/${FPGA_NAME}.config" \
+            "${HAZARD3_SYNTH}/${FPGA_NAME}.bit" \
+            "${HAZARD3_SYNTH}/${FPGA_NAME}.svf"
+    fi
+
+    printf 'ULX4M-LD system clock: %s MHz\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
+}
+
 reuse_ulx3s_12f_bitstream_if_allowed()
 {
     local recorded_seed=""
@@ -237,6 +276,13 @@ run_synthesis()
             exit 1
         fi
         ;;
+    ulx4m-ld-85f)
+        if ! DEFINES="${DEFINES:+${DEFINES} }HAZARD3_ULX4M_SYS_CLK_MHZ=${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
+            make -C "${HAZARD3_SYNTH}" -f "${MAKEFILE}" synth; then
+            copy_synth_log
+            exit 1
+        fi
+        ;;
     *)
         if ! make -C "${HAZARD3_SYNTH}" -f "${MAKEFILE}" synth; then
             copy_synth_log
@@ -256,12 +302,35 @@ run_synthesis()
     ulx3s-12f)
         printf '%s\n' "${HAZARD3_MEMORY_PROFILE}" > "${SYNTH_PROFILE_STAMP}"
         ;;
+    ulx4m-ld-85f)
+        printf '%s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}" > "${SYNTH_PROFILE_STAMP}"
+        ;;
     esac
 }
 
 validate_ulx4m_synthesis()
 {
     local ebr_used
+
+    if [[ "${HAZARD3_ULX4M_SYS_CLK_MHZ}" == 25 ]]; then
+        if grep -Eq \
+            "Used module:[[:space:]]+\\\\pll_25_(40|50)$" \
+            "${SYNTH_SOURCE_LOG}"; then
+            echo "ERROR: ULX4M-LD 25 MHz profile unexpectedly synthesized a system PLL." >&2
+            exit 1
+        fi
+    elif ! grep -Eq \
+        "Used module:[[:space:]]+\\\\pll_25_${HAZARD3_ULX4M_SYS_CLK_MHZ}$" \
+        "${SYNTH_SOURCE_LOG}"; then
+        echo "ERROR: ULX4M-LD did not synthesize the requested ${HAZARD3_ULX4M_SYS_CLK_MHZ} MHz system PLL." >&2
+        exit 1
+    fi
+    if ! grep -Fq \
+        "Parameter \\CLK_MHZ = ${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
+        "${SYNTH_SOURCE_LOG}"; then
+        echo "ERROR: ULX4M-LD example_soc CLK_MHZ does not match the requested system clock." >&2
+        exit 1
+    fi
 
     # ULX4M-LD cannot fit the extended 400x240/512x300 framebuffer alongside
     # LiteDRAM. Verify the synthesized hierarchy selected the standard 64-bank
@@ -404,6 +473,8 @@ ulx4m-ld-85f)
     NEXTPNR_SEED="${NEXTPNR_SEED:-232}"
     PNR_DEVICE_ARGS=(--um-85k --speed 8 --package CABGA381)
     LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM/generated"
+    HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-50}"
+    SYNTH_PROFILE_STAMP="${HAZARD3_SYNTH}/fpga_ulx4m_ld.sys-clk-mhz"
     SEED_STAMP="${BUILD_DIR}/fpga_ulx4m_ld.seed"
     ;;
 *)
@@ -477,6 +548,9 @@ if [[ "${BOARD_ID}" == "ulx3s-85f" ]]; then
 fi
 if [[ "${BOARD_ID}" == "ulx3s-12f" ]]; then
     prepare_ulx3s_12f_profile
+fi
+if [[ "${BOARD_ID}" == "ulx4m-ld-85f" ]]; then
+    prepare_ulx4m_clock_profile
 fi
 
 run_synthesis
