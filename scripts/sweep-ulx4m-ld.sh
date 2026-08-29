@@ -141,6 +141,8 @@ if [[ "${SWEEP_SKIP_SYNTH}" != "1" ]]; then
     # Always ask make to ensure the synthesized netlist is current. This is a no-op
     # when the source dependencies are already up to date.
     make -C "${SYNTH_DIR}" -f ULX4M_LD_85F.mk synth
+else
+    printf 'Using existing synthesized netlist; synthesis skipped.\n'
 fi
 
 [[ -s "${SYNTH_DIR}/fpga_ulx4m_ld.json" ]] || {

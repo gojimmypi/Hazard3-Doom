@@ -34,11 +34,35 @@ jobs:
           sudo apt-get install --yes --no-install-recommends \
               make
 
+      - name: Restore the pinned OSS CAD Suite cache
+        id: oss-cad-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ runner.temp }}/oss-cad-suite
+          key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.OSS_CAD_SUITE_VERSION }}-v1
+
       - name: Set up the pinned OSS CAD Suite
+        if: steps.oss-cad-cache.outputs.cache-hit != 'true'
         uses: YosysHQ/setup-oss-cad-suite@v4
         with:
           version: ${{ env.OSS_CAD_SUITE_VERSION }}
           github-token: ${{ github.token }}
+
+      - name: Activate the cached OSS CAD Suite
+        if: steps.oss-cad-cache.outputs.cache-hit == 'true'
+        shell: bash
+        run: |
+          test -x "${RUNNER_TEMP}/oss-cad-suite/bin/yosys"
+          test -x "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-ecp5"
+          test -x "${RUNNER_TEMP}/oss-cad-suite/bin/ecppack"
+          printf '%s\n' "${RUNNER_TEMP}/oss-cad-suite/bin" >> "${GITHUB_PATH}"
+
+      - name: Save the pinned OSS CAD Suite cache
+        if: steps.oss-cad-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ runner.temp }}/oss-cad-suite
+          key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.OSS_CAD_SUITE_VERSION }}-v1
 
       - name: Initialize ULX4M-LD synthesis submodules
         shell: bash
@@ -224,11 +248,27 @@ jobs:
           sudo apt-get install --yes --no-install-recommends \
               make
 
-      - name: Set up the pinned OSS CAD Suite
-        uses: YosysHQ/setup-oss-cad-suite@v4
+      - name: Restore the pinned OSS CAD Suite cache
+        id: oss-cad-cache
+        uses: actions/cache/restore@v5
         with:
-          version: ${{ env.OSS_CAD_SUITE_VERSION }}
-          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/oss-cad-suite
+          key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.OSS_CAD_SUITE_VERSION }}-v1
+
+      - name: Activate the pinned OSS CAD Suite
+        shell: bash
+        env:
+          OSS_CAD_CACHE_HIT: ${{ steps.oss-cad-cache.outputs.cache-hit }}
+        run: |
+          if [[ "${OSS_CAD_CACHE_HIT}" != "true" ]]; then
+              echo "Pinned OSS CAD Suite cache was not available." >&2
+              exit 1
+          fi
+
+          test -x "${RUNNER_TEMP}/oss-cad-suite/bin/yosys"
+          test -x "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-ecp5"
+          test -x "${RUNNER_TEMP}/oss-cad-suite/bin/ecppack"
+          printf '%s\n' "${RUNNER_TEMP}/oss-cad-suite/bin" >> "${GITHUB_PATH}"
 
       - name: Download frozen sweep inputs
         uses: actions/download-artifact@v8
