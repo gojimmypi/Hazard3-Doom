@@ -1,36 +1,69 @@
 [submodule "third_party/doomgeneric"]
-	path = third_party/doomgeneric
-	url = https://github.com/ulx3s/doomgeneric.git
-	update = checkout
-	branch = ulx-doom
+    path = third_party/doomgeneric
+    url = https://github.com/ulx3s/doomgeneric.git
+    update = checkout
+    branch = ulx-doom
 
-# When changing, refresh and confirm:
+# When changing the Hazard3 submodule, refresh and confirm:
 #
-#   git submodule sync -- third_party/Hazard3
+# Optional: inspect and preserve any tracked local changes that would
+# prevent checkout. Untracked WIP files normally do not need to be stashed.
 #
-#   Optional:
-#   git -C third_party/Hazard3 stash push -u -m "Hazard3 local changes before upstream update 20YY-MM-DD"
-#   git -C third_party/Hazard3 switch ulx-doom-dev 2>/dev/null || git -C third_party/Hazard3 switch -c ulx-doom-dev --track origin/ulx-doom-dev
+# Fetch the intended Hazard3 integration branch:
 #
-#   Refresh:
-#   git submodule update --init --remote third_party/Hazard3
+# git -C third_party/Hazard3 fetch \
+# https://github.com/ulx3s/Hazard3.git \
+# ulx-doom
 #
-#   Refresh is Hazard3 submodules changed (e.g. libfgps):
-#   git submodule update --init --recursive --remote third_party/Hazard3
+# Confirm the fetched revision before switching:
 #
-#   Confirm:
-#   git -C third_party/Hazard3 remote -v
-#   git -C third_party/Hazard3 branch --show-current
-#   git -C third_party/Hazard3 log -1 --oneline
+# git -C third_party/Hazard3 log -1 --oneline FETCH_HEAD
+#
+# Check out the exact fetched revision:
+#
+# git -C third_party/Hazard3 checkout --detach FETCH_HEAD
+#
+# Refresh submodule URLs and check out the exact nested revisions recorded
+# by that Hazard3 commit:
+#
+# git -C third_party/Hazard3 submodule sync --recursive
+# git -C third_party/Hazard3 submodule update --init --recursive
+#
+# Do not use --remote for the recursive update. --remote follows nested
+# submodule branches and can move them away from the commits recorded by
+# Hazard3, making the checkout non-reproducible.
+#
+# Confirm the Hazard3 and libfpga revisions:
+#
+# git -C third_party/Hazard3 log -1 --oneline
+# git -C third_party/Hazard3 rev-parse HEAD:example_soc/libfpga
+# git -C third_party/Hazard3/example_soc/libfpga rev-parse HEAD
+#
+# Confirm all nested submodules match their recorded gitlinks:
+#
+# git -C third_party/Hazard3 submodule status --recursive
+#
+# A leading space means the nested checkout matches the recorded gitlink.
+# A leading '+' means it is checked out at a different revision.
+#
+# Finally inspect local status:
+#
+# git -C third_party/Hazard3 status --short
+# git -C third_party/Hazard3/example_soc/libfpga status --short
 
-#[submodule "third_party/Hazard3"]
-#	path = third_party/Hazard3
-#	url = https://github.com/ulx3s/Hazard3.git
-#	branch = ulx-doom
-#	update = checkout
 
+# ulx3s release on ulx-doom branch
+# ------------------------------------------------------
 [submodule "third_party/Hazard3"]
-	path = third_party/Hazard3
-	url = https://github.com/gojimmypi/Hazard3.git
-	branch = ulx-doom-dev
-	update = checkout
+    path = third_party/Hazard3
+    url = https://github.com/ulx3s/Hazard3.git
+    branch = ulx-doom
+    update = checkout
+
+# dev:
+# ------------------------------------------------------
+# [submodule "third_party/Hazard3"]
+#     path = third_party/Hazard3
+#     url = https://github.com/gojimmypi/Hazard3.git
+#     branch = ulx-doom-dev
+#     update = checkout
