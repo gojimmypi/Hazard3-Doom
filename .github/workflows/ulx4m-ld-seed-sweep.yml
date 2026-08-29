@@ -74,6 +74,7 @@ jobs:
           test -s "${litedram_dir}/litedram_ulx4m_cpu.v"
           test -s "${litedram_dir}/litedram_ulx4m_cpu_rom.init"
           test -f "${litedram_dir}/litedram_ulx4m_cpu_sram.init"
+          touch "${synth_dir}/../soc/hazard3-boot-monitor.hex;
 
       - name: Record sweep reference metadata
         shell: bash
