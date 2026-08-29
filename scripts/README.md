@@ -16,7 +16,7 @@ Complete board builds:
 ```bash
 ./scripts/build-ulx3s-doom.sh
 ./scripts/build-ulx3s-12f-doom.sh
-./scripts/build-ulx4m-ld-doom.sh
+ALLOW_TIMING_FAILURE=1 ./scripts/build-ulx4m-ld-doom.sh
 ```
 
 The board wrappers build the monitor, FPGA bitstream, and Doom image with a
@@ -35,6 +35,12 @@ Current primary profiles are:
 The monitor, FPGA configuration, Doom image, and SDRAM map must use compatible
 settings. Do not mix 32 MiB and 64 MiB software images.
 
+Current release validation uses seed 55 for ULX3S 85F and seed 65 for ULX3S
+12F; both meet their configured system-clock targets. ULX4M-LD seed 232 still
+misses both the 50 MHz ``clk_sys`` and 75.01 MHz LiteDRAM constraints, so the
+current development build requires ``ALLOW_TIMING_FAILURE=1``. The waiver keeps
+the misses visible and does not claim timing closure.
+
 ## Build Scripts
 
 - `build.sh` - Builds the shared Hazard3 monitor firmware. Defaults to the 64 MiB map at 50 MHz; accepts `HAZARD3_MEMORY_PROFILE`, `HAZARD3_SYS_CLK_HZ`, `HAZARD3_BUILD_DIR`, `TOOLCHAIN_PREFIX`, and `HAZARD3_MONITOR_LINKER_SCRIPT` overrides.
@@ -44,7 +50,7 @@ settings. Do not mix 32 MiB and 64 MiB software images.
 - `build-ulx3s-12f-bitstream.sh` - ULX3S 12F entry point for the shared ECP5 flow. Defaults to `HAZARD3_MEMORY_PROFILE=32m`.
 - `build-ulx3s-12f-doom.sh` - Complete ULX3S 12F build. Uses a 40 MHz Hazard3 clock, defaults to the 32 MiB map, and intentionally accepts only `HAZARD3_DOOM_HDMI_RESOLUTION=320x200`.
 - `build-ulx4m-ld-bitstream.sh` - ULX4M-LD 85F entry point for the shared ECP5 flow.
-- `build-ulx4m-ld-doom.sh` - Complete ULX4M-LD 85F build using the 64 MiB map at 50 MHz, including LiteDRAM inputs and the embedded resident monitor.
+- `build-ulx4m-ld-doom.sh` - Complete ULX4M-LD 85F build using the 64 MiB map at 50 MHz, including LiteDRAM inputs and the embedded resident monitor. The current development route requires `ALLOW_TIMING_FAILURE=1` because the system and LiteDRAM timing constraints are not yet closed.
 - `build-xpack.cmd` - Native Windows monitor build using the repository xPack RISC-V GCC installation. Supports `build`, `clean`, and `rebuild` plus memory-profile and clock arguments.
 - `make-boot-hex.py` - Converts the monitor binary into the hexadecimal initialization format consumed by FPGA boot memory.
 

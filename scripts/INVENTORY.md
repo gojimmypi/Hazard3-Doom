@@ -12,7 +12,7 @@ Git source: current index (`git ls-files --cached`)
 
 Files inventoried: 52
 
-Total bytes: 289271
+Total bytes: 296399
 
 ## Verification
 
@@ -25,14 +25,14 @@ should be identified before a public release.
 
 | Path | Bytes | SHA-256 | Component | Kind |
 |---|---:|---|---|---|
-| `README.md` | 13905 | `a44ce6f3830c2c21ba2281f8baf9031cb63491d1c759edf11dbfc14e693d6f1e` | REVIEW | Markdown documentation |
+| `README.md` | 14436 | `29c71a8b4291ce4951832c18f4616ede5ff4f8be73fda8a335369d757555d34a` | REVIEW | Markdown documentation |
 | `apply-doom-noncombat.py` | 6775 | `3a8062684727b572d903c3a53ef729d64438b6f3c2bdfdd5c426bfe5bec08658` | REVIEW | File |
 | `build-coremark.sh` | 6863 | `1b0b1d8c4fef1968a7bc37ef151a9c2d0453fc6cd95b75c48d85141a6b41e94f` | REVIEW | Shell script |
 | `build-doom-noncombat.sh` | 3665 | `09c019946631358bcbea10f44e9e42fbd0d99186399c7f481ca9ae002a03bfb3` | REVIEW | Shell script |
 | `build-ecp5-bitstream-common.sh` | 17758 | `6ed9e2fef2ef7c4f17148e2262758969dd7a43df01a1f0e5fe578d77827556b3` | REVIEW | Shell script |
 | `build-supercon10-wad.py` | 6988 | `9d69e095203df153dad20f839f8ce049ef62b4433521f4c1804938043c751da6` | REVIEW | File |
 | `build-ulx3s-12f-bitstream.sh` | 1335 | `8afa28f5b87190acafc3f85e319f41f823be2b6f94468ad390fcc3f347633ae2` | REVIEW | Shell script |
-| `build-ulx3s-12f-doom.sh` | 4738 | `f5ae337c79193bdfe439e50ae5407af7ea01ccbf10ba74bed35e69430a557941` | REVIEW | Shell script |
+| `build-ulx3s-12f-doom.sh` | 4280 | `afbc0e9c6607f1258a89dfff2e474557bbc3d584944858c89016e6e8d4fbf250` | REVIEW | Shell script |
 | `build-ulx3s-85f-bitstream.sh` | 1261 | `e681ed50dcfc7759eafb76a1a98d542054389c848b3d440497e26bca321dfb94` | REVIEW | Shell script |
 | `build-ulx3s-doom.sh` | 5057 | `8b8feec52c645ff566e4bd456ee3523419660405f0d1407c42083d8443d9513c` | REVIEW | Shell script |
 | `build-ulx4m-ld-bitstream.sh` | 1267 | `c9699a426c80c0b53afc8b2aac9130fc3e81c8a1797f69f88123f53275e4b949` | REVIEW | Shell script |
@@ -54,7 +54,7 @@ should be identified before a public release.
 | `gdb/sao-touchwheel-test.gdb` | 4547 | `13097de76e5acccbab3439a62ab2cd808d9b6b4b01b7288b2f8eb3db0ac07ff4` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `git-exe.sh` | 1849 | `fd3a9ebccf709c8a45817d9ec67738b765d7074454309db41834af4a13dced66` | REVIEW | Shell script |
 | `hazard3-debug.gdb` | 1181 | `38a49cf5e41db070c8c21402e7b797c0d0e56f7d50d15de0dfdfbef39a4ac4a3` | REVIEW | File |
-| `hazard3-doom-source-status.sh` | 15048 | `647632ffdcdf00b8a11319ba8f78f8ad72e5d68aad41fd2544940bf1a680c8ff` | REVIEW | Shell script |
+| `hazard3-doom-source-status.sh` | 22103 | `0d9e973fbdf8e911030b72378572ad45506b50b7e5ffc6b6712eb03b90ba5614` | REVIEW | Shell script |
 | `hazard3-submodule.sh` | 8529 | `21a5d01d95108a9d304fc9b2bf9606f18c5a76416259fa27525cb32a9ff6e45e` | REVIEW | Shell script |
 | `inventory.sh` | 11789 | `361e24105ab63c726ad283b113ae1580b91f14be03ef1dcf7d524babbb6b262b` | Hazard3-Doom repository | Shell script |
 | `load-firmware-12f.sh` | 1570 | `63b70d39f092cdb590da8f8541806f67fe99556ea7f81afd8eb87a940cd1fc82` | REVIEW | Shell script |
