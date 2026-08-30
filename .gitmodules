@@ -11,9 +11,7 @@
 #
 # Fetch the intended Hazard3 integration branch:
 #
-# git -C third_party/Hazard3 fetch \
-# https://github.com/ulx3s/Hazard3.git \
-# ulx-doom
+# git -C third_party/Hazard3 fetch https://github.com/ulx3s/Hazard3.git ulx-doom
 #
 # Confirm the fetched revision before switching:
 #
