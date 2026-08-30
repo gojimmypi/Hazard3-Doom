@@ -20,8 +20,6 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
-
 usage()
 {
     cat >&2 <<EOF_USAGE
@@ -41,7 +39,7 @@ Targets:
 Board-specific settings remain environment variables understood by the target
 sweep script. Generic nextpnr tuning uses SWEEP_NEXTPNR_* variables.
 EOF_USAGE
-}
+} # usage
 
 target_script()
 {
@@ -61,7 +59,7 @@ target_script()
         exit 1
         ;;
     esac
-}
+} # target_script
 
 canonical_target()
 {
@@ -73,8 +71,24 @@ canonical_target()
         printf '%s\n' "$1"
         ;;
     esac
-}
+} # canonical_target
 
+# Run shellcheck to ensure this is a good script.
+# Specify the executable shell checker you want to use:
+MY_SHELLCHECK="${MY_SHELLCHECK:-shellcheck}"
+
+if command -v "${MY_SHELLCHECK}" >/dev/null 2>&1; then
+    (
+        cd -- "${REPO_ROOT}"
+        "${MY_SHELLCHECK}" -x "scripts/$(basename -- "${BASH_SOURCE[0]}")"
+    ) || exit 1
+else
+    echo "${MY_SHELLCHECK} is not installed. Please install it if changes to this script have been made."
+fi
+
+# -----------------------------------------------------------------------------
+# Main
+# -----------------------------------------------------------------------------
 if (( $# == 0 )); then
     usage
     exit 1

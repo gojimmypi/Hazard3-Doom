@@ -32,14 +32,16 @@ HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
 SYNTH_PROFILE_STAMP="${SYNTH_DIR}/fpga_ulx3s.video-profile"
 NETLIST="${SYNTH_DIR}/fpga_ulx3s.json"
 LPF="${SYNTH_DIR}/fpga_ulx3s.lpf"
-SYNTH_LOG="${SYNTH_DIR}/synth.log"
 
 # shellcheck source=scripts/sweep-ecp5-common.sh
+# shellcheck disable=SC1091
 source "${COMMON_SCRIPT}"
+echo "Include source: ${COMMON_SCRIPT}"
+
 sweep_ecp5_init_tuning
 TUNING_SUFFIX="$(sweep_ecp5_tuning_suffix)"
 SWEEP_DIR="${REPO_ROOT}/build/ulx3s-seed-sweep${TUNING_SUFFIX}"
-SWEEP_REL_DIR="${SWEEP_DIR#${REPO_ROOT}/}"
+SWEEP_REL_DIR="${SWEEP_DIR#"${REPO_ROOT}"/}"
 
 usage()
 {
@@ -56,6 +58,19 @@ HAZARD3_HDMI_EXTENDED_MODES=0|1 selects standard/extended video.
 SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.
 EOF_USAGE
 }
+
+# Run shellcheck to ensure this is a good script.
+# Specify the executable shell checker you want to use:
+MY_SHELLCHECK="${MY_SHELLCHECK:-shellcheck}"
+
+if command -v "${MY_SHELLCHECK}" >/dev/null 2>&1; then
+    (
+        cd -- "${REPO_ROOT}"
+        "${MY_SHELLCHECK}" -x "scripts/$(basename -- "${BASH_SOURCE[0]}")"
+    ) || exit 1
+else
+    echo "${MY_SHELLCHECK} is not installed. Please install it if changes to this script have been made."
+fi
 
 if (( $# == 1 )) && [[ "$1" == "--print-sweep-dir" ]]; then
     printf '%s\n' "${SWEEP_REL_DIR}"
@@ -82,6 +97,10 @@ case "${HAZARD3_HDMI_EXTENDED_MODES}" in
 esac
 
 if [[ "${SWEEP_PREPARE_ONLY}" != "1" ]]; then
+    if (( $# == 0 )); then
+        usage
+        exit 1
+    fi
     sweep_ecp5_parse_seeds usage "$@"
     results_file="$(sweep_ecp5_results_filename "${SWEEP_DIR}")"
 fi
@@ -94,7 +113,9 @@ sweep_ecp5_require_file "${LPF}"
 
 if [[ "${SWEEP_SKIP_SYNTH}" == "1" ]]; then
     recorded_profile=""
-    [[ -f "${SYNTH_PROFILE_STAMP}" ]] && read -r recorded_profile < "${SYNTH_PROFILE_STAMP}" || true
+    if [[ -f "${SYNTH_PROFILE_STAMP}" ]]; then
+        read -r recorded_profile < "${SYNTH_PROFILE_STAMP}" || true
+    fi
     if [[ "${recorded_profile}" != "${VIDEO_PROFILE}" ]]; then
         echo "Frozen ULX3S 85F netlist video profile does not match requested ${VIDEO_PROFILE}." >&2
         exit 1
@@ -105,7 +126,9 @@ else
     sweep_ecp5_require_tool yosys
 
     current_profile=""
-    [[ -f "${SYNTH_PROFILE_STAMP}" ]] && read -r current_profile < "${SYNTH_PROFILE_STAMP}" || true
+    if [[ -f "${SYNTH_PROFILE_STAMP}" ]]; then
+        read -r current_profile < "${SYNTH_PROFILE_STAMP}" || true
+    fi
     if [[ "${current_profile}" != "${VIDEO_PROFILE}" ]]; then
         rm -f \
             "${NETLIST}" \

@@ -38,11 +38,14 @@ LPF="${SYNTH_DIR}/fpga_ulx4m_ld.lpf"
 SYNTH_LOG="${SYNTH_DIR}/synth.log"
 
 # shellcheck source=scripts/sweep-ecp5-common.sh
+# shellcheck disable=SC1091
 source "${COMMON_SCRIPT}"
+echo "Include source: ${COMMON_SCRIPT}"
+
 sweep_ecp5_init_tuning
 TUNING_SUFFIX="$(sweep_ecp5_tuning_suffix)"
 SWEEP_DIR="${SYNTH_DIR}/routing-sweep/ulx4m-ld-${HAZARD3_ULX4M_SYS_CLK_MHZ}mhz-${ULX4M_LITEDRAM_CPU}${TUNING_SUFFIX}"
-SWEEP_REL_DIR="${SWEEP_DIR#${REPO_ROOT}/}"
+SWEEP_REL_DIR="${SWEEP_DIR#"${REPO_ROOT}"/}"
 
 usage()
 {
@@ -61,7 +64,19 @@ SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.
 Generic nextpnr tuning is controlled by SWEEP_NEXTPNR_* variables.
 The older HAZARD3_ULX4M_NEXTPNR_* names remain accepted as aliases.
 EOF_USAGE
-}
+} # usage
+
+# Run ShellCheck when available.
+MY_SHELLCHECK="${MY_SHELLCHECK:-shellcheck}"
+
+if command -v "${MY_SHELLCHECK}" >/dev/null 2>&1; then
+    (
+        cd -- "${REPO_ROOT}"
+        "${MY_SHELLCHECK}" -x "scripts/$(basename -- "${BASH_SOURCE[0]}")"
+    ) || exit 1
+else
+    echo "${MY_SHELLCHECK} is not installed. Please install it if changes to this script have been made."
+fi
 
 if (( $# == 1 )) && [[ "$1" == "--print-sweep-dir" ]]; then
     printf '%s\n' "${SWEEP_REL_DIR}"
@@ -90,6 +105,10 @@ serv|vexrisc) ;;
 esac
 
 if [[ "${SWEEP_PREPARE_ONLY}" != "1" ]]; then
+    if (( $# == 0 )); then
+        usage
+        exit 1
+    fi
     sweep_ecp5_parse_seeds usage "$@"
     results_file="$(sweep_ecp5_results_filename "${SWEEP_DIR}")"
 fi
@@ -103,8 +122,12 @@ sweep_ecp5_require_file "${LPF}"
 if [[ "${SWEEP_SKIP_SYNTH}" == "1" ]]; then
     recorded_profile=""
     recorded_litedram_cpu=""
-    [[ -f "${SYNTH_PROFILE_STAMP}" ]] && read -r recorded_profile < "${SYNTH_PROFILE_STAMP}" || true
-    [[ -f "${LITEDRAM_CPU_STAMP}" ]] && read -r recorded_litedram_cpu < "${LITEDRAM_CPU_STAMP}" || true
+    if [[ -f "${SYNTH_PROFILE_STAMP}" ]]; then
+        read -r recorded_profile < "${SYNTH_PROFILE_STAMP}" || true
+    fi
+    if [[ -f "${LITEDRAM_CPU_STAMP}" ]]; then
+        read -r recorded_litedram_cpu < "${LITEDRAM_CPU_STAMP}" || true
+    fi
 
     if [[ "${recorded_profile}" != "${HAZARD3_ULX4M_SYS_CLK_MHZ}" ]]; then
         echo "Frozen ULX4M-LD netlist system clock does not match requested ${HAZARD3_ULX4M_SYS_CLK_MHZ} MHz." >&2
@@ -127,7 +150,9 @@ else
     sweep_ecp5_require_file "${generated_dir}/litedram_ulx4m_cpu_sram.init"
 
     recorded_profile=""
-    [[ -f "${SYNTH_PROFILE_STAMP}" ]] && read -r recorded_profile < "${SYNTH_PROFILE_STAMP}" || true
+    if [[ -f "${SYNTH_PROFILE_STAMP}" ]]; then
+        read -r recorded_profile < "${SYNTH_PROFILE_STAMP}" || true
+    fi
     if [[ "${recorded_profile}" != "${HAZARD3_ULX4M_SYS_CLK_MHZ}" ]]; then
         rm -f "${NETLIST}"
     fi
@@ -148,7 +173,9 @@ fi
 }
 
 recorded_litedram_cpu=""
-[[ -f "${LITEDRAM_CPU_STAMP}" ]] && read -r recorded_litedram_cpu < "${LITEDRAM_CPU_STAMP}" || true
+if [[ -f "${LITEDRAM_CPU_STAMP}" ]]; then
+    read -r recorded_litedram_cpu < "${LITEDRAM_CPU_STAMP}" || true
+fi
 if [[ "${recorded_litedram_cpu}" != "${ULX4M_LITEDRAM_CPU}" ]]; then
     echo "ULX4M-LD synthesized netlist LiteDRAM CPU does not match requested ${ULX4M_LITEDRAM_CPU}." >&2
     exit 1

@@ -37,11 +37,14 @@ SYNTH_LOG="${SYNTH_DIR}/synth.log"
 SYNTH_PROFILE_STAMP="${SYNTH_DIR}/fpga_ulx3s_12f.memory-profile"
 
 # shellcheck source=scripts/sweep-ecp5-common.sh
+# shellcheck disable=SC1091
 source "${COMMON_SCRIPT}"
+echo "Include source: ${COMMON_SCRIPT}"
+
 sweep_ecp5_init_tuning
 TUNING_SUFFIX="$(sweep_ecp5_tuning_suffix)"
 SWEEP_DIR="${REPO_ROOT}/build/ulx3s-12f-seed-sweep/${HAZARD3_MEMORY_PROFILE}${TUNING_SUFFIX}"
-SWEEP_REL_DIR="${SWEEP_DIR#${REPO_ROOT}/}"
+SWEEP_REL_DIR="${SWEEP_DIR#"${REPO_ROOT}"/}"
 
 usage()
 {
@@ -58,6 +61,17 @@ HAZARD3_MEMORY_PROFILE=32m|64m selects the SDRAM profile (default: 32m).
 SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.
 EOF_USAGE
 }
+
+# Run shellcheck to ensure this is a good script.
+# Specify the executable shell checker you want to use:
+MY_SHELLCHECK="shellcheck"
+
+# Check if the executable is available in the PATH
+if command -v "${MY_SHELLCHECK}" >/dev/null 2>&1; then
+    "${MY_SHELLCHECK}" "$0" || exit 1
+else
+    echo "${MY_SHELLCHECK} is not installed. Please install it if changes to this script have been made."
+fi
 
 if (( $# == 1 )) && [[ "$1" == "--print-sweep-dir" ]]; then
     printf '%s\n' "${SWEEP_REL_DIR}"
@@ -82,6 +96,10 @@ case "${HAZARD3_MEMORY_PROFILE}" in
 esac
 
 if [[ "${SWEEP_PREPARE_ONLY}" != "1" ]]; then
+    if (( $# == 0 )); then
+        usage
+        exit 1
+    fi
     sweep_ecp5_parse_seeds usage "$@"
     results_file="$(sweep_ecp5_results_filename "${SWEEP_DIR}")"
 fi
@@ -94,7 +112,9 @@ sweep_ecp5_require_file "${LPF}"
 
 if [[ "${SWEEP_SKIP_SYNTH}" == "1" ]]; then
     recorded_profile=""
-    [[ -f "${SYNTH_PROFILE_STAMP}" ]] && read -r recorded_profile < "${SYNTH_PROFILE_STAMP}" || true
+    if [[ -f "${SYNTH_PROFILE_STAMP}" ]]; then
+        read -r recorded_profile < "${SYNTH_PROFILE_STAMP}" || true
+    fi
     if [[ "${recorded_profile}" != "${HAZARD3_MEMORY_PROFILE}" ]]; then
         echo "Frozen ULX3S 12F netlist memory profile does not match requested ${HAZARD3_MEMORY_PROFILE}." >&2
         exit 1
@@ -108,7 +128,9 @@ else
     sweep_ecp5_require_file "${HAZARD3_ROOT}/example_soc/soc/hazard3-12f-bootstrap.hex"
 
     current_profile=""
-    [[ -f "${SYNTH_PROFILE_STAMP}" ]] && read -r current_profile < "${SYNTH_PROFILE_STAMP}" || true
+    if [[ -f "${SYNTH_PROFILE_STAMP}" ]]; then
+        read -r current_profile < "${SYNTH_PROFILE_STAMP}" || true
+    fi
     if [[ "${current_profile}" != "${HAZARD3_MEMORY_PROFILE}" ]]; then
         rm -f \
             "${NETLIST}" \
