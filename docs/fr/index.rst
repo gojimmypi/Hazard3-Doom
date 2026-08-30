@@ -17,6 +17,7 @@ l'intégration matériel/logiciel pour les familles ULX3S et ULX4M.
 Commencer ici
 -------------
 
+* :doc:`about/index` - comprendre le projet, ses usages pédagogiques et l'intérêt de l'ULX4M pour le prototypage modulaire.
 * :doc:`getting-started/quick-start` - mettre une carte en fonctionnement avec un minimum d'étapes.
 * :doc:`getting-started/build` - construire le FPGA, le moniteur résident et l'image Doom.
 * :doc:`user-guide/web-flasher` - programmer la SRAM du FPGA ULX3S directement depuis Chrome/Edge avec WebUSB.
@@ -25,6 +26,12 @@ Commencer ici
 * :doc:`user-guide/jtag-debugging` - déboguer Hazard3 avec OpenOCD/GDB ou VisualGDB.
 * :doc:`architecture/hazard3/index` - découvrir le processeur RISC-V Hazard3, son pipeline, sa configuration ISA, ses CSR, ses bus et son architecture de débogage.
 * :doc:`architecture/system` - comprendre comment le FPGA, le moniteur, la SDRAM, HDMI, la SD, le SAO et l'ESP32 s'assemblent.
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Vue d'ensemble du projet
+
+   about/index
 
 .. toctree::
    :maxdepth: 2

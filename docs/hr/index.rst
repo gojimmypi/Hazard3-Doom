@@ -17,6 +17,7 @@ hardvera i softvera za porodice ULX3S i ULX4M.
 Počnite ovdje
 -------------
 
+* :doc:`about/index` - saznajte što je projekt, čemu služi u obrazovanju i zašto je ULX4M koristan za modularno prototipiranje.
 * :doc:`getting-started/quick-start` - pokrenite pločicu uz najmanji broj koraka.
 * :doc:`getting-started/build` - izgradite FPGA, rezidentni monitor i Doom sliku.
 * :doc:`user-guide/web-flasher` - programirajte FPGA SRAM na ULX3S izravno iz Chromea/Edgea putem WebUSB-a.
@@ -25,6 +26,12 @@ Počnite ovdje
 * :doc:`user-guide/jtag-debugging` - otklanjajte pogreške u Hazard3 putem OpenOCD/GDB-a ili VisualGDB-a.
 * :doc:`architecture/hazard3/index` - upoznajte Hazard3 RISC-V procesor, cjevovod, konfiguraciju ISA-e, CSR-ove, sabirnice i arhitekturu za otklanjanje pogrešaka.
 * :doc:`architecture/system` - razumijte kako su povezani FPGA, monitor, SDRAM, HDMI, SD, SAO i ESP32.
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Pregled projekta
+
+   about/index
 
 .. toctree::
    :maxdepth: 2

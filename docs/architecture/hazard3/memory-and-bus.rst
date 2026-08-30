@@ -92,25 +92,81 @@ The relevant source locations are:
 
 See :doc:`../memory-map` for the Hazard3-Doom software-visible memory layout.
 
-External SDRAM is not a Hazard3 CPU feature
--------------------------------------------
+External DRAM is not a Hazard3 CPU feature
+------------------------------------------
 
 The large Doom image, heap, IWAD data, and video buffers live in external
 memory in the project design. Support for that memory lives in the fork's
-example-SoC integration, including modules such as ``ahb_sdram.v`` and the
-ULX3S SDRAM controller.
+example-SoC integration. The ULX3S and ULX4M-LS targets use the native SDR
+SDRAM path, while ULX4M-LD uses the LiteDRAM DDR3 path.
 
 This is a critical architectural boundary:
 
 * **Upstream CPU responsibility:** execute loads/stores and obey bus
   ready/error responses.
-* **Project SoC responsibility:** decode SDRAM address windows, implement
-  caching/aliases where configured, arbitrate SDRAM users, and drive board
-  memory pins.
+* **Project SoC responsibility:** decode external-memory address windows,
+  implement caching/aliases where configured, arbitrate memory users, and
+  drive the board memory interface.
 
 A CPU load from ``0x20xxxxxx`` is not a special "SDRAM instruction." It is a
 normal RISC-V load whose physical address happens to be routed to the external
 memory subsystem.
+
+Memory controller implementations
+---------------------------------
+
+Hazard3-Doom uses three distinct memory mechanisms. Internal ECP5 EBR is
+synchronous block SRAM inside the FPGA and does not need a DRAM controller.
+The board-level SDR SDRAM and DDR3 devices are separate external memories and
+require controllers with refresh and DRAM timing state.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 19 20 27 34
+
+   * - Target/memory
+     - Physical interface
+     - Controller path
+     - Important behavior
+   * - ECP5 internal EBR
+     - On-chip synchronous SRAM
+     - ``ahb_sync_sram`` / inferred EBR
+     - No activate/precharge, refresh, or DRAM training. This is the lowest
+       latency and most deterministic memory, but EBR capacity is limited.
+   * - ULX3S 12F/85F
+     - External 16-bit SDR SDRAM
+     - ``ahb_sdram.v`` -> ``ulx3s_sdram_controller.v``
+     - Native project SDR controller. It accepts one controller request at a
+       time, keeps rows open across accesses when possible, uses CAS latency 2,
+       and periodically precharges for refresh. CPU and video requests are
+       arbitrated at the AHB/SDRAM adapter.
+   * - ULX4M-LS 85F
+     - External 16-bit SDR SDRAM, 32 MiB board device
+     - ``ahb_sdram.v`` -> ``ulx3s_sdram_controller.v``
+     - Uses the same native SDR memory subsystem as the ULX3S path at a 50 MHz
+       system clock. The board wrapper forwards a half-cycle-shifted SDRAM
+       clock and keeps video on a separate PLL.
+   * - ULX4M-LD 85F
+     - External DDR3
+     - ``ahb_litedram.v`` -> generated LiteDRAM -> ``ECP5DDRPHY``
+     - LiteDRAM runs a 75 MHz user port with a 128-bit Wishbone interface while
+       Hazard3/AHB runs at 50 MHz. The adapter crosses the clock domains one
+       request at a time. Startup firmware performs DDR3 initialization, read
+       leveling, and a memory test before normal accesses are enabled.
+
+The two external-memory paths therefore have different performance tradeoffs.
+The native SDR controller is simpler and has less interface machinery, but
+external SDR SDRAM still has activate/CAS/refresh latency. DDR3 offers much
+higher burst bandwidth, while the current ULX4M-LD adapter adds clock-domain
+crossing and request-conversion overhead. In particular, the current adapter
+maps each DDR3 BL8 transfer to one 128-bit Wishbone word; writes use an atomic
+128-bit read/modify/write path before the full burst is written. For the
+in-order Hazard3 core, first-access latency and cache behavior can matter more
+than peak DDR transfer rate.
+
+Do not confuse the ULX3S external SDRAM with ECP5 EBR. EBR is SRAM physically
+inside the FPGA; the SDR SDRAM chip is a separate device on the board. LiteDRAM
+is not used in the ULX3S native SDR path.
 
 Memory ordering and ``fence.i``
 -------------------------------

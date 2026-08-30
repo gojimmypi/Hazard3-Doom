@@ -88,22 +88,83 @@ Les emplacements source pertinents sont :
 Voir :doc:`../memory-map` pour la cartographie mémoire visible par le logiciel
 Hazard3-Doom.
 
-La SDRAM externe n'est pas une fonctionnalité du CPU Hazard3
-------------------------------------------------------------
+La DRAM externe n'est pas une fonctionnalité du CPU Hazard3
+-----------------------------------------------------------
 
 La grande image Doom, le heap, les données IWAD et les tampons vidéo résident
 dans la mémoire externe du design du projet. Le support de cette mémoire se
-trouve dans l'intégration du SoC d'exemple du fork, notamment dans des modules
-comme ``ahb_sdram.v`` et le contrôleur SDRAM ULX3S.
+trouve dans l'intégration du SoC d'exemple du fork. Les cibles ULX3S et
+ULX4M-LS utilisent le chemin SDR SDRAM natif, tandis que l'ULX4M-LD utilise le
+chemin DDR3 LiteDRAM.
 
 Il s'agit d'une frontière architecturale essentielle :
 
 * **Responsabilité CPU amont :** exécuter les loads/stores et respecter les réponses ready/error du bus.
-* **Responsabilité SoC du projet :** décoder les fenêtres d'adresses SDRAM, implémenter les caches/alias configurés, arbitrer les utilisateurs SDRAM et piloter les broches mémoire de la carte.
+* **Responsabilité SoC du projet :** décoder les fenêtres d'adresses de mémoire externe, implémenter les caches/alias configurés, arbitrer les utilisateurs mémoire et piloter l'interface mémoire de la carte.
 
 Un load CPU depuis ``0x20xxxxxx`` n'est pas une « instruction SDRAM » spéciale.
 C'est un load RISC-V normal dont l'adresse physique se trouve être routée vers
 le sous-système de mémoire externe.
+
+Implémentations des contrôleurs mémoire
+---------------------------------------
+
+Hazard3-Doom utilise trois mécanismes mémoire distincts. L'EBR interne de
+l'ECP5 est une SRAM bloc synchrone située dans le FPGA et ne nécessite pas de
+contrôleur DRAM. Les composants SDR SDRAM et DDR3 de la carte sont des mémoires
+externes séparées et nécessitent des contrôleurs qui gèrent le refresh et les
+temporisations DRAM.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 19 20 27 34
+
+   * - Cible/mémoire
+     - Interface physique
+     - Chemin du contrôleur
+     - Comportement important
+   * - EBR interne ECP5
+     - SRAM synchrone intégrée
+     - ``ahb_sync_sram`` / EBR inférée
+     - Pas d'activate/precharge, de refresh ni d'entraînement DRAM. C'est la
+       mémoire à latence la plus faible et la plus déterministe, mais la
+       capacité EBR est limitée.
+   * - ULX3S 12F/85F
+     - SDR SDRAM externe 16 bits
+     - ``ahb_sdram.v`` -> ``ulx3s_sdram_controller.v``
+     - Contrôleur SDR natif du projet. Il accepte une requête de contrôleur à la
+       fois, garde les lignes ouvertes lorsque possible, utilise une latence CAS
+       de 2 et précharge périodiquement pour le refresh. Les requêtes CPU et
+       vidéo sont arbitrées dans l'adaptateur AHB/SDRAM.
+   * - ULX4M-LS 85F
+     - SDR SDRAM externe 16 bits, composant de 32 Mio sur la carte
+     - ``ahb_sdram.v`` -> ``ulx3s_sdram_controller.v``
+     - Utilise le même sous-système SDR natif que le chemin ULX3S avec une
+       horloge système de 50 MHz. Le wrapper de carte transmet une horloge SDRAM
+       décalée d'un demi-cycle et conserve la vidéo sur une PLL séparée.
+   * - ULX4M-LD 85F
+     - DDR3 externe
+     - ``ahb_litedram.v`` -> LiteDRAM généré -> ``ECP5DDRPHY``
+     - LiteDRAM utilise un port utilisateur à 75 MHz avec une interface Wishbone
+       128 bits tandis que Hazard3/AHB fonctionne à 50 MHz. L'adaptateur traverse
+       les domaines d'horloge une requête à la fois. Le firmware de démarrage
+       effectue l'initialisation DDR3, le read leveling et un test mémoire avant
+       d'autoriser les accès normaux.
+
+Les deux chemins de mémoire externe ont donc des compromis de performances
+différents. Le contrôleur SDR natif est plus simple et comporte moins de logique
+d'interface, mais la SDR SDRAM externe conserve les latences d'activate, CAS et
+refresh. La DDR3 offre une bande passante en rafale bien supérieure, tandis que
+l'adaptateur ULX4M-LD actuel ajoute la traversée de domaines d'horloge et la
+conversion des requêtes. En particulier, l'adaptateur actuel associe chaque
+transfert DDR3 BL8 à un mot Wishbone de 128 bits ; les écritures passent par un
+read/modify/write atomique de 128 bits avant l'écriture de la rafale complète.
+Pour le cœur Hazard3 in-order, la latence du premier accès et le comportement du
+cache peuvent compter davantage que le débit DDR maximal.
+
+Ne confondez pas la SDRAM externe de l'ULX3S avec l'EBR ECP5. L'EBR est une SRAM
+physiquement intégrée au FPGA ; le composant SDR SDRAM est un circuit séparé sur
+la carte. LiteDRAM n'est pas utilisé dans le chemin SDR natif de l'ULX3S.
 
 Ordonnancement mémoire et ``fence.i``
 -------------------------------------

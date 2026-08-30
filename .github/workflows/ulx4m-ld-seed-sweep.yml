@@ -12,6 +12,14 @@ on:
           - "25"
           - "40"
           - "50"
+      litedram_cpu:
+        description: LiteDRAM initialization CPU embedded in generated core
+        required: true
+        default: "serv"
+        type: choice
+        options:
+          - "serv"
+          - "vexrisc"
       placer:
         description: ULX4M-LD nextpnr placer
         required: true
@@ -20,6 +28,63 @@ on:
         options:
           - "heap"
           - "sa"
+      router:
+        description: ULX4M-LD nextpnr router
+        required: true
+        default: "router1"
+        type: choice
+        options:
+          - "router1"
+          - "router2"
+      heap_timingweight:
+        description: HeAP timing weight (default nextpnr value is 10)
+        required: true
+        default: "10"
+        type: choice
+        options:
+          - "10"
+          - "20"
+          - "30"
+          - "40"
+      heap_critexp:
+        description: HeAP criticality exponent (default nextpnr value is 2)
+        required: true
+        default: "2"
+        type: choice
+        options:
+          - "2"
+          - "3"
+          - "4"
+      tmg_ripup:
+        description: Enable experimental timing-driven router rip-up
+        required: true
+        default: false
+        type: boolean
+      router2_alt_weights:
+        description: Enable Router2 alternate weights (Router2 only)
+        required: true
+        default: false
+        type: boolean
+      nextpnr_extra_args:
+        description: Optional whitespace-separated extra nextpnr arguments
+        required: false
+        default: ""
+        type: string
+      route_oss_cad_suite_version:
+        description: Route OSS CAD Suite snapshot; change to A/B nextpnr versions
+        required: true
+        default: "2026-07-20"
+        type: string
+      seed_first:
+        description: First seed to route (1-260)
+        required: true
+        default: "1"
+        type: string
+      seed_last:
+        description: Last seed to route (1-260)
+        required: true
+        default: "260"
+        type: string
 
 permissions:
   contents: read
@@ -30,8 +95,18 @@ concurrency:
 
 env:
   OSS_CAD_SUITE_VERSION: "2026-07-20"
+  ROUTE_OSS_CAD_SUITE_VERSION: ${{ inputs.route_oss_cad_suite_version }}
   HAZARD3_ULX4M_SYS_CLK_MHZ: ${{ inputs.sys_clk_mhz }}
+  ULX4M_LITEDRAM_CPU: ${{ inputs.litedram_cpu }}
   HAZARD3_ULX4M_NEXTPNR_PLACER: ${{ inputs.placer }}
+  HAZARD3_ULX4M_NEXTPNR_ROUTER: ${{ inputs.router }}
+  HAZARD3_ULX4M_NEXTPNR_HEAP_TIMINGWEIGHT: ${{ inputs.heap_timingweight }}
+  HAZARD3_ULX4M_NEXTPNR_HEAP_CRITEXP: ${{ inputs.heap_critexp }}
+  HAZARD3_ULX4M_NEXTPNR_TMG_RIPUP: ${{ inputs.tmg_ripup }}
+  HAZARD3_ULX4M_NEXTPNR_ROUTER2_ALT_WEIGHTS: ${{ inputs.router2_alt_weights }}
+  HAZARD3_ULX4M_NEXTPNR_EXTRA_ARGS: ${{ inputs.nextpnr_extra_args }}
+  SWEEP_SEED_FIRST: ${{ inputs.seed_first }}
+  SWEEP_SEED_LAST: ${{ inputs.seed_last }}
 
 jobs:
   prepare:
@@ -47,6 +122,37 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
+
+      - name: Validate sweep inputs
+        shell: bash
+        run: |
+          if [[ ! "${SWEEP_SEED_FIRST}" =~ ^[0-9]+$ ||
+                ! "${SWEEP_SEED_LAST}" =~ ^[0-9]+$ ||
+                "${SWEEP_SEED_FIRST}" -lt 1 ||
+                "${SWEEP_SEED_LAST}" -gt 260 ||
+                "${SWEEP_SEED_FIRST}" -gt "${SWEEP_SEED_LAST}" ]]; then
+              echo "Seed range must be within 1-260 with first <= last." >&2
+              exit 1
+          fi
+
+          if [[ "${ULX4M_LITEDRAM_CPU}" != "serv" &&
+                "${ULX4M_LITEDRAM_CPU}" != "vexrisc" ]]; then
+              echo "LiteDRAM CPU must be serv or vexrisc." >&2
+              exit 1
+          fi
+
+          if [[ "${HAZARD3_ULX4M_NEXTPNR_PLACER}" != "heap" &&
+                ( "${HAZARD3_ULX4M_NEXTPNR_HEAP_TIMINGWEIGHT}" != "10" ||
+                  "${HAZARD3_ULX4M_NEXTPNR_HEAP_CRITEXP}" != "2" ) ]]; then
+              echo "HeAP timing options require placer=heap." >&2
+              exit 1
+          fi
+
+          if [[ "${HAZARD3_ULX4M_NEXTPNR_ROUTER2_ALT_WEIGHTS}" == "true" &&
+                "${HAZARD3_ULX4M_NEXTPNR_ROUTER}" != "router2" ]]; then
+              echo "Router2 alternate weights require router=router2." >&2
+              exit 1
+          fi
 
       - name: Install build prerequisites
         run: |
@@ -108,11 +214,13 @@ jobs:
         shell: bash
         run: |
           synth_dir="third_party/Hazard3/example_soc/synth"
-          litedram_dir="third_party/Hazard3/example_soc/third_party/LiteDRAM/generated"
+          litedram_dir="third_party/Hazard3/example_soc/third_party/LiteDRAM"
+          litedram_generated_dir="${litedram_dir}/generated-${ULX4M_LITEDRAM_CPU}"
 
           touch "${synth_dir}/../soc/hazard3-boot-monitor.hex"
           DEFINES="HAZARD3_ULX4M_SYS_CLK_MHZ=${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
-              make -C "${synth_dir}" -f ULX4M_LD_85F.mk synth
+              make -C "${synth_dir}" -f ULX4M_LD_85F.mk \
+                  ULX4M_LITEDRAM_CPU="${ULX4M_LITEDRAM_CPU}" synth
           printf '%s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
               > "${synth_dir}/fpga_ulx4m_ld.sys-clk-mhz"
 
@@ -135,8 +243,11 @@ jobs:
               "Parameter \\CLK_MHZ = ${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
               "${synth_dir}/synth.log"
           test -s "${litedram_dir}/litedram_ulx4m_cpu.v"
-          test -s "${litedram_dir}/litedram_ulx4m_cpu_rom.init"
-          test -f "${litedram_dir}/litedram_ulx4m_cpu_sram.init"
+          test -s "${litedram_generated_dir}/litedram_ulx4m_cpu.v"
+          test -s "${litedram_generated_dir}/litedram_ulx4m_cpu_rom.init"
+          test -f "${litedram_generated_dir}/litedram_ulx4m_cpu_sram.init"
+          test "$(cat "${synth_dir}/fpga_ulx4m_ld.litedram-cpu")" = \
+              "${ULX4M_LITEDRAM_CPU}"
 
       - name: Record sweep reference metadata
         shell: bash
@@ -182,14 +293,27 @@ jobs:
               printf 'github_sha=%s\n' "${GITHUB_SHA}"
               printf 'github_ref=%s\n' "${GITHUB_REF}"
               printf 'runner_os=%s\n' "${RUNNER_OS}"
-              printf 'oss_cad_suite_version=%s\n' "${OSS_CAD_SUITE_VERSION}"
+              printf 'synth_oss_cad_suite_version=%s\n' "${OSS_CAD_SUITE_VERSION}"
+              printf 'route_oss_cad_suite_version=%s\n' "${ROUTE_OSS_CAD_SUITE_VERSION}"
               printf 'target=ulx4m-ld-85f\n'
-              printf 'seed_first=1\n'
-              printf 'seed_last=260\n'
-              printf 'matrix_jobs=20\n'
-              printf 'seeds_per_matrix_job=13\n'
+              printf 'litedram_cpu=%s\n' "${ULX4M_LITEDRAM_CPU}"
+              seed_count=$((SWEEP_SEED_LAST - SWEEP_SEED_FIRST + 1))
+              if (( seed_count < 20 )); then
+                  matrix_jobs="${seed_count}"
+              else
+                  matrix_jobs=20
+              fi
+              printf 'seed_first=%s\n' "${SWEEP_SEED_FIRST}"
+              printf 'seed_last=%s\n' "${SWEEP_SEED_LAST}"
+              printf 'matrix_jobs=%s\n' "${matrix_jobs}"
               printf 'matrix_max_parallel=20\n'
               printf 'placer=%s\n' "${HAZARD3_ULX4M_NEXTPNR_PLACER}"
+              printf 'router=%s\n' "${HAZARD3_ULX4M_NEXTPNR_ROUTER}"
+              printf 'heap_timingweight=%s\n' "${HAZARD3_ULX4M_NEXTPNR_HEAP_TIMINGWEIGHT}"
+              printf 'heap_critexp=%s\n' "${HAZARD3_ULX4M_NEXTPNR_HEAP_CRITEXP}"
+              printf 'tmg_ripup=%s\n' "${HAZARD3_ULX4M_NEXTPNR_TMG_RIPUP}"
+              printf 'router2_alt_weights=%s\n' "${HAZARD3_ULX4M_NEXTPNR_ROUTER2_ALT_WEIGHTS}"
+              printf 'nextpnr_extra_args=%s\n' "${HAZARD3_ULX4M_NEXTPNR_EXTRA_ARGS}"
               printf 'clk_sys_required_mhz=%s.00\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
               printf 'litedram_user_required_mhz=75.01\n'
               printf 'clk_video_required_mhz=50.00\n'
@@ -197,23 +321,27 @@ jobs:
               printf 'init_clk_required_mhz=25.00\n'
           } > reference/workflow.txt
 
-      - name: Generate 20-way seed matrix
+      - name: Generate seed matrix
         id: matrix
         shell: bash
         run: |
           matrix="$({ python3 - <<'PY'
           import json
+          import os
 
-          group_count = 20
+          seed_first = int(os.environ["SWEEP_SEED_FIRST"])
+          seed_last = int(os.environ["SWEEP_SEED_LAST"])
+          seeds = list(range(seed_first, seed_last + 1))
+          group_count = min(20, len(seeds))
           seed_groups = [[] for _ in range(group_count)]
-          for seed in range(1, 261):
-              seed_groups[(seed - 1) % group_count].append(seed)
+          for index, seed in enumerate(seeds):
+              seed_groups[index % group_count].append(seed)
 
           groups = []
-          for index, seeds in enumerate(seed_groups, start=1):
+          for index, group_seeds in enumerate(seed_groups, start=1):
               groups.append({
                   "group": f"{index:02d}",
-                  "seeds": " ".join(str(seed) for seed in seeds),
+                  "seeds": " ".join(str(seed) for seed in group_seeds),
               })
 
           print(json.dumps({"include": groups}, separators=(",", ":")))
@@ -221,8 +349,45 @@ jobs:
           } )"
 
           printf 'matrix=%s\n' "${matrix}" >> "${GITHUB_OUTPUT}"
-          printf 'Generated %s matrix jobs for seeds 1 through 260.\n' \
-              "$(python3 -c 'import json,sys; print(len(json.loads(sys.argv[1])["include"]))' "${matrix}")"
+          printf 'Generated %s matrix jobs for seeds %s through %s.\n' \
+              "$(python3 -c 'import json,sys; print(len(json.loads(sys.argv[1])["include"]))' "${matrix}")" \
+              "${SWEEP_SEED_FIRST}" \
+              "${SWEEP_SEED_LAST}"
+
+      - name: Clear synthesis tool directory for alternate route suite
+        if: env.ROUTE_OSS_CAD_SUITE_VERSION != env.OSS_CAD_SUITE_VERSION
+        shell: bash
+        run: rm -rf "${RUNNER_TEMP}/oss-cad-suite"
+
+      - name: Restore requested route OSS CAD Suite cache
+        if: env.ROUTE_OSS_CAD_SUITE_VERSION != env.OSS_CAD_SUITE_VERSION
+        id: route-oss-cad-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ runner.temp }}/oss-cad-suite
+          key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.ROUTE_OSS_CAD_SUITE_VERSION }}-v1
+
+      - name: Set up requested route OSS CAD Suite
+        if: env.ROUTE_OSS_CAD_SUITE_VERSION != env.OSS_CAD_SUITE_VERSION && steps.route-oss-cad-cache.outputs.cache-hit != 'true'
+        uses: YosysHQ/setup-oss-cad-suite@v4
+        with:
+          version: ${{ env.ROUTE_OSS_CAD_SUITE_VERSION }}
+          github-token: ${{ github.token }}
+
+      - name: Save requested route OSS CAD Suite cache
+        if: env.ROUTE_OSS_CAD_SUITE_VERSION != env.OSS_CAD_SUITE_VERSION && steps.route-oss-cad-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ runner.temp }}/oss-cad-suite
+          key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.ROUTE_OSS_CAD_SUITE_VERSION }}-v1
+
+      - name: Record route tool version
+        shell: bash
+        run: |
+          test -x "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-ecp5"
+          "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-ecp5" --version \
+              > reference/route-nextpnr-version.txt
+          cat reference/route-nextpnr-version.txt
 
       - name: Package frozen synthesis inputs and reference files
         shell: bash
@@ -287,17 +452,17 @@ jobs:
           sudo apt-get install --yes --no-install-recommends \
               make
 
-      - name: Restore the pinned OSS CAD Suite cache
-        id: oss-cad-cache
+      - name: Restore the route OSS CAD Suite cache
+        id: route-oss-cad-cache
         uses: actions/cache/restore@v5
         with:
           path: ${{ runner.temp }}/oss-cad-suite
-          key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.OSS_CAD_SUITE_VERSION }}-v1
+          key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.ROUTE_OSS_CAD_SUITE_VERSION }}-v1
 
-      - name: Activate the pinned OSS CAD Suite
+      - name: Activate the route OSS CAD Suite
         shell: bash
         env:
-          OSS_CAD_CACHE_HIT: ${{ steps.oss-cad-cache.outputs.cache-hit }}
+          OSS_CAD_CACHE_HIT: ${{ steps.route-oss-cad-cache.outputs.cache-hit }}
         run: |
           if [[ "${OSS_CAD_CACHE_HIT}" != "true" ]]; then
               echo "Pinned OSS CAD Suite cache was not available." >&2
@@ -308,6 +473,10 @@ jobs:
           test -x "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-ecp5"
           test -x "${RUNNER_TEMP}/oss-cad-suite/bin/ecppack"
           printf '%s\n' "${RUNNER_TEMP}/oss-cad-suite/bin" >> "${GITHUB_PATH}"
+
+      - name: Show route tool version
+        shell: bash
+        run: nextpnr-ecp5 --version
 
       - name: Download frozen sweep inputs
         uses: actions/download-artifact@v8
@@ -336,10 +505,8 @@ jobs:
         run: |
           set -u -o pipefail
 
-          sweep_dir="third_party/Hazard3/example_soc/synth/routing-sweep/ulx4m-ld"
-          if [[ "${HAZARD3_ULX4M_NEXTPNR_PLACER}" != "heap" ]]; then
-              sweep_dir="${sweep_dir}-${HAZARD3_ULX4M_NEXTPNR_PLACER}"
-          fi
+          sweep_rel_dir="$(./scripts/sweep-ulx4m-ld.sh --print-sweep-dir)"
+          sweep_dir="third_party/Hazard3/example_soc/synth/${sweep_rel_dir}"
           artifact_dir="seed-artifact"
           expected_sha="$(awk '{print $1}' reference/netlist.sha256)"
           overall_status=0
@@ -510,7 +677,10 @@ jobs:
 
           rows = []
 
-          for seed in range(1, 261):
+          seed_first = int(os.environ["SWEEP_SEED_FIRST"])
+          seed_last = int(os.environ["SWEEP_SEED_LAST"])
+
+          for seed in range(seed_first, seed_last + 1):
               result = read_result(seed)
               route_exit = read_int(seeds_dir / f"exit-{seed}.txt")
               elapsed = read_int(seeds_dir / f"elapsed-{seed}.txt")
@@ -530,11 +700,14 @@ jobs:
               )
 
               worst_margin = ""
+              limiting_clock = ""
               if clocks_present:
-                  worst_margin = min(
-                      values[key] / requirements[key]
+                  ratios = {
+                      key: values[key] / requirements[key]
                       for key in requirements
-                  )
+                  }
+                  limiting_clock = min(ratios, key=ratios.get)
+                  worst_margin = ratios[limiting_clock]
 
               rows.append({
                   "seed": seed,
@@ -547,6 +720,7 @@ jobs:
                   "init_clk_mhz": "" if values.get("init_clk_mhz") is None else f"{values['init_clk_mhz']:.2f}",
                   "timing_status": timing_status,
                   "all_timing_pass": "PASS" if all_timing_pass else "FAIL",
+                  "limiting_clock": limiting_clock,
                   "worst_required_ratio": "" if worst_margin == "" else f"{worst_margin:.6f}",
               })
 
@@ -563,6 +737,15 @@ jobs:
           timing_failures = [
               row for row in completed if row["all_timing_pass"] != "PASS"
           ]
+          pass_seed_values = ", ".join(str(row["seed"]) for row in passing)
+          clock_pass_counts = {
+              key: sum(
+                  1
+                  for row in completed
+                  if row[key] != "" and float(row[key]) >= requirements[key]
+              )
+              for key in requirements
+          }
 
           passing_by_sys = sorted(
               passing,
@@ -577,6 +760,11 @@ jobs:
           passing_by_elapsed = sorted(
               [row for row in passing if row["elapsed_seconds"] != ""],
               key=lambda row: int(row["elapsed_seconds"]),
+          )
+          passing_by_margin = sorted(
+              passing,
+              key=lambda row: float(row["worst_required_ratio"]),
+              reverse=True,
           )
           closest = sorted(
               [row for row in completed if row["worst_required_ratio"] != ""],
@@ -596,15 +784,19 @@ jobs:
 
           def append_clock_table(lines, rows_to_show):
               lines.extend([
-                  "| Seed | Result | clk_sys | LiteDRAM | Video | TMDS | init_clk | Elapsed |",
-                  "| ---: | :---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+                  "| Seed | Result | clk_sys | LiteDRAM | Video | TMDS | init_clk | Limiting | Worst ratio | Elapsed |",
+                  "| ---: | :---: | ---: | ---: | ---: | ---: | ---: | :--- | ---: | ---: |",
               ])
               for row in rows_to_show:
+                  worst_ratio = row["worst_required_ratio"]
+                  if worst_ratio != "":
+                      worst_ratio = f"{float(worst_ratio):.3f}x"
                   lines.append(
                       f"| {row['seed']} | {row['all_timing_pass']} | "
                       f"{row['clk_sys_mhz']} | {row['litedram_user_mhz']} | "
                       f"{row['clk_video_mhz']} | {row['clk_tmds_mhz']} | "
-                      f"{row['init_clk_mhz']} | {format_seconds(row['elapsed_seconds'])} |"
+                      f"{row['init_clk_mhz']} | {row['limiting_clock']} | "
+                      f"{worst_ratio} | {format_seconds(row['elapsed_seconds'])} |"
                   )
 
           lines = [
@@ -612,6 +804,20 @@ jobs:
               "",
               "Timing values are the final routed values emitted by",
               "`scripts/sweep-ulx4m-ld.sh` for each seed.",
+              "",
+              "Configuration:",
+              "",
+              f"- synthesis OSS CAD Suite: {os.environ['OSS_CAD_SUITE_VERSION']}",
+              f"- route OSS CAD Suite: {os.environ['ROUTE_OSS_CAD_SUITE_VERSION']}",
+              f"- LiteDRAM CPU: {os.environ['ULX4M_LITEDRAM_CPU']}",
+              f"- placer: {os.environ['HAZARD3_ULX4M_NEXTPNR_PLACER']}",
+              f"- router: {os.environ['HAZARD3_ULX4M_NEXTPNR_ROUTER']}",
+              f"- HeAP timing weight: {os.environ['HAZARD3_ULX4M_NEXTPNR_HEAP_TIMINGWEIGHT']}",
+              f"- HeAP criticality exponent: {os.environ['HAZARD3_ULX4M_NEXTPNR_HEAP_CRITEXP']}",
+              f"- timing-driven rip-up: {os.environ['HAZARD3_ULX4M_NEXTPNR_TMG_RIPUP']}",
+              f"- Router2 alternate weights: {os.environ['HAZARD3_ULX4M_NEXTPNR_ROUTER2_ALT_WEIGHTS']}",
+              f"- extra nextpnr args: {os.environ['HAZARD3_ULX4M_NEXTPNR_EXTRA_ARGS'] or '(none)'}",
+              f"- seeds: {seed_first}-{seed_last}",
               "",
               "Required clocks:",
               "",
@@ -623,10 +829,20 @@ jobs:
               "",
               f"- Seeds expected: {len(rows)}",
               f"- Routes completed: {len(completed)}",
-              f"- All final timing checks PASS: {len(passing)}",
+              f"- Timing-passing seeds: {len(passing)}",
+              f"- PASS seed values: {pass_seed_values or 'none'}",
+              f"- Best combined-margin PASS seed: {passing_by_margin[0]['seed'] if passing_by_margin else 'none'}",
               f"- Completed routes with final timing failure: {len(timing_failures)}",
               f"- Route/tool failures: {len(route_failures)}",
               f"- Missing seed results: {len(missing)}",
+              "",
+              "Per-clock closure among completed routes:",
+              "",
+              f"- clk_sys: {clock_pass_counts['clk_sys_mhz']}/{len(completed)}",
+              f"- LiteDRAM user: {clock_pass_counts['litedram_user_mhz']}/{len(completed)}",
+              f"- video pixel: {clock_pass_counts['clk_video_mhz']}/{len(completed)}",
+              f"- TMDS x5: {clock_pass_counts['clk_tmds_mhz']}/{len(completed)}",
+              f"- init_clk: {clock_pass_counts['init_clk_mhz']}/{len(completed)}",
               "",
               "## Closest to full timing closure",
               "",
@@ -656,13 +872,14 @@ jobs:
           ])
           append_clock_table(lines, passing_by_elapsed[:20])
 
-          seed232 = rows[231]
-          lines.extend([
-              "",
-              "## Seed 232 baseline",
-              "",
-          ])
-          append_clock_table(lines, [seed232])
+          if seed_first <= 232 <= seed_last:
+              seed232 = next(row for row in rows if row["seed"] == 232)
+              lines.extend([
+                  "",
+                  "## Seed 232 baseline",
+                  "",
+              ])
+              append_clock_table(lines, [seed232])
 
           lines.extend([
               "",
@@ -730,5 +947,7 @@ jobs:
           if missing or failed:
               sys.exit(1)
 
-          print("All 260 seeds produced completed route results.")
+          print(
+              f"All {len(rows)} requested seeds produced completed route results."
+          )
           PY

@@ -3,28 +3,33 @@ Board Profiles
 
 .. list-table::
    :header-rows: 1
-   :widths: 30 25 20 25
+   :widths: 18 16 28 14 24
 
    * - Board
      - Memory profile
+     - External memory/controller
      - System clock
      - Video/build note
    * - ULX3S 85F
      - ``64m``
+     - 16-bit SDR SDRAM; native ``ahb_sdram`` controller path
      - 50 MHz
      - 320x200 default; extended modes available
    * - ULX3S 12F
      - ``32m`` default; ``64m`` optional
+     - 16-bit SDR SDRAM; native ``ahb_sdram`` controller path
      - 40 MHz
      - Compact 320x200 SDRAM scanout
    * - ULX4M-LD 85F
      - ``64m``
-     - 50 MHz
+     - DDR3; ``ahb_litedram`` + generated LiteDRAM/``ECP5DDRPHY``
+     - 50 MHz CPU/AHB; 75 MHz LiteDRAM user port
      - LiteDRAM target; timing waiver required
    * - ULX4M-LS 85F
      - ``32m``
-     - 50 MHz documented profile
-     - Memory-profile reference
+     - 32 MiB, 16-bit SDR SDRAM; native ``ahb_sdram`` controller path
+     - 50 MHz
+     - Native SDR memory path
 
 The monitor, linked Doom image, and SDRAM memory map must agree on the memory
 profile. Complete board build wrappers set their target-specific profile and

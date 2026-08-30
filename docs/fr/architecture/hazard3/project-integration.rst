@@ -67,9 +67,9 @@ plateforme Doom :
    * - Zone du projet
      - Rôle
    * - ``ahb_sdram.v`` / ``ulx3s_sdram_controller.v``
-     - Relier la SDR SDRAM de la carte au fabric mémoire processeur/système.
-   * - ``ahb_litedram.v``
-     - Chemin alternatif d'intégration de mémoire externe utilisé par certains profils de cartes.
+     - Relier la SDR SDRAM externe des ULX3S et ULX4M-LS au fabric mémoire processeur/système.
+   * - ``ahb_litedram.v`` / LiteDRAM généré
+     - Relier la DDR3 de l'ULX4M-LD via un adaptateur de domaine d'horloge entre l'AHB à 50 MHz et LiteDRAM/Wishbone à 75 MHz.
    * - Accès vidéo/SDRAM natif
      - Permettre au pipeline d'affichage de consommer les données framebuffer sans prétendre que la vidéo est une fonctionnalité du CPU.
    * - ``apb_sao_bridge.v``

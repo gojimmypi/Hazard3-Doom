@@ -447,7 +447,7 @@ ulx3s-85f)
     MAKEFILE="ULX3S.mk"
     LPF="${HAZARD3_SYNTH}/fpga_ulx3s.lpf"
     IDCODE="0x41113043"
-    NEXTPNR_SEED="${NEXTPNR_SEED:-55}"
+    NEXTPNR_SEED="${NEXTPNR_SEED:-178}"
     PNR_DEVICE_ARGS=(--um5g-85k --package CABGA381)
     HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
     SYNTH_PROFILE_STAMP="${HAZARD3_SYNTH}/fpga_ulx3s.video-profile"
@@ -472,7 +472,7 @@ ulx4m-ld-85f)
     IDCODE="0x01113043"
     NEXTPNR_SEED="${NEXTPNR_SEED:-232}"
     PNR_DEVICE_ARGS=(--um-85k --speed 8 --package CABGA381)
-    LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM/generated"
+    LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM"
     HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-50}"
     SYNTH_PROFILE_STAMP="${HAZARD3_SYNTH}/fpga_ulx4m_ld.sys-clk-mhz"
     SEED_STAMP="${BUILD_DIR}/fpga_ulx4m_ld.seed"

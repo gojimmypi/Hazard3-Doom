@@ -3,28 +3,33 @@ Profili pločica
 
 .. list-table::
    :header-rows: 1
-   :widths: 30 25 20 25
+   :widths: 18 16 28 14 24
 
    * - Pločica
      - Memorijski profil
+     - Vanjska memorija/kontroler
      - Sistemski takt
      - Napomena o videu/buildu
    * - ULX3S 85F
      - ``64m``
+     - 16-bitni SDR SDRAM; izvorni ``ahb_sdram`` put kontrolera
      - 50 MHz
      - 320x200 zadano; dostupni su prošireni načini
    * - ULX3S 12F
      - ``32m`` zadano; ``64m`` opcionalno
+     - 16-bitni SDR SDRAM; izvorni ``ahb_sdram`` put kontrolera
      - 40 MHz
      - Kompaktni 320x200 SDRAM scanout
    * - ULX4M-LD 85F
      - ``64m``
-     - 50 MHz
+     - DDR3; ``ahb_litedram`` + generirani LiteDRAM/``ECP5DDRPHY``
+     - 50 MHz CPU/AHB; 75 MHz LiteDRAM korisnički port
      - LiteDRAM cilj; potrebna timing iznimka
    * - ULX4M-LS 85F
      - ``32m``
-     - Dokumentirani profil od 50 MHz
-     - Referenca memorijskog profila
+     - 32 MiB 16-bitni SDR SDRAM; izvorni ``ahb_sdram`` put kontrolera
+     - 50 MHz
+     - Izvorni SDR memorijski put
 
 Monitor, povezana Doom slika i SDRAM memorijska mapa moraju se slagati oko
 memorijskog profila. Potpuni omotači za build pločica automatski postavljaju

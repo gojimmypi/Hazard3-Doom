@@ -1,0 +1,252 @@
+name: Check submodules
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      enforce_ulx3s_forks:
+        description: Require the ULX3S-owned Hazard3 and DoomGeneric forks
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  check-submodules:
+    runs-on: ubuntu-latest
+    env:
+      ENFORCE_ULX3S_FORKS: ${{ vars.ENFORCE_ULX3S_SUBMODULES == 'true' || (github.event_name == 'workflow_dispatch' && inputs.enforce_ulx3s_forks) }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+
+      - name: Validate submodule configuration and gitlinks
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          fail=0
+          tmp_root="$(mktemp -d)"
+          trap 'rm -rf "${tmp_root}"' EXIT
+
+          error()
+          {
+              printf 'ERROR: %s\n' "$*" >&2
+              printf '::error file=.gitmodules::%s\n' "$*"
+              fail=1
+          }
+
+          notice()
+          {
+              printf 'INFO: %s\n' "$*"
+              printf '::notice::%s\n' "$*"
+          }
+
+          warning()
+          {
+              printf 'WARNING: %s\n' "$*" >&2
+              printf '::warning file=.gitmodules::%s\n' "$*"
+          }
+
+          canonical_github_repo()
+          {
+              local url="$1"
+              local repo
+
+              case "${url}" in
+                  https://github.com/*)
+                      repo="${url#https://github.com/}"
+                      ;;
+                  http://github.com/*)
+                      repo="${url#http://github.com/}"
+                      ;;
+                  git@github.com:*)
+                      repo="${url#git@github.com:}"
+                      ;;
+                  ssh://git@github.com/*)
+                      repo="${url#ssh://git@github.com/}"
+                      ;;
+                  *)
+                      return 1
+                      ;;
+              esac
+
+              repo="${repo%.git}"
+              repo="${repo%/}"
+              printf '%s\n' "${repo,,}"
+          }
+
+          if [[ ! -f .gitmodules ]]; then
+              if git ls-tree -r HEAD | awk '$1 == "160000" { found = 1 } END { exit !found }'; then
+                  error "repository contains submodule gitlinks but .gitmodules is missing"
+              else
+                  notice "No .gitmodules file and no submodule gitlinks found."
+              fi
+
+              if (( fail != 0 )); then
+                  exit 1
+              fi
+              exit 0
+          fi
+
+          mapfile -t module_records < <(
+              git config -f .gitmodules --get-regexp '^submodule\..*\.path$' || true
+          )
+
+          if (( ${#module_records[@]} == 0 )); then
+              error ".gitmodules contains no submodule path entries"
+          fi
+
+          declare -A configured_paths=()
+
+          for record in "${module_records[@]}"; do
+              key="${record%% *}"
+              path="${record#* }"
+              name="${key#submodule.}"
+              name="${name%.path}"
+
+              url="$(git config -f .gitmodules --get "submodule.${name}.url" || true)"
+              branch="$(git config -f .gitmodules --get "submodule.${name}.branch" || true)"
+
+              configured_paths["${path}"]=1
+
+              printf '\nSubmodule: %s\n' "${name}"
+              printf '  path:   %s\n' "${path}"
+              printf '  url:    %s\n' "${url:-<missing>}"
+              printf '  branch: %s\n' "${branch:-<not specified>}"
+
+              if [[ -z "${url}" ]]; then
+                  error "submodule ${name} (${path}) has no url"
+                  continue
+              fi
+
+              tree_entry="$(git ls-tree HEAD -- "${path}")"
+              if [[ -z "${tree_entry}" ]]; then
+                  error "submodule ${name} declares path ${path}, but HEAD has no entry at that path"
+                  continue
+              fi
+
+              read -r mode type gitlink_sha tree_path <<<"${tree_entry}"
+
+              if [[ "${mode}" != "160000" || "${type}" != "commit" ]]; then
+                  error "${path} is declared as a submodule but HEAD stores ${mode} ${type}, not a 160000 gitlink"
+                  continue
+              fi
+
+              printf '  gitlink: %s\n' "${gitlink_sha}"
+
+              module_tmp="${tmp_root}/${name//\//_}"
+              git init -q "${module_tmp}"
+              git -C "${module_tmp}" remote add origin "${url}"
+
+              if ! git -C "${module_tmp}" fetch -q --no-tags --filter=blob:none origin "${gitlink_sha}"; then
+                  error "${path} gitlink ${gitlink_sha} cannot be fetched from ${url}"
+                  continue
+              fi
+
+              if ! git -C "${module_tmp}" cat-file -e "${gitlink_sha}^{commit}" 2>/dev/null; then
+                  error "${path} gitlink ${gitlink_sha} is not a commit in ${url}"
+                  continue
+              fi
+
+              notice "${path}: gitlink ${gitlink_sha} is available from ${url}"
+
+              if [[ -n "${branch}" ]]; then
+                  if [[ "${branch}" == "." ]]; then
+                      warning "${path} uses branch = .; branch ancestry cannot be validated without a matching parent branch name"
+                  else
+                      branch_ref="refs/heads/${branch}"
+                      branch_tip="$(git ls-remote --heads "${url}" "${branch_ref}" | awk 'NR == 1 { print $1 }')"
+
+                      if [[ -z "${branch_tip}" ]]; then
+                          error "${path} declares branch ${branch}, but ${url} has no ${branch_ref}"
+                      else
+                          if ! git -C "${module_tmp}" fetch -q --no-tags --filter=blob:none origin "+${branch_ref}:refs/remotes/origin/${branch}"; then
+                              error "failed to fetch declared branch ${branch} for ${path} from ${url}"
+                          elif ! git -C "${module_tmp}" merge-base --is-ancestor "${gitlink_sha}" "refs/remotes/origin/${branch}"; then
+                              error "${path} gitlink ${gitlink_sha} is not reachable from declared branch ${branch} in ${url}"
+                          elif [[ "${gitlink_sha}" == "${branch_tip}" ]]; then
+                              notice "${path}: gitlink is exactly the tip of ${branch}"
+                          else
+                              notice "${path}: gitlink is on ${branch}, but intentionally pinned behind branch tip ${branch_tip}"
+                          fi
+                      fi
+                  fi
+              fi
+          done
+
+          while read -r mode type sha path; do
+              if [[ "${mode}" == "160000" && -z "${configured_paths[${path}]+x}" ]]; then
+                  error "HEAD contains submodule gitlink ${path} at ${sha}, but .gitmodules has no matching path entry"
+              fi
+          done < <(git ls-tree -r HEAD)
+
+          if [[ "${ENFORCE_ULX3S_FORKS,,}" == "true" ]]; then
+              printf '\nULX3S fork policy: enabled\n'
+
+              declare -A expected_repo=(
+                  ["third_party/Hazard3"]="ulx3s/hazard3"
+                  ["third_party/doomgeneric"]="ulx3s/doomgeneric"
+              )
+              declare -A expected_branch=(
+                  ["third_party/Hazard3"]="ulx-doom"
+                  ["third_party/doomgeneric"]="ulx-doom"
+              )
+
+              for path in "${!expected_repo[@]}"; do
+                  matching_name=""
+
+                  for record in "${module_records[@]}"; do
+                      key="${record%% *}"
+                      candidate_path="${record#* }"
+                      if [[ "${candidate_path}" == "${path}" ]]; then
+                          matching_name="${key#submodule.}"
+                          matching_name="${matching_name%.path}"
+                          break
+                      fi
+                  done
+
+                  if [[ -z "${matching_name}" ]]; then
+                      error "ULX3S policy requires submodule ${path}, but it is not present in .gitmodules"
+                      continue
+                  fi
+
+                  url="$(git config -f .gitmodules --get "submodule.${matching_name}.url" || true)"
+                  branch="$(git config -f .gitmodules --get "submodule.${matching_name}.branch" || true)"
+
+                  if canonical="$(canonical_github_repo "${url}")"; then
+                      if [[ "${canonical}" != "${expected_repo[${path}]}" ]]; then
+                          error "ULX3S policy requires ${path} url to be ${expected_repo[${path}]}, found ${canonical}"
+                      else
+                          notice "${path}: using required ULX3S repository ${canonical}"
+                      fi
+                  else
+                      error "ULX3S policy requires a GitHub URL for ${path}, found ${url}"
+                  fi
+
+                  if [[ "${branch}" != "${expected_branch[${path}]}" ]]; then
+                      error "ULX3S policy requires ${path} branch ${expected_branch[${path}]}, found ${branch:-<not specified>}"
+                  else
+                      notice "${path}: using required branch ${branch}"
+                  fi
+              done
+          else
+              notice "ULX3S fork policy is disabled. Set repository variable ENFORCE_ULX3S_SUBMODULES=true or enable it in workflow_dispatch to enforce it."
+          fi
+
+          if (( fail != 0 )); then
+              printf '\nSubmodule validation FAILED.\n' >&2
+              exit 1
+          fi
+
+          printf '\nSubmodule validation PASSED.\n'

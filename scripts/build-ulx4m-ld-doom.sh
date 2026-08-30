@@ -33,7 +33,7 @@ MONITOR_OUTPUT="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.elf"
 MONITOR_BIN="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.bin"
 BOOT_HEX="${HAZARD3_ROOT}/example_soc/soc/hazard3-boot-monitor.hex"
 DOOM_OUTPUT="${DOOM_BUILD_DIR}/hazard3-doom.h3d"
-LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM/generated"
+LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM"
 HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-50}"
 
 # Run shellcheck to ensure this is a good script.

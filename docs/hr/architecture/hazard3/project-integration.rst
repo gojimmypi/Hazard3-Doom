@@ -64,9 +64,9 @@ Prikvačeni ULX3S fork dodaje sistemske značajke potrebne Doom platformi:
    * - Područje projekta
      - Namjena
    * - ``ahb_sdram.v`` / ``ulx3s_sdram_controller.v``
-     - Povezuje SDR SDRAM pločice s procesorskim/sistemskim memorijskim sklopom.
-   * - ``ahb_litedram.v``
-     - Alternativni put integracije vanjske memorije koji koriste odgovarajući profili pločica.
+     - Povezuje vanjski SDR SDRAM na ULX3S i ULX4M-LS pločicama s procesorskim/sistemskim memorijskim sklopom.
+   * - ``ahb_litedram.v`` / generirani LiteDRAM
+     - Povezuje ULX4M-LD DDR3 kroz adapter taktnih domena između 50 MHz AHB-a i 75 MHz LiteDRAM/Wishbone sučelja.
    * - Video/izvorni SDRAM pristup
      - Omogućuje display cjevovodu korištenje framebuffer podataka bez predstavljanja videa kao CPU značajke.
    * - ``apb_sao_bridge.v``

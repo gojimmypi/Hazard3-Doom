@@ -17,6 +17,7 @@ for the ULX3S and ULX4M families.
 Start here
 ----------
 
+* :doc:`about/index` - understand what the project is, what it teaches, and why ULX4M is useful for modular prototyping.
 * :doc:`getting-started/quick-start` - get a board running with the minimum number of steps.
 * :doc:`getting-started/build` - build the FPGA, resident monitor, and Doom image.
 * :doc:`user-guide/web-flasher` - program ULX3S FPGA SRAM directly from Chrome/Edge with WebUSB.
@@ -25,6 +26,12 @@ Start here
 * :doc:`user-guide/jtag-debugging` - debug Hazard3 through OpenOCD/GDB or VisualGDB.
 * :doc:`architecture/hazard3/index` - learn the Hazard3 RISC-V processor, pipeline, ISA configuration, CSRs, buses, and debug architecture.
 * :doc:`architecture/system` - understand how the FPGA, monitor, SDRAM, HDMI, SD, SAO, and ESP32 pieces fit together.
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Project Overview
+
+   about/index
 
 .. toctree::
    :maxdepth: 2

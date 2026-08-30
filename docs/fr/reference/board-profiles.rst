@@ -3,28 +3,33 @@ Profils de cartes
 
 .. list-table::
    :header-rows: 1
-   :widths: 30 25 20 25
+   :widths: 18 16 28 14 24
 
    * - Carte
      - Profil mémoire
+     - Mémoire externe/contrôleur
      - Horloge système
      - Note vidéo/build
    * - ULX3S 85F
      - ``64m``
+     - SDR SDRAM 16 bits ; chemin du contrôleur natif ``ahb_sdram``
      - 50 MHz
      - 320x200 par défaut ; modes étendus disponibles
    * - ULX3S 12F
      - ``32m`` par défaut ; ``64m`` en option
+     - SDR SDRAM 16 bits ; chemin du contrôleur natif ``ahb_sdram``
      - 40 MHz
      - Scanout SDRAM compact 320x200
    * - ULX4M-LD 85F
      - ``64m``
-     - 50 MHz
+     - DDR3 ; ``ahb_litedram`` + LiteDRAM généré/``ECP5DDRPHY``
+     - CPU/AHB 50 MHz ; port utilisateur LiteDRAM 75 MHz
      - Cible LiteDRAM ; dérogation de timing requise
    * - ULX4M-LS 85F
      - ``32m``
-     - Profil 50 MHz documenté
-     - Référence du profil mémoire
+     - SDR SDRAM 16 bits de 32 Mio ; chemin du contrôleur natif ``ahb_sdram``
+     - 50 MHz
+     - Chemin mémoire SDR natif
 
 Le moniteur, l'image Doom liée et la cartographie mémoire SDRAM doivent utiliser
 le même profil mémoire. Les wrappers de build complets pour chaque carte règlent
