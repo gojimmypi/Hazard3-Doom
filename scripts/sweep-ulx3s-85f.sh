@@ -1,11 +1,11 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------
-# File:        sweep-ulx3s-12f.sh
-# Path:        scripts/sweep-ulx3s-12f.sh
+# File:        sweep-ulx3s-85f.sh
+# Path:        scripts/sweep-ulx3s-85f.sh
 #
 # Project:     Hazard3-Doom
-# Purpose:     Run fully routed ULX3S 12F nextpnr seed sweeps and record final
-#              timing results.
+# Purpose:     Run fully routed ULX3S 85F nextpnr seed sweeps and record final
+#              timing results and bitstreams.
 #
 # Copyright (c) 2026 gojimmypi
 #
@@ -28,19 +28,17 @@ COMMON_SCRIPT="${SCRIPT_DIR}/sweep-ecp5-common.sh"
 SWEEP_JOBS="${SWEEP_JOBS:-4}"
 SWEEP_SKIP_SYNTH="${SWEEP_SKIP_SYNTH:-0}"
 SWEEP_PREPARE_ONLY="${SWEEP_PREPARE_ONLY:-0}"
-HAZARD3_MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE:-32m}"
-
-NETLIST="${SYNTH_DIR}/fpga_ulx3s_12f.json"
+HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
+SYNTH_PROFILE_STAMP="${SYNTH_DIR}/fpga_ulx3s.video-profile"
+NETLIST="${SYNTH_DIR}/fpga_ulx3s.json"
 LPF="${SYNTH_DIR}/fpga_ulx3s.lpf"
-MAKEFILE="${SYNTH_DIR}/ULX3S_12F.mk"
 SYNTH_LOG="${SYNTH_DIR}/synth.log"
-SYNTH_PROFILE_STAMP="${SYNTH_DIR}/fpga_ulx3s_12f.memory-profile"
 
 # shellcheck source=scripts/sweep-ecp5-common.sh
 source "${COMMON_SCRIPT}"
 sweep_ecp5_init_tuning
 TUNING_SUFFIX="$(sweep_ecp5_tuning_suffix)"
-SWEEP_DIR="${REPO_ROOT}/build/ulx3s-12f-seed-sweep/${HAZARD3_MEMORY_PROFILE}${TUNING_SUFFIX}"
+SWEEP_DIR="${REPO_ROOT}/build/ulx3s-seed-sweep${TUNING_SUFFIX}"
 SWEEP_REL_DIR="${SWEEP_DIR#${REPO_ROOT}/}"
 
 usage()
@@ -51,10 +49,10 @@ Usage: $0 SEED [SEED ...]
        $0 START-END
        $0 --all
 
-Route one or more nextpnr seeds for the ULX3S 12F Hazard3-Doom build.
+Route one or more nextpnr seeds for the ULX3S 85F Hazard3-Doom build.
 Seeds must be decimal values from 1 through 260.
 SWEEP_JOBS=N runs up to N routes concurrently (default: 4).
-HAZARD3_MEMORY_PROFILE=32m|64m selects the SDRAM profile (default: 32m).
+HAZARD3_HDMI_EXTENDED_MODES=0|1 selects standard/extended video.
 SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.
 EOF_USAGE
 }
@@ -76,9 +74,11 @@ if [[ ! "${SWEEP_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
     echo "Invalid SWEEP_JOBS: ${SWEEP_JOBS}; expected a positive integer." >&2
     exit 1
 fi
-case "${HAZARD3_MEMORY_PROFILE}" in
-32m|64m) ;;
-*) echo "HAZARD3_MEMORY_PROFILE must be 32m or 64m." >&2; exit 1 ;;
+
+case "${HAZARD3_HDMI_EXTENDED_MODES}" in
+0) VIDEO_PROFILE="standard" ;;
+1) VIDEO_PROFILE="extended" ;;
+*) echo "HAZARD3_HDMI_EXTENDED_MODES must be 0 or 1." >&2; exit 1 ;;
 esac
 
 if [[ "${SWEEP_PREPARE_ONLY}" != "1" ]]; then
@@ -95,87 +95,62 @@ sweep_ecp5_require_file "${LPF}"
 if [[ "${SWEEP_SKIP_SYNTH}" == "1" ]]; then
     recorded_profile=""
     [[ -f "${SYNTH_PROFILE_STAMP}" ]] && read -r recorded_profile < "${SYNTH_PROFILE_STAMP}" || true
-    if [[ "${recorded_profile}" != "${HAZARD3_MEMORY_PROFILE}" ]]; then
-        echo "Frozen ULX3S 12F netlist memory profile does not match requested ${HAZARD3_MEMORY_PROFILE}." >&2
+    if [[ "${recorded_profile}" != "${VIDEO_PROFILE}" ]]; then
+        echo "Frozen ULX3S 85F netlist video profile does not match requested ${VIDEO_PROFILE}." >&2
         exit 1
     fi
-    printf 'Using existing synthesized ULX3S 12F netlist; synthesis skipped.\n'
+    printf 'Using existing synthesized ULX3S 85F netlist; synthesis skipped.\n'
 else
     sweep_ecp5_require_tool make
     sweep_ecp5_require_tool yosys
-    sweep_ecp5_require_file "${MAKEFILE}"
-    sweep_ecp5_require_file "${HAZARD3_ROOT}/example_soc/soc/cache_tags_zero_12f.hex"
-    sweep_ecp5_require_file "${HAZARD3_ROOT}/example_soc/soc/hazard3-12f-bootstrap.hex"
 
     current_profile=""
     [[ -f "${SYNTH_PROFILE_STAMP}" ]] && read -r current_profile < "${SYNTH_PROFILE_STAMP}" || true
-    if [[ "${current_profile}" != "${HAZARD3_MEMORY_PROFILE}" ]]; then
+    if [[ "${current_profile}" != "${VIDEO_PROFILE}" ]]; then
         rm -f \
             "${NETLIST}" \
-            "${SYNTH_DIR}/fpga_ulx3s_12f.config" \
-            "${SYNTH_DIR}/fpga_ulx3s_12f.bit" \
-            "${SYNTH_DIR}/fpga_ulx3s_12f.svf"
+            "${SYNTH_DIR}/fpga_ulx3s.config" \
+            "${SYNTH_DIR}/fpga_ulx3s.bit" \
+            "${SYNTH_DIR}/fpga_ulx3s.svf"
     fi
 
-    printf 'ULX3S 12F profile: compact 320x200, %s SDRAM\n' \
-        "${HAZARD3_MEMORY_PROFILE}"
+    printf 'ULX3S 85F HDMI video profile: %s (extended modes=%s)\n' \
+        "${VIDEO_PROFILE}" "${HAZARD3_HDMI_EXTENDED_MODES}"
 
-    make -C "${SYNTH_DIR}" -f ULX3S_12F.mk \
-        HAZARD3_MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE}" \
-        HAZARD3_HDMI_EXTENDED_MODES=0 synth
-    printf '%s\n' "${HAZARD3_MEMORY_PROFILE}" > "${SYNTH_PROFILE_STAMP}"
+    make -C "${SYNTH_DIR}" -f ULX3S.mk \
+        HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES}" synth
+    printf '%s\n' "${VIDEO_PROFILE}" > "${SYNTH_PROFILE_STAMP}"
 fi
 
 [[ -s "${NETLIST}" ]] || {
-    echo "Missing synthesized ULX3S 12F netlist: ${NETLIST}" >&2
+    echo "Missing synthesized ULX3S 85F netlist: ${NETLIST}" >&2
     exit 1
 }
-[[ -s "${SYNTH_LOG}" ]] || {
-    echo "Missing ULX3S 12F synthesis log: ${SYNTH_LOG}" >&2
-    exit 1
-}
-
-ebr_used="$(awk '$2 == "DP16KD" {used=$1} END {print used}' "${SYNTH_LOG}")"
-if [[ -z "${ebr_used}" ]]; then
-    echo "ERROR: Could not determine ULX3S 12F DP16KD usage from synth.log." >&2
-    exit 1
-fi
-if (( ebr_used > 32 )); then
-    echo "ERROR: ULX3S 12F synthesis uses ${ebr_used} DP16KD blocks; LFE5U-12F limit is 32." >&2
-    exit 1
-fi
-if grep -Fq "ulx3s_frame_ram\\BANK_COUNT=" "${SYNTH_LOG}"; then
-    echo "ERROR: ULX3S 12F synthesized the full EBR framebuffer hierarchy." >&2
-    exit 1
-fi
 
 netlist_sha256="$(sha256sum "${NETLIST}" | awk '{print $1}')"
 mkdir -p "${SWEEP_DIR}"
 
 {
-    printf 'target=ulx3s-12f\n'
-    printf 'device=12k\n'
-    printf 'speed=6\n'
+    printf 'target=ulx3s-85f\n'
+    printf 'device=um5g-85k\n'
     printf 'package=CABGA381\n'
     printf 'full_route=1\n'
     printf 'result_columns=seed,clk_sys_mhz,clk_video_mhz,clk_tmds_mhz,timing_status\n'
-    printf 'hazard3_memory_profile=%s\n' "${HAZARD3_MEMORY_PROFILE}"
-    printf 'dp16kd_used=%s\n' "${ebr_used}"
+    printf 'video_profile=%s\n' "${VIDEO_PROFILE}"
     sweep_ecp5_write_tuning_metadata
-    printf 'clk_sys_required_mhz=40.00\n'
+    printf 'clk_sys_required_mhz=50.00\n'
     printf 'clk_video_required_mhz=50.00\n'
     printf 'clk_tmds_required_mhz=250.00\n'
     printf 'netlist_sha256=%s\n' "${netlist_sha256}"
-    printf 'netlist=fpga_ulx3s_12f.json\n'
+    printf 'netlist=fpga_ulx3s.json\n'
     printf 'generated_utc=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 } > "${SWEEP_DIR}/metadata.txt"
 
-printf 'ULX3S 12F synthesis check: compact profile, %s/32 DP16KD.\n' "${ebr_used}"
-printf 'ULX3S 12F routed sweep netlist SHA256: %s\n' "${netlist_sha256}"
-printf 'ULX3S 12F routed sweep directory: %s\n' "${SWEEP_DIR}"
+printf 'ULX3S 85F routed sweep netlist SHA256: %s\n' "${netlist_sha256}"
+printf 'ULX3S 85F routed sweep directory: %s\n' "${SWEEP_DIR}"
 
 if [[ "${SWEEP_PREPARE_ONLY}" == "1" ]]; then
-    printf 'ULX3S 12F frozen sweep netlist prepared; routing skipped.\n'
+    printf 'ULX3S 85F frozen sweep netlist prepared; routing skipped.\n'
     exit 0
 fi
 
@@ -187,20 +162,19 @@ run_seed()
     local seed="$1"
     local pnr_log="${SWEEP_DIR}/pnr-${seed}.log"
     local failed_log="${SWEEP_DIR}/pnr-${seed}-failed.log"
-    local config="${SWEEP_DIR}/fpga_ulx3s_12f-${seed}.config"
-    local svf="${SWEEP_DIR}/fpga_ulx3s_12f-${seed}.svf"
-    local bit="${SWEEP_DIR}/fpga_ulx3s_12f-${seed}.bit"
+    local config="${SWEEP_DIR}/fpga_ulx3s-${seed}.config"
+    local svf="${SWEEP_DIR}/fpga_ulx3s-${seed}.svf"
+    local bit="${SWEEP_DIR}/fpga_ulx3s-${seed}.bit"
     local result="${SWEEP_DIR}/result-seed-${seed}.csv"
     local clk_sys clk_video clk_tmds timing_status
 
-    printf '\nTrying ULX3S 12F nextpnr seed %s\n' "${seed}"
+    printf '\nTrying ULX3S 85F nextpnr seed %s\n' "${seed}"
     rm -f "${pnr_log}" "${failed_log}" "${config}" "${svf}" "${bit}" "${result}"
 
     if ! nextpnr-ecp5 \
         --seed "${seed}" \
         "${SWEEP_NEXTPNR_ARGS[@]}" \
-        --12k \
-        --speed 6 \
+        --um5g-85k \
         --package CABGA381 \
         --lpf "${LPF}" \
         --json "${NETLIST}" \
@@ -219,7 +193,7 @@ run_seed()
     clk_tmds="$(sweep_ecp5_extract_clock "${pnr_log}" "clk_tmds_x5")"
 
     timing_status="FAIL"
-    if sweep_ecp5_clock_at_least "${clk_sys}" 40.00 &&
+    if sweep_ecp5_clock_at_least "${clk_sys}" 50.00 &&
        sweep_ecp5_clock_at_least "${clk_video}" 50.00 &&
        sweep_ecp5_clock_at_least "${clk_tmds}" 250.00; then
         timing_status="PASS"
@@ -228,7 +202,7 @@ run_seed()
     if ! ecppack \
         --compress \
         --svf "${svf}" \
-        --idcode 0x21111043 \
+        --idcode 0x41113043 \
         "${config}" \
         "${bit}"; then
         printf '%d,%s,%s,%s,PACK_ERROR\n' \

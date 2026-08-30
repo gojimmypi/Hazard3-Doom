@@ -1,10 +1,60 @@
-name: ULX4M-LD 85F seed sweep
+name: ECP5 seed sweep
 
 on:
   workflow_dispatch:
     inputs:
-      sys_clk_mhz:
-        description: ULX4M-LD Hazard3 system clock
+      target:
+        description: FPGA target to sweep
+        required: true
+        default: ulx3s-85f
+        type: choice
+        options:
+          - ulx3s-85f
+          - ulx3s-12f
+          - ulx4m-ld-85f
+      seed_first:
+        description: First seed to route (1-260)
+        required: true
+        default: "1"
+        type: string
+      seed_last:
+        description: Last seed to route (1-260)
+        required: true
+        default: "260"
+        type: string
+      max_parallel:
+        description: Maximum concurrent GitHub route jobs
+        required: true
+        default: "20"
+        type: choice
+        options:
+          - "4"
+          - "8"
+          - "12"
+          - "20"
+      retain_bitstreams:
+        description: Retain per-seed bitstreams in CI artifacts when produced
+        required: true
+        default: false
+        type: boolean
+      ulx3s_85f_extended_modes:
+        description: ULX3S 85F extended HDMI modes (ignored for other targets)
+        required: true
+        default: "1"
+        type: choice
+        options:
+          - "1"
+          - "0"
+      ulx3s_12f_memory_profile:
+        description: ULX3S 12F SDRAM profile (ignored for other targets)
+        required: true
+        default: 32m
+        type: choice
+        options:
+          - 32m
+          - 64m
+      ulx4m_sys_clk_mhz:
+        description: ULX4M-LD Hazard3 system clock (ignored for other targets)
         required: true
         default: "40"
         type: choice
@@ -12,32 +62,32 @@ on:
           - "25"
           - "40"
           - "50"
-      litedram_cpu:
-        description: LiteDRAM initialization CPU embedded in generated core
+      ulx4m_litedram_cpu:
+        description: ULX4M-LD LiteDRAM initialization CPU (ignored for other targets)
         required: true
-        default: "serv"
+        default: serv
         type: choice
         options:
-          - "serv"
-          - "vexrisc"
+          - serv
+          - vexrisc
       placer:
-        description: ULX4M-LD nextpnr placer
+        description: nextpnr placer
         required: true
-        default: "heap"
+        default: heap
         type: choice
         options:
-          - "heap"
-          - "sa"
+          - heap
+          - sa
       router:
-        description: ULX4M-LD nextpnr router
+        description: nextpnr router
         required: true
-        default: "router1"
+        default: router1
         type: choice
         options:
-          - "router1"
-          - "router2"
+          - router1
+          - router2
       heap_timingweight:
-        description: HeAP timing weight (default nextpnr value is 10)
+        description: HeAP timing weight
         required: true
         default: "10"
         type: choice
@@ -47,7 +97,7 @@ on:
           - "30"
           - "40"
       heap_critexp:
-        description: HeAP criticality exponent (default nextpnr value is 2)
+        description: HeAP criticality exponent
         required: true
         default: "2"
         type: choice
@@ -61,7 +111,7 @@ on:
         default: false
         type: boolean
       router2_alt_weights:
-        description: Enable Router2 alternate weights (Router2 only)
+        description: Enable Router2 alternate weights
         required: true
         default: false
         type: boolean
@@ -70,49 +120,49 @@ on:
         required: false
         default: ""
         type: string
-      route_oss_cad_suite_version:
-        description: Route OSS CAD Suite snapshot; change to A/B nextpnr versions
+      synth_oss_cad_suite_version:
+        description: OSS CAD Suite snapshot used for synthesis
         required: true
         default: "2026-07-20"
         type: string
-      seed_first:
-        description: First seed to route (1-260)
+      route_oss_cad_suite_version:
+        description: OSS CAD Suite snapshot used for routing
         required: true
-        default: "1"
-        type: string
-      seed_last:
-        description: Last seed to route (1-260)
-        required: true
-        default: "260"
+        default: "2026-07-20"
         type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: ulx4m-ld-seed-sweep-${{ github.ref }}
+  group: ecp5-seed-sweep-${{ inputs.target }}-${{ github.ref }}
   cancel-in-progress: false
 
 env:
-  OSS_CAD_SUITE_VERSION: "2026-07-20"
-  ROUTE_OSS_CAD_SUITE_VERSION: ${{ inputs.route_oss_cad_suite_version }}
-  HAZARD3_ULX4M_SYS_CLK_MHZ: ${{ inputs.sys_clk_mhz }}
-  ULX4M_LITEDRAM_CPU: ${{ inputs.litedram_cpu }}
-  HAZARD3_ULX4M_NEXTPNR_PLACER: ${{ inputs.placer }}
-  HAZARD3_ULX4M_NEXTPNR_ROUTER: ${{ inputs.router }}
-  HAZARD3_ULX4M_NEXTPNR_HEAP_TIMINGWEIGHT: ${{ inputs.heap_timingweight }}
-  HAZARD3_ULX4M_NEXTPNR_HEAP_CRITEXP: ${{ inputs.heap_critexp }}
-  HAZARD3_ULX4M_NEXTPNR_TMG_RIPUP: ${{ inputs.tmg_ripup }}
-  HAZARD3_ULX4M_NEXTPNR_ROUTER2_ALT_WEIGHTS: ${{ inputs.router2_alt_weights }}
-  HAZARD3_ULX4M_NEXTPNR_EXTRA_ARGS: ${{ inputs.nextpnr_extra_args }}
+  SWEEP_TARGET: ${{ inputs.target }}
   SWEEP_SEED_FIRST: ${{ inputs.seed_first }}
   SWEEP_SEED_LAST: ${{ inputs.seed_last }}
+  SWEEP_MAX_PARALLEL: ${{ inputs.max_parallel }}
+  RETAIN_BITSTREAMS: ${{ inputs.retain_bitstreams }}
+  OSS_CAD_SUITE_VERSION: ${{ inputs.synth_oss_cad_suite_version }}
+  ROUTE_OSS_CAD_SUITE_VERSION: ${{ inputs.route_oss_cad_suite_version }}
+  HAZARD3_HDMI_EXTENDED_MODES: ${{ inputs.ulx3s_85f_extended_modes }}
+  HAZARD3_MEMORY_PROFILE: ${{ inputs.ulx3s_12f_memory_profile }}
+  HAZARD3_ULX4M_SYS_CLK_MHZ: ${{ inputs.ulx4m_sys_clk_mhz }}
+  ULX4M_LITEDRAM_CPU: ${{ inputs.ulx4m_litedram_cpu }}
+  SWEEP_NEXTPNR_PLACER: ${{ inputs.placer }}
+  SWEEP_NEXTPNR_ROUTER: ${{ inputs.router }}
+  SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT: ${{ inputs.heap_timingweight }}
+  SWEEP_NEXTPNR_HEAP_CRITEXP: ${{ inputs.heap_critexp }}
+  SWEEP_NEXTPNR_TMG_RIPUP: ${{ inputs.tmg_ripup }}
+  SWEEP_NEXTPNR_ROUTER2_ALT_WEIGHTS: ${{ inputs.router2_alt_weights }}
+  SWEEP_NEXTPNR_EXTRA_ARGS: ${{ inputs.nextpnr_extra_args }}
 
 jobs:
   prepare:
-    name: Prepare frozen ULX4M-LD 85F netlist
+    name: Prepare frozen ${{ inputs.target }} netlist
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
 
@@ -126,6 +176,8 @@ jobs:
       - name: Validate sweep inputs
         shell: bash
         run: |
+          set -euo pipefail
+
           if [[ ! "${SWEEP_SEED_FIRST}" =~ ^[0-9]+$ ||
                 ! "${SWEEP_SEED_LAST}" =~ ^[0-9]+$ ||
                 "${SWEEP_SEED_FIRST}" -lt 1 ||
@@ -135,47 +187,42 @@ jobs:
               exit 1
           fi
 
-          if [[ "${ULX4M_LITEDRAM_CPU}" != "serv" &&
-                "${ULX4M_LITEDRAM_CPU}" != "vexrisc" ]]; then
-              echo "LiteDRAM CPU must be serv or vexrisc." >&2
+          if [[ ! "${SWEEP_MAX_PARALLEL}" =~ ^[1-9][0-9]*$ ]]; then
+              echo "max_parallel must be a positive integer." >&2
               exit 1
           fi
 
-          if [[ "${HAZARD3_ULX4M_NEXTPNR_PLACER}" != "heap" &&
-                ( "${HAZARD3_ULX4M_NEXTPNR_HEAP_TIMINGWEIGHT}" != "10" ||
-                  "${HAZARD3_ULX4M_NEXTPNR_HEAP_CRITEXP}" != "2" ) ]]; then
-              echo "HeAP timing options require placer=heap." >&2
-              exit 1
-          fi
+          chmod +x \
+              scripts/sweep-ecp5.sh \
+              scripts/sweep-ecp5-common.sh \
+              scripts/sweep-ulx3s-85f.sh \
+              scripts/sweep-ulx3s-12f.sh \
+              scripts/sweep-ulx4m-ld.sh
 
-          if [[ "${HAZARD3_ULX4M_NEXTPNR_ROUTER2_ALT_WEIGHTS}" == "true" &&
-                "${HAZARD3_ULX4M_NEXTPNR_ROUTER}" != "router2" ]]; then
-              echo "Router2 alternate weights require router=router2." >&2
-              exit 1
-          fi
+          ./scripts/sweep-ecp5.sh --list-targets | grep -Fxq "${SWEEP_TARGET}"
+          ./scripts/sweep-ecp5.sh --print-sweep-dir "${SWEEP_TARGET}"
 
       - name: Install build prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends \
-              make
+          sudo apt-get install --yes --no-install-recommends make
 
-      - name: Restore the pinned OSS CAD Suite cache
-        id: oss-cad-cache
+      - name: Restore synthesis OSS CAD Suite cache
+        id: synth-oss-cad-cache
         uses: actions/cache/restore@v5
         with:
           path: ${{ runner.temp }}/oss-cad-suite
           key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.OSS_CAD_SUITE_VERSION }}-v1
 
-      - name: Set up the pinned OSS CAD Suite
-        if: steps.oss-cad-cache.outputs.cache-hit != 'true'
+      - name: Set up synthesis OSS CAD Suite
+        if: steps.synth-oss-cad-cache.outputs.cache-hit != 'true'
         uses: YosysHQ/setup-oss-cad-suite@v4
         with:
           version: ${{ env.OSS_CAD_SUITE_VERSION }}
           github-token: ${{ github.token }}
 
-      - name: Activate the cached OSS CAD Suite
-        if: steps.oss-cad-cache.outputs.cache-hit == 'true'
+      - name: Activate cached synthesis OSS CAD Suite
+        if: steps.synth-oss-cad-cache.outputs.cache-hit == 'true'
         shell: bash
         run: |
           test -x "${RUNNER_TEMP}/oss-cad-suite/bin/yosys"
@@ -183,14 +230,14 @@ jobs:
           test -x "${RUNNER_TEMP}/oss-cad-suite/bin/ecppack"
           printf '%s\n' "${RUNNER_TEMP}/oss-cad-suite/bin" >> "${GITHUB_PATH}"
 
-      - name: Save the pinned OSS CAD Suite cache
-        if: steps.oss-cad-cache.outputs.cache-hit != 'true'
+      - name: Save synthesis OSS CAD Suite cache
+        if: steps.synth-oss-cad-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
         with:
           path: ${{ runner.temp }}/oss-cad-suite
           key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.OSS_CAD_SUITE_VERSION }}-v1
 
-      - name: Initialize ULX4M-LD synthesis submodules
+      - name: Initialize synthesis submodules
         shell: bash
         run: |
           git submodule sync -- third_party/Hazard3
@@ -202,7 +249,7 @@ jobs:
               scripts \
               example_soc/libfpga
 
-      - name: Show tool versions
+      - name: Show synthesis tool versions
         shell: bash
         run: |
           yosys --version
@@ -210,115 +257,66 @@ jobs:
           printf 'ecppack: %s\n' "$(command -v ecppack)"
           python3 --version
 
-      - name: Synthesize frozen ULX4M-LD 85F netlist
+      - name: Prepare frozen target netlist
         shell: bash
         run: |
-          synth_dir="third_party/Hazard3/example_soc/synth"
-          litedram_dir="third_party/Hazard3/example_soc/third_party/LiteDRAM"
-          litedram_generated_dir="${litedram_dir}/generated-${ULX4M_LITEDRAM_CPU}"
+          set -euo pipefail
 
-          touch "${synth_dir}/../soc/hazard3-boot-monitor.hex"
-          DEFINES="HAZARD3_ULX4M_SYS_CLK_MHZ=${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
-              make -C "${synth_dir}" -f ULX4M_LD_85F.mk \
-                  ULX4M_LITEDRAM_CPU="${ULX4M_LITEDRAM_CPU}" synth
-          printf '%s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
-              > "${synth_dir}/fpga_ulx4m_ld.sys-clk-mhz"
+          chmod +x \
+              scripts/sweep-ecp5.sh \
+              scripts/sweep-ecp5-common.sh \
+              scripts/sweep-ulx3s-85f.sh \
+              scripts/sweep-ulx3s-12f.sh \
+              scripts/sweep-ulx4m-ld.sh
 
-          test -s "${synth_dir}/fpga_ulx4m_ld.json"
-          test -s "${synth_dir}/fpga_ulx4m_ld.lpf"
-          test -s "${synth_dir}/synth.log"
-          if [[ "${HAZARD3_ULX4M_SYS_CLK_MHZ}" == "25" ]]; then
-              if grep -Eq \
-                  "Used module:[[:space:]]+\\\\pll_25_(40|50)$" \
-                  "${synth_dir}/synth.log"; then
-                  echo "ULX4M-LD 25 MHz profile unexpectedly uses a system PLL." >&2
-                  exit 1
-              fi
-          else
-              grep -Eq \
-                  "Used module:[[:space:]]+\\\\pll_25_${HAZARD3_ULX4M_SYS_CLK_MHZ}$" \
-                  "${synth_dir}/synth.log"
-          fi
-          grep -Fq \
-              "Parameter \\CLK_MHZ = ${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
-              "${synth_dir}/synth.log"
-          test -s "${litedram_dir}/litedram_ulx4m_cpu.v"
-          test -s "${litedram_generated_dir}/litedram_ulx4m_cpu.v"
-          test -s "${litedram_generated_dir}/litedram_ulx4m_cpu_rom.init"
-          test -f "${litedram_generated_dir}/litedram_ulx4m_cpu_sram.init"
-          test "$(cat "${synth_dir}/fpga_ulx4m_ld.litedram-cpu")" = \
-              "${ULX4M_LITEDRAM_CPU}"
+          touch third_party/Hazard3/example_soc/soc/hazard3-boot-monitor.hex
+          ./scripts/sweep-ecp5.sh --prepare "${SWEEP_TARGET}"
 
-      - name: Record sweep reference metadata
-        shell: bash
-        run: |
-          synth_dir="third_party/Hazard3/example_soc/synth"
+          sweep_dir="$(./scripts/sweep-ecp5.sh --print-sweep-dir "${SWEEP_TARGET}")"
+          netlist="$(./scripts/sweep-ecp5.sh --print-netlist "${SWEEP_TARGET}")"
+
+          test -s "${netlist}"
+          test -s "${sweep_dir}/metadata.txt"
 
           mkdir -p reference
+          cp "${sweep_dir}/metadata.txt" reference/sweep-metadata.txt
+          sha256sum "${netlist}" > reference/netlist.sha256
 
           git rev-parse HEAD > reference/hazard3-doom-head.txt
           git ls-tree HEAD third_party/Hazard3 > reference/hazard3-doom-hazard3-gitlink.txt
-          git show HEAD:.gitmodules > reference/hazard3-doom.gitmodules
-
           git -C third_party/Hazard3 rev-parse HEAD > reference/hazard3-head.txt
-          git -C third_party/Hazard3 show HEAD:.gitmodules > reference/hazard3.gitmodules
-          git -C third_party/Hazard3 \
-              ls-tree HEAD example_soc/libfpga > reference/hazard3-libfpga-gitlink.txt
-          git -C third_party/Hazard3 \
-              ls-tree HEAD scripts > reference/hazard3-scripts-gitlink.txt
-          git -C third_party/Hazard3/example_soc/libfpga \
-              rev-parse HEAD > reference/libfpga-head.txt
-          git -C third_party/Hazard3/scripts \
-              rev-parse HEAD > reference/hazard3-scripts-head.txt
+          git -C third_party/Hazard3 ls-tree HEAD example_soc/libfpga \
+              > reference/hazard3-libfpga-gitlink.txt
+          git -C third_party/Hazard3 ls-tree HEAD scripts \
+              > reference/hazard3-scripts-gitlink.txt
 
           {
               yosys --version
               nextpnr-ecp5 --version
               printf 'ecppack: %s\n' "$(command -v ecppack)"
-              python3 --version
-          } > reference/tool-versions.txt
-
-          sha256sum "${synth_dir}/fpga_ulx4m_ld.json" \
-              > reference/netlist.sha256
-
-          git status --short > reference/hazard3-doom-status.txt
-          git -C third_party/Hazard3 status --short \
-              > reference/hazard3-status.txt
-          git -C third_party/Hazard3/example_soc/libfpga status --short \
-              > reference/libfpga-status.txt
+          } > reference/synthesis-tool-versions.txt
 
           {
-              printf 'workflow_run_id=%s\n' "${GITHUB_RUN_ID}"
-              printf 'workflow_run_number=%s\n' "${GITHUB_RUN_NUMBER}"
-              printf 'github_sha=%s\n' "${GITHUB_SHA}"
-              printf 'github_ref=%s\n' "${GITHUB_REF}"
-              printf 'runner_os=%s\n' "${RUNNER_OS}"
-              printf 'synth_oss_cad_suite_version=%s\n' "${OSS_CAD_SUITE_VERSION}"
-              printf 'route_oss_cad_suite_version=%s\n' "${ROUTE_OSS_CAD_SUITE_VERSION}"
-              printf 'target=ulx4m-ld-85f\n'
-              printf 'litedram_cpu=%s\n' "${ULX4M_LITEDRAM_CPU}"
-              seed_count=$((SWEEP_SEED_LAST - SWEEP_SEED_FIRST + 1))
-              if (( seed_count < 20 )); then
-                  matrix_jobs="${seed_count}"
-              else
-                  matrix_jobs=20
-              fi
+              printf 'target=%s\n' "${SWEEP_TARGET}"
               printf 'seed_first=%s\n' "${SWEEP_SEED_FIRST}"
               printf 'seed_last=%s\n' "${SWEEP_SEED_LAST}"
-              printf 'matrix_jobs=%s\n' "${matrix_jobs}"
-              printf 'matrix_max_parallel=20\n'
-              printf 'placer=%s\n' "${HAZARD3_ULX4M_NEXTPNR_PLACER}"
-              printf 'router=%s\n' "${HAZARD3_ULX4M_NEXTPNR_ROUTER}"
-              printf 'heap_timingweight=%s\n' "${HAZARD3_ULX4M_NEXTPNR_HEAP_TIMINGWEIGHT}"
-              printf 'heap_critexp=%s\n' "${HAZARD3_ULX4M_NEXTPNR_HEAP_CRITEXP}"
-              printf 'tmg_ripup=%s\n' "${HAZARD3_ULX4M_NEXTPNR_TMG_RIPUP}"
-              printf 'router2_alt_weights=%s\n' "${HAZARD3_ULX4M_NEXTPNR_ROUTER2_ALT_WEIGHTS}"
-              printf 'nextpnr_extra_args=%s\n' "${HAZARD3_ULX4M_NEXTPNR_EXTRA_ARGS}"
-              printf 'clk_sys_required_mhz=%s.00\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
-              printf 'litedram_user_required_mhz=75.01\n'
-              printf 'clk_video_required_mhz=50.00\n'
-              printf 'clk_tmds_required_mhz=250.00\n'
-              printf 'init_clk_required_mhz=25.00\n'
+              printf 'max_parallel=%s\n' "${SWEEP_MAX_PARALLEL}"
+              printf 'retain_bitstreams=%s\n' "${RETAIN_BITSTREAMS}"
+              printf 'synth_oss_cad_suite_version=%s\n' "${OSS_CAD_SUITE_VERSION}"
+              printf 'route_oss_cad_suite_version=%s\n' "${ROUTE_OSS_CAD_SUITE_VERSION}"
+              printf 'ulx3s_85f_extended_modes=%s\n' "${HAZARD3_HDMI_EXTENDED_MODES}"
+              printf 'ulx3s_12f_memory_profile=%s\n' "${HAZARD3_MEMORY_PROFILE}"
+              printf 'ulx4m_sys_clk_mhz=%s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
+              printf 'ulx4m_litedram_cpu=%s\n' "${ULX4M_LITEDRAM_CPU}"
+              printf 'placer=%s\n' "${SWEEP_NEXTPNR_PLACER}"
+              printf 'router=%s\n' "${SWEEP_NEXTPNR_ROUTER}"
+              printf 'heap_timingweight=%s\n' "${SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT}"
+              printf 'heap_critexp=%s\n' "${SWEEP_NEXTPNR_HEAP_CRITEXP}"
+              printf 'tmg_ripup=%s\n' "${SWEEP_NEXTPNR_TMG_RIPUP}"
+              printf 'router2_alt_weights=%s\n' "${SWEEP_NEXTPNR_ROUTER2_ALT_WEIGHTS}"
+              printf 'nextpnr_extra_args=%s\n' "${SWEEP_NEXTPNR_EXTRA_ARGS}"
+              printf 'sweep_dir=%s\n' "${sweep_dir}"
+              printf 'netlist=%s\n' "${netlist}"
           } > reference/workflow.txt
 
       - name: Generate seed matrix
@@ -331,35 +329,33 @@ jobs:
 
           seed_first = int(os.environ["SWEEP_SEED_FIRST"])
           seed_last = int(os.environ["SWEEP_SEED_LAST"])
+          max_parallel = int(os.environ["SWEEP_MAX_PARALLEL"])
           seeds = list(range(seed_first, seed_last + 1))
-          group_count = min(20, len(seeds))
-          seed_groups = [[] for _ in range(group_count)]
+          group_count = min(max_parallel, len(seeds))
+          groups = [[] for _ in range(group_count)]
           for index, seed in enumerate(seeds):
-              seed_groups[index % group_count].append(seed)
+              groups[index % group_count].append(seed)
 
-          groups = []
-          for index, group_seeds in enumerate(seed_groups, start=1):
-              groups.append({
-                  "group": f"{index:02d}",
-                  "seeds": " ".join(str(seed) for seed in group_seeds),
-              })
-
-          print(json.dumps({"include": groups}, separators=(",", ":")))
+          matrix = {
+              "include": [
+                  {
+                      "group": f"{index:02d}",
+                      "seeds": " ".join(str(seed) for seed in group),
+                  }
+                  for index, group in enumerate(groups, start=1)
+              ]
+          }
+          print(json.dumps(matrix, separators=(",", ":")))
           PY
           } )"
-
           printf 'matrix=%s\n' "${matrix}" >> "${GITHUB_OUTPUT}"
-          printf 'Generated %s matrix jobs for seeds %s through %s.\n' \
-              "$(python3 -c 'import json,sys; print(len(json.loads(sys.argv[1])["include"]))' "${matrix}")" \
-              "${SWEEP_SEED_FIRST}" \
-              "${SWEEP_SEED_LAST}"
 
-      - name: Clear synthesis tool directory for alternate route suite
+      - name: Prepare route OSS CAD Suite cache
         if: env.ROUTE_OSS_CAD_SUITE_VERSION != env.OSS_CAD_SUITE_VERSION
         shell: bash
         run: rm -rf "${RUNNER_TEMP}/oss-cad-suite"
 
-      - name: Restore requested route OSS CAD Suite cache
+      - name: Restore route OSS CAD Suite cache
         if: env.ROUTE_OSS_CAD_SUITE_VERSION != env.OSS_CAD_SUITE_VERSION
         id: route-oss-cad-cache
         uses: actions/cache/restore@v5
@@ -367,217 +363,191 @@ jobs:
           path: ${{ runner.temp }}/oss-cad-suite
           key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.ROUTE_OSS_CAD_SUITE_VERSION }}-v1
 
-      - name: Set up requested route OSS CAD Suite
+      - name: Set up route OSS CAD Suite
         if: env.ROUTE_OSS_CAD_SUITE_VERSION != env.OSS_CAD_SUITE_VERSION && steps.route-oss-cad-cache.outputs.cache-hit != 'true'
         uses: YosysHQ/setup-oss-cad-suite@v4
         with:
           version: ${{ env.ROUTE_OSS_CAD_SUITE_VERSION }}
           github-token: ${{ github.token }}
 
-      - name: Save requested route OSS CAD Suite cache
+      - name: Save route OSS CAD Suite cache
         if: env.ROUTE_OSS_CAD_SUITE_VERSION != env.OSS_CAD_SUITE_VERSION && steps.route-oss-cad-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
         with:
           path: ${{ runner.temp }}/oss-cad-suite
           key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.ROUTE_OSS_CAD_SUITE_VERSION }}-v1
 
-      - name: Record route tool version
+      - name: Record route nextpnr version
         shell: bash
         run: |
           test -x "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-ecp5"
           "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-ecp5" --version \
-              > reference/route-nextpnr-version.txt
-          cat reference/route-nextpnr-version.txt
+              | tee reference/route-nextpnr-version.txt
 
-      - name: Package frozen synthesis inputs and reference files
+      - name: Package frozen route inputs
         shell: bash
         run: |
-          input_paths=(
-              .github/workflows/ulx4m-ld-seed-sweep.yml
-              .gitmodules
-              scripts/sweep-ulx4m-ld.sh
-              reference
-              third_party/Hazard3/.gitmodules
-              third_party/Hazard3/hdl
-              third_party/Hazard3/scripts
-              third_party/Hazard3/project_paths.mk
-              third_party/Hazard3/example_soc/project_paths.mk
-              third_party/Hazard3/example_soc/fpga
-              third_party/Hazard3/example_soc/soc
-              third_party/Hazard3/example_soc/libfpga
-              third_party/Hazard3/example_soc/synth
-              third_party/Hazard3/example_soc/third_party/LiteDRAM
-          )
-
-          if [[ -d third_party/Hazard3/example_soc/third_party/UberDDR3 ]]; then
-              input_paths+=(third_party/Hazard3/example_soc/third_party/UberDDR3)
-          fi
-
-          find "${input_paths[@]}" \
-              -type f \
-              ! -name .git \
-              -print \
-              | LC_ALL=C sort -u \
-              > reference/sweep-input-file-list.txt
-
           tar \
-              --exclude='.git' \
-              --exclude='*/.git' \
-              -czf "${RUNNER_TEMP}/ulx4m-ld-sweep-inputs.tar.gz" \
-              "${input_paths[@]}"
+              --exclude='routing-sweep' \
+              --exclude='*.config' \
+              --exclude='*.bit' \
+              --exclude='*.svf' \
+              -czf "${RUNNER_TEMP}/ecp5-sweep-inputs.tar.gz" \
+              reference \
+              third_party/Hazard3/example_soc/synth
 
-      - name: Upload frozen sweep inputs
+      - name: Upload frozen route inputs
         uses: actions/upload-artifact@v7
         with:
-          name: ulx4m-ld-sweep-inputs-${{ github.run_id }}
-          path: ${{ runner.temp }}/ulx4m-ld-sweep-inputs.tar.gz
+          name: ecp5-sweep-inputs-${{ github.run_id }}
+          path: ${{ runner.temp }}/ecp5-sweep-inputs.tar.gz
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
 
   route:
-    name: Seed group ${{ matrix.group }}
+    name: ${{ inputs.target }} seeds ${{ matrix.seeds }}
     needs: prepare
     runs-on: ubuntu-24.04
     timeout-minutes: 350
     strategy:
       fail-fast: false
-      max-parallel: 20
+      max-parallel: ${{ fromJSON(inputs.max_parallel) }}
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
 
     steps:
-      - name: Install build prerequisites
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends \
-              make
+      - name: Check out sweep scripts
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
 
-      - name: Restore the route OSS CAD Suite cache
+      - name: Restore route OSS CAD Suite cache
         id: route-oss-cad-cache
         uses: actions/cache/restore@v5
         with:
           path: ${{ runner.temp }}/oss-cad-suite
           key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.ROUTE_OSS_CAD_SUITE_VERSION }}-v1
 
-      - name: Activate the route OSS CAD Suite
+      - name: Activate route OSS CAD Suite
         shell: bash
         env:
-          OSS_CAD_CACHE_HIT: ${{ steps.route-oss-cad-cache.outputs.cache-hit }}
+          CACHE_HIT: ${{ steps.route-oss-cad-cache.outputs.cache-hit }}
         run: |
-          if [[ "${OSS_CAD_CACHE_HIT}" != "true" ]]; then
-              echo "Pinned OSS CAD Suite cache was not available." >&2
+          if [[ "${CACHE_HIT}" != "true" ]]; then
+              echo "Route OSS CAD Suite cache was not available." >&2
               exit 1
           fi
-
-          test -x "${RUNNER_TEMP}/oss-cad-suite/bin/yosys"
           test -x "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-ecp5"
           test -x "${RUNNER_TEMP}/oss-cad-suite/bin/ecppack"
           printf '%s\n' "${RUNNER_TEMP}/oss-cad-suite/bin" >> "${GITHUB_PATH}"
+
+      - name: Download frozen route inputs
+        uses: actions/download-artifact@v8
+        with:
+          name: ecp5-sweep-inputs-${{ github.run_id }}
+          path: ${{ runner.temp }}/sweep-inputs
+
+      - name: Extract and verify frozen route inputs
+        shell: bash
+        run: |
+          tar -xzf "${RUNNER_TEMP}/sweep-inputs/ecp5-sweep-inputs.tar.gz" \
+              -C "${GITHUB_WORKSPACE}"
+
+          chmod +x \
+              scripts/sweep-ecp5.sh \
+              scripts/sweep-ecp5-common.sh \
+              scripts/sweep-ulx3s-85f.sh \
+              scripts/sweep-ulx3s-12f.sh \
+              scripts/sweep-ulx4m-ld.sh
+
+          netlist="$(./scripts/sweep-ecp5.sh --print-netlist "${SWEEP_TARGET}")"
+          expected_sha="$(awk '{print $1}' reference/netlist.sha256)"
+          actual_sha="$(sha256sum "${netlist}" | awk '{print $1}')"
+          printf 'Frozen netlist SHA256: %s\n' "${actual_sha}"
+          test "${actual_sha}" = "${expected_sha}"
 
       - name: Show route tool version
         shell: bash
         run: nextpnr-ecp5 --version
 
-      - name: Download frozen sweep inputs
-        uses: actions/download-artifact@v8
-        with:
-          name: ulx4m-ld-sweep-inputs-${{ github.run_id }}
-          path: ${{ runner.temp }}/sweep-inputs
-
-      - name: Extract frozen sweep inputs
-        shell: bash
-        run: |
-          tar -xzf \
-              "${RUNNER_TEMP}/sweep-inputs/ulx4m-ld-sweep-inputs.tar.gz" \
-              -C "${GITHUB_WORKSPACE}"
-
-          chmod +x scripts/sweep-ulx4m-ld.sh
-
-          expected_sha="$(awk '{print $1}' reference/netlist.sha256)"
-          actual_sha="$(sha256sum third_party/Hazard3/example_soc/synth/fpga_ulx4m_ld.json | awk '{print $1}')"
-
-          printf 'Frozen netlist SHA256: %s\n' "${actual_sha}"
-          test "${actual_sha}" = "${expected_sha}"
-
-      - name: Route seeds ${{ matrix.seeds }}
+      - name: Route seed group
         id: route
         shell: bash
         run: |
           set -u -o pipefail
 
-          sweep_rel_dir="$(./scripts/sweep-ulx4m-ld.sh --print-sweep-dir)"
-          sweep_dir="third_party/Hazard3/example_soc/synth/${sweep_rel_dir}"
-          artifact_dir="seed-artifact"
+          sweep_dir="$(./scripts/sweep-ecp5.sh --print-sweep-dir "${SWEEP_TARGET}")"
+          netlist="$(./scripts/sweep-ecp5.sh --print-netlist "${SWEEP_TARGET}")"
           expected_sha="$(awk '{print $1}' reference/netlist.sha256)"
+          artifact_dir="seed-artifact"
           overall_status=0
-
           mkdir -p "${artifact_dir}"
 
           for seed in ${{ matrix.seeds }}; do
               printf '\n============================================================\n'
-              printf 'Routing ULX4M-LD 85F seed %s\n' "${seed}"
+              printf 'Routing %s seed %s\n' "${SWEEP_TARGET}" "${seed}"
               printf '============================================================\n'
 
               start_seconds="$(date +%s)"
-
               set +e
-              SWEEP_JOBS=1 \
-              SWEEP_SKIP_SYNTH=1 \
-                  ./scripts/sweep-ulx4m-ld.sh "${seed}" \
+              SWEEP_JOBS=1 SWEEP_SKIP_SYNTH=1 \
+                  ./scripts/sweep-ecp5.sh "${SWEEP_TARGET}" "${seed}" \
                   |& tee "${artifact_dir}/console-${seed}.log"
               route_status=${PIPESTATUS[0]}
               set -e
-
               end_seconds="$(date +%s)"
-              elapsed_seconds=$((end_seconds - start_seconds))
 
-              printf '%s\n' "${elapsed_seconds}" \
+              printf '%s\n' "$((end_seconds - start_seconds))" \
                   > "${artifact_dir}/elapsed-${seed}.txt"
               printf '%s\n' "${route_status}" \
                   > "${artifact_dir}/exit-${seed}.txt"
 
-              for file in \
-                  "${sweep_dir}/seed-${seed}.log" \
-                  "${sweep_dir}/result-seed-${seed}.csv" \
-                  "${sweep_dir}/results-seed-${seed}.csv"
-              do
-                  if [[ -f "${file}" ]]; then
-                      cp "${file}" "${artifact_dir}/"
-                  fi
-              done
-
-              if [[ -f "${sweep_dir}/metadata.txt" ]]; then
-                  cp "${sweep_dir}/metadata.txt" \
-                      "${artifact_dir}/metadata-${seed}.txt"
+              result="${sweep_dir}/result-seed-${seed}.csv"
+              if [[ -f "${result}" ]]; then
+                  cp "${result}" "${artifact_dir}/"
               fi
 
-              actual_sha="$(sha256sum third_party/Hazard3/example_soc/synth/fpga_ulx4m_ld.json | awk '{print $1}')"
+              shopt -s nullglob
+              logs=(
+                  "${sweep_dir}/pnr-${seed}.log"
+                  "${sweep_dir}/seed-${seed}.log"
+                  "${sweep_dir}/pnr-${seed}-failed.log"
+              )
+              for file in "${logs[@]}"; do
+                  [[ -f "${file}" ]] && cp "${file}" "${artifact_dir}/"
+              done
+
+              if [[ "${RETAIN_BITSTREAMS}" == "true" || "${RETAIN_BITSTREAMS}" == "1" ]]; then
+                  bits=("${sweep_dir}"/*-"${seed}".bit)
+                  for file in "${bits[@]}"; do
+                      [[ -f "${file}" ]] && cp "${file}" "${artifact_dir}/"
+                  done
+              fi
+              shopt -u nullglob
+
+              actual_sha="$(sha256sum "${netlist}" | awk '{print $1}')"
               printf '%s\n' "${actual_sha}" \
                   > "${artifact_dir}/netlist-sha256-${seed}.txt"
 
               if [[ "${actual_sha}" != "${expected_sha}" ]]; then
-                  printf 'ERROR: seed %s changed the frozen synthesized netlist.\n' \
-                      "${seed}" >&2
+                  echo "Seed ${seed} changed the frozen synthesized netlist." >&2
                   overall_status=1
               fi
-
               if (( route_status != 0 )); then
-                  printf 'ERROR: seed %s route exited with status %s.\n' \
-                      "${seed}" "${route_status}" >&2
+                  echo "Seed ${seed} route exited with status ${route_status}." >&2
                   overall_status=1
               fi
-
-              printf 'Seed %s elapsed: %s seconds\n' \
-                  "${seed}" "${elapsed_seconds}"
           done
 
+          cp reference/sweep-metadata.txt "${artifact_dir}/metadata-${{ matrix.group }}.txt"
           printf 'status=%s\n' "${overall_status}" >> "${GITHUB_OUTPUT}"
 
-      - name: Upload seed reference files
+      - name: Upload seed group results
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: ulx4m-ld-sweep-seeds-${{ matrix.group }}-${{ github.run_id }}
+          name: ecp5-sweep-seeds-${{ matrix.group }}-${{ github.run_id }}
           path: seed-artifact/
           if-no-files-found: error
           retention-days: 1
@@ -588,7 +558,7 @@ jobs:
         run: exit 1
 
   summarize:
-    name: Summarize ULX4M-LD 85F sweep
+    name: Summarize ${{ inputs.target }} sweep
     needs:
       - prepare
       - route
@@ -597,357 +567,69 @@ jobs:
     timeout-minutes: 60
 
     steps:
+      - name: Check out summary script
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
       - name: Download frozen reference inputs
         uses: actions/download-artifact@v8
         with:
-          name: ulx4m-ld-sweep-inputs-${{ github.run_id }}
-          path: final/reference-download
+          name: ecp5-sweep-inputs-${{ github.run_id }}
+          path: final/frozen-download
 
-      - name: Download all seed reference files
+      - name: Download all seed group results
         uses: actions/download-artifact@v8
         with:
-          pattern: ulx4m-ld-sweep-seeds-*-${{ github.run_id }}
+          pattern: ecp5-sweep-seeds-*-${{ github.run_id }}
           path: final/seeds
           merge-multiple: true
 
       - name: Expand frozen reference inputs
         shell: bash
         run: |
-          mkdir -p final/reference
+          mkdir -p final/frozen
+          tar -xzf final/frozen-download/ecp5-sweep-inputs.tar.gz \
+              -C final/frozen
+          rm -rf final/frozen-download
 
-          tar -xzf \
-              final/reference-download/ulx4m-ld-sweep-inputs.tar.gz \
-              -C final/reference
-
-          rm -rf final/reference-download
-
-      - name: Generate CSV and Markdown summaries
+      - name: Generate sweep summary
+        id: summary
         shell: bash
         run: |
-          python3 - <<'PY'
-          import csv
-          import os
-          from pathlib import Path
-
-          root = Path("final")
-          seeds_dir = root / "seeds"
-          summary_csv = root / "summary.csv"
-          summary_md = root / "summary.md"
-
-          requirements = {
-              "clk_sys_mhz": float(os.environ["HAZARD3_ULX4M_SYS_CLK_MHZ"]),
-              "litedram_user_mhz": 75.01,
-              "clk_video_mhz": 50.00,
-              "clk_tmds_mhz": 250.00,
-              "init_clk_mhz": 25.00,
-          }
-
-          def read_int(path):
-              try:
-                  return int(path.read_text(encoding="utf-8").strip())
-              except (FileNotFoundError, ValueError):
-                  return None
-
-          def read_result(seed):
-              path = seeds_dir / f"result-seed-{seed}.csv"
-              if not path.exists():
-                  return None
-
-              line = path.read_text(encoding="utf-8", errors="replace").strip()
-              fields = line.split(",")
-              if len(fields) != 7:
-                  return None
-
-              names = (
-                  "seed",
-                  "clk_sys_mhz",
-                  "litedram_user_mhz",
-                  "clk_video_mhz",
-                  "clk_tmds_mhz",
-                  "init_clk_mhz",
-                  "timing_status",
-              )
-              return dict(zip(names, fields))
-
-          def numeric(value):
-              try:
-                  return float(value)
-              except (TypeError, ValueError):
-                  return None
-
-          rows = []
-
-          seed_first = int(os.environ["SWEEP_SEED_FIRST"])
-          seed_last = int(os.environ["SWEEP_SEED_LAST"])
-
-          for seed in range(seed_first, seed_last + 1):
-              result = read_result(seed)
-              route_exit = read_int(seeds_dir / f"exit-{seed}.txt")
-              elapsed = read_int(seeds_dir / f"elapsed-{seed}.txt")
-
-              values = {}
-              if result is not None:
-                  for key in requirements:
-                      values[key] = numeric(result.get(key))
-
-              clocks_present = all(values.get(key) is not None for key in requirements)
-              timing_status = "" if result is None else result.get("timing_status", "")
-              all_timing_pass = (
-                  route_exit == 0
-                  and clocks_present
-                  and timing_status == "PASS"
-                  and all(values[key] >= requirements[key] for key in requirements)
-              )
-
-              worst_margin = ""
-              limiting_clock = ""
-              if clocks_present:
-                  ratios = {
-                      key: values[key] / requirements[key]
-                      for key in requirements
-                  }
-                  limiting_clock = min(ratios, key=ratios.get)
-                  worst_margin = ratios[limiting_clock]
-
-              rows.append({
-                  "seed": seed,
-                  "route_exit": "" if route_exit is None else route_exit,
-                  "elapsed_seconds": "" if elapsed is None else elapsed,
-                  "clk_sys_mhz": "" if values.get("clk_sys_mhz") is None else f"{values['clk_sys_mhz']:.2f}",
-                  "litedram_user_mhz": "" if values.get("litedram_user_mhz") is None else f"{values['litedram_user_mhz']:.2f}",
-                  "clk_video_mhz": "" if values.get("clk_video_mhz") is None else f"{values['clk_video_mhz']:.2f}",
-                  "clk_tmds_mhz": "" if values.get("clk_tmds_mhz") is None else f"{values['clk_tmds_mhz']:.2f}",
-                  "init_clk_mhz": "" if values.get("init_clk_mhz") is None else f"{values['init_clk_mhz']:.2f}",
-                  "timing_status": timing_status,
-                  "all_timing_pass": "PASS" if all_timing_pass else "FAIL",
-                  "limiting_clock": limiting_clock,
-                  "worst_required_ratio": "" if worst_margin == "" else f"{worst_margin:.6f}",
-              })
-
-          fieldnames = list(rows[0].keys())
-          with summary_csv.open("w", encoding="utf-8", newline="") as handle:
-              writer = csv.DictWriter(handle, fieldnames=fieldnames)
-              writer.writeheader()
-              writer.writerows(rows)
-
-          completed = [row for row in rows if row["route_exit"] == 0]
-          route_failures = [row for row in rows if row["route_exit"] not in (0, "")]
-          missing = [row for row in rows if row["route_exit"] == ""]
-          passing = [row for row in rows if row["all_timing_pass"] == "PASS"]
-          timing_failures = [
-              row for row in completed if row["all_timing_pass"] != "PASS"
-          ]
-          pass_seed_values = ", ".join(str(row["seed"]) for row in passing)
-          clock_pass_counts = {
-              key: sum(
-                  1
-                  for row in completed
-                  if row[key] != "" and float(row[key]) >= requirements[key]
-              )
-              for key in requirements
-          }
-
-          passing_by_sys = sorted(
-              passing,
-              key=lambda row: float(row["clk_sys_mhz"]),
-              reverse=True,
-          )
-          passing_by_litedram = sorted(
-              passing,
-              key=lambda row: float(row["litedram_user_mhz"]),
-              reverse=True,
-          )
-          passing_by_elapsed = sorted(
-              [row for row in passing if row["elapsed_seconds"] != ""],
-              key=lambda row: int(row["elapsed_seconds"]),
-          )
-          passing_by_margin = sorted(
-              passing,
-              key=lambda row: float(row["worst_required_ratio"]),
-              reverse=True,
-          )
-          closest = sorted(
-              [row for row in completed if row["worst_required_ratio"] != ""],
-              key=lambda row: float(row["worst_required_ratio"]),
-              reverse=True,
-          )
-
-          def format_seconds(value):
-              if value == "":
-                  return ""
-              seconds = int(value)
-              minutes, seconds = divmod(seconds, 60)
-              hours, minutes = divmod(minutes, 60)
-              if hours:
-                  return f"{hours:d}:{minutes:02d}:{seconds:02d}"
-              return f"{minutes:d}:{seconds:02d}"
-
-          def append_clock_table(lines, rows_to_show):
-              lines.extend([
-                  "| Seed | Result | clk_sys | LiteDRAM | Video | TMDS | init_clk | Limiting | Worst ratio | Elapsed |",
-                  "| ---: | :---: | ---: | ---: | ---: | ---: | ---: | :--- | ---: | ---: |",
-              ])
-              for row in rows_to_show:
-                  worst_ratio = row["worst_required_ratio"]
-                  if worst_ratio != "":
-                      worst_ratio = f"{float(worst_ratio):.3f}x"
-                  lines.append(
-                      f"| {row['seed']} | {row['all_timing_pass']} | "
-                      f"{row['clk_sys_mhz']} | {row['litedram_user_mhz']} | "
-                      f"{row['clk_video_mhz']} | {row['clk_tmds_mhz']} | "
-                      f"{row['init_clk_mhz']} | {row['limiting_clock']} | "
-                      f"{worst_ratio} | {format_seconds(row['elapsed_seconds'])} |"
-                  )
-
-          lines = [
-              "# ULX4M-LD 85F seed sweep summary",
-              "",
-              "Timing values are the final routed values emitted by",
-              "`scripts/sweep-ulx4m-ld.sh` for each seed.",
-              "",
-              "Configuration:",
-              "",
-              f"- synthesis OSS CAD Suite: {os.environ['OSS_CAD_SUITE_VERSION']}",
-              f"- route OSS CAD Suite: {os.environ['ROUTE_OSS_CAD_SUITE_VERSION']}",
-              f"- LiteDRAM CPU: {os.environ['ULX4M_LITEDRAM_CPU']}",
-              f"- placer: {os.environ['HAZARD3_ULX4M_NEXTPNR_PLACER']}",
-              f"- router: {os.environ['HAZARD3_ULX4M_NEXTPNR_ROUTER']}",
-              f"- HeAP timing weight: {os.environ['HAZARD3_ULX4M_NEXTPNR_HEAP_TIMINGWEIGHT']}",
-              f"- HeAP criticality exponent: {os.environ['HAZARD3_ULX4M_NEXTPNR_HEAP_CRITEXP']}",
-              f"- timing-driven rip-up: {os.environ['HAZARD3_ULX4M_NEXTPNR_TMG_RIPUP']}",
-              f"- Router2 alternate weights: {os.environ['HAZARD3_ULX4M_NEXTPNR_ROUTER2_ALT_WEIGHTS']}",
-              f"- extra nextpnr args: {os.environ['HAZARD3_ULX4M_NEXTPNR_EXTRA_ARGS'] or '(none)'}",
-              f"- seeds: {seed_first}-{seed_last}",
-              "",
-              "Required clocks:",
-              "",
-              f"- clk_sys: {requirements['clk_sys_mhz']:.2f} MHz",
-              "- LiteDRAM user: 75.01 MHz",
-              "- video pixel: 50.00 MHz",
-              "- TMDS x5: 250.00 MHz",
-              "- init_clk: 25.00 MHz",
-              "",
-              f"- Seeds expected: {len(rows)}",
-              f"- Routes completed: {len(completed)}",
-              f"- Timing-passing seeds: {len(passing)}",
-              f"- PASS seed values: {pass_seed_values or 'none'}",
-              f"- Best combined-margin PASS seed: {passing_by_margin[0]['seed'] if passing_by_margin else 'none'}",
-              f"- Completed routes with final timing failure: {len(timing_failures)}",
-              f"- Route/tool failures: {len(route_failures)}",
-              f"- Missing seed results: {len(missing)}",
-              "",
-              "Per-clock closure among completed routes:",
-              "",
-              f"- clk_sys: {clock_pass_counts['clk_sys_mhz']}/{len(completed)}",
-              f"- LiteDRAM user: {clock_pass_counts['litedram_user_mhz']}/{len(completed)}",
-              f"- video pixel: {clock_pass_counts['clk_video_mhz']}/{len(completed)}",
-              f"- TMDS x5: {clock_pass_counts['clk_tmds_mhz']}/{len(completed)}",
-              f"- init_clk: {clock_pass_counts['init_clk_mhz']}/{len(completed)}",
-              "",
-              "## Closest to full timing closure",
-              "",
-              "Sorted by the worst actual/required clock ratio across all five clocks.",
-              "",
-          ]
-          append_clock_table(lines, closest[:20])
-
-          lines.extend([
-              "",
-              "## Highest clk_sys among timing-passing seeds",
-              "",
-          ])
-          append_clock_table(lines, passing_by_sys[:20])
-
-          lines.extend([
-              "",
-              "## Highest LiteDRAM user clock among timing-passing seeds",
-              "",
-          ])
-          append_clock_table(lines, passing_by_litedram[:20])
-
-          lines.extend([
-              "",
-              "## Fastest timing-passing seeds",
-              "",
-          ])
-          append_clock_table(lines, passing_by_elapsed[:20])
-
-          if seed_first <= 232 <= seed_last:
-              seed232 = next(row for row in rows if row["seed"] == 232)
-              lines.extend([
-                  "",
-                  "## Seed 232 baseline",
-                  "",
-              ])
-              append_clock_table(lines, [seed232])
-
-          lines.extend([
-              "",
-              "The complete per-seed data is in `summary.csv`. All route logs,",
-              "console logs, elapsed-time files, per-seed result CSV files, the frozen",
-              "synthesized netlist, synthesis log, relevant source files, submodule",
-              "revisions, and tool-version metadata are included in the final artifact.",
-              "",
-          ])
-
-          summary_md.write_text("\n".join(lines), encoding="utf-8")
-          PY
-
-          cat final/summary.md
+          set +e
+          python3 scripts/summarize-ecp5-sweep.py \
+              --target "${SWEEP_TARGET}" \
+              --seed-first "${SWEEP_SEED_FIRST}" \
+              --seed-last "${SWEEP_SEED_LAST}" \
+              --seed-dir final/seeds \
+              --metadata final/frozen/reference/sweep-metadata.txt \
+              --configuration final/frozen/reference/workflow.txt \
+              --output-dir final
+          status=$?
+          set -e
           cat final/summary.md >> "${GITHUB_STEP_SUMMARY}"
+          printf 'status=%s\n' "${status}" >> "${GITHUB_OUTPUT}"
 
-      - name: Inventory final reference artifact
+      - name: Inventory final artifact
         shell: bash
         run: |
-          find final -type f -print | LC_ALL=C sort \
-              > final/file-list.txt
-
+          find final -type f -print | LC_ALL=C sort > final/file-list.txt
           while IFS= read -r file; do
               sha256sum "${file}"
-          done < final/file-list.txt \
-              > final/SHA256SUMS
+          done < final/file-list.txt > final/SHA256SUMS
 
-          printf '\nFinal artifact file count: '
-          wc -l < final/file-list.txt
-          printf 'Final artifact size: '
-          du -sh final | awk '{print $1}'
-
-      - name: Upload complete sweep reference artifact
+      - name: Upload complete sweep artifact
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: ulx4m-ld-seed-sweep-${{ github.run_number }}-${{ github.sha }}
+          name: ecp5-seed-sweep-${{ inputs.target }}-${{ github.run_number }}-${{ github.sha }}
           path: final/
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
 
       - name: Verify sweep completeness
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import csv
-          import sys
-
-          with open("final/summary.csv", encoding="utf-8", newline="") as handle:
-              rows = list(csv.DictReader(handle))
-
-          missing = [row["seed"] for row in rows if row["route_exit"] == ""]
-          failed = [
-              row["seed"]
-              for row in rows
-              if row["route_exit"] not in ("", "0")
-          ]
-
-          if missing:
-              print("Missing seed results:", ", ".join(missing))
-          if failed:
-              print("Seeds with route/tool failure:", ", ".join(failed))
-
-          if missing or failed:
-              sys.exit(1)
-
-          print(
-              f"All {len(rows)} requested seeds produced completed route results."
-          )
-          PY
+        if: steps.summary.outputs.status != '0'
+        run: exit 1
