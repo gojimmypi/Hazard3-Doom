@@ -350,7 +350,7 @@ if [[ "${pass_seeds:-none}" != "none" ]]; then
     printf '\n------------- PASS -------------\n'
 fi
 
-printf 'PASS seed values: %s\n' "${pass_seeds:-none}"
+printf 'Timing-passing seeds: %s\n' "${pass_seeds:-none}"
 
 if [[ "${pass_seeds:-none}" != "none" ]]; then
     printf '\n--------------------------------\n'

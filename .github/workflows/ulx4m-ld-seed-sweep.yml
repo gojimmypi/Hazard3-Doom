@@ -476,7 +476,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          printf 'Watcher inputs:\n'
+          printf '  SWEEP_TARGET:        %s\n' "${SWEEP_TARGET}"
+          printf '  SWEEP_SEED_FIRST:    %s\n' "${SWEEP_SEED_FIRST}"
+          printf '  SWEEP_SEED_LAST:     %s\n' "${SWEEP_SEED_LAST}"
+          printf '  SWEEP_SEEDS_PER_JOB: %s\n' "${SWEEP_SEEDS_PER_JOB}"
+
+          printf 'Calling: ./scripts/watch-ecp5-sweep-results.sh %s %s %s %s\n' \
+              "${SWEEP_TARGET}" \
+              "${SWEEP_SEED_FIRST}" \
+              "${SWEEP_SEED_LAST}" \
+              "${SWEEP_SEEDS_PER_JOB}"
+
           chmod +x scripts/watch-ecp5-sweep-results.sh
+
           ./scripts/watch-ecp5-sweep-results.sh \
               "${SWEEP_TARGET}" \
               "${SWEEP_SEED_FIRST}" \
@@ -693,10 +706,10 @@ jobs:
 
           if [[ -n "${pass_seeds}" ]]; then
               printf '\n============================================================\n'
-              printf 'LOOK HERE - PASS SEEDS IN THIS JOB: %s\n' "${pass_seeds}"
+              printf 'Timing-passing seeds: %s\n' "${pass_seeds}"
               printf '============================================================\n'
           else
-              printf 'PASS seed values: none\n'
+              printf 'Timing-passing seeds: none\n'
           fi
 
           {

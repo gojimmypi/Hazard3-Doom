@@ -241,31 +241,29 @@ print_consolidated()
 {
     local completed_groups="$1"
     local completed_jobs="$2"
-    local pass_seeds timeout_seeds fail_seeds error_seeds
+    local pass_seeds timeout_seeds error_seeds
     local pass_count timeout_count fail_count error_count
 
     pass_seeds="$(joined_seeds_for_status PASS)"
     timeout_seeds="$(joined_seeds_for_status TIMEOUT)"
-    fail_seeds="$(joined_seeds_for_status FAIL)"
     error_seeds="$(joined_seeds_for_status ERROR)"
     pass_count="$(count_status PASS)"
     timeout_count="$(count_status TIMEOUT)"
     fail_count="$(count_status FAIL)"
     error_count="$(count_status ERROR)"
 
-    printf '\n============================================================\n'
-    printf 'LOOK HERE - TIMING-PASSING SEEDS SO FAR\n'
-    printf '============================================================\n'
-    printf 'PASS seed values: %s\n' "${pass_seeds}"
-    printf '============================================================\n'
-    printf 'Seed results received: %s / %s\n' "${#seed_status[@]}" "${expected_seeds}"
-    printf 'Artifact groups received: %s / %s\n' "${completed_groups}" "${expected_groups}"
-    printf 'Route jobs completed: %s / %s\n' "${completed_jobs}" "${expected_groups}"
-    printf 'PASS=%s FAIL=%s TIMEOUT=%s OTHER=%s\n' \
+    printf '\n%s\n' '------------------------------------------------------------'
+    printf 'LIVE TIMING RESULTS\n'
+    printf 'Timing-passing seeds: %s\n' "${pass_seeds}"
+    printf 'Progress: %s/%s seeds | %s/%s groups | %s/%s jobs\n' \
+        "${#seed_status[@]}" "${expected_seeds}" \
+        "${completed_groups}" "${expected_groups}" \
+        "${completed_jobs}" "${expected_groups}"
+    printf 'Status: PASS=%s FAIL=%s TIMEOUT=%s OTHER=%s\n' \
         "${pass_count}" "${fail_count}" "${timeout_count}" "${error_count}"
-    printf 'FAIL seed values: %s\n' "${fail_seeds}"
-    printf 'TIMEOUT seed values: %s\n' "${timeout_seeds}"
-    printf 'OTHER seed values: %s\n' "${error_seeds}"
+    printf 'Timeout seeds: %s\n' "${timeout_seeds}"
+    printf 'Other/problem seeds: %s\n' "${error_seeds}"
+    printf '%s\n' '------------------------------------------------------------'
 }
 
 printf 'Watching %s seeds %s-%s.\n' \
@@ -322,6 +320,9 @@ while :; do
         printf '\n[%s UTC] seed group %s reported: %s\n' \
             "$(date -u +%H:%M:%S)" "${group}" "${group_seeds[*]:-none}"
         printf 'PASS in this group: %s\n' "${group_passes[*]:-none}"
+        if (( ${#group_passes[@]} > 0 )); then
+            printf '>>> NEW TIMING PASS: %s <<<\n' "${group_passes[*]}"
+        fi
         for seed in "${group_seeds[@]}"; do
             printf '  seed %-3s %-18s %ss (exit %s)\n' \
                 "${seed}" "${seed_status[$seed]}" \
