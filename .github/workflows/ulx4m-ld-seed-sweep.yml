@@ -276,14 +276,40 @@ jobs:
           touch third_party/Hazard3/example_soc/soc/hazard3-boot-monitor.hex
           ./scripts/sweep-ecp5.sh --prepare "${SWEEP_TARGET}"
 
-          sweep_dir="$(./scripts/sweep-ecp5.sh --print-sweep-dir "${SWEEP_TARGET}")"
-          netlist="$(./scripts/sweep-ecp5.sh --print-netlist "${SWEEP_TARGET}")"
+          sweep_dir="$(
+              ./scripts/sweep-ecp5.sh --print-sweep-dir "${SWEEP_TARGET}" |
+                  tail -n 1
+          )"
+          netlist="$(
+              ./scripts/sweep-ecp5.sh --print-netlist "${SWEEP_TARGET}" |
+                  tail -n 1
+          )"
+          metadata="${sweep_dir}/metadata.txt"
 
-          test -s "${netlist}"
-          test -s "${sweep_dir}/metadata.txt"
+          printf 'Resolved sweep directory: %s\n' "${sweep_dir}"
+          printf 'Resolved netlist: %s\n' "${netlist}"
+          printf 'Resolved metadata: %s\n' "${metadata}"
+
+          if [[ -z "${sweep_dir}" ]]; then
+              echo '::error::Sweep directory query returned an empty value.' >&2
+              exit 1
+          fi
+          if [[ -z "${netlist}" ]]; then
+              echo '::error::Netlist query returned an empty value.' >&2
+              exit 1
+          fi
+          if [[ ! -s "${netlist}" ]]; then
+              printf '::error::Frozen netlist is missing or empty: %s\n' "${netlist}" >&2
+              exit 1
+          fi
+          if [[ ! -s "${metadata}" ]]; then
+              printf '::error::Sweep metadata is missing or empty: %s\n' "${metadata}" >&2
+              find build -maxdepth 3 -name metadata.txt -print >&2 || true
+              exit 1
+          fi
 
           mkdir -p reference
-          cp "${sweep_dir}/metadata.txt" reference/sweep-metadata.txt
+          cp "${metadata}" reference/sweep-metadata.txt
           sha256sum "${netlist}" > reference/netlist.sha256
 
           git rev-parse HEAD > reference/hazard3-doom-head.txt
