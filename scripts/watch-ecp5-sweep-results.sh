@@ -83,7 +83,7 @@ fi
 : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
 : "${GITHUB_RUN_ID:?GITHUB_RUN_ID is required}"
 
-for command_name in curl jq unzip sort paste wc find; do
+for command_name in curl jq unzip sort paste wc find awk; do
     if ! command -v "${command_name}" >/dev/null 2>&1; then
         printf 'Required command is not installed: %s\n' "${command_name}" >&2
         exit 1
@@ -101,6 +101,11 @@ declare -A seen_artifacts=()
 declare -A seed_status=()
 declare -A seed_seconds=()
 declare -A seed_exit=()
+declare -A seed_clk_sys=()
+declare -A seed_clk_video=()
+declare -A seed_clk_tmds=()
+declare -A seed_litedram_user=()
+declare -A seed_init_clk=()
 
 api_get()
 {
@@ -194,6 +199,160 @@ download_artifact()
     printf '%s\n' "${extract_dir}"
 }
 
+is_decimal()
+{
+    [[ "$1" =~ ^[0-9]+([.][0-9]+)?$ ]]
+}
+
+load_seed_metrics()
+{
+    local extract_dir="$1"
+    local seed="$2"
+    local result
+    local fields=()
+
+    result="$(
+        find "${extract_dir}" -maxdepth 2 -type f \
+            -name "result-seed-${seed}.csv" -print -quit
+    )"
+    if [[ -z "${result}" ]]; then
+        return 0
+    fi
+
+    IFS=, read -r -a fields < "${result}" || true
+    case "${SWEEP_TARGET}" in
+    ulx3s-85f|ulx3s-12f)
+        seed_clk_sys["${seed}"]="${fields[1]:-NA}"
+        seed_clk_video["${seed}"]="${fields[2]:-NA}"
+        seed_clk_tmds["${seed}"]="${fields[3]:-NA}"
+        ;;
+    ulx4m-ld-85f)
+        seed_clk_sys["${seed}"]="${fields[1]:-NA}"
+        seed_litedram_user["${seed}"]="${fields[2]:-NA}"
+        seed_clk_video["${seed}"]="${fields[3]:-NA}"
+        seed_clk_tmds["${seed}"]="${fields[4]:-NA}"
+        seed_init_clk["${seed}"]="${fields[5]:-NA}"
+        ;;
+    esac
+
+    seed_clk_sys["${seed}"]="${seed_clk_sys[$seed]:-NA}"
+    seed_clk_video["${seed}"]="${seed_clk_video[$seed]:-NA}"
+    seed_clk_tmds["${seed}"]="${seed_clk_tmds[$seed]:-NA}"
+    seed_litedram_user["${seed}"]="${seed_litedram_user[$seed]:-NA}"
+    seed_init_clk["${seed}"]="${seed_init_clk[$seed]:-NA}"
+
+    seed_clk_sys["${seed}"]="${seed_clk_sys[$seed]%$'\r'}"
+    seed_clk_video["${seed}"]="${seed_clk_video[$seed]%$'\r'}"
+    seed_clk_tmds["${seed}"]="${seed_clk_tmds[$seed]%$'\r'}"
+    seed_litedram_user["${seed}"]="${seed_litedram_user[$seed]%$'\r'}"
+    seed_init_clk["${seed}"]="${seed_init_clk[$seed]%$'\r'}"
+}
+
+seed_frequency_metrics()
+{
+    local seed="$1"
+
+    case "${SWEEP_TARGET}" in
+    ulx4m-ld-85f)
+        printf 'sys=%s litedram_user=%s video=%s tmds=%s init=%s' \
+            "${seed_clk_sys[$seed]:-NA}" \
+            "${seed_litedram_user[$seed]:-NA}" \
+            "${seed_clk_video[$seed]:-NA}" \
+            "${seed_clk_tmds[$seed]:-NA}" \
+            "${seed_init_clk[$seed]:-NA}"
+        ;;
+    *)
+        printf 'sys=%s video=%s tmds=%s' \
+            "${seed_clk_sys[$seed]:-NA}" \
+            "${seed_clk_video[$seed]:-NA}" \
+            "${seed_clk_tmds[$seed]:-NA}"
+        ;;
+    esac
+}
+
+best_metric()
+{
+    local array_name="$1"
+    local -n metric_values="${array_name}"
+    local seed value best
+
+    best="$(
+        for seed in "${!metric_values[@]}"; do
+            value="${metric_values[$seed]}"
+            if is_decimal "${value}"; then
+                printf '%s,%s\n' "${value}" "${seed}"
+            fi
+        done | awk -F, '
+            BEGIN { have = 0 }
+            !have || ($1 + 0) > best {
+                have = 1
+                best = $1 + 0
+                value = $1
+                seed = $2
+            }
+            END {
+                if (have) {
+                    printf "%s (seed %s)\n", value, seed
+                }
+            }'
+    )"
+
+    printf '%s\n' "${best:-none}"
+}
+
+print_route_duration_summary()
+{
+    local seed seconds
+    local count=0 total=0 min_seconds=0 max_seconds=0
+    local min_seed="" max_seed=""
+
+    for seed in "${!seed_seconds[@]}"; do
+        seconds="${seed_seconds[$seed]}"
+        [[ "${seconds}" =~ ^[0-9]+$ ]] || continue
+
+        if (( count == 0 || seconds < min_seconds )); then
+            min_seconds="${seconds}"
+            min_seed="${seed}"
+        fi
+        if (( count == 0 || seconds > max_seconds )); then
+            max_seconds="${seconds}"
+            max_seed="${seed}"
+        fi
+        total=$((total + seconds))
+        count=$((count + 1))
+    done
+
+    if (( count == 0 )); then
+        printf 'Route duration: no numeric samples yet\n'
+        return
+    fi
+
+    printf 'Route duration: avg=%ss | fastest=%ss (seed %s) | slowest=%ss (seed %s)\n' \
+        "$((total / count))" "${min_seconds}" "${min_seed}" \
+        "${max_seconds}" "${max_seed}"
+}
+
+print_best_frequency_summary()
+{
+    local best_sys best_video best_tmds best_litedram best_init
+
+    best_sys="$(best_metric seed_clk_sys)"
+    best_video="$(best_metric seed_clk_video)"
+    best_tmds="$(best_metric seed_clk_tmds)"
+
+    if [[ "${SWEEP_TARGET}" == "ulx4m-ld-85f" ]]; then
+        best_litedram="$(best_metric seed_litedram_user)"
+        best_init="$(best_metric seed_init_clk)"
+        printf 'Best observed max MHz: sys=%s | litedram_user=%s | video=%s\n' \
+            "${best_sys}" "${best_litedram}" "${best_video}"
+        printf '                       tmds=%s | init=%s\n' \
+            "${best_tmds}" "${best_init}"
+    else
+        printf 'Best observed max MHz: sys=%s | video=%s | tmds=%s\n' \
+            "${best_sys}" "${best_video}" "${best_tmds}"
+    fi
+}
+
 sorted_seeds_for_status()
 {
     local wanted_status="$1"
@@ -261,6 +420,8 @@ print_consolidated()
         "${completed_jobs}" "${expected_groups}"
     printf 'Status: PASS=%s FAIL=%s TIMEOUT=%s OTHER=%s\n' \
         "${pass_count}" "${fail_count}" "${timeout_count}" "${error_count}"
+    print_route_duration_summary
+    print_best_frequency_summary
     printf 'Timeout seeds: %s\n' "${timeout_seeds}"
     printf 'Other/problem seeds: %s\n' "${error_seeds}"
     printf '%s\n' '------------------------------------------------------------'
@@ -307,11 +468,20 @@ while :; do
             seed_status["${seed}"]="${status}"
             seed_seconds["${seed}"]="${seconds}"
             seed_exit["${seed}"]="${route_exit}"
+            seed_clk_sys["${seed}"]="NA"
+            seed_clk_video["${seed}"]="NA"
+            seed_clk_tmds["${seed}"]="NA"
+            seed_litedram_user["${seed}"]="NA"
+            seed_init_clk["${seed}"]="NA"
             group_seeds+=("${seed}")
             if [[ "${status}" == "PASS" ]]; then
                 group_passes+=("${seed}")
             fi
         done < "${status_file}"
+
+        for seed in "${group_seeds[@]}"; do
+            load_seed_metrics "${extract_dir}" "${seed}"
+        done
 
         seen_artifacts["${artifact_name}"]=1
         new_artifacts=$((new_artifacts + 1))
@@ -324,9 +494,10 @@ while :; do
             printf '>>> NEW TIMING PASS: %s <<<\n' "${group_passes[*]}"
         fi
         for seed in "${group_seeds[@]}"; do
-            printf '  seed %-3s %-18s %ss (exit %s)\n' \
+            printf '  seed %-3s %-18s %ss (exit %s) | max MHz: %s\n' \
                 "${seed}" "${seed_status[$seed]}" \
-                "${seed_seconds[$seed]}" "${seed_exit[$seed]}"
+                "${seed_seconds[$seed]}" "${seed_exit[$seed]}" \
+                "$(seed_frequency_metrics "${seed}")"
         done
     done < <(list_seed_artifacts)
 
@@ -372,7 +543,9 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
         printf '### Live %s timing results\n\n' "${SWEEP_TARGET}"
         printf '**Timing-passing seeds:** %s\n\n' "${pass_seeds}"
         printf '**Timed-out seeds:** %s\n\n' "${timeout_seeds}"
-        printf 'Received %s of %s expected seed results.\n' \
+        print_route_duration_summary
+        print_best_frequency_summary
+        printf '\nReceived %s of %s expected seed results.\n' \
             "${#seed_status[@]}" "${expected_seeds}"
     } >> "${GITHUB_STEP_SUMMARY}"
 fi

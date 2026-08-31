@@ -9,6 +9,12 @@ their own location, so they also work when launched from another directory.
 
 See the full Quick Start overview at https://ulx3s.github.io/ulx-doom/
 
+Sweep summaries:
+
+- [ULX3S-12F](./build-ulx3s-12f-sweep_summary.md)
+- [ULX3S-85F](./build-ulx3s-85f-sweep_summary.md)
+- [ULX4M-LD](./build-ulx4m-ld-sweep_summary.md)
+
 ## Quick Start
 
 Complete board builds:
