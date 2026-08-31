@@ -21,6 +21,9 @@
 # file: scripts/build-ulx3s-85f-bitstream.sh
 #
 # ULX3S 85F entry point for the shared Hazard3-Doom ECP5 build flow.
+#
+# See build-ecp5-bitstream-common.sh for default seeds
+#
 
 set -euo pipefail
 

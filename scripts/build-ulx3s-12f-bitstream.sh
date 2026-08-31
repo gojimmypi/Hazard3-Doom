@@ -19,7 +19,9 @@
 # -----------------------------------------------------------------------------
 
 # ULX3S 12F entry point for the shared Hazard3-Doom ECP5 build flow.
-
+#
+# See build-ecp5-bitstream-common.sh for default seeds
+#
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

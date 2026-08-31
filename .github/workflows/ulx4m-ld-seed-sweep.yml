@@ -157,6 +157,10 @@ env:
   SWEEP_NEXTPNR_TMG_RIPUP: ${{ inputs.tmg_ripup }}
   SWEEP_NEXTPNR_ROUTER2_ALT_WEIGHTS: ${{ inputs.router2_alt_weights }}
   SWEEP_NEXTPNR_EXTRA_ARGS: ${{ inputs.nextpnr_extra_args }}
+  SWEEP_ROUTE_TIMEOUT_SECONDS: "3600"
+  SWEEP_ROUTE_KILL_AFTER_SECONDS: "30"
+  SWEEP_SEED_TIMEOUT_SECONDS: "7600"
+  SWEEP_SEED_KILL_AFTER_SECONDS: "30"
 
 jobs:
   prepare:
@@ -315,6 +319,10 @@ jobs:
               printf 'tmg_ripup=%s\n' "${SWEEP_NEXTPNR_TMG_RIPUP}"
               printf 'router2_alt_weights=%s\n' "${SWEEP_NEXTPNR_ROUTER2_ALT_WEIGHTS}"
               printf 'nextpnr_extra_args=%s\n' "${SWEEP_NEXTPNR_EXTRA_ARGS}"
+              printf 'route_timeout_seconds=%s\n' "${SWEEP_ROUTE_TIMEOUT_SECONDS}"
+              printf 'route_kill_after_seconds=%s\n' "${SWEEP_ROUTE_KILL_AFTER_SECONDS}"
+              printf 'seed_timeout_seconds=%s\n' "${SWEEP_SEED_TIMEOUT_SECONDS}"
+              printf 'seed_kill_after_seconds=%s\n' "${SWEEP_SEED_KILL_AFTER_SECONDS}"
               printf 'sweep_dir=%s\n' "${sweep_dir}"
               printf 'netlist=%s\n' "${netlist}"
           } > reference/workflow.txt
@@ -492,7 +500,11 @@ jobs:
               start_seconds="$(date +%s)"
               set +e
               SWEEP_JOBS=1 SWEEP_SKIP_SYNTH=1 \
-                  ./scripts/sweep-ecp5.sh "${SWEEP_TARGET}" "${seed}" \
+                  timeout \
+                      --signal=TERM \
+                      --kill-after="${SWEEP_SEED_KILL_AFTER_SECONDS}s" \
+                      "${SWEEP_SEED_TIMEOUT_SECONDS}s" \
+                      ./scripts/sweep-ecp5.sh "${SWEEP_TARGET}" "${seed}" \
                   |& tee "${artifact_dir}/console-${seed}.log"
               route_status=${PIPESTATUS[0]}
               set -e
@@ -534,10 +546,17 @@ jobs:
                   echo "Seed ${seed} changed the frozen synthesized netlist." >&2
                   overall_status=1
               fi
-              if (( route_status != 0 )); then
+              case "${route_status}" in
+              0)
+                  ;;
+              124|137)
+                  echo "Seed ${seed} exceeded the whole-seed watchdog (${SWEEP_SEED_TIMEOUT_SECONDS}s, status ${route_status}); continuing." >&2
+                  ;;
+              *)
                   echo "Seed ${seed} route exited with status ${route_status}." >&2
                   overall_status=1
-              fi
+                  ;;
+              esac
           done
 
           cp reference/sweep-metadata.txt "${artifact_dir}/metadata-${{ matrix.group }}.txt"

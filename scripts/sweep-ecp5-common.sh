@@ -66,6 +66,8 @@ sweep_ecp5_init_tuning()
     SWEEP_NEXTPNR_TMG_RIPUP="$(sweep_ecp5_bool "${SWEEP_NEXTPNR_TMG_RIPUP:-${HAZARD3_ULX4M_NEXTPNR_TMG_RIPUP:-0}}")"
     SWEEP_NEXTPNR_ROUTER2_ALT_WEIGHTS="$(sweep_ecp5_bool "${SWEEP_NEXTPNR_ROUTER2_ALT_WEIGHTS:-${HAZARD3_ULX4M_NEXTPNR_ROUTER2_ALT_WEIGHTS:-0}}")"
     SWEEP_NEXTPNR_EXTRA_ARGS="${SWEEP_NEXTPNR_EXTRA_ARGS:-${HAZARD3_ULX4M_NEXTPNR_EXTRA_ARGS:-}}"
+    SWEEP_ROUTE_TIMEOUT_SECONDS="${SWEEP_ROUTE_TIMEOUT_SECONDS:-3600}"
+    SWEEP_ROUTE_KILL_AFTER_SECONDS="${SWEEP_ROUTE_KILL_AFTER_SECONDS:-30}"
 
     case "${SWEEP_NEXTPNR_PLACER}" in
     heap|sa)
@@ -91,6 +93,14 @@ sweep_ecp5_init_tuning()
     fi
     if [[ ! "${SWEEP_NEXTPNR_HEAP_CRITEXP}" =~ ^[1-9][0-9]*$ ]]; then
         echo "SWEEP_NEXTPNR_HEAP_CRITEXP must be a positive integer." >&2
+        exit 1
+    fi
+    if [[ ! "${SWEEP_ROUTE_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
+        echo "SWEEP_ROUTE_TIMEOUT_SECONDS must be a positive integer." >&2
+        exit 1
+    fi
+    if [[ ! "${SWEEP_ROUTE_KILL_AFTER_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
+        echo "SWEEP_ROUTE_KILL_AFTER_SECONDS must be a positive integer." >&2
         exit 1
     fi
 
@@ -261,14 +271,37 @@ sweep_ecp5_extract_clock()
     printf '%s\n' "${value}"
 }
 
-sweep_ecp5_clock_at_least()
+sweep_ecp5_extract_clock_status()
 {
-    local value="$1"
-    local minimum="$2"
+    local log="$1"
+    local clock="$2"
+    local line
 
-    [[ "${value}" =~ ^[0-9]+([.][0-9]+)?$ ]] || return 1
-    awk -v value="${value}" -v minimum="${minimum}" \
-        'BEGIN { exit !(value >= minimum) }'
+    line="$(
+        grep "Max frequency for clock.*${clock}" "${log}" 2>/dev/null |
+            tail -n 1 || true
+    )"
+
+    case "${line}" in
+    *"(FAIL at "*)
+        printf 'FAIL\n'
+        ;;
+    *"(PASS at "*)
+        printf 'PASS\n'
+        ;;
+    *)
+        printf 'UNKNOWN\n'
+        ;;
+    esac
+}
+
+sweep_ecp5_run_nextpnr()
+{
+    timeout \
+        --signal=TERM \
+        --kill-after="${SWEEP_ROUTE_KILL_AFTER_SECONDS}s" \
+        "${SWEEP_ROUTE_TIMEOUT_SECONDS}s" \
+        nextpnr-ecp5 "$@"
 }
 
 sweep_ecp5_write_tuning_metadata()
@@ -280,6 +313,8 @@ sweep_ecp5_write_tuning_metadata()
     printf 'tmg_ripup=%s\n' "${SWEEP_NEXTPNR_TMG_RIPUP}"
     printf 'router2_alt_weights=%s\n' "${SWEEP_NEXTPNR_ROUTER2_ALT_WEIGHTS}"
     printf 'extra_args=%s\n' "${SWEEP_NEXTPNR_EXTRA_ARGS}"
+    printf 'route_timeout_seconds=%s\n' "${SWEEP_ROUTE_TIMEOUT_SECONDS}"
+    printf 'route_kill_after_seconds=%s\n' "${SWEEP_ROUTE_KILL_AFTER_SECONDS}"
     if command -v nextpnr-ecp5 >/dev/null 2>&1; then
         printf 'nextpnr_version=%s\n' "$(nextpnr-ecp5 --version 2>&1 | head -n 1)"
     fi

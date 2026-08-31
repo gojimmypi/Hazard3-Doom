@@ -97,7 +97,10 @@ def read_result(path: Path, schema: tuple[str, ...]) -> dict[str, str] | None:
 def format_elapsed(value: str) -> str:
     if not value:
         return ""
-    seconds = int(value)
+    try:
+        seconds = int(value)
+    except ValueError:
+        return value
     minutes, seconds = divmod(seconds, 60)
     hours, minutes = divmod(minutes, 60)
     if hours:
@@ -126,7 +129,11 @@ def main() -> int:
     for seed in range(args.seed_first, args.seed_last + 1):
         result = read_result(args.seed_dir / f"result-seed-{seed}.csv", schema)
         route_exit = read_int(args.seed_dir / f"exit-{seed}.txt")
-        elapsed = read_int(args.seed_dir / f"elapsed-{seed}.txt")
+        job_elapsed = read_int(args.seed_dir / f"elapsed-{seed}.txt")
+        result_route_seconds = numeric(result.get("route_seconds")) if result else None
+        route_seconds = (
+            int(result_route_seconds) if result_route_seconds is not None else job_elapsed
+        )
 
         clock_values: dict[str, float | None] = {}
         for column in requirements:
@@ -161,7 +168,8 @@ def main() -> int:
         row: dict[str, object] = {
             "seed": seed,
             "route_exit": "" if route_exit is None else route_exit,
-            "elapsed_seconds": "" if elapsed is None else elapsed,
+            "route_seconds": "" if route_seconds is None else route_seconds,
+            "job_elapsed_seconds": "" if job_elapsed is None else job_elapsed,
         }
         for column in schema:
             if not column.endswith("_mhz"):
@@ -188,10 +196,21 @@ def main() -> int:
         writer.writeheader()
         writer.writerows(rows)
 
-    completed = [row for row in rows if row["route_exit"] == 0]
+    timed_out = [
+        row
+        for row in rows
+        if row["timing_status"] == "TIMEOUT" or row["route_exit"] in (124, 137)
+    ]
+    completed = [
+        row
+        for row in rows
+        if row["route_exit"] == 0 and row["timing_status"] != "TIMEOUT"
+    ]
     passing = [row for row in rows if row["all_timing_pass"] == "PASS"]
     missing = [row for row in rows if row["route_exit"] == ""]
-    tool_failures = [row for row in rows if row["route_exit"] not in (0, "")]
+    tool_failures = [
+        row for row in rows if row["route_exit"] not in (0, 124, 137, "")
+    ]
     timing_failures = [row for row in completed if row["all_timing_pass"] != "PASS"]
     closest = sorted(
         [row for row in completed if row["worst_required_ratio"] != ""],
@@ -202,6 +221,10 @@ def main() -> int:
         passing,
         key=lambda row: float(row["worst_required_ratio"]),
         reverse=True,
+    )
+    passing_by_speed = sorted(
+        [row for row in passing if row["route_seconds"] != ""],
+        key=lambda row: int(row["route_seconds"]),
     )
 
     pass_seeds = ", ".join(str(row["seed"]) for row in passing)
@@ -219,7 +242,7 @@ def main() -> int:
     def append_table(lines: list[str], table_rows: list[dict[str, object]]) -> None:
         headers = ["Seed", "Result"]
         headers.extend(clock_label(column) for column in active_clock_columns)
-        headers.extend(["Limiting", "Worst ratio", "Elapsed"])
+        headers.extend(["Limiting", "Worst ratio", "Route time"])
         lines.append("| " + " | ".join(headers) + " |")
         lines.append("| " + " | ".join(["---:", ":---:"] + ["---:"] * len(active_clock_columns) + [":---", "---:", "---:"]) + " |")
         for row in table_rows:
@@ -230,19 +253,26 @@ def main() -> int:
                 [
                     str(row["limiting_clock"]),
                     "" if ratio == "" else f"{float(ratio):.3f}x",
-                    format_elapsed(str(row["elapsed_seconds"])),
+                    format_elapsed(str(row["route_seconds"])),
                 ]
             )
             lines.append("| " + " | ".join(values) + " |")
 
+    synthesis_seconds = metadata.get("synthesis_seconds", "")
+    synthesis_display = format_elapsed(synthesis_seconds) if synthesis_seconds else "unknown"
+
     lines = [
         f"# {args.target} seed sweep summary",
         "",
+        f"- Synthesis duration: {synthesis_display}" + (f" ({synthesis_seconds} seconds)" if synthesis_seconds.isdigit() else ""),
         f"- Seeds expected: {len(rows)}",
         f"- Routes completed: {len(completed)}",
+        f"- Timed-out seeds: {len(timed_out)}",
+        f"- TIMEOUT seed values: {', '.join(str(row['seed']) for row in timed_out) or 'none'}",
         f"- Timing-passing seeds: {len(passing)}",
         f"- PASS seed values: {pass_seeds or 'none'}",
         f"- Best combined-margin PASS seed: {passing_by_margin[0]['seed'] if passing_by_margin else 'none'}",
+        f"- Fastest timing-passing seed: {passing_by_speed[0]['seed'] if passing_by_speed else 'none'}",
         f"- Completed routes with timing failure: {len(timing_failures)}",
         f"- Route/tool failures: {len(tool_failures)}",
         f"- Missing seed results: {len(missing)}",
@@ -269,6 +299,9 @@ def main() -> int:
 
     lines.extend(["", "## Timing-passing seeds by combined margin", ""])
     append_table(lines, passing_by_margin[:20])
+
+    lines.extend(["", "## Fastest timing-passing seeds", ""])
+    append_table(lines, passing_by_speed[:20])
 
     lines.extend(
         [

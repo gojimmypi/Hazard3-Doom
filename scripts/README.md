@@ -143,6 +143,21 @@ All routed targets accept explicit seeds, comma-separated seeds, ranges such as
 `metadata.txt`, per-seed result CSV files, and an aggregate results CSV. The
 ULX3S targets also retain routed bitstreams locally.
 
+Each nextpnr route is limited by `SWEEP_ROUTE_TIMEOUT_SECONDS`, which defaults
+to 600 seconds. `SWEEP_ROUTE_KILL_AFTER_SECONDS` defaults to 30 seconds and
+allows a route that ignores `SIGTERM` to be killed. A timed-out route is
+recorded with `timing_status=TIMEOUT` and the sweep continues with the remaining
+seeds; it is not treated as a tool failure. For example:
+
+```bash
+SWEEP_ROUTE_TIMEOUT_SECONDS=900 \
+    ./scripts/sweep-ecp5.sh ulx3s-85f 1-32
+```
+
+The GitHub seed-sweep workflow also applies a 720-second whole-seed watchdog
+around each `sweep-ecp5.sh` invocation. This is a second safety net for hangs
+outside nextpnr itself; the normal nextpnr timeout should fire first.
+
 Common optional nextpnr tuning is available on every routed target:
 
 ```bash

@@ -32,6 +32,7 @@ SWEEP_PREPARE_ONLY="${SWEEP_PREPARE_ONLY:-0}"
 HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-50}"
 ULX4M_LITEDRAM_CPU="${ULX4M_LITEDRAM_CPU:-serv}"
 SYNTH_PROFILE_STAMP="${SYNTH_DIR}/fpga_ulx4m_ld.sys-clk-mhz"
+SYNTH_DURATION_STAMP="${SYNTH_DIR}/fpga_ulx4m_ld.synth-seconds"
 LITEDRAM_CPU_STAMP="${SYNTH_DIR}/fpga_ulx4m_ld.litedram-cpu"
 NETLIST="${SYNTH_DIR}/fpga_ulx4m_ld.json"
 LPF="${SYNTH_DIR}/fpga_ulx4m_ld.lpf"
@@ -61,6 +62,7 @@ SWEEP_JOBS=N runs up to N routes concurrently (default: 2).
 HAZARD3_ULX4M_SYS_CLK_MHZ=25|40|50 selects the Hazard3 system clock.
 ULX4M_LITEDRAM_CPU=serv|vexrisc selects the LiteDRAM initialization CPU.
 SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.
+SWEEP_ROUTE_TIMEOUT_SECONDS=N limits each nextpnr route (default: 600).
 Generic nextpnr tuning is controlled by SWEEP_NEXTPNR_* variables.
 The older HAZARD3_ULX4M_NEXTPNR_* names remain accepted as aliases.
 EOF_USAGE
@@ -119,6 +121,14 @@ sweep_ecp5_require_tool grep
 sweep_ecp5_require_tool sed
 sweep_ecp5_require_file "${LPF}"
 
+synthesis_seconds="NA"
+if [[ -f "${SYNTH_DURATION_STAMP}" ]]; then
+    read -r synthesis_seconds < "${SYNTH_DURATION_STAMP}" || true
+fi
+if [[ ! "${synthesis_seconds}" =~ ^[0-9]+$ ]]; then
+    synthesis_seconds="NA"
+fi
+
 if [[ "${SWEEP_SKIP_SYNTH}" == "1" ]]; then
     recorded_profile=""
     recorded_litedram_cpu=""
@@ -154,12 +164,15 @@ else
         read -r recorded_profile < "${SYNTH_PROFILE_STAMP}" || true
     fi
     if [[ "${recorded_profile}" != "${HAZARD3_ULX4M_SYS_CLK_MHZ}" ]]; then
-        rm -f "${NETLIST}"
+        rm -f "${NETLIST}" "${SYNTH_DURATION_STAMP}"
     fi
 
+    synth_start_seconds="$(date +%s)"
     DEFINES="${DEFINES:+${DEFINES} }HAZARD3_ULX4M_SYS_CLK_MHZ=${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
         make -C "${SYNTH_DIR}" -f ULX4M_LD_85F.mk \
             ULX4M_LITEDRAM_CPU="${ULX4M_LITEDRAM_CPU}" synth
+    synthesis_seconds="$(( $(date +%s) - synth_start_seconds ))"
+    printf '%s\n' "${synthesis_seconds}" > "${SYNTH_DURATION_STAMP}"
     printf '%s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}" > "${SYNTH_PROFILE_STAMP}"
 fi
 
@@ -208,7 +221,7 @@ mkdir -p "${SWEEP_DIR}"
     printf 'speed=8\n'
     printf 'package=CABGA381\n'
     printf 'full_route=1\n'
-    printf 'result_columns=seed,clk_sys_mhz,litedram_user_mhz,clk_video_mhz,clk_tmds_mhz,init_clk_mhz,timing_status\n'
+    printf 'result_columns=seed,clk_sys_mhz,litedram_user_mhz,clk_video_mhz,clk_tmds_mhz,init_clk_mhz,route_seconds,timing_status\n'
     printf 'litedram_cpu=%s\n' "${ULX4M_LITEDRAM_CPU}"
     printf 'hazard3_sys_clk_mhz=%s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
     sweep_ecp5_write_tuning_metadata
@@ -217,11 +230,13 @@ mkdir -p "${SWEEP_DIR}"
     printf 'clk_video_required_mhz=50.00\n'
     printf 'clk_tmds_required_mhz=250.00\n'
     printf 'init_clk_required_mhz=25.00\n'
+    printf 'synthesis_seconds=%s\n' "${synthesis_seconds}"
     printf 'netlist_sha256=%s\n' "${netlist_sha256}"
     printf 'netlist=fpga_ulx4m_ld.json\n'
     printf 'generated_utc=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 } > "${SWEEP_DIR}/metadata.txt"
 
+printf 'ULX4M-LD synthesis duration: %s seconds\n' "${synthesis_seconds}"
 printf 'ULX4M-LD routed sweep netlist SHA256: %s\n' "${netlist_sha256}"
 printf 'ULX4M-LD routed sweep directory: %s\n' "${SWEEP_DIR}"
 
@@ -231,18 +246,23 @@ if [[ "${SWEEP_PREPARE_ONLY}" == "1" ]]; then
 fi
 
 sweep_ecp5_require_tool nextpnr-ecp5
+sweep_ecp5_require_tool timeout
 
 run_seed()
 {
     local seed="$1"
     local log="${SWEEP_DIR}/seed-${seed}.log"
     local result="${SWEEP_DIR}/result-seed-${seed}.csv"
-    local clk_sys litedram_user clk_video clk_tmds init_clk timing_status
+    local clk_sys litedram_user clk_video clk_tmds init_clk
+    local clk_sys_clock clk_sys_status litedram_user_status
+    local clk_video_status clk_tmds_status init_clk_status
+    local route_start_seconds route_seconds route_status timing_status
 
     printf '\nTrying ULX4M-LD 85F nextpnr seed %s\n' "${seed}"
     rm -f "${log}" "${result}"
 
-    if ! nextpnr-ecp5 \
+    route_start_seconds="$(date +%s)"
+    if sweep_ecp5_run_nextpnr \
         --seed "${seed}" \
         "${SWEEP_NEXTPNR_ARGS[@]}" \
         --um-85k \
@@ -253,32 +273,59 @@ run_seed()
         --timing-allow-fail \
         --quiet \
         --log "${log}"; then
-        printf '%d,ERROR,ERROR,ERROR,ERROR,ERROR,ERROR\n' "${seed}" > "${result}"
+        route_status=0
+    else
+        route_status=$?
+    fi
+    route_seconds="$(( $(date +%s) - route_start_seconds ))"
+
+    case "${route_status}" in
+    0)
+        ;;
+    124|137)
+        printf '%d,TIMEOUT,TIMEOUT,TIMEOUT,TIMEOUT,TIMEOUT,%s,TIMEOUT\n' \
+            "${seed}" "${route_seconds}" > "${result}"
+        printf 'Seed %s: routing timed out after %ss (kill grace %ss, status %s).\n' \
+            "${seed}" "${SWEEP_ROUTE_TIMEOUT_SECONDS}" \
+            "${SWEEP_ROUTE_KILL_AFTER_SECONDS}" "${route_status}" >&2
+        return 0
+        ;;
+    *)
+        printf '%d,ERROR,ERROR,ERROR,ERROR,ERROR,%s,ERROR\n' "${seed}" "${route_seconds}" > "${result}"
+        printf 'Seed %s: nextpnr route failed with status %s.\n' \
+            "${seed}" "${route_status}" >&2
         return 1
+        ;;
+    esac
+
+    clk_sys_clock="clk_sys"
+    if [[ "${HAZARD3_ULX4M_SYS_CLK_MHZ}" == "25" ]]; then
+        clk_sys_clock="clk_osc"
     fi
 
-    if [[ "${HAZARD3_ULX4M_SYS_CLK_MHZ}" == "25" ]]; then
-        clk_sys="$(sweep_ecp5_extract_clock "${log}" "clk_osc")"
-    else
-        clk_sys="$(sweep_ecp5_extract_clock "${log}" "clk_sys")"
-    fi
+    clk_sys="$(sweep_ecp5_extract_clock "${log}" "${clk_sys_clock}")"
     litedram_user="$(sweep_ecp5_extract_clock "${log}" "litedram_user_clk")"
     clk_video="$(sweep_ecp5_extract_clock "${log}" "clk_video_pix")"
     clk_tmds="$(sweep_ecp5_extract_clock "${log}" "clk_tmds_x5")"
     init_clk="$(sweep_ecp5_extract_clock "${log}" "init_clk")"
+    clk_sys_status="$(sweep_ecp5_extract_clock_status "${log}" "${clk_sys_clock}")"
+    litedram_user_status="$(sweep_ecp5_extract_clock_status "${log}" "litedram_user_clk")"
+    clk_video_status="$(sweep_ecp5_extract_clock_status "${log}" "clk_video_pix")"
+    clk_tmds_status="$(sweep_ecp5_extract_clock_status "${log}" "clk_tmds_x5")"
+    init_clk_status="$(sweep_ecp5_extract_clock_status "${log}" "init_clk")"
 
     timing_status="FAIL"
-    if sweep_ecp5_clock_at_least "${clk_sys}" "${HAZARD3_ULX4M_SYS_CLK_MHZ}.00" &&
-       sweep_ecp5_clock_at_least "${litedram_user}" 75.01 &&
-       sweep_ecp5_clock_at_least "${clk_video}" 50.00 &&
-       sweep_ecp5_clock_at_least "${clk_tmds}" 250.00 &&
-       sweep_ecp5_clock_at_least "${init_clk}" 25.00; then
+    if [[ "${clk_sys_status}" == "PASS" &&
+          "${litedram_user_status}" == "PASS" &&
+          "${clk_video_status}" == "PASS" &&
+          "${clk_tmds_status}" == "PASS" &&
+          "${init_clk_status}" == "PASS" ]]; then
         timing_status="PASS"
     fi
 
-    printf '%d,%s,%s,%s,%s,%s,%s\n' \
+    printf '%d,%s,%s,%s,%s,%s,%s,%s\n' \
         "${seed}" "${clk_sys}" "${litedram_user}" "${clk_video}" \
-        "${clk_tmds}" "${init_clk}" "${timing_status}" > "${result}"
+        "${clk_tmds}" "${init_clk}" "${route_seconds}" "${timing_status}" > "${result}"
     cat "${result}"
 }
 
@@ -289,6 +336,8 @@ done
 printf 'Routing %d seed(s):' "${#SWEEP_SEEDS[@]}"
 printf ' %s' "${SWEEP_SEEDS[@]}"
 printf '\nConcurrent route jobs: %s\n' "${SWEEP_JOBS}"
+printf 'Per-seed nextpnr timeout: %ss (+%ss kill grace)\n' \
+    "${SWEEP_ROUTE_TIMEOUT_SECONDS}" "${SWEEP_ROUTE_KILL_AFTER_SECONDS}"
 
 status=0
 running=0
@@ -306,22 +355,26 @@ while (( running > 0 )); do
 done
 
 {
-    printf 'seed,clk_sys_mhz,litedram_user_mhz,clk_video_mhz,clk_tmds_mhz,init_clk_mhz,timing_status\n'
+    printf 'seed,clk_sys_mhz,litedram_user_mhz,clk_video_mhz,clk_tmds_mhz,init_clk_mhz,route_seconds,timing_status\n'
     for seed in "${SWEEP_SEEDS[@]}"; do
         result="${SWEEP_DIR}/result-seed-${seed}.csv"
         if [[ -f "${result}" ]]; then
             cat "${result}"
         else
-            printf '%d,MISSING,MISSING,MISSING,MISSING,MISSING,MISSING\n' "${seed}"
+            printf '%d,MISSING,MISSING,MISSING,MISSING,MISSING,MISSING,MISSING\n' "${seed}"
             status=1
         fi
     done
 } > "${results_file}"
 
-pass_count="$(awk -F, 'NR > 1 && $7 == "PASS" {count++} END {print count + 0}' "${results_file}")"
-pass_seeds="$(awk -F, 'NR > 1 && $7 == "PASS" {if (s != "") s=s ", "; s=s $1} END {print s}' "${results_file}")"
+pass_count="$(awk -F, 'NR > 1 && $8 == "PASS" {count++} END {print count + 0}' "${results_file}")"
+pass_seeds="$(awk -F, 'NR > 1 && $8 == "PASS" {if (s != "") s=s ", "; s=s $1} END {print s}' "${results_file}")"
+timeout_count="$(awk -F, 'NR > 1 && $8 == "TIMEOUT" {count++} END {print count + 0}' "${results_file}")"
+timeout_seeds="$(awk -F, 'NR > 1 && $8 == "TIMEOUT" {if (s != "") s=s ", "; s=s $1} END {print s}' "${results_file}")"
 printf '\nTiming-passing seeds: %s\n' "${pass_count}"
 printf 'PASS seed values: %s\n' "${pass_seeds:-none}"
+printf 'Timed-out seeds: %s\n' "${timeout_count}"
+printf 'TIMEOUT seed values: %s\n' "${timeout_seeds:-none}"
 printf 'Results: %s\n' "${results_file}"
 
 exit "${status}"
