@@ -206,13 +206,19 @@ run_seed()
     local svf="${SWEEP_DIR}/fpga_ulx3s-${seed}.svf"
     local bit="${SWEEP_DIR}/fpga_ulx3s-${seed}.bit"
     local result="${SWEEP_DIR}/result-seed-${seed}.csv"
-    local clk_sys clk_video clk_tmds route_start_seconds route_seconds route_status
+    local clk_sys clk_video clk_tmds
+    local route_start_seconds route_start_time
+    local route_end_seconds route_end_time
+    local route_seconds route_status
     local clk_sys_status clk_video_status clk_tmds_status timing_status
 
     printf '\nTrying ULX3S 85F nextpnr seed %s\n' "${seed}"
     rm -f "${pnr_log}" "${failed_log}" "${config}" "${svf}" "${bit}" "${result}"
 
     route_start_seconds="$(date +%s)"
+    route_start_time="$(date '+%Y-%m-%d %H:%M:%S %Z')"
+    printf 'Seed %s route start: %s\n' "${seed}" "${route_start_time}"
+
     if sweep_ecp5_run_nextpnr \
         --seed "${seed}" \
         "${SWEEP_NEXTPNR_ARGS[@]}" \
@@ -228,7 +234,13 @@ run_seed()
     else
         route_status=$?
     fi
-    route_seconds="$(( $(date +%s) - route_start_seconds ))"
+
+    route_end_seconds="$(date +%s)"
+    route_end_time="$(date '+%Y-%m-%d %H:%M:%S %Z')"
+    route_seconds="$((route_end_seconds - route_start_seconds))"
+
+    printf 'Seed %s route end:   %s\n' "${seed}" "${route_end_time}"
+    printf 'Seed %s route elapsed: %ss\n' "${seed}" "${route_seconds}"
 
     case "${route_status}" in
     0)
@@ -332,8 +344,18 @@ pass_count="$(awk -F, 'NR > 1 && $6 == "PASS" {count++} END {print count + 0}' "
 pass_seeds="$(awk -F, 'NR > 1 && $6 == "PASS" {if (s != "") s=s ", "; s=s $1} END {print s}' "${results_file}")"
 timeout_count="$(awk -F, 'NR > 1 && $6 == "TIMEOUT" {count++} END {print count + 0}' "${results_file}")"
 timeout_seeds="$(awk -F, 'NR > 1 && $6 == "TIMEOUT" {if (s != "") s=s ", "; s=s $1} END {print s}' "${results_file}")"
-printf '\nTiming-passing seeds: %s\n' "${pass_count}"
+printf 'Timing-passing seeds: %s\n' "${pass_count}"
+
+if [[ "${pass_seeds:-none}" != "none" ]]; then
+    printf '\n------------- PASS -------------\n'
+fi
+
 printf 'PASS seed values: %s\n' "${pass_seeds:-none}"
+
+if [[ "${pass_seeds:-none}" != "none" ]]; then
+    printf '\n--------------------------------\n'
+fi
+
 printf 'Timed-out seeds: %s\n' "${timeout_count}"
 printf 'TIMEOUT seed values: %s\n' "${timeout_seeds:-none}"
 printf 'Results: %s\n' "${results_file}"

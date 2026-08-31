@@ -35,7 +35,7 @@ on:
       seeds_per_job:
         description: Seeds routed serially by each GitHub route job
         required: true
-        default: "5"
+        default: "2" # keep in mind some seed values may be long running and hit timeout
         type: choice
         options:
           - "1"
@@ -143,6 +143,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -457,6 +458,31 @@ jobs:
           retention-days: 1
           compression-level: 0
 
+  watch:
+    name: LIVE timing-pass collector (${{ inputs.target }})
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    steps:
+      - name: Check out live result watcher
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Watch completed seed groups
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          chmod +x scripts/watch-ecp5-sweep-results.sh
+          ./scripts/watch-ecp5-sweep-results.sh \
+              "${SWEEP_TARGET}" \
+              "${SWEEP_SEED_FIRST}" \
+              "${SWEEP_SEED_LAST}" \
+              "${SWEEP_SEEDS_PER_JOB}"
+
   route:
     name: ${{ inputs.target }} seeds ${{ matrix.seeds }}
     needs: prepare
@@ -614,6 +640,78 @@ jobs:
 
           cp reference/sweep-metadata.txt "${artifact_dir}/metadata-${{ matrix.group }}.txt"
           printf 'status=%s\n' "${overall_status}" >> "${GITHUB_OUTPUT}"
+
+      - name: Publish seed group status
+        if: always()
+        shell: bash
+        run: |
+          set -u -o pipefail
+
+          artifact_dir="seed-artifact"
+          status_file="${artifact_dir}/group-status-${{ matrix.group }}.csv"
+          mkdir -p "${artifact_dir}"
+          printf 'seed,timing_status,seconds,route_exit_status\n' > "${status_file}"
+
+          for seed in ${{ matrix.seeds }}; do
+              result="$(find "${artifact_dir}" -maxdepth 1 -type f -name "result-seed-${seed}.csv" -print -quit)"
+              elapsed_file="${artifact_dir}/elapsed-${seed}.txt"
+              exit_file="${artifact_dir}/exit-${seed}.txt"
+              elapsed='NA'
+              route_exit='missing'
+              timing_status='NO_RESULT'
+              seconds='NA'
+
+              [[ -f "${elapsed_file}" ]] && elapsed="$(tr -d '\r\n' < "${elapsed_file}")"
+              [[ -f "${exit_file}" ]] && route_exit="$(tr -d '\r\n' < "${exit_file}")"
+
+              if [[ -n "${result}" && -f "${result}" ]]; then
+                  timing_status="$(awk -F, 'NF {gsub(/\r/, "", $NF); print $NF}' "${result}" | tail -n 1)"
+                  seconds="$(awk -F, 'NF {gsub(/\r/, "", $(NF-1)); print $(NF-1)}' "${result}" | tail -n 1)"
+              else
+                  seconds="${elapsed}"
+                  case "${route_exit}" in
+                  124|137)
+                      timing_status='WHOLE_SEED_TIMEOUT'
+                      ;;
+                  0)
+                      timing_status='NO_RESULT'
+                      ;;
+                  *)
+                      timing_status='ERROR'
+                      ;;
+                  esac
+              fi
+
+              printf '%s,%s,%s,%s\n' \
+                  "${seed}" "${timing_status}" "${seconds}" "${route_exit}" \
+                  >> "${status_file}"
+          done
+
+          pass_seeds="$(awk -F, '$2 == "PASS" {if (s != "") s=s " "; s=s $1} END {print s}' "${status_file}")"
+          fail_seeds="$(awk -F, '$2 == "FAIL" {if (s != "") s=s " "; s=s $1} END {print s}' "${status_file}")"
+          timeout_seeds="$(awk -F, '$2 ~ /TIMEOUT/ {if (s != "") s=s " "; s=s $1} END {print s}' "${status_file}")"
+
+          if [[ -n "${pass_seeds}" ]]; then
+              printf '\n============================================================\n'
+              printf 'LOOK HERE - PASS SEEDS IN THIS JOB: %s\n' "${pass_seeds}"
+              printf '============================================================\n'
+          else
+              printf 'PASS seed values: none\n'
+          fi
+
+          {
+              printf '### %s seeds %s\n\n' "${SWEEP_TARGET}" '${{ matrix.seeds }}'
+              printf '| Seed | Timing | Seconds | Route exit |\n'
+              printf '| ---: | :--- | ---: | ---: |\n'
+              while IFS=, read -r seed timing_status seconds route_exit; do
+                  [[ "${seed}" != 'seed' ]] || continue
+                  printf '| %s | %s | %s | %s |\n' \
+                      "${seed}" "${timing_status}" "${seconds}" "${route_exit}"
+              done < "${status_file}"
+              printf '\n**Timing-passing seeds:** `%s`\n\n' "${pass_seeds:-none}"
+              printf '**Failing seeds:** `%s`\n\n' "${fail_seeds:-none}"
+              printf '**Timed-out seeds:** `%s`\n' "${timeout_seeds:-none}"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Upload seed group results
         if: always()

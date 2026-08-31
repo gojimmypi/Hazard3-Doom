@@ -579,7 +579,11 @@ cleanup_temporary_outputs
 (
     cd "${HAZARD3_SYNTH}"
 
-    nextpnr-ecp5 \
+    route_start_seconds="$(date +%s)"
+    route_start_time="$(date '+%Y-%m-%d %H:%M:%S %Z')"
+    printf 'Seed %s route start: %s\n' "${NEXTPNR_SEED}" "${route_start_time}"
+
+    if nextpnr-ecp5 \
         --seed "${NEXTPNR_SEED}" \
         --placer heap \
         "${PNR_DEVICE_ARGS[@]}" \
@@ -588,7 +592,22 @@ cleanup_temporary_outputs
         --textcfg "${CONFIG_TEMP}" \
         "${timing_options[@]}" \
         --quiet \
-        --log "${PNR_LOG}"
+        --log "${PNR_LOG}"; then
+        route_status=0
+    else
+        route_status=$?
+    fi
+
+    route_end_seconds="$(date +%s)"
+    route_end_time="$(date '+%Y-%m-%d %H:%M:%S %Z')"
+    route_seconds="$((route_end_seconds - route_start_seconds))"
+
+    printf 'Seed %s route end:   %s\n' "${NEXTPNR_SEED}" "${route_end_time}"
+    printf 'Seed %s route elapsed: %ss\n' "${NEXTPNR_SEED}" "${route_seconds}"
+
+    if (( route_status != 0 )); then
+        exit "${route_status}"
+    fi
 
     if [[ "${BOARD_ID}" == "ulx3s-12f" ]]; then
         validate_ulx3s_12f_system_timing

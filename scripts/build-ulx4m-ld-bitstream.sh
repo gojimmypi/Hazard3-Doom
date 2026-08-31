@@ -22,7 +22,7 @@
 #
 # ULX4M-LD 85F entry point for the shared Hazard3-Doom ECP5 build flow.
 #
-# See build-ecp5-bitstream-common.sh for default seeds
+# See build-ecp5-bitstream-common.sh for NEXTPNR_SEED default seeds
 #
 
 set -euo pipefail
