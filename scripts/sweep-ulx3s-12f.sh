@@ -98,6 +98,9 @@ case "${HAZARD3_MEMORY_PROFILE}" in
 *) echo "HAZARD3_MEMORY_PROFILE must be 32m or 64m." >&2; exit 1 ;;
 esac
 
+printf 'ULX3S 12F sweep configuration: system clock=40 MHz, SDRAM profile=%s\n' \
+    "${HAZARD3_MEMORY_PROFILE}"
+
 if [[ "${SWEEP_PREPARE_ONLY}" != "1" ]]; then
     if (( $# == 0 )); then
         usage

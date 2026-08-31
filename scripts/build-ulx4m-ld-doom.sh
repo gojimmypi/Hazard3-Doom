@@ -34,7 +34,7 @@ MONITOR_BIN="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.bin"
 BOOT_HEX="${HAZARD3_ROOT}/example_soc/soc/hazard3-boot-monitor.hex"
 DOOM_OUTPUT="${DOOM_BUILD_DIR}/hazard3-doom.h3d"
 LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM"
-HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-50}"
+HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-40}"
 ULX4M_LITEDRAM_CPU="${ULX4M_LITEDRAM_CPU:-serv}"
 
 # Run shellcheck to ensure this is a good script.
@@ -102,6 +102,9 @@ vexrisc)
     exit 1
     ;;
 esac
+
+printf 'ULX4M-LD build configuration: system clock=%s MHz, LiteDRAM CPU=%s\n' \
+    "${HAZARD3_ULX4M_SYS_CLK_MHZ}" "${ULX4M_LITEDRAM_CPU}"
 
 require_tool make
 require_tool python3

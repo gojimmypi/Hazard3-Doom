@@ -98,6 +98,9 @@ case "${HAZARD3_HDMI_EXTENDED_MODES}" in
 *) echo "HAZARD3_HDMI_EXTENDED_MODES must be 0 or 1." >&2; exit 1 ;;
 esac
 
+printf 'ULX3S 85F sweep configuration: system clock=50 MHz, HDMI profile=%s, extended modes=%s\n' \
+    "${VIDEO_PROFILE}" "${HAZARD3_HDMI_EXTENDED_MODES}"
+
 if [[ "${SWEEP_PREPARE_ONLY}" != "1" ]]; then
     if (( $# == 0 )); then
         usage

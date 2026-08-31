@@ -62,6 +62,9 @@ if [[ "${VIDEO_RESOLUTION}" != "320x200" ]]; then
     exit 1
 fi
 
+printf 'ULX3S 12F build configuration: system clock=40 MHz, SDRAM profile=%s, video=%s\n' \
+    "${MEMORY_PROFILE}" "${VIDEO_RESOLUTION}"
+
 require_file "${SYNTH_DIR}/ULX3S_12F.mk"
 require_file "${SYNTH_DIR}/fpga_ulx3s.lpf"
 require_file "${HAZARD3_ROOT}/example_soc/soc/cache_tags_zero_12f.hex"

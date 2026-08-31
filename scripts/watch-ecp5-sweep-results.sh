@@ -429,6 +429,18 @@ print_consolidated()
 
 printf 'Watching %s seeds %s-%s.\n' \
     "${SWEEP_TARGET}" "${SWEEP_SEED_FIRST}" "${SWEEP_SEED_LAST}"
+case "${SWEEP_TARGET}" in
+ulx3s-85f)
+    printf 'Timing targets: sys=50.00 MHz | video=50.00 MHz | tmds=250.00 MHz\n'
+    ;;
+ulx3s-12f)
+    printf 'Timing targets: sys=40.00 MHz | video=50.00 MHz | tmds=250.00 MHz\n'
+    ;;
+ulx4m-ld-85f)
+    printf 'Timing targets: sys=%s.00 MHz | litedram_user=75.01 MHz | video=50.00 MHz | tmds=250.00 MHz | init=25.00 MHz\n' \
+        "${HAZARD3_ULX4M_SYS_CLK_MHZ:-40}"
+    ;;
+esac
 printf 'Expected seed groups: %s (%s seed(s) per job).\n' \
     "${expected_groups}" "${SWEEP_SEEDS_PER_JOB}"
 printf 'Newly uploaded seed artifacts will be reported here while routing continues.\n'

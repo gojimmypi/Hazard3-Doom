@@ -94,7 +94,7 @@ case "${HAZARD3_HDMI_EXTENDED_MODES}" in
     ;;
 esac
 
-printf 'ULX3S HDMI video profile: %s (extended modes=%s)\n' \
+printf 'ULX3S 85F build configuration: system clock=50 MHz, HDMI profile=%s, extended modes=%s\n' \
     "${VIDEO_PROFILE}" "${HAZARD3_HDMI_EXTENDED_MODES}"
 
 require_tool make

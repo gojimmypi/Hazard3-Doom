@@ -481,6 +481,20 @@ jobs:
           printf '  SWEEP_SEED_FIRST:    %s\n' "${SWEEP_SEED_FIRST}"
           printf '  SWEEP_SEED_LAST:     %s\n' "${SWEEP_SEED_LAST}"
           printf '  SWEEP_SEEDS_PER_JOB: %s\n' "${SWEEP_SEEDS_PER_JOB}"
+          case "${SWEEP_TARGET}" in
+          ulx3s-85f)
+              printf '  System clock:                  50 MHz (fixed)\n'
+              printf '  HAZARD3_HDMI_EXTENDED_MODES: %s\n' "${HAZARD3_HDMI_EXTENDED_MODES}"
+              ;;
+          ulx3s-12f)
+              printf '  System clock:            40 MHz (fixed)\n'
+              printf '  HAZARD3_MEMORY_PROFILE: %s\n' "${HAZARD3_MEMORY_PROFILE}"
+              ;;
+          ulx4m-ld-85f)
+              printf '  HAZARD3_ULX4M_SYS_CLK_MHZ: %s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
+              printf '  ULX4M_LITEDRAM_CPU:         %s\n' "${ULX4M_LITEDRAM_CPU}"
+              ;;
+          esac
 
           printf 'Calling: ./scripts/watch-ecp5-sweep-results.sh %s %s %s %s\n' \
               "${SWEEP_TARGET}" \

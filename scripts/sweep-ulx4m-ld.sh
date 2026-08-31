@@ -29,7 +29,7 @@ COMMON_SCRIPT="${SCRIPT_DIR}/sweep-ecp5-common.sh"
 SWEEP_JOBS="${SWEEP_JOBS:-2}"
 SWEEP_SKIP_SYNTH="${SWEEP_SKIP_SYNTH:-0}"
 SWEEP_PREPARE_ONLY="${SWEEP_PREPARE_ONLY:-0}"
-HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-50}"
+HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-40}"
 ULX4M_LITEDRAM_CPU="${ULX4M_LITEDRAM_CPU:-serv}"
 SYNTH_PROFILE_STAMP="${SYNTH_DIR}/fpga_ulx4m_ld.sys-clk-mhz"
 SYNTH_DURATION_STAMP="${SYNTH_DIR}/fpga_ulx4m_ld.synth-seconds"
@@ -105,6 +105,9 @@ case "${ULX4M_LITEDRAM_CPU}" in
 serv|vexrisc) ;;
 *) echo "ULX4M_LITEDRAM_CPU must be serv or vexrisc." >&2; exit 1 ;;
 esac
+
+printf 'ULX4M-LD sweep configuration: system clock=%s MHz, LiteDRAM CPU=%s\n' \
+    "${HAZARD3_ULX4M_SYS_CLK_MHZ}" "${ULX4M_LITEDRAM_CPU}"
 
 if [[ "${SWEEP_PREPARE_ONLY}" != "1" ]]; then
     if (( $# == 0 )); then
