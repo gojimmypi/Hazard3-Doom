@@ -32,6 +32,17 @@ on:
           - "8"
           - "12"
           - "20"
+      seeds_per_job:
+        description: Seeds routed serially by each GitHub route job
+        required: true
+        default: "5"
+        type: choice
+        options:
+          - "1"
+          - "2"
+          - "3"
+          - "4"
+          - "5"
       retain_bitstreams:
         description: Retain per-seed bitstreams in CI artifacts when produced
         required: true
@@ -143,6 +154,7 @@ env:
   SWEEP_SEED_FIRST: ${{ inputs.seed_first }}
   SWEEP_SEED_LAST: ${{ inputs.seed_last }}
   SWEEP_MAX_PARALLEL: ${{ inputs.max_parallel }}
+  SWEEP_SEEDS_PER_JOB: ${{ inputs.seeds_per_job }}
   RETAIN_BITSTREAMS: ${{ inputs.retain_bitstreams }}
   OSS_CAD_SUITE_VERSION: ${{ inputs.synth_oss_cad_suite_version }}
   ROUTE_OSS_CAD_SUITE_VERSION: ${{ inputs.route_oss_cad_suite_version }}
@@ -193,6 +205,11 @@ jobs:
 
           if [[ ! "${SWEEP_MAX_PARALLEL}" =~ ^[1-9][0-9]*$ ]]; then
               echo "max_parallel must be a positive integer." >&2
+              exit 1
+          fi
+
+          if [[ ! "${SWEEP_SEEDS_PER_JOB}" =~ ^[1-5]$ ]]; then
+              echo "seeds_per_job must be an integer from 1 through 5." >&2
               exit 1
           fi
 
@@ -331,6 +348,7 @@ jobs:
               printf 'seed_first=%s\n' "${SWEEP_SEED_FIRST}"
               printf 'seed_last=%s\n' "${SWEEP_SEED_LAST}"
               printf 'max_parallel=%s\n' "${SWEEP_MAX_PARALLEL}"
+              printf 'seeds_per_job=%s\n' "${SWEEP_SEEDS_PER_JOB}"
               printf 'retain_bitstreams=%s\n' "${RETAIN_BITSTREAMS}"
               printf 'synth_oss_cad_suite_version=%s\n' "${OSS_CAD_SUITE_VERSION}"
               printf 'route_oss_cad_suite_version=%s\n' "${ROUTE_OSS_CAD_SUITE_VERSION}"
@@ -364,7 +382,7 @@ jobs:
           seed_first = int(os.environ["SWEEP_SEED_FIRST"])
           seed_last = int(os.environ["SWEEP_SEED_LAST"])
           seeds = list(range(seed_first, seed_last + 1))
-          seeds_per_job = 2
+          seeds_per_job = int(os.environ["SWEEP_SEEDS_PER_JOB"])
           groups = [
               seeds[index:index + seeds_per_job]
               for index in range(0, len(seeds), seeds_per_job)
