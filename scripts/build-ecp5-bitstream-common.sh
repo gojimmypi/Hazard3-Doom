@@ -25,6 +25,18 @@
 
 set -euo pipefail
 
+# Default nextpnr seeds. Keep these together so board defaults are easy to find
+# and update after timing sweeps. NEXTPNR_SEED still overrides the selected
+# board default when provided by the caller.
+#
+# Seeds are both yosys and nextpnr version-specific:
+#   yosys --version && nextpnr-ecp5 --version
+#   Yosys 0.67 (git sha1 2d1509d1b, Release, GNU /usr/bin/c++ 11.4.0)
+#   "nextpnr-ecp5" -- Next Generation Place and Route (Version nextpnr-0.10-95-gddc6c8c8)
+ULX3S_85F_DEFAULT_NEXTPNR_SEED=116
+ULX3S_12F_DEFAULT_NEXTPNR_SEED=65
+ULX4M_LD_85F_DEFAULT_NEXTPNR_SEED=232
+
 BOARD_ID="${1:-}"
 shift || true
 
@@ -447,7 +459,7 @@ ulx3s-85f)
     MAKEFILE="ULX3S.mk"
     LPF="${HAZARD3_SYNTH}/fpga_ulx3s.lpf"
     IDCODE="0x41113043"
-    NEXTPNR_SEED="${NEXTPNR_SEED:-185}"
+    NEXTPNR_SEED="${NEXTPNR_SEED:-${ULX3S_85F_DEFAULT_NEXTPNR_SEED}}"
     PNR_DEVICE_ARGS=(--um5g-85k --package CABGA381)
     HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
     SYNTH_PROFILE_STAMP="${HAZARD3_SYNTH}/fpga_ulx3s.video-profile"
@@ -458,7 +470,7 @@ ulx3s-12f)
     MAKEFILE="ULX3S_12F.mk"
     LPF="${HAZARD3_SYNTH}/fpga_ulx3s.lpf"
     IDCODE="0x21111043"
-    NEXTPNR_SEED="${NEXTPNR_SEED:-65}"
+    NEXTPNR_SEED="${NEXTPNR_SEED:-${ULX3S_12F_DEFAULT_NEXTPNR_SEED}}"
     PNR_DEVICE_ARGS=(--12k --speed 6 --package CABGA381)
     HAZARD3_MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE:-32m}"
     SYNTH_PROFILE_STAMP="${HAZARD3_SYNTH}/fpga_ulx3s_12f.memory-profile"
@@ -470,7 +482,7 @@ ulx4m-ld-85f)
     MAKEFILE="ULX4M_LD_85F.mk"
     LPF="${HAZARD3_SYNTH}/fpga_ulx4m_ld.lpf"
     IDCODE="0x01113043"
-    NEXTPNR_SEED="${NEXTPNR_SEED:-232}"
+    NEXTPNR_SEED="${NEXTPNR_SEED:-${ULX4M_LD_85F_DEFAULT_NEXTPNR_SEED}}"
     PNR_DEVICE_ARGS=(--um-85k --speed 8 --package CABGA381)
     LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM"
     HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-50}"

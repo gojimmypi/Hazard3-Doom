@@ -35,6 +35,7 @@ BOOT_HEX="${HAZARD3_ROOT}/example_soc/soc/hazard3-boot-monitor.hex"
 DOOM_OUTPUT="${DOOM_BUILD_DIR}/hazard3-doom.h3d"
 LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM"
 HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-50}"
+ULX4M_LITEDRAM_CPU="${ULX4M_LITEDRAM_CPU:-serv}"
 
 # Run shellcheck to ensure this is a good script.
 # Specify the executable shell checker you want to use:
@@ -89,6 +90,19 @@ case "${HAZARD3_ULX4M_SYS_CLK_MHZ}" in
 esac
 HAZARD3_ULX4M_SYS_CLK_HZ=$((HAZARD3_ULX4M_SYS_CLK_MHZ * 1000000))
 
+case "${ULX4M_LITEDRAM_CPU}" in
+serv)
+    LITEDRAM_GENERATED_DIR="${LITEDRAM_DIR}/generated-serv"
+    ;;
+vexrisc)
+    LITEDRAM_GENERATED_DIR="${LITEDRAM_DIR}/generated-vexrisc"
+    ;;
+*)
+    echo "ULX4M_LITEDRAM_CPU must be serv or vexrisc" >&2
+    exit 1
+    ;;
+esac
+
 require_tool make
 require_tool python3
 require_file "${SYNTH_DIR}/ULX4M_LD_85F.mk"
@@ -97,8 +111,9 @@ require_executable "${HAZARD3_ROOT}/scripts/listfiles"
 require_executable "${ROOT_DIR}/scripts/build-ulx4m-ld-bitstream.sh"
 require_file "${HAZARD3_ROOT}/example_soc/libfpga/common/reset_sync.v"
 require_file "${LITEDRAM_DIR}/litedram_ulx4m_cpu.v"
-require_file "${LITEDRAM_DIR}/litedram_ulx4m_cpu_rom.init"
-require_file "${LITEDRAM_DIR}/litedram_ulx4m_cpu_sram.init"
+require_file "${LITEDRAM_GENERATED_DIR}/litedram_ulx4m_cpu.v"
+require_file "${LITEDRAM_GENERATED_DIR}/litedram_ulx4m_cpu_rom.init"
+require_file "${LITEDRAM_GENERATED_DIR}/litedram_ulx4m_cpu_sram.init"
 require_executable "${ROOT_DIR}/scripts/build.sh"
 require_executable "${ROOT_DIR}/scripts/make-boot-hex.py"
 require_executable "${ROOT_DIR}/doom/build-doom-image.sh"
@@ -121,6 +136,7 @@ require_file "${BOOT_HEX}"
 printf '\nBuilding the Hazard3 ULX4M-LD 85F FPGA target with cold-boot monitor...\n'
 HAZARD3_ROOT="${HAZARD3_ROOT}" \
 HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
+ULX4M_LITEDRAM_CPU="${ULX4M_LITEDRAM_CPU}" \
     "${ROOT_DIR}/scripts/build-ulx4m-ld-bitstream.sh"
 
 require_file "${FPGA_OUTPUT}"

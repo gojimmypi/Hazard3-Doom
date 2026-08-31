@@ -369,8 +369,8 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
     timeout_seeds="$(joined_seeds_for_status TIMEOUT)"
     {
         printf '### Live %s timing results\n\n' "${SWEEP_TARGET}"
-        printf '**Timing-passing seeds:** `%s`\n\n' "${pass_seeds}"
-        printf '**Timed-out seeds:** `%s`\n\n' "${timeout_seeds}"
+        printf '**Timing-passing seeds:** %s\n\n' "${pass_seeds}"
+        printf '**Timed-out seeds:** %s\n\n' "${timeout_seeds}"
         printf 'Received %s of %s expected seed results.\n' \
             "${#seed_status[@]}" "${expected_seeds}"
     } >> "${GITHUB_STEP_SUMMARY}"
