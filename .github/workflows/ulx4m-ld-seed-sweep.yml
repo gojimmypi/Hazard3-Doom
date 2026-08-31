@@ -495,7 +495,10 @@ jobs:
               scripts/sweep-ulx3s-12f.sh \
               scripts/sweep-ulx4m-ld.sh
 
-          netlist="$(./scripts/sweep-ecp5.sh --print-netlist "${SWEEP_TARGET}")"
+          netlist="$(
+              ./scripts/sweep-ecp5.sh --print-netlist "${SWEEP_TARGET}" |
+                  tail -n 1
+          )"
           expected_sha="$(awk '{print $1}' reference/netlist.sha256)"
           actual_sha="$(sha256sum "${netlist}" | awk '{print $1}')"
           printf 'Frozen netlist SHA256: %s\n' "${actual_sha}"
@@ -511,8 +514,14 @@ jobs:
         run: |
           set -u -o pipefail
 
-          sweep_dir="$(./scripts/sweep-ecp5.sh --print-sweep-dir "${SWEEP_TARGET}")"
-          netlist="$(./scripts/sweep-ecp5.sh --print-netlist "${SWEEP_TARGET}")"
+          sweep_dir="$(
+              ./scripts/sweep-ecp5.sh --print-sweep-dir "${SWEEP_TARGET}" |
+                  tail -n 1
+          )"
+          netlist="$(
+              ./scripts/sweep-ecp5.sh --print-netlist "${SWEEP_TARGET}" |
+                  tail -n 1
+          )"
           expected_sha="$(awk '{print $1}' reference/netlist.sha256)"
           artifact_dir="seed-artifact"
           overall_status=0
