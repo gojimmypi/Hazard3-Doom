@@ -41,7 +41,7 @@ SYNTH_LOG="${SYNTH_DIR}/synth.log"
 # shellcheck source=scripts/sweep-ecp5-common.sh
 # shellcheck disable=SC1091
 source "${COMMON_SCRIPT}"
-echo "Include source: ${COMMON_SCRIPT}"
+printf 'Include source: %s\n' "${COMMON_SCRIPT}" >&2
 
 sweep_ecp5_init_tuning
 TUNING_SUFFIX="$(sweep_ecp5_tuning_suffix)"
@@ -62,7 +62,7 @@ SWEEP_JOBS=N runs up to N routes concurrently (default: 2).
 HAZARD3_ULX4M_SYS_CLK_MHZ=25|40|50 selects the Hazard3 system clock.
 ULX4M_LITEDRAM_CPU=serv|vexrisc selects the LiteDRAM initialization CPU.
 SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.
-SWEEP_ROUTE_TIMEOUT_SECONDS=N limits each nextpnr route (default: 600).
+SWEEP_ROUTE_TIMEOUT_SECONDS=N limits each nextpnr route (default: 7200).
 Generic nextpnr tuning is controlled by SWEEP_NEXTPNR_* variables.
 The older HAZARD3_ULX4M_NEXTPNR_* names remain accepted as aliases.
 EOF_USAGE

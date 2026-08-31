@@ -40,7 +40,7 @@ SYNTH_DURATION_STAMP="${SYNTH_DIR}/fpga_ulx3s_12f.synth-seconds"
 # shellcheck source=scripts/sweep-ecp5-common.sh
 # shellcheck disable=SC1091
 source "${COMMON_SCRIPT}"
-echo "Include source: ${COMMON_SCRIPT}"
+printf 'Include source: %s\n' "${COMMON_SCRIPT}" >&2
 
 sweep_ecp5_init_tuning
 TUNING_SUFFIX="$(sweep_ecp5_tuning_suffix)"
@@ -60,7 +60,7 @@ Seeds must be decimal values from 1 through 260.
 SWEEP_JOBS=N runs up to N routes concurrently (default: 4).
 HAZARD3_MEMORY_PROFILE=32m|64m selects the SDRAM profile (default: 32m).
 SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.
-SWEEP_ROUTE_TIMEOUT_SECONDS=N limits each nextpnr route (default: 600).
+SWEEP_ROUTE_TIMEOUT_SECONDS=N limits each nextpnr route (default: 7200).
 EOF_USAGE
 }
 

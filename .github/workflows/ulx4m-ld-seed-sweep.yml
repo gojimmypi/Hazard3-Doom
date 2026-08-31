@@ -157,7 +157,7 @@ env:
   SWEEP_NEXTPNR_TMG_RIPUP: ${{ inputs.tmg_ripup }}
   SWEEP_NEXTPNR_ROUTER2_ALT_WEIGHTS: ${{ inputs.router2_alt_weights }}
   SWEEP_NEXTPNR_EXTRA_ARGS: ${{ inputs.nextpnr_extra_args }}
-  SWEEP_ROUTE_TIMEOUT_SECONDS: "3600"
+  SWEEP_ROUTE_TIMEOUT_SECONDS: "7200"
   SWEEP_ROUTE_KILL_AFTER_SECONDS: "30"
   SWEEP_SEED_TIMEOUT_SECONDS: "7600"
   SWEEP_SEED_KILL_AFTER_SECONDS: "30"
@@ -337,12 +337,12 @@ jobs:
 
           seed_first = int(os.environ["SWEEP_SEED_FIRST"])
           seed_last = int(os.environ["SWEEP_SEED_LAST"])
-          max_parallel = int(os.environ["SWEEP_MAX_PARALLEL"])
           seeds = list(range(seed_first, seed_last + 1))
-          group_count = min(max_parallel, len(seeds))
-          groups = [[] for _ in range(group_count)]
-          for index, seed in enumerate(seeds):
-              groups[index % group_count].append(seed)
+          seeds_per_job = 2
+          groups = [
+              seeds[index:index + seeds_per_job]
+              for index in range(0, len(seeds), seeds_per_job)
+          ]
 
           matrix = {
               "include": [
