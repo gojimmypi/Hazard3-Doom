@@ -290,7 +290,8 @@ run_synthesis()
         ;;
     ulx4m-ld-85f)
         if ! DEFINES="${DEFINES:+${DEFINES} }HAZARD3_ULX4M_SYS_CLK_MHZ=${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
-            make -C "${HAZARD3_SYNTH}" -f "${MAKEFILE}" synth; then
+            make -C "${HAZARD3_SYNTH}" -f "${MAKEFILE}" \
+                ULX4M_LITEDRAM_CPU="${ULX4M_LITEDRAM_CPU}" synth; then
             copy_synth_log
             exit 1
         fi
@@ -485,6 +486,16 @@ ulx4m-ld-85f)
     NEXTPNR_SEED="${NEXTPNR_SEED:-${ULX4M_LD_85F_DEFAULT_NEXTPNR_SEED}}"
     PNR_DEVICE_ARGS=(--um-85k --speed 8 --package CABGA381)
     LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM"
+    ULX4M_LITEDRAM_CPU="${ULX4M_LITEDRAM_CPU:-serv}"
+    case "${ULX4M_LITEDRAM_CPU}" in
+    serv|vexrisc)
+        ;;
+    *)
+        echo "ULX4M_LITEDRAM_CPU must be serv or vexrisc" >&2
+        exit 1
+        ;;
+    esac
+    LITEDRAM_GENERATED_DIR="${LITEDRAM_DIR}/generated-${ULX4M_LITEDRAM_CPU}"
     HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-50}"
     SYNTH_PROFILE_STAMP="${HAZARD3_SYNTH}/fpga_ulx4m_ld.sys-clk-mhz"
     SEED_STAMP="${BUILD_DIR}/fpga_ulx4m_ld.seed"
@@ -543,8 +554,9 @@ if [[ "${BOARD_ID}" == "ulx4m-ld-85f" ]]; then
     require_tool grep
     require_tool awk
     require_file "${LITEDRAM_DIR}/litedram_ulx4m_cpu.v"
-    require_file "${LITEDRAM_DIR}/litedram_ulx4m_cpu_rom.init"
-    require_file "${LITEDRAM_DIR}/litedram_ulx4m_cpu_sram.init"
+    require_file "${LITEDRAM_GENERATED_DIR}/litedram_ulx4m_cpu.v"
+    require_file "${LITEDRAM_GENERATED_DIR}/litedram_ulx4m_cpu_rom.init"
+    require_file "${LITEDRAM_GENERATED_DIR}/litedram_ulx4m_cpu_sram.init"
 fi
 
 if [[ "${BOARD_ID}" == "ulx3s-12f" ]]; then
