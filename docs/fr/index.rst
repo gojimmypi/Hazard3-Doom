@@ -20,6 +20,7 @@ Commencer ici
 * :doc:`about/index` - comprendre le projet, ses usages pédagogiques et l'intérêt de l'ULX4M pour le prototypage modulaire.
 * :doc:`getting-started/quick-start` - mettre une carte en fonctionnement avec un minimum d'étapes.
 * :doc:`getting-started/build` - construire le FPGA, le moniteur résident et l'image Doom.
+* :doc:`reference/timing-sweeps` - exécuter les sweeps ECP5 localement/GitHub et interpréter le timing en direct.
 * :doc:`user-guide/web-flasher` - programmer la SRAM du FPGA ULX3S directement depuis Chrome/Edge avec WebUSB.
 * :doc:`user-guide/sd-card` - configurer un démarrage autonome à froid depuis une carte micro-SD.
 * :doc:`user-guide/i2cdriver` - analyser et inspecter le bus I2C SAO sur HDMI.

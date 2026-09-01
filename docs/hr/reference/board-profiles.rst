@@ -22,8 +22,8 @@ Profili pločica
      - Kompaktni 320x200 SDRAM scanout
    * - ULX4M-LD 85F
      - ``64m``
-     - DDR3; ``ahb_litedram`` + generirani LiteDRAM/``ECP5DDRPHY``
-     - 50 MHz CPU/AHB; 75 MHz LiteDRAM korisnički port
+     - 1 GiB MT41K512M16HA-125 DDR3L; ``ahb_litedram`` + generirani LiteDRAM/``ECP5DDRPHY``
+     - 40 MHz CPU/AHB zadano; 75 MHz LiteDRAM korisnički port
      - LiteDRAM cilj; potrebna timing iznimka
    * - ULX4M-LS 85F
      - ``32m``
@@ -38,9 +38,10 @@ profil i takt specifičan za cilj.
 Trenutačna FPGA provjera
 ------------------------
 
-Trenutačno izdanje lokalno je ponovno izgrađeno iz prikvačenog Hazard3 stabla
-uz Yosys 0.60+70 i zadane seedove pločica. Ovi routed rezultati služe kao
-regresijske kontrolne točke, a ne kao prijenosna jamstva timinga:
+Routed vrijednosti ispod regresijske su kontrolne točke iz projektnih buildova.
+Točne revizije izvora, SHA256 netlista, verzije CAD alata i sweep parametre treba
+uzeti iz odgovarajućeg build/sweep artifacta; ove vrijednosti nisu prijenosna
+jamstva timinga:
 
 .. list-table::
    :header-rows: 1
@@ -60,15 +61,16 @@ regresijske kontrolne točke, a ne kao prijenosna jamstva timinga:
      - PASS pri 40 MHz
    * - ULX4M-LD 85F
      - 232
-     - ``clk_sys`` 43.78 MHz; LiteDRAM 64.65 MHz
-     - FAIL pri 50 MHz / 75.01 MHz
+     - ``clk_sys`` 38.69 MHz; LiteDRAM 62.52 MHz
+     - FAIL pri 40 MHz / 75.01 MHz
 
 ULX4M-LD build zato koristi ``ALLOW_TIMING_FAILURE=1`` kada je potreban razvojni
 bitstream. Ta iznimka pretvara timing greške u prijavljena upozorenja; ne tvrdi
 da je timing zatvoren. Ponovno pokrenite routed timing nakon značajnih promjena
 RTL-a, netlista, seeda ili toolchaina. Rezultat ULX3S 85F specifičan je za timing
 model koji odabire trenutačni projektni tijek i ne treba ga izravno uspoređivati
-s pokretanjima koja odabiru drugi ECP5 timing model.
+s pokretanjima koja odabiru drugi ECP5 timing model. Pogledajte
+:doc:`timing-sweeps` za provenance sweepa i pravila usporedbe.
 
 Glavne baze ULX3S periferije
 ----------------------------

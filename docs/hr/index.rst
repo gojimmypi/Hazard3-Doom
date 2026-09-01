@@ -20,6 +20,7 @@ Počnite ovdje
 * :doc:`about/index` - saznajte što je projekt, čemu služi u obrazovanju i zašto je ULX4M koristan za modularno prototipiranje.
 * :doc:`getting-started/quick-start` - pokrenite pločicu uz najmanji broj koraka.
 * :doc:`getting-started/build` - izgradite FPGA, rezidentni monitor i Doom sliku.
+* :doc:`reference/timing-sweeps` - pokrenite lokalne/GitHub ECP5 sweepove i tumačite live timing rezultate.
 * :doc:`user-guide/web-flasher` - programirajte FPGA SRAM na ULX3S izravno iz Chromea/Edgea putem WebUSB-a.
 * :doc:`user-guide/sd-card` - podesite samostalno hladno pokretanje s micro-SD kartice.
 * :doc:`user-guide/i2cdriver` - skenirajte i pregledajte SAO I2C sabirnicu preko HDMI-ja.

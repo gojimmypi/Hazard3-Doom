@@ -19,7 +19,7 @@ Cible compacte ULX3S 12F, 32 Mio par défaut, 40 MHz :
 
    ./scripts/build-ulx3s-12f-doom.sh
 
-ULX4M-LD 85F, 64 Mio, 50 MHz :
+ULX4M-LD 85F, cartographie logicielle 64 Mio, Hazard3 à 40 MHz :
 
 .. code-block:: bash
 
@@ -144,8 +144,10 @@ Par exemple, le flux 12F peut utiliser :
    SWEEP_JOBS=30 ./scripts/sweep-peek-ulx3s-12f.sh --all
    SWEEP_JOBS=30 ./scripts/sweep-ulx3s-12f.sh --all
 
-Voir :doc:`../reference/scripts` pour les outils de sweep 85F, 12F et ULX4M-LD
-ainsi que les emplacements des résultats.
+Voir :doc:`../reference/scripts` pour le catalogue des outils de sweep et
+:doc:`../reference/timing-sweeps` pour la matrice GitHub Actions, le choix des
+paramètres, le moniteur de timing en direct, les timeouts, les artifacts et les
+règles de reproductibilité.
 
 Propriété du build
 ------------------

@@ -22,8 +22,8 @@ Board Profiles
      - Compact 320x200 SDRAM scanout
    * - ULX4M-LD 85F
      - ``64m``
-     - DDR3; ``ahb_litedram`` + generated LiteDRAM/``ECP5DDRPHY``
-     - 50 MHz CPU/AHB; 75 MHz LiteDRAM user port
+     - 1 GiB MT41K512M16HA-125 DDR3L; ``ahb_litedram`` + generated LiteDRAM/``ECP5DDRPHY``
+     - 40 MHz CPU/AHB default; 75 MHz LiteDRAM user port
      - LiteDRAM target; timing waiver required
    * - ULX4M-LS 85F
      - ``32m``
@@ -38,9 +38,10 @@ clock automatically.
 Current FPGA validation
 -----------------------
 
-The current release was locally rebuilt from the pinned Hazard3 tree with
-Yosys 0.60+70 and the default board seeds. These routed results are regression
-checkpoints, not portable timing guarantees:
+The routed values below are regression checkpoints collected from project
+builds. Exact source revisions, netlist hashes, CAD-tool versions, and sweep
+parameters should be taken from the corresponding build/sweep artifact; these
+values are not portable timing guarantees:
 
 .. list-table::
    :header-rows: 1
@@ -60,15 +61,16 @@ checkpoints, not portable timing guarantees:
      - PASS at 40 MHz
    * - ULX4M-LD 85F
      - 232
-     - ``clk_sys`` 43.78 MHz; LiteDRAM 64.65 MHz
-     - FAIL at 50 MHz / 75.01 MHz
+     - ``clk_sys`` 38.69 MHz; LiteDRAM 62.52 MHz
+     - FAIL at 40 MHz / 75.01 MHz
 
 The ULX4M-LD build therefore uses ``ALLOW_TIMING_FAILURE=1`` when a development
 bitstream is required. The waiver changes timing failures into reported
 warnings; it does not claim timing closure. Rerun routed timing after material
 RTL, netlist, seed, or toolchain changes. The ULX3S 85F result is specific to
 the timing model selected by the current project flow and should not be compared
-directly with runs that select a different ECP5 timing model.
+directly with runs that select a different ECP5 timing model. See
+:doc:`timing-sweeps` for sweep provenance and comparison rules.
 
 Primary ULX3S peripheral bases
 ------------------------------

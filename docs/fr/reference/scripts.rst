@@ -37,7 +37,7 @@ l'image Doom et la cartographie mémoire SDRAM cohérents.
    un moniteur résident en SDRAM.
 
 ``scripts/build-ulx4m-ld-doom.sh``
-   Build complet ULX4M-LD 85F. Il utilise la cartographie 64 Mio à 50 MHz et
+   Build complet ULX4M-LD 85F. Il utilise la cartographie logicielle 64 Mio à 40 MHz et
    vérifie les sources LiteDRAM générées requises avant de construire le
    moniteur, l'image de boot embarquée, le bitstream FPGA et l'image Doom. Le
    routage actuel présente des échecs de timing connus pour ``clk_sys`` et
@@ -129,6 +129,10 @@ Les sweeps de placement seul classent rapidement les candidats. Ils ne
 constituent pas une preuve finale de timing. Utilisez le sweep routé avant de
 sélectionner un seed de production.
 
+Pour l'architecture détaillée du sweep, les paramètres GitHub Actions, le modèle
+de netlist figé, le moniteur de timing en direct, les watchdogs, les artifacts
+et la stratégie d'expériences A/B, voir :doc:`timing-sweeps`.
+
 ``scripts/sweep-peek.sh``
    Sweep nextpnr de placement seul pour ULX3S 85F. Il s'arrête avant le routage.
    Sans argument de seed, il analyse la plage configurée ; un seed explicite
@@ -160,6 +164,26 @@ sélectionner un seed de production.
 ``scripts/sweep-ulx4m-ld.sh``
    Sweep de seeds routés ULX4M-LD. Accepte un seed unique ou une plage de seeds
    et utilise deux jobs concurrents par défaut.
+
+``scripts/sweep-ecp5.sh``
+   Répartiteur partagé des cibles, utilisé en local et dans GitHub Actions. Il
+   énumère les cibles, prépare/résout les chemins et appelle le sweep routé
+   spécifique à la cible.
+
+``scripts/sweep-ecp5-common.sh``
+   Implémentation nextpnr partagée. Elle valide les paramètres du placer/router,
+   construit les arguments nextpnr, applique les watchdogs, analyse les
+   fréquences maximales et écrit les CSV/métadonnées par seed.
+
+``scripts/watch-ecp5-sweep-results.sh``
+   Collecteur GitHub en direct. Il observe les artifacts de groupes terminés et
+   affiche les métriques, les comptes PASS/FAIL/TIMEOUT/OTHER, les durées et les
+   meilleures fréquences maximales observées par domaine.
+
+``scripts/summarize-ecp5-sweep.py``
+   Agrégateur CI final. Il combine tous les groupes avec les métadonnées et la
+   configuration figées, génère les résumés CSV/Markdown et vérifie que le sweep
+   est complet.
 
 Exemples :
 

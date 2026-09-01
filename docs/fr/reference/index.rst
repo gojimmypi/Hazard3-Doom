@@ -6,4 +6,5 @@ Référence
 
    commands
    scripts
+   timing-sweeps
    board-profiles

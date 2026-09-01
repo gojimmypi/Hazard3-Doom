@@ -33,7 +33,7 @@ memory map aligned.
    ``HAZARD3_DOOM_HDMI_RESOLUTION=320x200`` and uses an SDRAM-resident monitor.
 
 ``scripts/build-ulx4m-ld-doom.sh``
-   Complete ULX4M-LD 85F build. It uses the 64 MiB map at 50 MHz and checks the
+   Complete ULX4M-LD 85F build. It uses the 64 MiB software map at 40 MHz and checks the
    required LiteDRAM generated sources before building the monitor, embedded boot
    image, FPGA bitstream, and Doom image. The current routed design has known
    ``clk_sys`` and LiteDRAM timing misses, so use ``ALLOW_TIMING_FAILURE=1`` when
@@ -122,6 +122,10 @@ Placement and routed seed sweeps
 Placement-only sweeps rank candidates quickly. They are not final timing proof.
 Use the routed sweep before selecting a production seed.
 
+For the detailed sweep architecture, GitHub Actions parameters, frozen-netlist
+model, live timing monitor, watchdogs, artifact layout, and A/B experiment
+strategy, see :doc:`timing-sweeps`.
+
 ``scripts/sweep-peek.sh``
    ULX3S 85F placement-only nextpnr sweep. It stops before routing. With no seed
    argument it scans the configured range; an explicit seed limits the run.
@@ -151,6 +155,26 @@ Use the routed sweep before selecting a production seed.
 ``scripts/sweep-ulx4m-ld.sh``
    ULX4M-LD routed seed sweep. Accepts a single seed or a seed range and defaults
    to two concurrent jobs.
+
+``scripts/sweep-ecp5.sh``
+   Shared target dispatcher used by local runs and GitHub Actions. It lists
+   supported targets, prepares/fetches target paths, and invokes the
+   target-specific routed sweep.
+
+``scripts/sweep-ecp5-common.sh``
+   Shared nextpnr implementation. It validates placer/router controls, builds
+   nextpnr arguments, applies per-route watchdogs, parses max-frequency results,
+   and writes per-seed CSV/metadata used by the higher-level sweep tools.
+
+``scripts/watch-ecp5-sweep-results.sh``
+   GitHub live result collector. It watches completed seed-group artifacts,
+   prints newly completed seed metrics, reports PASS/FAIL/TIMEOUT/OTHER counts,
+   route-duration statistics, and the best observed max frequency per clock.
+
+``scripts/summarize-ecp5-sweep.py``
+   Final CI aggregation tool. It combines all seed-group results with the frozen
+   sweep metadata/configuration, generates CSV and Markdown summaries, and
+   checks sweep completeness.
 
 Examples:
 

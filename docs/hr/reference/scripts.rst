@@ -34,7 +34,7 @@ memorijsku mapu međusobno usklađenima.
    ``HAZARD3_DOOM_HDMI_RESOLUTION=320x200`` i koristi monitor smješten u SDRAM-u.
 
 ``scripts/build-ulx4m-ld-doom.sh``
-   Potpuni build za ULX4M-LD 85F. Koristi mapu od 64 MiB pri 50 MHz i prije
+   Potpuni build za ULX4M-LD 85F. Koristi softversku mapu od 64 MiB pri 40 MHz i prije
    builda monitora, ugrađene boot slike, FPGA bitstreama i Doom slike provjerava
    potrebne generirane LiteDRAM izvore. Trenutačni routed dizajn ima poznate
    timing promašaje za ``clk_sys`` i LiteDRAM, pa koristite
@@ -123,6 +123,10 @@ Placement i routed sweepovi seedova
 Sweepovi samo za placement brzo rangiraju kandidate. Oni nisu konačan dokaz
 timinga. Prije odabira produkcijskog seeda koristite routed sweep.
 
+Za detaljnu arhitekturu sweepa, GitHub Actions parametre, zamrznuti netlist,
+live timing monitor, watchdog limite, artifacts i A/B strategiju pogledajte
+:doc:`timing-sweeps`.
+
 ``scripts/sweep-peek.sh``
    ULX3S 85F nextpnr sweep samo za placement. Zaustavlja se prije routinga. Bez
    argumenta seeda pretražuje konfigurirani raspon; izričiti seed ograničava
@@ -153,6 +157,24 @@ timinga. Prije odabira produkcijskog seeda koristite routed sweep.
 ``scripts/sweep-ulx4m-ld.sh``
    ULX4M-LD routed seed sweep. Prihvaća jedan seed ili raspon seedova i zadano
    koristi dva paralelna posla.
+
+``scripts/sweep-ecp5.sh``
+   Zajednički razdjelnik ciljeva za lokalne i GitHub Actions runove. Ispisuje
+   podržane ciljeve, priprema/rješava putanje i poziva routed sweep cilja.
+
+``scripts/sweep-ecp5-common.sh``
+   Zajednička nextpnr implementacija. Provjerava placer/router postavke, gradi
+   nextpnr argumente, primjenjuje watchdog limite, parsira maksimalne frekvencije
+   i zapisuje CSV/metapodatke po seedu.
+
+``scripts/watch-ecp5-sweep-results.sh``
+   GitHub live collector. Prati artifacts završenih grupa, ispisuje metrike novih
+   seedova, PASS/FAIL/TIMEOUT/OTHER brojeve, trajanja i najbolje maksimalne
+   frekvencije po domeni.
+
+``scripts/summarize-ecp5-sweep.py``
+   Završni CI agregator. Spaja sve seed grupe sa zamrznutim metapodacima i
+   konfiguracijom, generira CSV/Markdown sažetke i provjerava potpunost sweepa.
 
 Primjeri:
 

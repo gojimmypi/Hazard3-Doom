@@ -22,8 +22,8 @@ Profils de cartes
      - Scanout SDRAM compact 320x200
    * - ULX4M-LD 85F
      - ``64m``
-     - DDR3 ; ``ahb_litedram`` + LiteDRAM généré/``ECP5DDRPHY``
-     - CPU/AHB 50 MHz ; port utilisateur LiteDRAM 75 MHz
+     - DDR3L MT41K512M16HA-125 de 1 Gio ; ``ahb_litedram`` + LiteDRAM généré/``ECP5DDRPHY``
+     - CPU/AHB 40 MHz par défaut ; port utilisateur LiteDRAM 75 MHz
      - Cible LiteDRAM ; dérogation de timing requise
    * - ULX4M-LS 85F
      - ``32m``
@@ -38,9 +38,10 @@ automatiquement le profil et l'horloge propres à leur cible.
 Validation FPGA actuelle
 ------------------------
 
-La version actuelle a été reconstruite localement depuis l'arbre Hazard3 épinglé
-avec Yosys 0.60+70 et les seeds par défaut des cartes. Ces résultats routés sont
-des points de contrôle de régression, pas des garanties de timing portables :
+Les valeurs routées ci-dessous sont des points de contrôle de régression issus
+des builds du projet. Les révisions exactes, le SHA256 du netlist, les versions
+des outils CAD et les paramètres du sweep doivent être lus dans l'artifact
+correspondant ; ces valeurs ne sont pas des garanties de timing portables :
 
 .. list-table::
    :header-rows: 1
@@ -60,8 +61,8 @@ des points de contrôle de régression, pas des garanties de timing portables :
      - PASS à 40 MHz
    * - ULX4M-LD 85F
      - 232
-     - ``clk_sys`` 43.78 MHz ; LiteDRAM 64.65 MHz
-     - FAIL à 50 MHz / 75.01 MHz
+     - ``clk_sys`` 38.69 MHz ; LiteDRAM 62.52 MHz
+     - FAIL à 40 MHz / 75.01 MHz
 
 Le build ULX4M-LD utilise donc ``ALLOW_TIMING_FAILURE=1`` lorsqu'un bitstream
 de développement est nécessaire. Cette dérogation transforme les échecs de
@@ -69,7 +70,8 @@ timing en avertissements signalés ; elle ne prétend pas que le timing est ferm
 Relancez le timing routé après toute modification importante du RTL, du netlist,
 du seed ou de la chaîne d'outils. Le résultat ULX3S 85F est propre au modèle de
 timing sélectionné par le flux actuel du projet et ne doit pas être comparé
-directement à des exécutions utilisant un autre modèle de timing ECP5.
+directement à des exécutions utilisant un autre modèle de timing ECP5. Voir
+:doc:`timing-sweeps` pour la provenance des sweeps et les règles de comparaison.
 
 Bases principales des périphériques ULX3S
 -----------------------------------------

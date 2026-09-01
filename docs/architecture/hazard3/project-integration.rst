@@ -66,7 +66,7 @@ The pinned ULX3S fork adds system features required by the Doom platform:
    * - ``ahb_sdram.v`` / ``ulx3s_sdram_controller.v``
      - Attach the ULX3S and ULX4M-LS external SDR SDRAM to the processor/system memory fabric.
    * - ``ahb_litedram.v`` / generated LiteDRAM
-     - Attach ULX4M-LD DDR3 through a 50 MHz AHB to 75 MHz LiteDRAM/Wishbone clock-domain adapter.
+     - Attach ULX4M-LD DDR3 through the selected Hazard3 AHB clock (40 MHz default) to the 75 MHz LiteDRAM/Wishbone clock-domain adapter.
    * - Video/native SDRAM access
      - Allow the display pipeline to consume framebuffer data without pretending video is a CPU feature.
    * - ``apb_sao_bridge.v``

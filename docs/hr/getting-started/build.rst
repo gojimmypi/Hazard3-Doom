@@ -19,7 +19,7 @@ Kompaktni cilj ULX3S 12F, zadano 32 MiB, 40 MHz:
 
    ./scripts/build-ulx3s-12f-doom.sh
 
-ULX4M-LD 85F, 64 MiB, 50 MHz:
+ULX4M-LD 85F, softverska mapa 64 MiB, Hazard3 na 40 MHz:
 
 .. code-block:: bash
 
@@ -141,8 +141,9 @@ Na primjer, tok za 12F može koristiti:
    SWEEP_JOBS=30 ./scripts/sweep-peek-ulx3s-12f.sh --all
    SWEEP_JOBS=30 ./scripts/sweep-ulx3s-12f.sh --all
 
-Pogledajte :doc:`../reference/scripts` za pomoćne skripte za sweepove 85F, 12F i
-ULX4M-LD te lokacije rezultata.
+Pogledajte :doc:`../reference/scripts` za katalog sweep pomoćnika i
+:doc:`../reference/timing-sweeps` za GitHub Actions matricu, odabir parametara,
+live timing monitor, timeoute, artifacts i pravila reproducibilnosti.
 
 Vlasništvo nad izgradnjom
 -------------------------
