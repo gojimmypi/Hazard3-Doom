@@ -276,19 +276,21 @@ Exemple :
 
    ------------------------------------------------------------
    LIVE TIMING RESULTS
-   Timing-passing seeds: none
-   Progress: 40/260 seeds | 20/130 groups | 20/130 jobs
-   Status: PASS=0 FAIL=40 TIMEOUT=0 OTHER=0
-   Route duration: avg=192s | fastest=118s (seed 6) | slowest=279s (seed 21)
-   Best observed max MHz: sys=43.82 (seed 12) | litedram_user=71.70 (seed 10) | video=73.33 (seed 25)
-                          tmds=370.23 (seed 4) | init=369.69 (seed 2)
+   Timing-passing seeds: 16 19 49
+   Progress: 22/260 seeds | 11/130 groups | 11/130 jobs
+   Status: PASS=3 FAIL=19 TIMEOUT=0 OTHER=0
+   PASS route duration: avg=388s | fastest=254s (seed 19) | slowest=582s (seed 49)
+   Best PASS max MHz: sys=51.27 (seed 19) | video=81.07 (seed 19) | tmds=370.78 (seed 19)
    Timeout seeds: none
    Other/problem seeds: none
    ------------------------------------------------------------
 
-Les artifacts peuvent arriver dans le désordre. Les maxima ``Best observed``
-sont calculés séparément pour chaque horloge et peuvent provenir de seeds
-différents : ils ne constituent pas un PASS combiné.
+Les artifacts peuvent arriver dans le désordre. Les métriques mises en évidence
+sont volontairement limitées aux seeds ``PASS``. ``PASS route duration`` exclut
+FAIL, TIMEOUT et OTHER : un seed arrêté par le watchdog ne peut donc pas devenir
+le « slowest » route réussi. ``Best PASS max MHz`` calcule chaque maximum
+uniquement parmi les seeds qui satisfont déjà toutes les contraintes. Les lignes
+de groupe conservent les résultats FAIL et timeout comme références de diagnostic.
 
 ``summarize`` : résultat final
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

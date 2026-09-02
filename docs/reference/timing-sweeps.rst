@@ -326,12 +326,11 @@ A typical live block looks like:
 
    ------------------------------------------------------------
    LIVE TIMING RESULTS
-   Timing-passing seeds: none
-   Progress: 40/260 seeds | 20/130 groups | 20/130 jobs
-   Status: PASS=0 FAIL=40 TIMEOUT=0 OTHER=0
-   Route duration: avg=192s | fastest=118s (seed 6) | slowest=279s (seed 21)
-   Best observed max MHz: sys=43.82 (seed 12) | litedram_user=71.70 (seed 10) | video=73.33 (seed 25)
-                          tmds=370.23 (seed 4) | init=369.69 (seed 2)
+   Timing-passing seeds: 16 19 49
+   Progress: 22/260 seeds | 11/130 groups | 11/130 jobs
+   Status: PASS=3 FAIL=19 TIMEOUT=0 OTHER=0
+   PASS route duration: avg=388s | fastest=254s (seed 19) | slowest=582s (seed 49)
+   Best PASS max MHz: sys=51.27 (seed 19) | video=81.07 (seed 19) | tmds=370.78 (seed 19)
    Timeout seeds: none
    Other/problem seeds: none
    ------------------------------------------------------------
@@ -340,15 +339,17 @@ Artifact groups can arrive out of numerical order because fast jobs finish
 first. That is normal. Progress counts are therefore more useful than assuming
 seed 1 will be reported before seed 100.
 
-The ``Best observed max MHz`` fields are **per-clock maxima** and can come from
-different seeds. They do not identify a combined timing pass. Always inspect the
-``Timing-passing seeds`` list or the final per-seed summary when selecting a
-candidate.
+The live highlight metrics are deliberately restricted to ``PASS`` seeds.
+``PASS route duration`` excludes FAIL, TIMEOUT, and OTHER results, so a seed that
+runs until the watchdog cannot become the reported slowest successful route.
+``Best PASS max MHz`` likewise reports per-clock maxima only among seeds that
+already satisfy every required timing domain. The individual group lines still
+show FAIL and timeout results as useful diagnostic reference data.
 
-When a new timing pass appears, the watcher highlights it immediately rather
-than waiting for the complete sweep. Route duration statistics also make it
-easy to see whether one seed or one configuration is becoming pathologically
-slow.
+When no seed has passed yet, the watcher reports that no timing-passing samples
+are available instead of promoting a failing seed into a highlight. When a new
+PASS appears, it is highlighted immediately rather than waiting for the complete
+sweep.
 
 Summarize: authoritative final result
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

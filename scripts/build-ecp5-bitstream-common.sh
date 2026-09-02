@@ -33,9 +33,9 @@ set -euo pipefail
 #   yosys --version && nextpnr-ecp5 --version
 #   Yosys 0.67 (git sha1 2d1509d1b, Release, GNU /usr/bin/c++ 11.4.0)
 #   "nextpnr-ecp5" -- Next Generation Place and Route (Version nextpnr-0.10-95-gddc6c8c8)
-ULX3S_85F_DEFAULT_NEXTPNR_SEED=116
+ULX3S_85F_DEFAULT_NEXTPNR_SEED=11
 ULX3S_12F_DEFAULT_NEXTPNR_SEED=82
-ULX4M_LD_85F_DEFAULT_NEXTPNR_SEED=232
+ULX4M_LD_85F_DEFAULT_NEXTPNR_SEED=1
 
 BOARD_ID="${1:-}"
 shift || true

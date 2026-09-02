@@ -267,19 +267,22 @@ Primjer:
 
    ------------------------------------------------------------
    LIVE TIMING RESULTS
-   Timing-passing seeds: none
-   Progress: 40/260 seeds | 20/130 groups | 20/130 jobs
-   Status: PASS=0 FAIL=40 TIMEOUT=0 OTHER=0
-   Route duration: avg=192s | fastest=118s (seed 6) | slowest=279s (seed 21)
-   Best observed max MHz: sys=43.82 (seed 12) | litedram_user=71.70 (seed 10) | video=73.33 (seed 25)
-                          tmds=370.23 (seed 4) | init=369.69 (seed 2)
+   Timing-passing seeds: 16 19 49
+   Progress: 22/260 seeds | 11/130 groups | 11/130 jobs
+   Status: PASS=3 FAIL=19 TIMEOUT=0 OTHER=0
+   PASS route duration: avg=388s | fastest=254s (seed 19) | slowest=582s (seed 49)
+   Best PASS max MHz: sys=51.27 (seed 19) | video=81.07 (seed 19) | tmds=370.78 (seed 19)
    Timeout seeds: none
    Other/problem seeds: none
    ------------------------------------------------------------
 
 Grupe mogu stići izvan numeričkog redoslijeda jer se brži jobovi završe prvi.
-``Best observed`` vrijednosti zasebni su maksimumi za svaku domenu i mogu doći
-iz različitih seedova; same po sebi ne znače kombinirani PASS.
+Istaknute metrike namjerno koriste samo ``PASS`` seedove. ``PASS route duration``
+isključuje FAIL, TIMEOUT i OTHER rezultate, pa seed koji završi na watchdog
+limitu ne može postati najsporiji uspješni route. ``Best PASS max MHz`` računa
+maksimum svake domene samo među seedovima koji već prolaze sve obavezne timing
+ciljeve. Pojedinačni retci grupa i dalje prikazuju FAIL i timeout rezultate kao
+korisne dijagnostičke reference.
 
 ``summarize``: konačni rezultat
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

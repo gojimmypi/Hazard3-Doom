@@ -270,7 +270,7 @@ seed_frequency_metrics()
     esac
 }
 
-best_metric()
+best_pass_metric()
 {
     local array_name="$1"
     local -n metric_values="${array_name}"
@@ -278,6 +278,7 @@ best_metric()
 
     best="$(
         for seed in "${!metric_values[@]}"; do
+            [[ "${seed_status[$seed]:-}" == "PASS" ]] || continue
             value="${metric_values[$seed]}"
             if is_decimal "${value}"; then
                 printf '%s,%s\n' "${value}" "${seed}"
@@ -307,6 +308,7 @@ print_route_duration_summary()
     local min_seed="" max_seed=""
 
     for seed in "${!seed_seconds[@]}"; do
+        [[ "${seed_status[$seed]:-}" == "PASS" ]] || continue
         seconds="${seed_seconds[$seed]}"
         [[ "${seconds}" =~ ^[0-9]+$ ]] || continue
 
@@ -323,11 +325,11 @@ print_route_duration_summary()
     done
 
     if (( count == 0 )); then
-        printf 'Route duration: no numeric samples yet\n'
+        printf 'PASS route duration: no timing-passing seeds yet\n'
         return
     fi
 
-    printf 'Route duration: avg=%ss | fastest=%ss (seed %s) | slowest=%ss (seed %s)\n' \
+    printf 'PASS route duration: avg=%ss | fastest=%ss (seed %s) | slowest=%ss (seed %s)\n' \
         "$((total / count))" "${min_seconds}" "${min_seed}" \
         "${max_seconds}" "${max_seed}"
 }
@@ -336,19 +338,24 @@ print_best_frequency_summary()
 {
     local best_sys best_video best_tmds best_litedram best_init
 
-    best_sys="$(best_metric seed_clk_sys)"
-    best_video="$(best_metric seed_clk_video)"
-    best_tmds="$(best_metric seed_clk_tmds)"
+    if (( $(count_status PASS) == 0 )); then
+        printf 'Best PASS max MHz: no timing-passing seeds yet\n'
+        return
+    fi
+
+    best_sys="$(best_pass_metric seed_clk_sys)"
+    best_video="$(best_pass_metric seed_clk_video)"
+    best_tmds="$(best_pass_metric seed_clk_tmds)"
 
     if [[ "${SWEEP_TARGET}" == "ulx4m-ld-85f" ]]; then
-        best_litedram="$(best_metric seed_litedram_user)"
-        best_init="$(best_metric seed_init_clk)"
-        printf 'Best observed max MHz: sys=%s | litedram_user=%s | video=%s\n' \
+        best_litedram="$(best_pass_metric seed_litedram_user)"
+        best_init="$(best_pass_metric seed_init_clk)"
+        printf 'Best PASS max MHz: sys=%s | litedram_user=%s | video=%s\n' \
             "${best_sys}" "${best_litedram}" "${best_video}"
-        printf '                       tmds=%s | init=%s\n' \
+        printf '                   tmds=%s | init=%s\n' \
             "${best_tmds}" "${best_init}"
     else
-        printf 'Best observed max MHz: sys=%s | video=%s | tmds=%s\n' \
+        printf 'Best PASS max MHz: sys=%s | video=%s | tmds=%s\n' \
             "${best_sys}" "${best_video}" "${best_tmds}"
     fi
 }
@@ -437,7 +444,7 @@ ulx3s-12f)
     printf 'Timing targets: sys=40.00 MHz | video=50.00 MHz | tmds=250.00 MHz\n'
     ;;
 ulx4m-ld-85f)
-    printf 'Timing targets: sys=%s.00 MHz | litedram_user=75.01 MHz | video=50.00 MHz | tmds=250.00 MHz | init=25.00 MHz\n' \
+    printf 'Timing targets: sys=%s.00 MHz | litedram_user=60.01 MHz | video=50.00 MHz | tmds=250.00 MHz | init=25.00 MHz\n' \
         "${HAZARD3_ULX4M_SYS_CLK_MHZ:-40}"
     ;;
 esac

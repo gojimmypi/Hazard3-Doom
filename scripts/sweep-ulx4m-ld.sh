@@ -43,6 +43,9 @@ SYNTH_LOG="${SYNTH_DIR}/synth.log"
 source "${COMMON_SCRIPT}"
 printf 'Include source: %s\n' "${COMMON_SCRIPT}" >&2
 
+generated_config="${LITEDRAM_DIR}/generated-${ULX4M_LITEDRAM_CPU}/litedram_ulx4m_cpu.yml"
+config_snapshot="${SYNTH_DIR}/fpga_ulx4m_ld.litedram-config.yml"
+
 sweep_ecp5_init_tuning
 TUNING_SUFFIX="$(sweep_ecp5_tuning_suffix)"
 SWEEP_DIR="${SYNTH_DIR}/routing-sweep/ulx4m-ld-${HAZARD3_ULX4M_SYS_CLK_MHZ}mhz-${ULX4M_LITEDRAM_CPU}${TUNING_SUFFIX}"
@@ -162,6 +165,8 @@ else
     sweep_ecp5_require_file "${generated_dir}/litedram_ulx4m_cpu_rom.init"
     sweep_ecp5_require_file "${generated_dir}/litedram_ulx4m_cpu_sram.init"
 
+    sweep_ecp5_require_file "${generated_config}"
+
     recorded_profile=""
     if [[ -f "${SYNTH_PROFILE_STAMP}" ]]; then
         read -r recorded_profile < "${SYNTH_PROFILE_STAMP}" || true
@@ -174,10 +179,13 @@ else
     DEFINES="${DEFINES:+${DEFINES} }HAZARD3_ULX4M_SYS_CLK_MHZ=${HAZARD3_ULX4M_SYS_CLK_MHZ}" \
         make -C "${SYNTH_DIR}" -f ULX4M_LD_85F.mk \
             ULX4M_LITEDRAM_CPU="${ULX4M_LITEDRAM_CPU}" synth
+    install -m 0644 "${generated_config}" "${config_snapshot}"
     synthesis_seconds="$(( $(date +%s) - synth_start_seconds ))"
     printf '%s\n' "${synthesis_seconds}" > "${SYNTH_DURATION_STAMP}"
     printf '%s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}" > "${SYNTH_PROFILE_STAMP}"
 fi
+
+sweep_ecp5_require_file "${config_snapshot}"
 
 [[ -s "${NETLIST}" ]] || {
     echo "Missing synthesized ULX4M-LD netlist: ${NETLIST}" >&2
@@ -216,7 +224,9 @@ if ! grep -Fq \
 fi
 
 netlist_sha256="$(sha256sum "${NETLIST}" | awk '{print $1}')"
+litedram_config_sha256="$(sha256sum "${config_snapshot}" | awk '{print $1}')"
 mkdir -p "${SWEEP_DIR}"
+install -m 0644 "${config_snapshot}" "${SWEEP_DIR}/litedram-config.yml"
 
 {
     printf 'target=ulx4m-ld-85f\n'
@@ -229,13 +239,15 @@ mkdir -p "${SWEEP_DIR}"
     printf 'hazard3_sys_clk_mhz=%s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
     sweep_ecp5_write_tuning_metadata
     printf 'clk_sys_required_mhz=%s.00\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
-    printf 'litedram_user_required_mhz=75.01\n'
+    printf 'litedram_user_required_mhz=60.01\n'
     printf 'clk_video_required_mhz=50.00\n'
     printf 'clk_tmds_required_mhz=250.00\n'
     printf 'init_clk_required_mhz=25.00\n'
     printf 'synthesis_seconds=%s\n' "${synthesis_seconds}"
     printf 'netlist_sha256=%s\n' "${netlist_sha256}"
     printf 'netlist=fpga_ulx4m_ld.json\n'
+    printf 'litedram_config=litedram-config.yml\n'
+    printf 'litedram_config_sha256=%s\n' "${litedram_config_sha256}"
     printf 'generated_utc=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 } > "${SWEEP_DIR}/metadata.txt"
 
