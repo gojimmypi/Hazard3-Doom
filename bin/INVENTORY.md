@@ -10,9 +10,9 @@ the bytes in a file; it does not by itself establish provenance or intent.
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 21
+Files inventoried: 26
 
-Total bytes: 37190446
+Total bytes: 39642930
 
 ## Verification
 
@@ -25,8 +25,13 @@ should be identified before a public release.
 
 | Path | Bytes | SHA-256 | Component | Kind |
 |---|---:|---|---|---|
-| `README.md` | 4058 | `4565917669e20f054f73f2a4c200b2c3e0fcbb15fa139fcd9d7762477928a555` | REVIEW | Markdown documentation |
+| `README.md` | 5669 | `cb2d16bb30fc9ca8de040c2a7446836a186800e8197d7bf3964ca8db4e0d5170` | REVIEW | Markdown documentation |
+| `dfu-prefix.exe` | 178765 | `96f1d24e00d1772e2c2721e100d86da4f7489af82fef1481819705bd0636d42e` | REVIEW | Windows executable |
+| `dfu-suffix.exe` | 179276 | `22946fa4cea2fd1396d5716af43b40e89e0096245135ae8080a09309880e4f0c` | REVIEW | Windows executable |
+| `dfu-util-static.exe` | 799602 | `1f4687d0f11f0eede72d582fb5174537d5820de515862a8041ac9506b4a6fa1e` | REVIEW | Windows executable |
+| `dfu-util.exe` | 290852 | `e27acab246d0c806033110bfd4330709bc3f0dbebc6440baada667f94fa54839` | REVIEW | Windows executable |
 | `fpga_ulx3s_hdmi_doom.bit` | 866114 | `7c5cb73e940cdb1a1d885fbfef7d17232486ada85eecb5f9221e5d7b68db5cf2` | Hazard3-Doom project output | FPGA bitstream |
+| `fpga_ulx4m_ld_hdmi_doom.bit` | 1002378 | `294602982dfc4a9906961f2e8b6f43de925d8c11a7e5e6bb0f5e392965a868de` | Hazard3-Doom project output | FPGA bitstream |
 | `fujprog-v48-win64.exe` | 212992 | `376be3f349c5cac35496f6cb8eaf75867e7f1ab3d8ecf7e5ddb43040eec272d5` | fujprog | Windows executable |
 | `gdb/README.md` | 217 | `2b83faba2c959cf9cc8180176279792e1185723f120bbfaeb54d9689eeb58f47` | xPack GNU RISC-V Embedded GCC/GDB runtime | Markdown documentation |
 | `gdb/libgcc_s_seh-1.dll` | 184227 | `61252331a388c1092649b561555f815e3a93175f8c33f819f6e09a1f0e3039c7` | xPack GNU RISC-V Embedded GCC/GDB runtime | Windows DLL |
