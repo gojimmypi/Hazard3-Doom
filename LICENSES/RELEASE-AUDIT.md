@@ -31,6 +31,11 @@ Before publishing a Hazard3-Doom release:
   exceptions.
 - For an xPack OpenOCD binary, preserve the exact archive's
   `distro-info/licenses` content instead of reconstructing it from memory.
+- For bundled dfu-util executables, pin the exact release/source revision and
+  preserve the matching GPL materials and corresponding source. Audit the
+  dynamically linked and static Windows builds separately; do not assume the
+  dependency/source obligations for `dfu-util.exe` and `dfu-util-static.exe`
+  are identical.
 - Review the WebUSB flasher provenance described in
   `Web-Flasher-Provenance-NOTICE.md`; preserve exact upstream notices for any
   copied or closely translated implementation material.

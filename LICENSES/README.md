@@ -41,6 +41,8 @@ build dependencies, so they receive explicit release notices.
 | File | Component/use |
 |---|---|
 | `BSD-2-Clause-fujprog-reference.txt` | fujprog BSD-2 reference; exact revision LICENSE still required |
+| `dfu-util-COPYING.txt` | Upstream GNU GPL version 2 text distributed with dfu-util |
+| `dfu-util-NOTICE.md` | dfu-util Windows utilities, attribution, GPL source obligations, and version-pinning requirement |
 | `fujprog-NOTICE.md` | fujprog/ujprog credits and version-pinning requirement |
 | `openFPGALoader-NOTICE.md` | openFPGALoader Apache-2.0 binary notice |
 | `OpenOCD-xPack-NOTICE.md` | OpenOCD GPL and xPack distribution notice |

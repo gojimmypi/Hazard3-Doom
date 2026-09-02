@@ -42,6 +42,9 @@ In particular:
 - Hazard3 upstream material remains subject to its applicable Apache-2.0 terms.
 - Doom and DoomGeneric source and derivative material remain subject to their
   applicable GPL terms.
+- dfu-util convenience binaries in `bin/` remain subject to the applicable
+  GNU GPL terms identified by the exact upstream release; see
+  `LICENSES/dfu-util-NOTICE.md` and `LICENSES/dfu-util-COPYING.txt`.
 - Other third-party source, binaries, libraries, benchmarks, tools, and assets
   remain subject to their respective upstream licenses.
 

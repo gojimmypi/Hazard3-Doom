@@ -1,0 +1,56 @@
+# Hazard3-Doom Inventory
+
+This manifest identifies every Git-tracked file under `LICENSES/`,
+except the generated `INVENTORY.*` manifest files themselves.
+Ignored and untracked local files are intentionally not inventoried.
+
+It is intended to support integrity verification, reproducibility, release
+auditing, and exact identification of tracked artifacts. A hash identifies
+the bytes in a file; it does not by itself establish provenance or intent.
+
+Git source: current index (`git ls-files --cached`)
+
+Files inventoried: 29
+
+Total bytes: 169412
+
+## Verification
+
+```bash
+(cd LICENSES && sha256sum -c INVENTORY.sha256)
+```
+
+The `component` column is an identification aid. Any entry marked `REVIEW`
+should be identified before a public release.
+
+| Path | Bytes | SHA-256 | Component | Kind |
+|---|---:|---|---|---|
+| `Apache-2.0.txt` | 11358 | `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30` | REVIEW | File |
+| `BSD-2-Clause-fujprog-reference.txt` | 1764 | `f376565b6ad1e309e18bd667050df66f438430d1aad5e32cdabd05ee4a2026f6` | REVIEW | File |
+| `BSD-3-Clause-i2cdriver.txt` | 1519 | `11fdd93616341093175bc93c39dc72a6bbf8a3117d0d70f75c613564feaaf046` | REVIEW | File |
+| `BUNDLED-BINARIES-MANIFEST.md` | 2988 | `9e47ea971329c15f3d1a743a51f1696468b3e339e58bb128c67e76cb856f2c18` | REVIEW | Markdown documentation |
+| `CC0-1.0.txt` | 7048 | `a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499` | REVIEW | File |
+| `CERN-OHL-W-2.0.txt` | 14539 | `4b6a7717ef4fcd145eabb577de44d84ffdc893532177b67479dad42f6c4e355e` | REVIEW | File |
+| `CoreMark-NOTICE.md` | 1006 | `a5d6b996b1e16523b361b9d3c72f7a179a65d9eb1c6e73aa341ff90b567446cd` | REVIEW | Markdown documentation |
+| `DOOM-DoomGeneric-NOTICE.md` | 977 | `6231c9a1482878484ae97e37cada2dcab35d4e0aa20cf91e93d3479f28f18ce2` | REVIEW | Markdown documentation |
+| `GPL-2.0.txt` | 17984 | `edaef632cbb643e4e7a221717a6c441a4c1a7c918e6e4d56debc3d8739b233f6` | REVIEW | File |
+| `GPL-3.0.txt` | 35149 | `3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986` | REVIEW | File |
+| `Hazard3-NOTICE.md` | 939 | `ff003c246f71b0619fdbfa44fc6d8ca2f91f7ce4a6cc8e7deb3d9ae2e8c4559c` | REVIEW | Markdown documentation |
+| `I2CDriver-NOTICE.md` | 709 | `cd5821c1d309a997e53f7fce153060ef07d85d8120f8bffb57a9037f4c793c65` | REVIEW | Markdown documentation |
+| `LGPL-2.1.txt` | 26419 | `20e50fe7aae3e56378ebf0417d9de904f55a0e61e4df315333e632a4d3555d95` | REVIEW | File |
+| `LGPL-3.0.txt` | 7652 | `e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118` | REVIEW | File |
+| `MIT-PuTTY-reference.txt` | 1240 | `2810d0bb0a30aa99972401fd13c867da5e3da3186c2b28ab645969c43319fd2a` | REVIEW | File |
+| `Nested-Upstream-NOTICE.md` | 756 | `cb0971c215ad740d9c86d971918f74a195285e3b0fabfd51503730213b115acb` | REVIEW | Markdown documentation |
+| `OpenOCD-xPack-NOTICE.md` | 977 | `911ccde75f369b49a1a7d2ab0cbb80190215633f1415e52d76f4c58c42776553` | REVIEW | Markdown documentation |
+| `PuTTY-NOTICE.md` | 1133 | `67c1e7e88565ae57629b30594dff2e89dc4ceb952a710657d5c8fb4ffd967885` | REVIEW | Markdown documentation |
+| `README.md` | 3903 | `5991f1995bdfbd85a8318402392568eaa695daebc53a2e89b9f3922f0645336b` | REVIEW | Markdown documentation |
+| `RELEASE-AUDIT.md` | 3468 | `542f6a46bc591e134dbe74fff7921244d6e1bdb9bf4e105782be5837059afec2` | REVIEW | Markdown documentation |
+| `RISC-V-GNU-Toolchain-NOTICE.md` | 1441 | `7f73a56d6c9e8176f65b017e28bade862d50529fcca94dbcbe6b3dea53aa1acc` | REVIEW | Markdown documentation |
+| `Web-Flasher-Provenance-NOTICE.md` | 1539 | `e55c5b93ad9b411ac3d41fce67204da4c61655c3f8e2caf5ae28b21149159ab4` | REVIEW | Markdown documentation |
+| `Zadig-libwdi-NOTICE.md` | 1005 | `e262c18f0cdb0cb1c529b59d8ad4d8595c0e236fcd24278a2ad24f3fb761fce1` | REVIEW | Markdown documentation |
+| `dfu-util-COPYING.txt` | 17992 | `32b1062f7da84967e7019d01ab805935caa7ab7321a7ced0e30ebe75e5df1670` | REVIEW | File |
+| `dfu-util-NOTICE.md` | 2319 | `1722dc70c3fc65e021336c60e2398bf18df90d3a8cc367619c4704e48a5b0afc` | REVIEW | Markdown documentation |
+| `fujprog-NOTICE.md` | 1115 | `0c56ac6221fd89deb16ac158ee21171793b2072ec320a247a5729a1d4537d2f9` | REVIEW | Markdown documentation |
+| `libftdi1-NOTICE.md` | 871 | `817dc69a35870e1f98f7fc431f7097ec65c19bbbde88f8a8078092964bdfeeab` | REVIEW | Markdown documentation |
+| `libusb-NOTICE.md` | 835 | `cd451448027475e322fd8ffe242fc0eeddfece37d97bd49d2fb6764d4445b2c4` | REVIEW | Markdown documentation |
+| `openFPGALoader-NOTICE.md` | 767 | `58740ca72bda18d3ad7211f2050f7181314238da6bb822c3aaf40e36b8c8818f` | REVIEW | Markdown documentation |

@@ -1,12 +1,16 @@
 # Bundled Windows binary licensing manifest
 
 This manifest is based on the current Hazard3-Doom `bin/README.md` material
-available during the 2026-08-22 review. It is a release checklist, not a claim
+available during the 2026-09-02 review. It is a release checklist, not a claim
 that all exact binary versions have been identified.
 
 | Redistributed item | Upstream/license family | Current audit state |
 |---|---|---|
 | `fujprog-v48-win64.exe` | fujprog / BSD-2-Clause | Version label known; exact source commit and SHA-256 must be pinned |
+| `dfu-prefix.exe` | dfu-util / GPL-2.0-or-later | Exact dfu-util version/source archive, SHA-256, matching `COPYING`, and corresponding source required |
+| `dfu-suffix.exe` | dfu-util / GPL-2.0-or-later | Exact dfu-util version/source archive, SHA-256, matching `COPYING`, and corresponding source required |
+| `dfu-util.exe` | dfu-util / GPL-2.0-or-later; dynamically packaged dependencies must also be audited | Exact dfu-util binary package, SHA-256, corresponding source, and dependency notices/source required |
+| `dfu-util-static.exe` | dfu-util / GPL-2.0-or-later; statically incorporated dependency licenses may also apply | Exact dfu-util binary package/build, SHA-256, corresponding source, and static dependency compliance required |
 | `openFPGALoader.exe` | openFPGALoader / Apache-2.0 | Exact version, SHA-256, and packaged dependency notices required |
 | `openocd.exe` | OpenOCD / GPL-2.0-or-later; observed xPack packaging | Exact xPack archive/version, complete `distro-info/licenses`, SHA-256, and source compliance required |
 | `putty.exe` | PuTTY / MIT | Exact version, SHA-256, and matching `LICENCE` required |

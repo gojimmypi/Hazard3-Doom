@@ -272,6 +272,24 @@ fujprog also directly informed Hazard3-Doom's FT231X WebUSB JTAG behavior; see
 
 https://github.com/trabucayre/openFPGALoader
 
+### dfu-util
+
+- Weston Schmidt and Harald Welte - original dfu-util authors for the OpenMoko
+  project, as credited by upstream documentation.
+- OpenMoko, Inc. - copyright holder identified in portions of the upstream
+  source.
+- Tormod Volden and Stefan Schmidt - long-time dfu-util maintainers and
+  developers.
+- All other dfu-util contributors and packagers represented by the exact
+  upstream release/source history used for the bundled Windows utilities.
+
+https://dfu-util.sourceforge.net/
+https://sourceforge.net/projects/dfu-util/
+
+Hazard3-Doom redistributes `dfu-prefix.exe`, `dfu-suffix.exe`, `dfu-util.exe`,
+and `dfu-util-static.exe`; see `LICENSES/dfu-util-NOTICE.md` and the preserved
+upstream GPL text in `LICENSES/dfu-util-COPYING.txt`.
+
 ### OpenOCD and xPack OpenOCD
 
 - The OpenOCD project, maintainers, driver/target authors, reviewers, and users.
