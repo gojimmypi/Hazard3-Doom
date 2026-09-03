@@ -7,6 +7,7 @@ Korisnički vodič
    monitor
    web-serial
    web-flasher
+   bootloader
    doom
    sd-card
    sao

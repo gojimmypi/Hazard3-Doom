@@ -47,6 +47,14 @@ ULX4M-LD uses its Micro-B USB DFU bootloader for FPGA image storage. Windows
 normally sees the DFU device as VID:PID ``1d50:614b`` with WinUSB. This USB
 connection is separate from the external Tigard JTAG/UART debug adapter.
 
+.. important::
+
+   Normal Hazard3-Doom programming updates the **user bitstream**, not the DFU
+   bootloader itself. Replacing the bootloader is highly unusual and should be
+   reserved for bootloader development or recovery of a missing/corrupted
+   bootloader. See :doc:`../user-guide/bootloader` for the separate bootloader
+   operation and recovery procedure.
+
 To enter the established DFU recovery/programming mode:
 
 #. Remove power.
