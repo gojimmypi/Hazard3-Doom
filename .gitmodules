@@ -34,8 +34,13 @@
 # Confirm the Hazard3 and libfpga revisions:
 #
 # git -C third_party/Hazard3 log -1 --oneline
+#
+# Currently: ea7e3d0 (HEAD) Merge pull request #8 from gojimmypi/ulx-doom-dev
+#
 # git -C third_party/Hazard3 rev-parse HEAD:example_soc/libfpga
 # git -C third_party/Hazard3/example_soc/libfpga rev-parse HEAD
+#
+# Currently: 2c430246892d52c41c610bfdb2afc88992986e00
 #
 # Confirm all nested submodules match their recorded gitlinks:
 #
