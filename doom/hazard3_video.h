@@ -60,8 +60,52 @@
 #define HAZARD3_MEMORY_CORE_BUILD_ID_ULX3S       0x53445235u
 #define HAZARD3_MEMORY_ADAPTER_BUILD_ID_ULX3S    0x41485335u
 #define HAZARD3_FIRMWARE_BUILD_ID                0x48335235u
+
+/* Begin Build Info */
+#define HAZARD3_STRINGIFY_INNER(value) #value
+#define HAZARD3_STRINGIFY(value) HAZARD3_STRINGIFY_INNER(value)
+
+#ifndef HAZARD3_FIRMWARE_MEMORY_PROFILE
+    #ifdef HAZARD3_SDRAM_32MB
+        #define HAZARD3_FIRMWARE_MEMORY_PROFILE "32m"
+    #else
+        #define HAZARD3_FIRMWARE_MEMORY_PROFILE "64m"
+    #endif
+#endif /* HAZARD3_FIRMWARE_MEMORY_PROFILE */
+
+#ifndef HAZARD3_FIRMWARE_SYS_CLK_NAME
+    #ifdef HAZARD3_FIRMWARE_SYS_CLK_MHZ
+        #define HAZARD3_FIRMWARE_SYS_CLK_NAME \
+                HAZARD3_STRINGIFY(HAZARD3_FIRMWARE_SYS_CLK_MHZ) "MHz"
+    #elif defined(HAZARD3_SYS_CLK_HZ)
+        #if HAZARD3_SYS_CLK_HZ == 25000000u
+            #define HAZARD3_FIRMWARE_SYS_CLK_NAME "25MHz"
+            #elif HAZARD3_SYS_CLK_HZ == 40000000u
+            #define HAZARD3_FIRMWARE_SYS_CLK_NAME "40MHz"
+            #elif HAZARD3_SYS_CLK_HZ == 50000000u
+            #define HAZARD3_FIRMWARE_SYS_CLK_NAME "50MHz"
+            #elif HAZARD3_SYS_CLK_HZ == 60000000u
+            #define HAZARD3_FIRMWARE_SYS_CLK_NAME "60MHz"
+            #elif HAZARD3_SYS_CLK_HZ == 75000000u
+            #define HAZARD3_FIRMWARE_SYS_CLK_NAME "75MHz"
+        #else
+            #define HAZARD3_FIRMWARE_SYS_CLK_NAME "clock-custom"
+        #endif /* HAZARD3_SYS_CLK_HZ */
+    #else
+        #define HAZARD3_FIRMWARE_SYS_CLK_NAME "clock-unknown"
+    #endif /* HAZARD3_FIRMWARE_SYS_CLK_MHZ */
+#endif /* HAZARD3_FIRMWARE_SYS_CLK_NAME */
+
+#ifndef HAZARD3_FIRMWARE_BUILD_DATE
+    #define HAZARD3_FIRMWARE_BUILD_DATE __DATE__
+#endif
+
 #define HAZARD3_FIRMWARE_BUILD_NAME \
-    "H3-DoomPerformance-R5-20260716"
+    "ULX-Doom-Console-0.2.0-" \
+    HAZARD3_FIRMWARE_MEMORY_PROFILE "-" \
+    HAZARD3_FIRMWARE_SYS_CLK_NAME "-" \
+    HAZARD3_FIRMWARE_BUILD_DATE
+/* End Build Info */
 
 #define HAZARD3_DDR_STATUS_INIT_DONE          (1u << 0)
 #define HAZARD3_DDR_STATUS_INIT_ERROR         (1u << 1)
