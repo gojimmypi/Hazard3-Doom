@@ -149,7 +149,7 @@ The project configuration is:
 
 The important configuration values are equivalent to:
 
-.. code-block:: tcl
+.. code-block:: text
 
    adapter driver ftdi
    ftdi vid_pid 0x0403 0x6010
