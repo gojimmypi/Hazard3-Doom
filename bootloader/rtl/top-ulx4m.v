@@ -48,7 +48,7 @@
 
 `default_nettype none
 
-module top 
+module top
 #(
 	parameter serial_debug = 0 // 0:ESP32 passthru, 1:RISC-V CPU debug console
 )
@@ -61,10 +61,10 @@ module top
 
 	// Buttons
 	input  wire [6:0] btn,
-	
+
 	// DIP switches
 	input  wire sw,
-	
+
 	// Debug or esp32 passthru UART
 	input  wire ftdi_txd,
 	output wire ftdi_rxd,
@@ -181,7 +181,7 @@ module top
 	wire boot_uart_rxd = serial_debug ? ftdi_txd : 1;
 	wire pass_uart_txd, boot_uart_txd;
 	assign ftdi_rxd = serial_debug ? boot_uart_txd : pass_uart_txd;
-	
+
 	// this is not needed for bootloader but it's
 	// good for user convenience to access and
 	// flash ESP32 over US1.
@@ -301,20 +301,57 @@ module top
 		.clk(clk_48m)
 	);
 
-	// BTN remapper (after debouncer in soc_had_misc)
+// Emergency recovery modes.
+//
+// EMERGENCY_RESTORE1 forces "stay in DFU" without requiring a button.
+// The bootloader remains protected; DFU alt setting 5 is not exposed.
+// Use this mode when physical button input is unavailable or unverified.
+//
+// EMERGENCY_RESTORE2 forces both "stay in DFU" and bootloader-upgrade mode.
+// This exposes DFU alt setting 5 (0x000000-0x1FFFFF), allowing the
+// bootloader region itself to be read or rewritten.
+//
+// In either emergency mode, a user bitstream can be started with:
+//     dfu-util -a 0 -e
+`ifdef EMERGENCY_RESTORE1
+	// bit 6: force stay in DFU; bootloader write access remains disabled
+	assign btn_remap_i = ~8'b01000000;
+`elif EMERGENCY_RESTORE2
+	// bit 7: bootloader upgrade/write-enable
+	// bit 6: stay in DFU
+    assign btn_remap_i = ~8'b11000000;
+`else
+	// Normal button-controlled operation.
+	//
+	// btn_remap_o contains the debounced physical inputs from soc_had_misc.
+	// Rearrange them into the logical button bits expected by the RISC-V
+	// bootloader firmware. The entire vector is inverted here because the
+	// firmware inverts the button register again when it reads it.
+	//
+	// PCB button labels are one-based; Verilog btn[] indices are zero-based.
+	// PCB BTN1 = btn[0], PCB BTN2 = btn[1], PCB BTN3 = btn[2].
+	// PCB BTN3          -> stay in normal DFU
+	// PCB BTN2 + BTN3   -> stay in DFU and expose alt 5 for bootloader access
+	// PCB BTN2 alone    -> upgrade/write-enable asserted, but does not by itself keep DFU active
 	assign btn_remap_i = ~ // invert all, RISC-V FW inverts it back
 	{
-	  btn_remap_o[2]   , // BTN2 hold and plug USB to write protect flash and upgrade bootloader
-	  btn_remap_o[1]   , // BTN1 hold and plug USB to stay in bootloader
-//	| btn_remap_o[7]   , // DIP SW1=ON is the same as BTN1 hold
-	  btn_remap_o[6:3] , // reserved
-	  1'b0             , // disabled
-	 ~btn_remap_o[0]     // BTN0 reserved, (BTN0 has inverted logic on ULX3S)
+      // Maps as:
+	  // btn_remap_i bit before outer ~
+	  // --------------------------------
+	  // [7]  btn_remap_o[1]
+	  // [6]  btn_remap_o[2]
+	  // [5:2] btn_remap_o[6:3]
+	  // [1]  1'b0
+	  // [0] ~btn_remap_o[0]
+
+	  btn_remap_o[1]   , // PCB BTN2 / btn[1]: enable bootloader upgrade/write access
+	  btn_remap_o[2]   , // PCB BTN3 / btn[2]: stay in DFU during startup
+	  btn_remap_o[6:3] , // Reserved inputs
+//	| btn_remap_o[7]   , // Optional legacy DIP SW1 alias; disabled on ULX4M-LD
+	  1'b0             , // Disabled input
+	 ~btn_remap_o[0]     // PCB BTN1 / btn[0]: reserved; ULX3S uses inverted polarity
 	};
-	// For buttonless boards use this remapper
-	// and execute user bistream with
-	// dfu-util -a 0 -e
-	//assign btn_remap_i = ~8'b01000000;
+`endif
 
 	// Peripheral [0] : Misc
 	soc_had_misc had_misc_I (
