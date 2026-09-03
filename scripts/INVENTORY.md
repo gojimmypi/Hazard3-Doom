@@ -12,7 +12,7 @@ Git source: current index (`git ls-files --cached`)
 
 Files inventoried: 60
 
-Total bytes: 364864
+Total bytes: 379249
 
 ## Verification
 
@@ -25,23 +25,23 @@ should be identified before a public release.
 
 | Path | Bytes | SHA-256 | Component | Kind |
 |---|---:|---|---|---|
-| `README.md` | 16262 | `c369dd7532a397e8b361379b63bea6fa2914d81dc7664360439f411ffb645c20` | REVIEW | Markdown documentation |
+| `README.md` | 16847 | `9fee95cb38266f2c11f83ba0d03cffe22e14d5d2752ff34d946d85201b0a998b` | REVIEW | Markdown documentation |
 | `apply-doom-noncombat.py` | 6775 | `3a8062684727b572d903c3a53ef729d64438b6f3c2bdfdd5c426bfe5bec08658` | REVIEW | File |
 | `build-coremark.sh` | 6863 | `1b0b1d8c4fef1968a7bc37ef151a9c2d0453fc6cd95b75c48d85141a6b41e94f` | REVIEW | Shell script |
 | `build-doom-noncombat.sh` | 3665 | `09c019946631358bcbea10f44e9e42fbd0d99186399c7f481ca9ae002a03bfb3` | REVIEW | Shell script |
-| `build-ecp5-bitstream-common.sh` | 22082 | `049a7a34176f4ae86873b2f15811d55b72fa9fbd699b1151577f47a21192baec` | REVIEW | Shell script |
+| `build-ecp5-bitstream-common.sh` | 25890 | `8cb8fbe2b02ddc7dfdf029eb99e80e9ac86b1dc358cc85c0fd7a036a8d968975` | REVIEW | Shell script |
 | `build-supercon10-wad.py` | 6988 | `9d69e095203df153dad20f839f8ce049ef62b4433521f4c1804938043c751da6` | REVIEW | File |
 | `build-ulx3s-12f-bitstream.sh` | 1406 | `973f5543461e945f3b2676727bd7b86a3d2eddc76d959e3b72a66e4ae26425a1` | REVIEW | Shell script |
-| `build-ulx3s-12f-doom.sh` | 4280 | `afbc0e9c6607f1258a89dfff2e474557bbc3d584944858c89016e6e8d4fbf250` | REVIEW | Shell script |
+| `build-ulx3s-12f-doom.sh` | 4419 | `1ef12eb12143b2a1e74e537ba6423979e820fb0c3870f8f8a84397dba6220ff5` | REVIEW | Shell script |
 | `build-ulx3s-12f-sweep_summary.md` | 6907 | `47d381b6ff8de3c8b789f73b297cdfffa3151ce896b26d008b5384673c55ce17` | REVIEW | Markdown documentation |
 | `build-ulx3s-85f-bitstream.sh` | 1333 | `01edce7bd19ecb5bbbe1a620f7f2f1c2900898a6a197720859c1612e7e787c35` | REVIEW | Shell script |
-| `build-ulx3s-85f-sweep_summary.md` | 6 | `7211b718d5f60410d3588b9255f65427f605fd95414a87a5d9dfc0374382852d` | REVIEW | Markdown documentation |
-| `build-ulx3s-doom.sh` | 5057 | `8b8feec52c645ff566e4bd456ee3523419660405f0d1407c42083d8443d9513c` | REVIEW | Shell script |
+| `build-ulx3s-85f-sweep_summary.md` | 6634 | `63f2e53f72d7f80c4772291c289bcc954163c0f90f3fdf660f1ec44cfe8f9ee1` | REVIEW | Markdown documentation |
+| `build-ulx3s-doom.sh` | 5095 | `f183ef200391dbc3ede0dfa193d78b979f4983cb8ed2abcb5cc6955ab8219d42` | REVIEW | Shell script |
 | `build-ulx4m-ld-bitstream.sh` | 1339 | `61e431dee6e42b9d2b53f8dfdc77330d0f8040057625ab6cb89a65f9b3d3ebaf` | REVIEW | Shell script |
-| `build-ulx4m-ld-doom.sh` | 5168 | `4f9f770073fb5139713d4c3edee21100fb078b619ea15cc24974d2866599341c` | REVIEW | Shell script |
+| `build-ulx4m-ld-doom.sh` | 5308 | `116b2089336f8ba74257be983d4109da4a515cfccbf6648985c8c69be19002c9` | REVIEW | Shell script |
 | `build-ulx4m-ld-sweep_summary.md` | 6 | `7211b718d5f60410d3588b9255f65427f605fd95414a87a5d9dfc0374382852d` | REVIEW | Markdown documentation |
 | `build-xpack.cmd` | 8584 | `0a2d251b7be9091b726996ecbbd1e5481ef2ec97c564eef7ce6b7e0be723bf26` | REVIEW | File |
-| `build.sh` | 4569 | `c85e73d6ff5f6470e3cf981d31e945b701da1c0be8da9506e576e5dc6e96a119` | REVIEW | Shell script |
+| `build.sh` | 4966 | `3f84a7355aac5341dc1a45f8bbcfe19be8ef1aaf1374234cfa0f681b989fe746` | REVIEW | Shell script |
 | `check-executable.sh` | 2470 | `a3d07e40e81a7c9b4342682555ed0c33a96bad78bb0ae3508ee244b32c6f4d8a` | REVIEW | Shell script |
 | `check-nettype.sh` | 4075 | `393632ec9b9cd94a2e2fc87c3a956c8aade504d34865093fa97694f2d59fd6f3` | REVIEW | Shell script |
 | `check-windows-visualgdb.ps1` | 8640 | `ff4326dbf7d9e4399b46dd8e981476a3ed3e6ce489eadeb239ae77c0f2b93d28` | REVIEW | File |
@@ -75,13 +75,13 @@ should be identified before a public release.
 | `start-openocd.bat` | 1621 | `47722eea263b1857c2ed8537927e3a047f6ba53d14baf2fcaefd655b56dccacd` | REVIEW | File |
 | `start-openocd.sh` | 2243 | `983161518bbf7754667d2702236213f54a6edc8095b1e02647bc8c0250b11286` | REVIEW | Shell script |
 | `summarize-ecp5-sweep.py` | 11880 | `1c9764208c376f0795c4ec68d84d19bb16fac4a2296cf5c062d1543d740edf75` | REVIEW | File |
-| `sweep-ecp5-common.sh` | 9990 | `0e72a076275f24c1dcb22a14b3b8d4de782d35b2a40ded954262d43d06fc013f` | REVIEW | Shell script |
+| `sweep-ecp5-common.sh` | 10072 | `f7893c9f215d0013a726e893ecbce06de247cfaeafdca759414a3f20aae2caca` | REVIEW | Shell script |
 | `sweep-ecp5.sh` | 3593 | `f2261df83a7abf39b7681020cd02f4a681fac5e3152aacf8ef93862a25e38aae` | REVIEW | Shell script |
 | `sweep-peek-ulx3s-12f-best-peek.sh` | 1693 | `d64946c8f5aa8f9c4947007c13ba5ff7ed49d3d15db896ede13ea263fbe2c81b` | REVIEW | Shell script |
 | `sweep-peek-ulx3s-12f.sh` | 11428 | `a32b77d454b386d99d90bd690ac9f378f9ccb964ef679a93406f930d6867d6d2` | REVIEW | Shell script |
 | `sweep-peek.sh` | 7566 | `9554299b58b10dce0612e689235c848243165d392a2dec057a8efe85d4882b4b` | REVIEW | Shell script |
-| `sweep-ulx3s-12f.sh` | 13629 | `eed9bdfeb5296c0d72dafb318933cd10236ba280d52aaca852d5dbeb814eee96` | REVIEW | Shell script |
-| `sweep-ulx3s-85f.sh` | 12577 | `e882e7ce6ffc23db8793870da68c582840351bac67761b8ae7f1626944ab7910` | REVIEW | Shell script |
-| `sweep-ulx4m-ld.sh` | 14618 | `df12b7e9204650298608afc4181ce066b2f6b51a1129df1ef9ae832f1b5d88d4` | REVIEW | Shell script |
+| `sweep-ulx3s-12f.sh` | 13744 | `5fc05372b7f283b406197eff1d82d6f8ba8bed8144d4e153b94bcc42c93f14a0` | REVIEW | Shell script |
+| `sweep-ulx3s-85f.sh` | 12734 | `7d1875c1c0da4836e5ccdafcd28b95324071ef35cd8b1ef4d570138adab29bcf` | REVIEW | Shell script |
+| `sweep-ulx4m-ld.sh` | 16200 | `6c42a1fa63e6384293c95ea7e8b90ace6aa2d23f55dc05ea4d082249330c68f2` | REVIEW | Shell script |
 | `sweep.sh` | 775 | `73dfc7d13c2d77e1ccc5e6ce72856621c639e27c01d88e13bfc4225dcb1f3895` | REVIEW | Shell script |
-| `watch-ecp5-sweep-results.sh` | 17485 | `81f623179c0ed0d69b1372ad0d99a97fe22c30cffb45efffde49e5194b105338` | REVIEW | Shell script |
+| `watch-ecp5-sweep-results.sh` | 18199 | `4d7b1bd134af275ad36d608811c64b9b2bf4ee201ee419d677bdf0b8b886536d` | REVIEW | Shell script |
