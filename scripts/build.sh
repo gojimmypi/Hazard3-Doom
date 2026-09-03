@@ -117,13 +117,18 @@ require_file "${DOOM_DIR}/hazard3_sao.h"
 mkdir -p "${BUILD_DIR}"
 
 system_clock_flags=("-DHAZARD3_SYS_CLK_HZ=${system_clock_hz}u")
+system_clock_mhz="$((system_clock_hz / 1000000))"
+build_date="${HAZARD3_BUILD_DATE:-$(date +%Y%m%d)}"
+firmware_build_flags=(
+    "-DHAZARD3_FIRMWARE_MEMORY_PROFILE=\"${memory_profile}\""
+    "-DHAZARD3_FIRMWARE_SYS_CLK_MHZ=${system_clock_mhz}"
+    "-DHAZARD3_FIRMWARE_BUILD_DATE=\"${build_date}\""
+)
 
-printf 'Hazard3 SDRAM profile: %s
-' "${memory_profile}"
-printf 'Hazard3 system clock: %s Hz
-' "${system_clock_hz}"
-printf 'Monitor output: %s
-' "${OUTPUT_ELF}"
+printf 'Hazard3 SDRAM profile: %s\n' "${memory_profile}"
+printf 'Hazard3 system clock: %s Hz\n' "${system_clock_hz}"
+printf 'Hazard3 firmware build date: %s\n' "${build_date}"
+printf 'Monitor output: %s\n' "${OUTPUT_ELF}"
 
 "${CC}" \
     -march=rv32imc_zicsr_zifencei_zba_zbb_zbs \
@@ -144,6 +149,7 @@ printf 'Monitor output: %s
     -I"${DOOM_DIR}" \
     "${memory_profile_flags[@]}" \
     "${system_clock_flags[@]}" \
+    "${firmware_build_flags[@]}" \
     "${SRC_DIR}/start.S" \
     "${SRC_DIR}/main.c" \
     "${SRC_DIR}/sd_spi.c" \

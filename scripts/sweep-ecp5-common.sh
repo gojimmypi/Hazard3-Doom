@@ -297,6 +297,10 @@ sweep_ecp5_extract_clock_status()
 
 sweep_ecp5_run_nextpnr()
 {
+    printf 'nextpnr command:'
+    printf ' %q' nextpnr-ecp5 "$@"
+    printf '\n'
+
     timeout \
         --signal=TERM \
         --kill-after="${SWEEP_ROUTE_KILL_AFTER_SECONDS}s" \

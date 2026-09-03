@@ -262,11 +262,14 @@ fi
 
 sweep_ecp5_require_tool nextpnr-ecp5
 sweep_ecp5_require_tool timeout
+sweep_ecp5_require_tool ecppack
 
 run_seed()
 {
     local seed="$1"
     local log="${SWEEP_DIR}/seed-${seed}.log"
+    local config="${SWEEP_DIR}/fpga_ulx4m_ld-${seed}.config"
+    local bit="${SWEEP_DIR}/fpga_ulx4m_ld-${seed}.bit"
     local result="${SWEEP_DIR}/result-seed-${seed}.csv"
     local clk_sys litedram_user clk_video clk_tmds init_clk
     local clk_sys_clock clk_sys_status litedram_user_status
@@ -275,7 +278,7 @@ run_seed()
     local route_end_seconds route_end_time
     local route_seconds route_status timing_status
     printf '\nTrying ULX4M-LD 85F nextpnr seed %s\n' "${seed}"
-    rm -f "${log}" "${result}"
+    rm -f "${log}" "${config}" "${bit}" "${result}"
 
     route_start_seconds="$(date +%s)"
     route_start_time="$(date '+%Y-%m-%d %H:%M:%S %Z')"
@@ -289,6 +292,7 @@ run_seed()
         --package CABGA381 \
         --lpf "${LPF}" \
         --json "${NETLIST}" \
+        --textcfg "${config}" \
         --timing-allow-fail \
         --quiet \
         --log "${log}"; then
@@ -310,6 +314,7 @@ run_seed()
     124|137)
         printf '%d,TIMEOUT,TIMEOUT,TIMEOUT,TIMEOUT,TIMEOUT,%s,TIMEOUT\n' \
             "${seed}" "${route_seconds}" > "${result}"
+        rm -f "${config}" "${bit}"
         printf 'Seed %s: routing timed out after %ss (kill grace %ss, status %s).\n' \
             "${seed}" "${SWEEP_ROUTE_TIMEOUT_SECONDS}" \
             "${SWEEP_ROUTE_KILL_AFTER_SECONDS}" "${route_status}" >&2
@@ -317,6 +322,7 @@ run_seed()
         ;;
     *)
         printf '%d,ERROR,ERROR,ERROR,ERROR,ERROR,%s,ERROR\n' "${seed}" "${route_seconds}" > "${result}"
+        rm -f "${config}" "${bit}"
         printf 'Seed %s: nextpnr route failed with status %s.\n' \
             "${seed}" "${route_status}" >&2
         return 1
@@ -348,9 +354,27 @@ run_seed()
         timing_status="PASS"
     fi
 
+    if [[ "${timing_status}" == "PASS" ]]; then
+        if ! ecppack \
+            --compress \
+            --idcode 0x01113043 \
+            "${config}" \
+            "${bit}"; then
+            printf '%d,%s,%s,%s,%s,%s,%s,PACK_ERROR\n' \
+                "${seed}" "${clk_sys}" "${litedram_user}" "${clk_video}" \
+                "${clk_tmds}" "${init_clk}" "${route_seconds}" > "${result}"
+            rm -f "${config}" "${bit}"
+            return 1
+        fi
+        printf 'Seed %s bitstream: %s\n' "${seed}" "${bit}"
+    else
+        rm -f "${bit}"
+    fi
+
     printf '%d,%s,%s,%s,%s,%s,%s,%s\n' \
         "${seed}" "${clk_sys}" "${litedram_user}" "${clk_video}" \
         "${clk_tmds}" "${init_clk}" "${route_seconds}" "${timing_status}" > "${result}"
+    rm -f "${config}"
     cat "${result}"
 }
 

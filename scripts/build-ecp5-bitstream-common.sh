@@ -25,9 +25,10 @@
 
 set -euo pipefail
 
-# Default nextpnr seeds. Keep these together so board defaults are easy to find
-# and update after timing sweeps. NEXTPNR_SEED still overrides the selected
-# board default when provided by the caller.
+# Default nextpnr routing settings. Keep these together so board defaults are
+# easy to find and update after timing sweeps. NEXTPNR_SEED still overrides the
+# selected board seed when provided by the caller. ULX4M-LD also accepts
+# NEXTPNR_HEAP_TIMINGWEIGHT as an override for its qualified HeAP timing weight.
 #
 # Seeds are both yosys and nextpnr version-specific:
 #   yosys --version && nextpnr-ecp5 --version
@@ -36,6 +37,7 @@ set -euo pipefail
 ULX3S_85F_DEFAULT_NEXTPNR_SEED=11
 ULX3S_12F_DEFAULT_NEXTPNR_SEED=82
 ULX4M_LD_85F_DEFAULT_NEXTPNR_SEED=1
+ULX4M_LD_85F_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT=30
 
 BOARD_ID="${1:-}"
 shift || true
@@ -47,6 +49,7 @@ HAZARD3_SYNTH="${HAZARD3_ROOT}/example_soc/synth"
 BUILD_DIR="${REPO_ROOT}/build"
 ALLOW_TIMING_FAILURE="${ALLOW_TIMING_FAILURE:-0}"
 FORCE_BITSTREAM_REBUILD="${FORCE_BITSTREAM_REBUILD:-0}"
+SKIP_SYNTH="${SKIP_SYNTH:-0}"
 
 require_tool()
 {
@@ -189,6 +192,18 @@ prepare_ulx4m_clock_profile()
     fi
 
     if [[ "${recorded_profile}" != "${HAZARD3_ULX4M_SYS_CLK_MHZ}" ]]; then
+        if [[ "${SKIP_SYNTH}" == 1 ]]; then
+            if [[ -n "${recorded_profile}" ]]; then
+                printf 'ERROR: Frozen ULX4M-LD netlist system clock is %s MHz; requested %s MHz.\n' \
+                    "${recorded_profile}" "${HAZARD3_ULX4M_SYS_CLK_MHZ}" >&2
+            else
+                printf 'ERROR: Frozen ULX4M-LD netlist system clock is not recorded; requested %s MHz.\n' \
+                    "${HAZARD3_ULX4M_SYS_CLK_MHZ}" >&2
+            fi
+            echo "SKIP_SYNTH=1 will not delete or replace the existing synthesized netlist." >&2
+            exit 1
+        fi
+
         if [[ -n "${recorded_profile}" ]]; then
             printf 'ULX4M-LD system clock changed: %s MHz -> %s MHz\n' \
                 "${recorded_profile}" "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
@@ -208,6 +223,36 @@ prepare_ulx4m_clock_profile()
     fi
 
     printf 'ULX4M-LD system clock: %s MHz\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
+}
+
+
+validate_ulx4m_frozen_netlist()
+{
+    local recorded_litedram_cpu=""
+
+    [[ -s "${NETLIST}" ]] || {
+        echo "ERROR: Missing or empty frozen ULX4M-LD netlist: ${NETLIST}" >&2
+        exit 1
+    }
+
+    if [[ ! -f "${LITEDRAM_CPU_STAMP}" ]]; then
+        echo "ERROR: Frozen ULX4M-LD netlist LiteDRAM CPU is not recorded." >&2
+        echo "Expected stamp: ${LITEDRAM_CPU_STAMP}" >&2
+        echo "SKIP_SYNTH=1 cannot safely infer whether the existing netlist is SERV or VexRisc." >&2
+        exit 1
+    fi
+
+    read -r recorded_litedram_cpu < "${LITEDRAM_CPU_STAMP}" || true
+    if [[ "${recorded_litedram_cpu}" != "${ULX4M_LITEDRAM_CPU}" ]]; then
+        printf 'ERROR: Frozen ULX4M-LD netlist LiteDRAM CPU is %s; requested %s.\n' \
+            "${recorded_litedram_cpu:-<empty>}" "${ULX4M_LITEDRAM_CPU}" >&2
+        echo "SKIP_SYNTH=1 will not delete or replace the existing synthesized netlist." >&2
+        exit 1
+    fi
+
+    printf 'Using existing synthesized ULX4M-LD netlist; synthesis skipped.\n'
+    printf 'ULX4M-LD frozen netlist SHA256: '
+    sha256sum "${NETLIST}" | awk '{print $1}'
 }
 
 reuse_ulx3s_12f_bitstream_if_allowed()
@@ -243,16 +288,21 @@ reuse_ulx3s_12f_bitstream_if_allowed()
 reuse_ulx4m_bitstream_if_allowed()
 {
     local recorded_seed=""
+    local recorded_timingweight=""
 
     if [[ -f "${SEED_STAMP}" ]]; then
         read -r recorded_seed < "${SEED_STAMP}" || true
     fi
+    if [[ -f "${TIMINGWEIGHT_STAMP}" ]]; then
+        read -r recorded_timingweight < "${TIMINGWEIGHT_STAMP}" || true
+    fi
 
     if [[ -s "${BITSTREAM_OUTPUT}" && "${FORCE_BITSTREAM_REBUILD}" == 0 ]]; then
         if [[ "${recorded_seed}" == "${NEXTPNR_SEED}" &&
+              "${recorded_timingweight}" == "${NEXTPNR_HEAP_TIMINGWEIGHT}" &&
               "${BITSTREAM_OUTPUT}" -nt "${NETLIST}" ]]; then
-            printf 'Reusing existing ULX4M-LD 85F bitstream built with seed %s; nextpnr was not run.\n' \
-                "${NEXTPNR_SEED}"
+            printf 'Reusing existing ULX4M-LD 85F bitstream built with seed %s and HeAP timingweight %s; nextpnr was not run.\n' \
+                "${NEXTPNR_SEED}" "${NEXTPNR_HEAP_TIMINGWEIGHT}"
             stat -c '  %n (modified %y, %s bytes)' -- "${BITSTREAM_OUTPUT}"
             printf 'Set FORCE_BITSTREAM_REBUILD=1 to rebuild it.\n'
             exit 0
@@ -264,6 +314,12 @@ reuse_ulx4m_bitstream_if_allowed()
         elif [[ "${recorded_seed}" != "${NEXTPNR_SEED}" ]]; then
             printf 'Existing ULX4M-LD bitstream used seed %s; requested seed is %s. Rebuilding.\n' \
                 "${recorded_seed}" "${NEXTPNR_SEED}"
+        elif [[ -z "${recorded_timingweight}" ]]; then
+            printf 'Existing ULX4M-LD bitstream has no HeAP timingweight stamp. Rebuilding with timingweight %s.\n' \
+                "${NEXTPNR_HEAP_TIMINGWEIGHT}"
+        elif [[ "${recorded_timingweight}" != "${NEXTPNR_HEAP_TIMINGWEIGHT}" ]]; then
+            printf 'Existing ULX4M-LD bitstream used HeAP timingweight %s; requested timingweight is %s. Rebuilding.\n' \
+                "${recorded_timingweight}" "${NEXTPNR_HEAP_TIMINGWEIGHT}"
         else
             printf 'Synthesized ULX4M-LD netlist is newer than the existing bitstream. Rebuilding.\n'
         fi
@@ -436,23 +492,18 @@ validate_ulx3s_12f_system_timing()
 # |     12 |     54.21 MHz PASS |
 # |     64 |     53.82 MHz PASS |
 #
-# ULX4M-LD seed reference from scripts/sweep-ulx4m-ld.sh:
+# ULX4M-LD qualified route reference from the 40/60 MHz ablation:
 #
-# No seed met both the 50.00 MHz clk_sys and 75.01 MHz LiteDRAM targets.
+# | Seed | HeAP timingweight | clk_sys | LiteDRAM | Result |
+# | ---: | ----------------: | ------: | -------: | :----- |
+# |    2 |                30 | 43.94   | 67.81    | PASS   |
 #
-# | Rank | Seed | clk_sys | LiteDRAM | Video | TMDS   | Result |
-# | ---: | ---: | ------: | -------: | ----: | -----: | :----- |
-# |    1 |  163 | 44.10   | 66.55    | 61.80 | 319.59 | FAIL   |
-# |    2 |  232 | 43.58   | 67.41    | 62.37 | 332.78 | FAIL   |
-# |    3 |  200 | 43.44   | 65.71    | 58.96 | 321.03 | FAIL   |
-# |    4 |  247 | 43.00   | 65.47    | 62.29 | 307.13 | FAIL   |
-# |    5 |   20 | 42.97   | 64.49    | 61.15 | 313.28 | FAIL   |
-# |    6 |  181 | 42.96   | 65.96    | 66.25 | 334.22 | FAIL   |
-# |    7 |   50 | 42.77   | 67.61    | 60.94 | 302.66 | FAIL   |
-# |    8 |  204 | 42.71   | 65.60    | 69.78 | 321.85 | FAIL   |
-# |    9 |   17 | 42.66   | 68.88    | 69.68 | 318.67 | FAIL   |
-# |   10 |   22 | 42.55   | 70.32    | 66.18 | 285.06 | FAIL   |
+# critexp=3 and tmg-ripup did not improve this seed over timingweight=30 alone.
+# Keep the normal build on the simpler qualified route unless a new sweep shows
+# a better setting for a changed netlist/toolchain.
 #
+PNR_TUNING_ARGS=()
+
 case "${BOARD_ID}" in
 ulx3s-85f)
     DISPLAY_NAME="ULX3S 85F"
@@ -484,6 +535,12 @@ ulx4m-ld-85f)
     LPF="${HAZARD3_SYNTH}/fpga_ulx4m_ld.lpf"
     IDCODE="0x01113043"
     NEXTPNR_SEED="${NEXTPNR_SEED:-${ULX4M_LD_85F_DEFAULT_NEXTPNR_SEED}}"
+    NEXTPNR_HEAP_TIMINGWEIGHT="${NEXTPNR_HEAP_TIMINGWEIGHT:-${SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT:-${ULX4M_LD_85F_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT}}}"
+    if [[ ! "${NEXTPNR_HEAP_TIMINGWEIGHT}" =~ ^[1-9][0-9]*$ ]]; then
+        echo "NEXTPNR_HEAP_TIMINGWEIGHT must be a positive integer." >&2
+        exit 1
+    fi
+    PNR_TUNING_ARGS=(--placer-heap-timingweight "${NEXTPNR_HEAP_TIMINGWEIGHT}")
     PNR_DEVICE_ARGS=(--um-85k --speed 8 --package CABGA381)
     LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM"
     ULX4M_LITEDRAM_CPU="${ULX4M_LITEDRAM_CPU:-serv}"
@@ -498,7 +555,9 @@ ulx4m-ld-85f)
     LITEDRAM_GENERATED_DIR="${LITEDRAM_DIR}/generated-${ULX4M_LITEDRAM_CPU}"
     HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-40}"
     SYNTH_PROFILE_STAMP="${HAZARD3_SYNTH}/fpga_ulx4m_ld.sys-clk-mhz"
+    LITEDRAM_CPU_STAMP="${HAZARD3_SYNTH}/fpga_ulx4m_ld.litedram-cpu"
     SEED_STAMP="${BUILD_DIR}/fpga_ulx4m_ld.seed"
+    TIMINGWEIGHT_STAMP="${BUILD_DIR}/fpga_ulx4m_ld.heap-timingweight"
     ;;
 *)
     echo "Unknown ECP5 board target: ${BOARD_ID:-<empty>}" >&2
@@ -540,23 +599,44 @@ case "${FORCE_BITSTREAM_REBUILD}" in
     ;;
 esac
 
+case "${SKIP_SYNTH}" in
+0|1)
+    ;;
+*)
+    echo "SKIP_SYNTH must be 0 or 1" >&2
+    exit 1
+    ;;
+esac
+
+if [[ "${SKIP_SYNTH}" == 1 && "${BOARD_ID}" != "ulx4m-ld-85f" ]]; then
+    echo "SKIP_SYNTH=1 is currently supported only for ulx4m-ld-85f." >&2
+    exit 1
+fi
+
 mkdir -p "${BUILD_DIR}"
 
 require_tool stat
-require_tool make
-require_tool yosys
 require_tool nextpnr-ecp5
 require_tool ecppack
-require_file "${HAZARD3_SYNTH}/${MAKEFILE}"
 require_file "${LPF}"
+
+if [[ "${SKIP_SYNTH}" == 0 ]]; then
+    require_tool make
+    require_tool yosys
+    require_file "${HAZARD3_SYNTH}/${MAKEFILE}"
+else
+    require_tool sha256sum
+fi
 
 if [[ "${BOARD_ID}" == "ulx4m-ld-85f" ]]; then
     require_tool grep
     require_tool awk
-    require_file "${LITEDRAM_DIR}/litedram_ulx4m_cpu.v"
-    require_file "${LITEDRAM_GENERATED_DIR}/litedram_ulx4m_cpu.v"
-    require_file "${LITEDRAM_GENERATED_DIR}/litedram_ulx4m_cpu_rom.init"
-    require_file "${LITEDRAM_GENERATED_DIR}/litedram_ulx4m_cpu_sram.init"
+    if [[ "${SKIP_SYNTH}" == 0 ]]; then
+        require_file "${LITEDRAM_DIR}/litedram_ulx4m_cpu.v"
+        require_file "${LITEDRAM_GENERATED_DIR}/litedram_ulx4m_cpu.v"
+        require_file "${LITEDRAM_GENERATED_DIR}/litedram_ulx4m_cpu_rom.init"
+        require_file "${LITEDRAM_GENERATED_DIR}/litedram_ulx4m_cpu_sram.init"
+    fi
 fi
 
 if [[ "${BOARD_ID}" == "ulx3s-12f" ]]; then
@@ -577,18 +657,27 @@ if [[ "${BOARD_ID}" == "ulx4m-ld-85f" ]]; then
     prepare_ulx4m_clock_profile
 fi
 
-run_synthesis
+if [[ "${SKIP_SYNTH}" == 1 ]]; then
+    validate_ulx4m_frozen_netlist
+else
+    run_synthesis
+fi
 
 if [[ "${BOARD_ID}" == "ulx3s-12f" ]]; then
     validate_ulx3s_12f_synthesis
     reuse_ulx3s_12f_bitstream_if_allowed
 fi
 if [[ "${BOARD_ID}" == "ulx4m-ld-85f" ]]; then
-    validate_ulx4m_synthesis
+    if [[ "${SKIP_SYNTH}" == 0 ]]; then
+        validate_ulx4m_synthesis
+    fi
     reuse_ulx4m_bitstream_if_allowed
 fi
 
 printf 'nextpnr seed: %s\n' "${NEXTPNR_SEED}"
+if [[ "${BOARD_ID}" == "ulx4m-ld-85f" ]]; then
+    printf 'nextpnr HeAP timingweight: %s\n' "${NEXTPNR_HEAP_TIMINGWEIGHT}"
+fi
 if [[ "${ALLOW_TIMING_FAILURE}" == 1 ]]; then
     printf 'WARNING: timing failure is allowed for this development build.\n' >&2
 fi
@@ -610,6 +699,7 @@ cleanup_temporary_outputs
     if nextpnr-ecp5 \
         --seed "${NEXTPNR_SEED}" \
         --placer heap \
+        "${PNR_TUNING_ARGS[@]}" \
         "${PNR_DEVICE_ARGS[@]}" \
         --lpf "${LPF}" \
         --json "${NETLIST}" \
@@ -655,6 +745,9 @@ mv -f "${BITSTREAM_TEMP}" "${BITSTREAM_OUTPUT}"
 if [[ -n "${SEED_STAMP:-}" ]]; then
     printf '%s\n' "${NEXTPNR_SEED}" > "${SEED_STAMP}"
 fi
+if [[ -n "${TIMINGWEIGHT_STAMP:-}" ]]; then
+    printf '%s\n' "${NEXTPNR_HEAP_TIMINGWEIGHT}" > "${TIMINGWEIGHT_STAMP}"
+fi
 
 # Remove only obsolete integration P&R artifacts from the Hazard3 synth tree.
 rm -f \
@@ -667,4 +760,8 @@ printf '%s bitstream: %s\n' "${DISPLAY_NAME}" "${BITSTREAM_OUTPUT}"
 if [[ -n "${SEED_STAMP:-}" ]]; then
     printf '%s seed stamp: %s (seed %s)\n' \
         "${DISPLAY_NAME}" "${SEED_STAMP}" "${NEXTPNR_SEED}"
+fi
+if [[ -n "${TIMINGWEIGHT_STAMP:-}" ]]; then
+    printf '%s HeAP timingweight stamp: %s (timingweight %s)\n' \
+        "${DISPLAY_NAME}" "${TIMINGWEIGHT_STAMP}" "${NEXTPNR_HEAP_TIMINGWEIGHT}"
 fi

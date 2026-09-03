@@ -22,13 +22,27 @@ Complete board builds:
 ```bash
 ./scripts/build-ulx3s-doom.sh
 ./scripts/build-ulx3s-12f-doom.sh
-ALLOW_TIMING_FAILURE=1 ./scripts/build-ulx4m-ld-doom.sh
+./scripts/build-ulx4m-ld-doom.sh
 ```
 
 The board wrappers build the monitor, FPGA bitstream, and Doom image with a
 matched memory/clock profile. Existing nonempty FPGA bitstreams may be reused
-where supported; set `FORCE_BITSTREAM_REBUILD=1` when a new synthesis and
-nextpnr run is required.
+where supported; set `FORCE_BITSTREAM_REBUILD=1` when a fresh route/bitstream is
+required. Normal bitstream builds synthesize before routing.
+
+For ULX4M-LD only, `SKIP_SYNTH=1` preserves and routes the existing synthesized
+`fpga_ulx4m_ld.json` instead of invoking Make/Yosys. Combine it with
+`FORCE_BITSTREAM_REBUILD=1` to reroute and repack a deliberately frozen netlist:
+
+```bash
+SKIP_SYNTH=1 \
+FORCE_BITSTREAM_REBUILD=1 \
+    ./scripts/build-ulx4m-ld-bitstream.sh
+```
+
+The frozen-netlist path requires the recorded system-clock and LiteDRAM-CPU
+profiles to match the requested build. It prints the JSON SHA256 before
+nextpnr and never deletes or replaces the JSON when a profile check fails.
 
 Current primary profiles are:
 
@@ -36,16 +50,16 @@ Current primary profiles are:
 | --- | --- | --- | --- |
 | ULX3S 85F | `64m` | 50 MHz | 320x200 default; extended modes optional |
 | ULX3S 12F | `32m` default, `64m` optional | 40 MHz | 320x200 compact SDRAM scanout |
-| ULX4M-LD 85F | `64m` | 50 MHz | 320x200 default |
+| ULX4M-LD 85F | `64m` | 40 MHz | 320x200 default |
 
 The monitor, FPGA configuration, Doom image, and SDRAM map must use compatible
 settings. Do not mix 32 MiB and 64 MiB software images.
 
-The current build defaults are seed 178 for ULX3S 85F, seed 65 for ULX3S 12F,
-and seed 232 for ULX4M-LD. These are convenience baselines, not permanent
-optima: rerun a seed sweep after placement-sensitive RTL, memory, video, clock,
-or toolchain changes. ULX4M-LD still requires timing investigation; a timing
-waiver keeps misses visible and does not claim timing closure.
+The current build defaults are seed 11 for ULX3S 85F, seed 82 for ULX3S 12F,
+and seed 2 for ULX4M-LD. ULX4M-LD also defaults to HeAP timingweight 30, the
+simplest qualified setting from the 40/60 MHz ablation. These are convenience
+baselines, not permanent optima: rerun a seed sweep after placement-sensitive
+RTL, memory, video, clock, or toolchain changes.
 
 ## Build Scripts
 
@@ -55,8 +69,8 @@ waiver keeps misses visible and does not claim timing closure.
 - `build-ulx3s-doom.sh` - Complete ULX3S 85F build: monitor, boot image, FPGA bitstream, Doom image, and SD-card staging files.
 - `build-ulx3s-12f-bitstream.sh` - ULX3S 12F entry point for the shared ECP5 flow. Defaults to `HAZARD3_MEMORY_PROFILE=32m`.
 - `build-ulx3s-12f-doom.sh` - Complete ULX3S 12F build. Uses a 40 MHz Hazard3 clock, defaults to the 32 MiB map, and intentionally accepts only `HAZARD3_DOOM_HDMI_RESOLUTION=320x200`.
-- `build-ulx4m-ld-bitstream.sh` - ULX4M-LD 85F entry point for the shared ECP5 flow.
-- `build-ulx4m-ld-doom.sh` - Complete ULX4M-LD 85F build using the 64 MiB map at 50 MHz, including LiteDRAM inputs and the embedded resident monitor. The current development route requires `ALLOW_TIMING_FAILURE=1` because the system and LiteDRAM timing constraints are not yet closed.
+- `build-ulx4m-ld-bitstream.sh` - ULX4M-LD 85F entry point for the shared ECP5 flow. Supports `SKIP_SYNTH=1` for routing an existing frozen JSON without invoking Make/Yosys.
+- `build-ulx4m-ld-doom.sh` - Complete ULX4M-LD 85F build using the 64 MiB map at 40 MHz, including LiteDRAM inputs and the embedded resident monitor. The default route uses seed 2 with HeAP timingweight 30.
 - `build-xpack.cmd` - Native Windows monitor build using the repository xPack RISC-V GCC installation. Supports `build`, `clean`, and `rebuild` plus memory-profile and clock arguments.
 - `make-boot-hex.py` - Converts the monitor binary into the hexadecimal initialization format consumed by FPGA boot memory.
 

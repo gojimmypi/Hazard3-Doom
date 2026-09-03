@@ -81,6 +81,16 @@ on:
         options:
           - serv
           - vexrisc
+      ulx4m_heap_timingweight:
+        description: ULX4M-LD HeAP timing weight (ignored for other targets)
+        required: true
+        default: "30"
+        type: choice
+        options:
+          - "10"
+          - "20"
+          - "30"
+          - "40"
       placer:
         description: nextpnr placer
         required: true
@@ -98,7 +108,7 @@ on:
           - router1
           - router2
       heap_timingweight:
-        description: HeAP timing weight
+        description: HeAP timing weight (ignored for ULX4M-LD)
         required: true
         default: "10"
         type: choice
@@ -165,7 +175,7 @@ env:
   ULX4M_LITEDRAM_CPU: ${{ inputs.ulx4m_litedram_cpu }}
   SWEEP_NEXTPNR_PLACER: ${{ inputs.placer }}
   SWEEP_NEXTPNR_ROUTER: ${{ inputs.router }}
-  SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT: ${{ inputs.heap_timingweight }}
+  SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT: ${{ inputs.target == 'ulx4m-ld-85f' && inputs.ulx4m_heap_timingweight || inputs.heap_timingweight }}
   SWEEP_NEXTPNR_HEAP_CRITEXP: ${{ inputs.heap_critexp }}
   SWEEP_NEXTPNR_TMG_RIPUP: ${{ inputs.tmg_ripup }}
   SWEEP_NEXTPNR_ROUTER2_ALT_WEIGHTS: ${{ inputs.router2_alt_weights }}
