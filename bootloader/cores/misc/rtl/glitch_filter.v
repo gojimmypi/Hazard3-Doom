@@ -1,5 +1,5 @@
 /*
- * glitch_filter.v
+ * bootloader/cores/misc/rtl/glitch_filter.v
  *
  * vim: ts=4 sw=4
  *
@@ -108,3 +108,5 @@ module glitch_filter #(
 	end
 
 endmodule // glitch_filter
+
+`default_nettype wire

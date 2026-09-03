@@ -1,5 +1,5 @@
 /*
- * usb_ep_buf_tb.v
+ * bootloader/cores/usb/sim/usb_ep_buf_tb.v
  *
  * vim: ts=4 sw=4
  *
@@ -82,3 +82,5 @@ module usb_ep_buf_tb;
 	assign wr_data_0 = 64'hab89127bbabecafe;
 
 endmodule // usb_ep_buf_tb
+
+`default_nettype wire

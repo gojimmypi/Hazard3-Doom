@@ -1,5 +1,5 @@
 /*
- * uart_irda_rx.v
+ * bootloader/cores/misc/rtl/uart_irda_rx.v
  *
  * vim: ts=4 sw=4
  *
@@ -139,3 +139,5 @@ module uart_irda_rx #(
 		stb <= ce_bit & sub_cnt[8] & rx_bit;
 
 endmodule // uart_irda_rx
+
+`default_nettype wire

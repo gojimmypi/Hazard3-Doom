@@ -1,5 +1,5 @@
 /*
- * usb_defs.vh
+ * bootloader/cores/usb/rtl/usb_defs.vh
  *
  * vim: ts=4 sw=4 syntax=verilog
  *

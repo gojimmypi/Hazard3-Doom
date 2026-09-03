@@ -1,5 +1,5 @@
 /*
- * usb.v
+ * bootloader/cores/usb/rtl/usb.v
  *
  * vim: ts=4 sw=4
  *
@@ -626,3 +626,5 @@ module usb #(
 	assign sof = sof_ind;
 
 endmodule // usb
+
+`default_nettype wire

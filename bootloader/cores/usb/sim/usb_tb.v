@@ -1,5 +1,5 @@
 /*
- * usb_tb.v
+ * bootloader/cores/usb/sim/usb_tb.v
  *
  * vim: ts=4 sw=4
  *
@@ -145,3 +145,5 @@ module usb_tb;
 	assign usb_dn = in_file_data[0] & in_file_valid;
 
 endmodule // usb_tb
+
+`default_nettype wire

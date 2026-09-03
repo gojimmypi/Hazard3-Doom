@@ -1,5 +1,5 @@
 /*
- * usb_trans.v
+ * bootloader/cores/usb/rtl/usb_trans.v
  *
  * vim: ts=4 sw=4
  *
@@ -486,3 +486,5 @@ module usb_trans #(
 	assign buf_rx_wren_0 = rxpkt_data_stb & bd_length[10];
 
 endmodule // usb_trans
+
+`default_nettype wire

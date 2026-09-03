@@ -1,5 +1,5 @@
 /*
- * delay.v
+ * bootloader/cores/misc/rtl/delay.v
  *
  * vim: ts=4 sw=4
  *
@@ -108,3 +108,5 @@ module delay_toggle #(
 	// FIXME: TODO
 
 endmodule // delay_toggle
+
+`default_nettype wire

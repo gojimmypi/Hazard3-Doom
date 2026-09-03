@@ -1,5 +1,5 @@
 /*
- * usb_rx_pkt.v
+ * bootloader/cores/usb/rtl/usb_rx_pkt.v
  *
  * vim: ts=4 sw=4
  *
@@ -391,3 +391,5 @@ module usb_rx_pkt (
 		pkt_data_stb <= (state == ST_DATA) && llu_byte_stb;
 
 endmodule // usb_rx_pkt
+
+`default_nettype wire

@@ -1,5 +1,5 @@
 /*
- * fifo_tb.v
+ * bootloader/cores/misc/sim/fifo_tb.v
  *
  * vim: ts=4 sw=4
  *
@@ -100,3 +100,5 @@ module fifo_tb;
 	assign rd_ena = rnd_rd & ~rd_empty;
 
 endmodule // fifo_tb
+
+`default_nettype wire

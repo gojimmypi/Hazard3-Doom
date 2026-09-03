@@ -1,5 +1,5 @@
 /*
- * pdm_tb.v
+ * bootloader/cores/misc/sim/pdm_tb.v
  *
  * vim: ts=4 sw=4
  *
@@ -79,3 +79,5 @@ module pdm_tb;
 	end
 
 endmodule // pdm_tb
+
+`default_nettype wire

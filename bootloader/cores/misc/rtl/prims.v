@@ -1,5 +1,5 @@
 /*
- * prims.v
+ * bootloader/cores/misc/rtl/prims.v
  *
  * vim: ts=4 sw=4
  *
@@ -289,3 +289,5 @@ module dffesr_n #(
 	endgenerate
 
 endmodule // dffesr_n
+
+`default_nettype wire

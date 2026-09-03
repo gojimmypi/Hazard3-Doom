@@ -1,5 +1,5 @@
 /*
- * fifo_sync_shift.v
+ * bootloader/cores/misc/rtl/fifo_sync_shift.v
  *
  * vim: ts=4 sw=4
  *
@@ -111,3 +111,5 @@ module fifo_sync_shift #(
 	assign rd_data  = data[1];
 
 endmodule // fifo_sync_shift
+
+`default_nettype wire

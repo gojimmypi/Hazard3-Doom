@@ -1,5 +1,5 @@
 /*
- * xclk_strobe.v
+ * bootloader/cores/misc/rtl/xclk_strobe.v
  *
  * vim: ts=4 sw=4
  *
@@ -63,3 +63,5 @@ module xclk_strobe (
 			out_stb <= ^dst[1:0];
 
 endmodule
+
+`default_nettype wire

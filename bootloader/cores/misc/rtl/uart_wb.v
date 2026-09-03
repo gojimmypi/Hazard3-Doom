@@ -1,5 +1,5 @@
 /*
- * uart_wb.v
+ * bootloader/cores/misc/rtl/uart_wb.v
  *
  * vim: ts=4 sw=4
  *
@@ -260,3 +260,5 @@ module uart_wb #(
 	assign bus_ack = ub_ack;
 
 endmodule // uart_wb
+
+`default_nettype wire

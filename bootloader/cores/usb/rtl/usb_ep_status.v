@@ -1,5 +1,5 @@
 /*
- * usb_ep_status.v
+ * bootloader/cores/usb/rtl/usb_ep_status.v
  *
  * vim: ts=4 sw=4
  *
@@ -143,3 +143,5 @@ module usb_ep_status (
 `endif
 
 endmodule // usb_ep_status
+
+`default_nettype wire

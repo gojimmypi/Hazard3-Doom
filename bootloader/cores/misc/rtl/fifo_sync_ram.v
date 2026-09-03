@@ -1,5 +1,5 @@
 /*
- * fifo_sync_ram.v
+ * bootloader/cores/misc/rtl/fifo_sync_ram.v
  *
  * vim: ts=4 sw=4
  *
@@ -158,3 +158,5 @@ module fifo_sync_ram #(
 	);
 
 endmodule // fifo_sync_ram
+
+`default_nettype wire

@@ -1,5 +1,5 @@
 /*
- * uart_tx.v
+ * bootloader/cores/misc/rtl/uart_tx.v
  *
  * vim: ts=4 sw=4
  *
@@ -94,3 +94,5 @@ module uart_tx #(
 	assign tx = shift[0];
 
 endmodule // uart_tx
+
+`default_nettype wire

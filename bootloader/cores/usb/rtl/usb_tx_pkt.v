@@ -1,5 +1,5 @@
 /*
- * usb_tx_pkt.v
+ * bootloader/cores/usb/rtl/usb_tx_pkt.v
  *
  * vim: ts=4 sw=4
  *
@@ -261,3 +261,5 @@ module usb_tx_pkt (
 	end
 
 endmodule // usb_tx_pkt
+
+`default_nettype wire

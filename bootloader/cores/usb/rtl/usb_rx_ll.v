@@ -1,5 +1,5 @@
 /*
- * usb_rx_ll.v
+ * bootloader/cores/usb/rtl/usb_rx_ll.v
  *
  * vim: ts=4 sw=4
  *
@@ -211,3 +211,5 @@ module usb_rx_ll (
 	assign ll_bs_err  = dec_bs_err_1;
 
 endmodule // usb_rx_ll
+
+`default_nettype wire

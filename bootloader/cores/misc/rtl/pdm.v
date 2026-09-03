@@ -1,5 +1,5 @@
 /*
- * pdm.v
+ * bootloader/cores/misc/rtl/pdm.v
  *
  * vim: ts=4 sw=4
  *
@@ -145,3 +145,5 @@ module pdm_lfsr #(
 			out <= { fb, out[WIDTH-1:1] };
 
 endmodule // pdm_lfsr
+
+`default_nettype wire

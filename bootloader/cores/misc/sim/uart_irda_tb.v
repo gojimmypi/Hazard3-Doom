@@ -1,5 +1,5 @@
 /*
- * uart_irda_tb.v
+ * bootloader/cores/misc/sim/uart_irda_tb.v
  *
  * vim: ts=4 sw=4
  *
@@ -100,3 +100,5 @@ module uart_irda_tb;
 	assign tx_valid = ~rst;
 
 endmodule // uart_irda_tb
+
+`default_nettype wire

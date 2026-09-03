@@ -1,5 +1,5 @@
 /*
- * usb_ep_buf.v
+ * bootloader/cores/usb/rtl/usb_ep_buf.v
  *
  * vim: ts=4 sw=4
  *
@@ -340,3 +340,5 @@ module usb_ep_buf #(
 `endif
 
 endmodule // usb_ep_buf
+
+`default_nettype wire

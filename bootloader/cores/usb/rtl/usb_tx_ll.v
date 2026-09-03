@@ -1,5 +1,5 @@
 /*
- * usb_tx_ll.v
+ * bootloader/cores/usb/rtl/usb_tx_ll.v
  *
  * vim: ts=4 sw=4
  *
@@ -156,3 +156,5 @@ module usb_tx_ll (
 	assign phy_tx_en = out_active;
 
 endmodule // usb_tx_ll
+
+`default_nettype wire

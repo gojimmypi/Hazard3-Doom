@@ -1,5 +1,5 @@
 /*
- * usb_phy.v
+ * bootloader/cores/usb/rtl/usb_phy.v
  *
  * vim: ts=4 sw=4
  *
@@ -189,3 +189,5 @@ module usb_phy #(
 	assign rx_chg = dp_state[2] | dn_state[2];
 
 endmodule // usb_phy
+
+`default_nettype wire

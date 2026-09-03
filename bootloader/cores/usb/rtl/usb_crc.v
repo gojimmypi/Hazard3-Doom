@@ -1,5 +1,5 @@
 /*
- * usb_crc.v
+ * bootloader/cores/usb/rtl/usb_crc.v
  *
  * vim: ts=4 sw=4
  *
@@ -66,3 +66,5 @@ module usb_crc #(
 	endgenerate
 
 endmodule // usb_crc
+
+`default_nettype wire

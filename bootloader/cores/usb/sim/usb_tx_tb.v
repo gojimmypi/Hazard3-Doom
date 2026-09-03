@@ -1,5 +1,5 @@
 /*
- * usb_tx_tb.v
+ * bootloader/cores/usb/sim/usb_tx_tb.v
  *
  * vim: ts=4 sw=4
  *
@@ -169,3 +169,5 @@ module usb_tx_tb;
 	wire trig = tx_ll_I.ll_last & tx_ll_I.br_now & tx_ll_I.bs_now;
 
 endmodule // usb_tx_tb
+
+`default_nettype wire

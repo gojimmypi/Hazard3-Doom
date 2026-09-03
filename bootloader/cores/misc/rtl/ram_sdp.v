@@ -1,5 +1,5 @@
 /*
- * ram_sdp.v
+ * bootloader/cores/misc/rtl/ram_sdp.v
  *
  * vim: ts=4 sw=4
  *
@@ -69,3 +69,5 @@ module ram_sdp #(
 	end
 
 endmodule // ram_sdp
+
+`default_nettype wire

@@ -1,5 +1,5 @@
 /*
- * xclk_wb.v
+ * bootloader/cores/misc/rtl/xclk_wb.v
  *
  * vim: ts=4 sw=4
  *
@@ -137,3 +137,5 @@ module xclk_wb #(
 	assign s_ack = s_ack_i;
 
 endmodule
+
+`default_nettype wire

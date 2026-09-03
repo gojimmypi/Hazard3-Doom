@@ -1,5 +1,5 @@
 /*
- * pwm.v
+ * bootloader/cores/misc/rtl/pwm.v
  *
  * vim: ts=4 sw=4
  *
@@ -67,3 +67,5 @@ module pwm #(
 	assign pwm = cnt_on[WIDTH];
 
 endmodule // pwm
+
+`default_nettype wire
