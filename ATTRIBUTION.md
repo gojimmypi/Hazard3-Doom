@@ -189,6 +189,41 @@ Hardware: https://github.com/emard/ulx3s
 
 Hardware: https://github.com/intergalaktik/ulx4m
 
+## HAD2019 / ULX3S / ULX4M DFU bootloader
+
+The ULX3S/ULX4M DFU bootloader lineage comes from the Hackaday Supercon
+2019 badge bootloader and subsequent ULX board adaptations. Principal authors
+and contributors identified from the source headers and Git history include:
+
+- Sylvain Munaut (`smunaut`) - original Hackaday Supercon 2019 badge
+  bootloader author and principal original copyright holder. His bootloader
+  firmware files carry LGPL v3-or-later notices, and much of the associated
+  bootloader RTL carries BSD 3-Clause notices.
+- Jeroen Domburg (`Spritetm`) - author of multiple commits in the original
+  bootloader history, including DFU, flash-selection, and bootloader-protection
+  changes.
+- Lawrie Griffiths (`lawrie`) - contributor to the ULX3S fork/adaptation and
+  later bootloader changes.
+- Davor Jadrijevic (`emard`) - extensive ULX3S and ULX4M bootloader
+  adaptation, integration, maintenance, and board-specific work.
+- Clifford Wolf - author/copyright holder of the PicoRV32 core included by the
+  upstream bootloader.
+- Michal Ludvig - author/copyright holder of the `mini-printf.c` implementation
+  included by the upstream bootloader firmware.
+- All other contributors recorded in the upstream repositories and their Git
+  histories are acknowledged by reference.
+
+Upstream lineage and source:
+
+- https://github.com/smunaut/had2019-playground/tree/master/projects/bootloader
+- https://github.com/lawrie/had2019-playground/tree/master/projects/bootloader
+- https://github.com/emard/had2019-playground/tree/master/projects/bootloader
+
+The upstream repository applies licenses per project/file rather than one
+blanket license. Preserve the original source-file headers and see
+`LICENSES/HAD2019-Bootloader-NOTICE.md` for the bootloader licensing summary
+and bundled license texts.
+
 ## FPGA silicon, USB, and board-component ecosystem
 
 - Lattice Semiconductor - ECP5 FPGA family used by principal targets.

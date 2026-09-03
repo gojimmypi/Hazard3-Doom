@@ -6,7 +6,10 @@ licensed under the CERN Open Hardware License Version 2 - Weakly
 Reciprocal.
 
 Other project material and third-party components are subject to their
-respective licenses.
+respective licenses. Bootloader-derived material from the HAD2019/ULX3S/ULX4M
+DFU bootloader retains its upstream per-file licenses and copyright notices;
+it is not relicensed by Hazard3-Doom. See
+LICENSES/HAD2019-Bootloader-NOTICE.md.
 
 See LICENSING.md for the applicable licensing policy, ATTRIBUTION.md
 for attribution and provenance, and LICENSES/ for license texts and

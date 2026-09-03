@@ -32,6 +32,19 @@ See `../ATTRIBUTION.md` for broad acknowledgements.
 | `I2CDriver-NOTICE.md` | I2CDriver inspiration and non-endorsement |
 | `Nested-Upstream-NOTICE.md` | Recursive Hazard3/test/support projects |
 
+### HAD2019 / ULX3S / ULX4M DFU bootloader
+
+The bootloader is mixed-license, with licensing determined by the applicable
+upstream file/header rather than a blanket project-wide choice.
+
+| File | Component/use |
+|---|---|
+| `HAD2019-Bootloader-NOTICE.md` | Bootloader lineage, contributors, provenance, and per-file licensing summary |
+| `LGPL-3.0.txt` | GNU LGPL v3 text for upstream bootloader firmware files marked LGPL v3-or-later |
+| `BSD-3-Clause-HAD2019-Bootloader.txt` | Sylvain Munaut BSD 3-Clause text used by upstream bootloader RTL |
+| `ISC-PicoRV32.txt` | Clifford Wolf PicoRV32 license notice used by the upstream bootloader |
+| `BSD-3-Clause-mini-printf.txt` | Michal Ludvig `mini-printf.c` BSD-style 3-clause notice |
+
 ## Bundled Windows utility/library notices
 
 The repository material reviewed for this bundle shows that `bin/` redistributes
