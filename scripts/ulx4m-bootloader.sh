@@ -25,7 +25,8 @@ OPENFPGALOADER="${REPO_ROOT}/bin/openFPGALoader.exe"
 DFU_UTIL="${REPO_ROOT}/bin/dfu-util.exe"
 
 BOOTLOADER_PROJECT_DIR=""
-HAD2019_ROOT=""
+BOOTLOADER_DEP_ROOT=""
+BOOTLOADER_RULES_DIR=""
 SESSION_DIR=""
 SESSION_LOG=""
 RUN_ID="$(date '+%Y%m%d-%H%M%S')"
@@ -72,20 +73,21 @@ Environment overrides:
     ULX4M_BOOTLOADER_SKIP_SHELLCHECK=1
         Skip the optional ShellCheck self-lint. bash -n still runs.
 
-Recommended source layout:
-    Hazard3-Doom/
-      third_party/had2019-playground/
-        cores/
-        projects/bootloader/
-
-A vendored layout is also supported if it preserves the upstream relationship:
+Recommended Hazard3-Doom vendored layout:
     Hazard3-Doom/
       bootloader/
-        cores/
-        projects/bootloader/
+        Makefile
+        mk/
+        cores/misc/
+        cores/usb/
+        data/
+        fw/
+        rtl/
 
-Do not copy only projects/bootloader to Hazard3-Doom/bootloader without also
-adapting its upstream core dependencies. The build uses cores/misc and cores/usb.
+The bootloader/Makefile in this layout sets ROOT to bootloader/ and uses the
+vendored had2019 make rules and cores directly. A full upstream layout under
+third_party/had2019-playground/projects/bootloader remains supported as a
+development fallback.
 USAGE
 }
 
@@ -151,18 +153,31 @@ resolve_bootloader_project_dir()
 {
     if [[ -n "${ULX4M_BOOTLOADER_PROJECT_DIR:-}" ]]; then
         BOOTLOADER_PROJECT_DIR="${ULX4M_BOOTLOADER_PROJECT_DIR}"
+    elif [[ -f "${REPO_ROOT}/bootloader/Makefile" ]]; then
+        BOOTLOADER_PROJECT_DIR="${REPO_ROOT}/bootloader"
     elif [[ -f "${REPO_ROOT}/third_party/had2019-playground/projects/bootloader/Makefile" ]]; then
         BOOTLOADER_PROJECT_DIR="${REPO_ROOT}/third_party/had2019-playground/projects/bootloader"
     elif [[ -f "${REPO_ROOT}/bootloader/projects/bootloader/Makefile" ]]; then
         BOOTLOADER_PROJECT_DIR="${REPO_ROOT}/bootloader/projects/bootloader"
-    elif [[ -f "${REPO_ROOT}/bootloader/Makefile" ]]; then
-        BOOTLOADER_PROJECT_DIR="${REPO_ROOT}/bootloader"
     else
         fail "Could not find the ULX4M bootloader project. See --help for the supported layouts."
     fi
 
     BOOTLOADER_PROJECT_DIR="$(cd "${BOOTLOADER_PROJECT_DIR}" && pwd -P)"
-    HAD2019_ROOT="$(cd "${BOOTLOADER_PROJECT_DIR}/../.." && pwd -P)"
+
+    if [[ -d "${BOOTLOADER_PROJECT_DIR}/build" && -d "${BOOTLOADER_PROJECT_DIR}/mk" ]]; then
+        fail "Both bootloader/build and bootloader/mk exist. Remove the legacy bootloader/build directory after completing the rename."
+    fi
+
+    if [[ -f "${BOOTLOADER_PROJECT_DIR}/mk/project-rules.mk" ]]; then
+        BOOTLOADER_DEP_ROOT="${BOOTLOADER_PROJECT_DIR}"
+        BOOTLOADER_RULES_DIR="mk"
+    elif [[ -f "${BOOTLOADER_PROJECT_DIR}/build/project-rules.mk" ]]; then
+        fail "Legacy bootloader/build make-rule directory found. Rename it to bootloader/mk and use the updated bootloader Makefile/core includes."
+    else
+        BOOTLOADER_DEP_ROOT="$(cd "${BOOTLOADER_PROJECT_DIR}/../.." && pwd -P)"
+        BOOTLOADER_RULES_DIR="build"
+    fi
 }
 
 check_source_invariants()
@@ -204,32 +219,47 @@ check_source_invariants()
 
 check_dependency_layout()
 {
-    [[ -d "${HAD2019_ROOT}/cores/misc" ]] || {
-        cat >&2 <<EOF_DEP
-ERROR: The bootloader project is not in a self-contained had2019 layout.
+    local required_path
+    local required_paths=(
+        "${BOOTLOADER_DEP_ROOT}/${BOOTLOADER_RULES_DIR}/project-rules.mk"
+        "${BOOTLOADER_DEP_ROOT}/${BOOTLOADER_RULES_DIR}/core-magic.mk"
+        "${BOOTLOADER_DEP_ROOT}/${BOOTLOADER_RULES_DIR}/core-rules.mk"
+        "${BOOTLOADER_DEP_ROOT}/${BOOTLOADER_RULES_DIR}/ulx3s-passthru-inc.mk"
+        "${BOOTLOADER_DEP_ROOT}/cores/misc/core.mk"
+        "${BOOTLOADER_DEP_ROOT}/cores/misc/rtl"
+        "${BOOTLOADER_DEP_ROOT}/cores/usb/core.mk"
+        "${BOOTLOADER_DEP_ROOT}/cores/usb/rtl"
+        "${BOOTLOADER_DEP_ROOT}/cores/usb/data/usb_ep_status.hex"
+        "${BOOTLOADER_DEP_ROOT}/cores/usb/utils/microcode.py"
+    )
+
+    for required_path in "${required_paths[@]}"; do
+        if [[ ! -e "${required_path}" ]]; then
+            cat >&2 <<EOF_DEP
+ERROR: The bootloader dependency tree is incomplete.
 
 Resolved bootloader project:
     ${BOOTLOADER_PROJECT_DIR}
 
-Its Makefile expects the had2019 root two directories above it:
-    ${HAD2019_ROOT}
+Resolved bootloader dependency root:
+    ${BOOTLOADER_DEP_ROOT}
 
 Missing dependency:
-    ${HAD2019_ROOT}/cores/misc
+    ${required_path}
 
-Do not distribute only projects/bootloader as a flat Hazard3-Doom/bootloader
-copy. Prefer a pinned had2019-playground fork/submodule under third_party, or
-vendor a tree that preserves:
+For the supported self-contained Hazard3-Doom layout, vendor these upstream
+had2019 directories below Hazard3-Doom/bootloader/:
 
-    bootloader/cores/misc
-    bootloader/cores/usb
-    bootloader/projects/bootloader
+    mk/
+    cores/misc/
+    cores/usb/
+
+The upstream had2019 build/ directory is vendored as bootloader/mk/.
+The bootloader project itself remains directly in Hazard3-Doom/bootloader/.
 EOF_DEP
-        return 1
-    }
-
-    [[ -d "${HAD2019_ROOT}/cores/usb" ]] || \
-        fail "Missing had2019 USB core directory: ${HAD2019_ROOT}/cores/usb"
+            return 1
+        fi
+    done
 }
 
 self_lint()
@@ -306,7 +336,8 @@ preflight()
 
     printf '\nPreflight PASS\n'
     printf '  Repository root:       %s\n' "${REPO_ROOT}"
-    printf '  had2019 root:          %s\n' "${HAD2019_ROOT}"
+    printf '  Bootloader dep root:   %s\n' "${BOOTLOADER_DEP_ROOT}"
+    printf '  Bootloader rules dir:  %s\n' "${BOOTLOADER_RULES_DIR}"
     printf '  Bootloader project:    %s\n' "${BOOTLOADER_PROJECT_DIR}"
     printf '  FPGA IDCODE:           %s\n' "${IDCODE}"
     printf '  DFU VID:PID:           %s:%s\n' "${DFU_VID}" "${DFU_PID}"
@@ -372,8 +403,8 @@ build_images()
     printf '\n=== Build normal ULX4M-LD bootloader ===\n'
     cd "${BOOTLOADER_PROJECT_DIR}"
 
-    run_command make MODEL="${MODEL}" BOARD="${BOARD}" DEVICE="${DEVICE}" clean
-    run_command make MODEL="${MODEL}" BOARD="${BOARD}" DEVICE="${DEVICE}"
+    run_command make ROOT="${BOOTLOADER_DEP_ROOT}" MODEL="${MODEL}" BOARD="${BOARD}" DEVICE="${DEVICE}" clean
+    run_command make ROOT="${BOOTLOADER_DEP_ROOT}" MODEL="${MODEL}" BOARD="${BOARD}" DEVICE="${DEVICE}"
 
     require_file "${bootloader_bit}"
     require_file "${build_dir}/bootloader-sw.config"
@@ -388,7 +419,7 @@ build_images()
 
     require_file "${sram_bit}"
 
-    run_command make MODEL="${MODEL}" BOARD="${BOARD}" DEVICE="${DEVICE}" passthru
+    run_command make ROOT="${BOOTLOADER_DEP_ROOT}" MODEL="${MODEL}" BOARD="${BOARD}" DEVICE="${DEVICE}" passthru
     require_file "${passthru_bit}"
 
     require_continue "Check the bootloader and passthru build output. Continue with the 85F multiboot image?"
@@ -696,7 +727,8 @@ recover_install()
 
 program_user_bitstream()
 {
-    local user_bitstream="${1:-${REPO_ROOT}/build/fpga_ulx4m_ld.bit}"
+    local default_user_bitstream="${REPO_ROOT}/third_party/Hazard3/example_soc/synth/fpga_ulx4m_ld.bit"
+    local user_bitstream="${1:-${default_user_bitstream}}"
     local user_bitstream_abs
     local user_bitstream_win
     local list_file
@@ -780,7 +812,7 @@ main()
         ;;
     program-user)
         start_session_log
-        program_user_bitstream "${1:-${REPO_ROOT}/build/fpga_ulx4m_ld.bit}"
+        program_user_bitstream "${1:-}"
         ;;
     *)
         usage >&2

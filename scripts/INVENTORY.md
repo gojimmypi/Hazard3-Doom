@@ -10,9 +10,9 @@ the bytes in a file; it does not by itself establish provenance or intent.
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 60
+Files inventoried: 61
 
-Total bytes: 379249
+Total bytes: 405506
 
 ## Verification
 
@@ -84,4 +84,5 @@ should be identified before a public release.
 | `sweep-ulx3s-85f.sh` | 12734 | `7d1875c1c0da4836e5ccdafcd28b95324071ef35cd8b1ef4d570138adab29bcf` | REVIEW | Shell script |
 | `sweep-ulx4m-ld.sh` | 16200 | `6c42a1fa63e6384293c95ea7e8b90ace6aa2d23f55dc05ea4d082249330c68f2` | REVIEW | Shell script |
 | `sweep.sh` | 775 | `73dfc7d13c2d77e1ccc5e6ce72856621c639e27c01d88e13bfc4225dcb1f3895` | REVIEW | Shell script |
+| `ulx4m-bootloader.sh` | 26257 | `1da8ccc18eace9fd61db87468fe0fb7d299b7fb75424b3c993ea7aecc5addf8b` | REVIEW | Shell script |
 | `watch-ecp5-sweep-results.sh` | 18199 | `4d7b1bd134af275ad36d608811c64b9b2bf4ee201ee419d677bdf0b8b886536d` | REVIEW | Shell script |

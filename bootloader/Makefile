@@ -24,6 +24,11 @@
 # Project config
 PROJ = bootloader
 
+# Hazard3-Doom vendors the had2019 build helpers and required cores directly
+# below this bootloader directory. Keep ROOT local so the imported build rules
+# resolve mk/, cores/misc/, and cores/usb/ from this self-contained tree.
+override ROOT := $(CURDIR)
+
 # Target config
 
 MODEL ?= ulx3s
@@ -74,7 +79,7 @@ PROJ_TOP_MOD := top
 #NEXTPNR_ARGS = --pre-pack data/clocks.py
 
 # Include default rules
-include ../../build/project-rules.mk
+include $(ROOT)/mk/project-rules.mk
 
 # Custom rules
 fw/fw_dfu.hex: fw
@@ -94,19 +99,21 @@ $(BUILD_TMP)/$(PROJ).bit $(BUILD_TMP)/$(PROJ).svf: fw/fw_dfu.hex $(BUILD_TMP)/$(
 		--svf $(BUILD_TMP)/$(PROJ).svf --svf-rowsize 100000 \
 		--bit $(BUILD_TMP)/$(PROJ).bit
 
-include ../../build/ulx3s-passthru-inc.mk
+include $(ROOT)/mk/ulx3s-passthru-inc.mk
+
+ECPMULTI_IDCODE_ARGS :=
+ifeq ($(MODEL),ulx4m)
+ifneq ($(filter um-85k um5g-85k,$(DEVICE)),)
+ECPMULTI_IDCODE_ARGS := --input-idcode 0x01113043 --output-idcode 0x01113043
+endif
+endif
 
 $(BUILD_TMP)/multiboot.img: $(BUILD_TMP)/$(PROJ).bit build-tmp/passthru.bit
 	ecpmulti                           --input $(BUILD_TMP)/$(PROJ).bit \
 	  --address $(USER_BITSTREAM_ADDR) --input build-tmp/passthru.bit \
 	  --flashsize 128 \
+	  $(ECPMULTI_IDCODE_ARGS) \
 	  --output $@
-# model=ulx4m DEVICE=um-85k:
-# this must be used for bootloader to jump to user bitstream
-# without this, even normal programming will fail if bootloader is loaded.
-# this can also be used to apply non-serdes bootloader bitstream to serdes 85F chip
-# --input-idcode  0x01113043 \
-# --output-idcode 0x01113043 \
 
 
 $(BUILD_TMP)/multiboot.img.gz: $(BUILD_TMP)/multiboot.img
@@ -126,7 +133,7 @@ flash_ofl: $(BUILD_TMP)/multiboot.img
 	openFPGALoader -b ulx3s --file-type bin -f $<
 
 # DFU write (upgrade) bootloader bitstream and start it
-# hold BTN1 and BTN2 and plug USB
+# hold PCB BTN2 and PCB BTN3 and plug USB
 flash_dfu: $(BUILD_TMP)/multiboot.img build-tmp/passthru.bit
 	dd if=$< of=/tmp/multibot.img bs=2M count=1
 	$(DFU_UTIL) -d 1d50:614a,1d50:614b -a 5 -D /tmp/multibot.img
@@ -135,7 +142,7 @@ flash_dfu: $(BUILD_TMP)/multiboot.img build-tmp/passthru.bit
 	rm /tmp/multibot.img
 
 # DFU write user passthru bitstream and start it
-# hold BTN1 and plug USB
+# hold PCB BTN3 and plug USB
 pass_dfu: build-tmp/passthru.bit
 	$(DFU_UTIL) -d 1d50:614a,1d50:614b -a 0 -D $<
 	$(DFU_UTIL) -d 1d50:614a,1d50:614b -a 0 -e

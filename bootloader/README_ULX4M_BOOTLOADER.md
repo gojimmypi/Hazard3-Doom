@@ -157,12 +157,47 @@ Example paths used during validation:
 
 ```text
 Bootloader source:
-/mnt/c/workspace/had2019-playground/projects/bootloader
+/mnt/c/workspace/Hazard3-Doom/bootloader
 
 Programming utilities:
 /mnt/c/workspace/Hazard3-Doom/bin/openFPGALoader.exe
 /mnt/c/workspace/Hazard3-Doom/bin/dfu-util.exe
 ```
+
+### Self-contained Hazard3-Doom bootloader layout
+
+Hazard3-Doom vendors the bootloader directly at `bootloader/`. The upstream
+had2019 build system also requires its shared build helpers plus the `misc` and
+`usb` cores. Keep those dependencies below the same directory:
+
+```text
+Hazard3-Doom/
+  bootloader/
+    Makefile
+    mk/
+      core-magic.mk
+      core-rules.mk
+      project-rules.mk
+      ulx3s-passthru-inc.mk
+    cores/
+      misc/
+      usb/
+    data/
+    fw/
+    rtl/
+```
+
+The ``mk/`` directory contains vendored upstream make rules and is part of the
+bootloader source tree; check it into Git. In contrast, ``build-tmp/`` contains
+generated build artifacts and should not be checked in. The upstream directory
+name is ``build/``; Hazard3-Doom intentionally vendors those make-rule files as
+``bootloader/mk/`` to avoid confusing them with generated build output.
+
+The imported `bootloader/Makefile` sets `ROOT` to the bootloader directory so
+these vendored paths are used instead of assuming the original
+`had2019-playground/projects/bootloader` repository nesting. Preserve the
+upstream copyright and license notices when copying the `build`, `cores/misc`,
+and `cores/usb` directories.
 
 The bootloader project expects the older `riscv-none-embed-*` tool names. If the
 installed compiler uses the `riscv32-unknown-elf-*` prefix, a temporary shim can
@@ -203,7 +238,7 @@ image for a different ECP5 density.
 From the bootloader project:
 
 ```bash
-cd /mnt/c/workspace/had2019-playground/projects/bootloader
+cd /mnt/c/workspace/Hazard3-Doom/bootloader
 
 make MODEL=ulx4m BOARD=ulx4m-v002 DEVICE=um-85k clean
 make MODEL=ulx4m BOARD=ulx4m-v002 DEVICE=um-85k
@@ -231,7 +266,7 @@ Repack the already routed and firmware-patched configuration without
 `--bootaddr`:
 
 ```bash
-cd /mnt/c/workspace/had2019-playground/projects/bootloader
+cd /mnt/c/workspace/Hazard3-Doom/bootloader
 
 ecppack \
     --compress \
@@ -254,7 +289,7 @@ cd /mnt/c/workspace/Hazard3-Doom
 
 ./bin/openFPGALoader.exe \
     -c tigard \
-    C:/workspace/had2019-playground/projects/bootloader/build-tmp/bootloader-sram-ld-normal.bit
+    C:/workspace/Hazard3-Doom/bootloader/build-tmp/bootloader-sram-ld-normal.bit
 ```
 
 List DFU interfaces:
@@ -287,7 +322,7 @@ cd /mnt/c/workspace/Hazard3-Doom
 
 ./bin/openFPGALoader.exe \
     -c tigard \
-    C:/workspace/had2019-playground/projects/bootloader/build-tmp/bootloader-sram-ld-normal.bit
+    C:/workspace/Hazard3-Doom/bootloader/build-tmp/bootloader-sram-ld-normal.bit
 
 ./bin/dfu-util.exe -l
 ```
@@ -313,7 +348,7 @@ cd /mnt/c/workspace/Hazard3-Doom
 
 ./bin/openFPGALoader.exe \
     -c tigard \
-    C:/workspace/had2019-playground/projects/bootloader/build-tmp/bootloader-sram-ld-upgrade.bit
+    C:/workspace/Hazard3-Doom/bootloader/build-tmp/bootloader-sram-ld-upgrade.bit
 ```
 
 Then verify:
@@ -337,13 +372,13 @@ cd /mnt/c/workspace/Hazard3-Doom
 ./bin/dfu-util.exe \
     -d 1d50:614b \
     -a 5 \
-    -U C:/workspace/had2019-playground/projects/bootloader/build-tmp/bootloader-alt5-before-update.bin
+    -U C:/workspace/Hazard3-Doom/bootloader/build-tmp/bootloader-alt5-before-update.bin
 ```
 
 Verify that the backup is exactly 2 MiB and record its SHA256:
 
 ```bash
-cd /mnt/c/workspace/had2019-playground/projects/bootloader
+cd /mnt/c/workspace/Hazard3-Doom/bootloader
 
 stat -c '%n: %s bytes' \
     build-tmp/bootloader-alt5-before-update.bin
@@ -368,7 +403,7 @@ Use the exact validated `build-tmp/bootloader.bit` from that build.
 First build the passthrough image if it is not already present:
 
 ```bash
-cd /mnt/c/workspace/had2019-playground/projects/bootloader
+cd /mnt/c/workspace/Hazard3-Doom/bootloader
 
 make MODEL=ulx4m BOARD=ulx4m-v002 DEVICE=um-85k passthru
 ```
@@ -447,7 +482,7 @@ cd /mnt/c/workspace/Hazard3-Doom
 
 ./bin/openFPGALoader.exe \
     -c tigard \
-    C:/workspace/had2019-playground/projects/bootloader/build-tmp/bootloader-sram-ld-normal.bit
+    C:/workspace/Hazard3-Doom/bootloader/build-tmp/bootloader-sram-ld-normal.bit
 
 ./bin/dfu-util.exe -l
 ```
@@ -468,7 +503,7 @@ cd /mnt/c/workspace/Hazard3-Doom
 ./bin/dfu-util.exe \
     -d 1d50:614b \
     -a 5 \
-    -D C:/workspace/had2019-playground/projects/bootloader/build-tmp/bootloader-alt5-2m.img
+    -D C:/workspace/Hazard3-Doom/bootloader/build-tmp/bootloader-alt5-2m.img
 ```
 
 A successful `dfu-util` 0.9 transfer ends with output equivalent to:
@@ -502,13 +537,13 @@ cd /mnt/c/workspace/Hazard3-Doom
 ./bin/dfu-util.exe \
     -d 1d50:614b \
     -a 5 \
-    -U C:/workspace/had2019-playground/projects/bootloader/build-tmp/bootloader-alt5-after-update.bin
+    -U C:/workspace/Hazard3-Doom/bootloader/build-tmp/bootloader-alt5-after-update.bin
 ```
 
 Verify the readback size and compare SHA256 hashes:
 
 ```bash
-cd /mnt/c/workspace/had2019-playground/projects/bootloader
+cd /mnt/c/workspace/Hazard3-Doom/bootloader
 
 stat -c '%n: %s bytes' \
     build-tmp/bootloader-alt5-after-update.bin
@@ -604,7 +639,7 @@ cd /mnt/c/workspace/Hazard3-Doom
     --vid 0x1d50 \
     --pid 0x614b \
     --altsetting 0 \
-    ./build/fpga_ulx4m_ld.bit
+    ./third_party/Hazard3/example_soc/synth/fpga_ulx4m_ld.bit
 ```
 
 Alt 0 begins at flash address `0x200000`; this operation does not overwrite the
