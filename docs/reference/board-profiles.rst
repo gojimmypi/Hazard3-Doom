@@ -22,9 +22,9 @@ Board Profiles
      - Compact 320x200 SDRAM scanout
    * - ULX4M-LD 85F
      - ``64m``
-     - 1 GiB MT41K512M16HA-125 DDR3L; ``ahb_litedram`` + generated LiteDRAM/``ECP5DDRPHY``
-     - 40 MHz CPU/AHB default; 75 MHz LiteDRAM user port
-     - LiteDRAM target; timing waiver required
+     - x16 DDR3/DDR3L; Micron ``MT41K512M16HA`` or Alliance ``AS4C256M16D3`` profile; ``ahb_litedram`` + generated LiteDRAM/``ECP5DDRPHY``
+     - 40 MHz CPU/AHB; 60 MHz qualified LiteDRAM user port; 25 MHz reference/init
+     - Micron hardware-qualified; device-specific generated profiles
    * - ULX4M-LS 85F
      - ``32m``
      - 32 MiB, 16-bit SDR SDRAM; native ``ahb_sdram`` controller path
@@ -39,13 +39,13 @@ Current FPGA validation
 -----------------------
 
 The routed values below are regression checkpoints collected from project
-builds. Exact source revisions, netlist hashes, CAD-tool versions, and sweep
-parameters should be taken from the corresponding build/sweep artifact; these
-values are not portable timing guarantees:
+builds. Exact source revisions, netlist hashes, CAD-tool versions, memory-device
+profile, and nextpnr settings are part of the result; seed numbers are not
+portable timing guarantees.
 
 .. list-table::
    :header-rows: 1
-   :widths: 24 12 40 24
+   :widths: 22 12 38 28
 
    * - Board
      - Seed
@@ -60,17 +60,39 @@ values are not portable timing guarantees:
      - ``clk_sys`` 42.11 MHz
      - PASS at 40 MHz
    * - ULX4M-LD 85F
-     - 232
-     - ``clk_sys`` 38.69 MHz; LiteDRAM 62.52 MHz
-     - FAIL at 40 MHz / 75.01 MHz
+     - 2
+     - ``clk_sys`` 43.94 MHz; LiteDRAM user 67.81 MHz
+     - PASS at 40 MHz / 60 MHz and hardware-qualified DDR
 
-The ULX4M-LD build therefore uses ``ALLOW_TIMING_FAILURE=1`` when a development
-bitstream is required. The waiver changes timing failures into reported
-warnings; it does not claim timing closure. Rerun routed timing after material
-RTL, netlist, seed, or toolchain changes. The ULX3S 85F result is specific to
-the timing model selected by the current project flow and should not be compared
-directly with runs that select a different ECP5 timing model. See
-:doc:`timing-sweeps` for sweep provenance and comparison rules.
+The current ULX4M-LD checkpoint is substantially stronger than the older
+``ALLOW_TIMING_FAILURE`` development state. The exact frozen netlist was:
+
+.. code-block:: text
+
+   160c536b12e46667990c887571da6f443ccc6c5a2ba644033db43fc783ea9453
+
+The timing-passing hardware-qualified route used nextpnr seed 2 with HeAP
+``timingweight=30``, ``critexp=3``, and timing-driven rip-up enabled. The exact
+locally tested bitstream had SHA256:
+
+.. code-block:: text
+
+   294602982dfc4a9906961f2e8b6f43de925d8c11a7e5e6bb0f5e392965a868de
+
+The same frozen netlist failed with the earlier default HeAP
+``timingweight=10``, ``critexp=2`` and no timing-driven rip-up, showing why the
+place-and-route settings are part of the qualification record rather than an
+incidental detail.
+
+Hardware validation on the Micron board then passed the complete ``q`` SDRAM
+qualification suite, 40 MiB heap stress, Doom platform smoke test, and copied
+RV32 execution from DDR. A timing PASS alone is not sufficient to claim DDR
+qualification.
+
+A new resident-monitor preload or any other synthesis-visible change creates a
+new netlist. Preserve the qualified seed-2 artifact as a reference, then rerun
+routing and hardware qualification for the new netlist. See :doc:`timing-sweeps`
+for sweep provenance and comparison rules.
 
 Primary ULX3S peripheral bases
 ------------------------------

@@ -62,7 +62,7 @@ Current nominal timing requirements are:
      - n/a
    * - ULX4M-LD 85F
      - Selected by workflow; 40 MHz default
-     - 75.01 MHz
+     - 60 MHz
      - 50 MHz
      - 250 MHz
      - 25 MHz
@@ -71,6 +71,101 @@ A line such as ``1 warning, 0 errors`` is not enough to determine timing status.
 Likewise, a route process can exit successfully while the timing result is
 ``FAIL`` because the sweep intentionally uses nextpnr's timing-allow-fail mode
 to collect data from routes that miss timing.
+
+Qualified ULX4M-LD 40/60 MHz checkpoint
+---------------------------------------
+
+The current hardware-qualified ULX4M-LD checkpoint uses:
+
+.. code-block:: text
+
+   Hazard3/AHB:          40 MHz
+   LiteDRAM user:        60 MHz
+   LiteDRAM reference:   25 MHz
+   LiteDRAM init:        25 MHz
+   LiteDRAM init CPU:    SERV
+   nextpnr placer:       heap
+   timingweight:         30
+   critexp:              3
+   timing-driven rip-up: enabled
+   seed:                 2
+
+The frozen synthesized netlist SHA256 is:
+
+.. code-block:: text
+
+   160c536b12e46667990c887571da6f443ccc6c5a2ba644033db43fc783ea9453
+
+For that exact netlist, seed 2 reached ``clk_sys`` 43.94 MHz and the LiteDRAM
+user clock 67.81 MHz, passing the 40/60 MHz requirements. The exact locally
+hardware-tested bitstream SHA256 is:
+
+.. code-block:: text
+
+   294602982dfc4a9906961f2e8b6f43de925d8c11a7e5e6bb0f5e392965a868de
+
+The same netlist and seeds did **not** close reliably with the earlier HeAP
+``timingweight=10``, ``critexp=2``, no-rip-up defaults. This is why the sweep
+metadata must record placer/router tuning in addition to seed and netlist hash.
+
+Static timing was followed by real DDR qualification on the Micron-populated
+board. The route passed the 1 MiB sequential test, complete 64 MiB sparse alias
+test, four-region pseudorandom test, repeated ``q`` qualification, 40 MiB heap
+stress, Doom memory/timer smoke test, and copied RV32 execution from DDR. Do
+not label a new route hardware-qualified based only on nextpnr timing.
+
+To reproduce the known-good routing experiment against an already-frozen
+matching netlist:
+
+.. code-block:: bash
+
+   SWEEP_SKIP_SYNTH=1 \
+   SWEEP_JOBS=1 \
+   SWEEP_ROUTE_TIMEOUT_SECONDS=1200 \
+   SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT=30 \
+   SWEEP_NEXTPNR_HEAP_CRITEXP=3 \
+   SWEEP_NEXTPNR_TMG_RIPUP=1 \
+       ./scripts/sweep-ecp5.sh ulx4m-ld-85f 2
+
+Only use ``SWEEP_SKIP_SYNTH=1`` after verifying the frozen netlist hash and all
+profile metadata. A rebuilt monitor preload, DDR-device profile, generated
+LiteDRAM core, clock, RTL change, or synthesis-tool change invalidates the
+frozen-netlist comparison and requires a new synthesis followed by a new sweep.
+
+
+Retaining an ULX4M-LD hardware-test bitstream
+---------------------------------------------
+
+The ULX4M-LD sweep normally records timing logs/results and does not need to
+pack every exploratory route. When a seed is worth taking to hardware, retain a
+nextpnr text configuration explicitly. For the qualified seed-2 experiment:
+
+.. code-block:: bash
+
+   SWEEP_SKIP_SYNTH=1 \
+   SWEEP_JOBS=1 \
+   SWEEP_ROUTE_TIMEOUT_SECONDS=1200 \
+   SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT=30 \
+   SWEEP_NEXTPNR_HEAP_CRITEXP=3 \
+   SWEEP_NEXTPNR_TMG_RIPUP=1 \
+   SWEEP_NEXTPNR_EXTRA_ARGS="--textcfg build/ulx4m-ld-test/fpga_ulx4m_ld-seed2.config" \
+       ./scripts/sweep-ecp5.sh ulx4m-ld-85f 2
+
+Then pack that **already routed** configuration without rerunning nextpnr:
+
+.. code-block:: bash
+
+   ecppack \
+       --compress \
+       --svf build/ulx4m-ld-test/fpga_ulx4m_ld-seed2.svf \
+       --idcode 0x01113043 \
+       build/ulx4m-ld-test/fpga_ulx4m_ld-seed2.config \
+       build/ulx4m-ld-test/fpga_ulx4m_ld-seed2.bit
+
+Do not use a convenience bitstream script that silently invokes nextpnr again
+with different/default placer settings; that would create a different route
+from the timing result being qualified. Verify the netlist hash, route settings,
+seed, and final bitstream SHA256 before hardware testing.
 
 Local sweep workflow
 --------------------
@@ -165,7 +260,7 @@ The workflow file remains authoritative if a default changes later.
    * - ``ulx4m_sys_clk_mhz``
      - 40
      - Hazard3 CPU/AHB system clock for ULX4M-LD. Choices are 25, 40, and
-       50 MHz. The LiteDRAM user clock remains a separate 75 MHz domain.
+       50 MHz. The current qualified LiteDRAM user clock is a separate 60 MHz domain.
    * - ``ulx4m_litedram_cpu``
      - ``serv``
      - Select the CPU embedded in the generated LiteDRAM initialization core:
@@ -462,7 +557,7 @@ A sweep result contains several different concepts that should not be confused:
 
 When comparing failing seeds, max-frequency numbers help identify which clock
 is limiting the design. For ULX4M-LD, for example, a seed can pass the selected
-Hazard3 ``clk_sys`` requirement while still missing the independent 75.01 MHz
+Hazard3 ``clk_sys`` requirement while still missing the independent 60 MHz
 LiteDRAM user clock. The best ``clk_sys`` seed is therefore not necessarily the
 best overall candidate.
 

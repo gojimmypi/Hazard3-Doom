@@ -46,6 +46,13 @@ Used by ULX3S 85F and ULX4M-LD 85F:
    * - ``0x23C00000-0x23FFFFFF``
      - Uncached video reservation.
 
+For ULX4M-LD, this is a **software-visible 64 MiB profile**, not the physical
+DDR3 chip capacity. The currently qualified Micron ``MT41K512M16HA`` population
+is an 8 Gbit/x16 device (1 GiB), and the project also supports the smaller
+Alliance ``AS4C256M16D3`` population through a separate generated LiteDRAM
+profile. Hazard3-Doom deliberately uses only the 64 MiB range above, so the
+software memory map remains stable across those board populations.
+
 32 MiB SDRAM profile
 --------------------
 

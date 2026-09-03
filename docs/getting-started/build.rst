@@ -19,16 +19,22 @@ ULX3S 12F compact target, 32 MiB default, 40 MHz:
 
    ./scripts/build-ulx3s-12f-doom.sh
 
-ULX4M-LD 85F, 64 MiB software map, 40 MHz Hazard3:
+ULX4M-LD 85F, 64 MiB software map, 40 MHz Hazard3 and 60 MHz LiteDRAM.
+The normal complete-build route is still an exploratory path:
 
 .. code-block:: bash
 
    ALLOW_TIMING_FAILURE=1 ./scripts/build-ulx4m-ld-doom.sh
 
-The current ULX4M-LD route has known ``clk_sys`` and LiteDRAM timing misses.
-``ALLOW_TIMING_FAILURE=1`` keeps those misses visible while allowing a
-development bitstream to be generated; it does not make the constraints pass.
-See :doc:`../reference/board-profiles` for the current validation results.
+Do not confuse that convenience build with the hardware-qualified route. The
+current qualified checkpoint closes timing with seed 2,
+``timingweight=30``, ``critexp=3``, and timing-driven rip-up, then passes the
+full DDR qualification suite on a Micron-populated ULX4M-LD. Use the sweep flow
+to reproduce/select a timing-passing bitstream. A complete rebuild changes the
+synthesized netlist when the resident monitor or generated LiteDRAM profile
+changes, so rerun the timing sweep and hardware tests rather than assuming seed
+2 remains valid. See :doc:`../reference/board-profiles` and
+:doc:`../reference/timing-sweeps`.
 
 The 12F wrapper supports either a 32 MiB or 64 MiB SDRAM map, but defaults to
 32 MiB. If the 64 MiB map is selected, keep the monitor and Doom image matched:
@@ -66,6 +72,26 @@ The complete board wrappers set the target-specific memory profile, system clock
 and linker script for you. For manual builds, the main controls are
 ``HAZARD3_MEMORY_PROFILE``, ``HAZARD3_SYS_CLK_HZ``, and
 ``HAZARD3_MONITOR_LINKER_SCRIPT``.
+
+For a software-only ULX4M-LD monitor update against an already configured
+40 MHz FPGA, keep the output separate from the resident preload:
+
+.. code-block:: bash
+
+   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-40mhz/monitor" \
+   HAZARD3_MEMORY_PROFILE=64m \
+   HAZARD3_SYS_CLK_HZ=40000000 \
+       ./scripts/build.sh
+
+Load it through an already-running OpenOCD session with:
+
+.. code-block:: bash
+
+   ./scripts/load-firmware.sh \
+       ./build/ulx4m-ld-40mhz/monitor/hazard3-boot-monitor.elf
+
+This updates only processor software in the running FPGA and does not reroute
+the known-good bitstream.
 
 Linked Doom image only
 ----------------------

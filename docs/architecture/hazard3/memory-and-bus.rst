@@ -147,12 +147,13 @@ require controllers with refresh and DRAM timing state.
        system clock. The board wrapper forwards a half-cycle-shifted SDRAM
        clock and keeps video on a separate PLL.
    * - ULX4M-LD 85F
-     - External DDR3
+     - External x16 DDR3/DDR3L
      - ``ahb_litedram.v`` -> generated LiteDRAM -> ``ECP5DDRPHY``
-     - LiteDRAM runs a 75 MHz user port with a 128-bit Wishbone interface while
-       Hazard3/AHB runs at 50 MHz. The adapter crosses the clock domains one
-       request at a time. Startup firmware performs DDR3 initialization, read
-       leveling, and a memory test before normal accesses are enabled.
+     - The qualified profile uses a 60 MHz LiteDRAM user clock with a 128-bit
+       Wishbone interface while Hazard3/AHB runs at 40 MHz. LiteDRAM uses the
+       25 MHz board reference/init clock. The adapter crosses the clock domains
+       one request at a time; the generated LiteDRAM core owns chip-specific
+       DDR geometry and initialization.
 
 The two external-memory paths therefore have different performance tradeoffs.
 The native SDR controller is simpler and has less interface machinery, but
@@ -167,6 +168,92 @@ than peak DDR transfer rate.
 Do not confuse the ULX3S external SDRAM with ECP5 EBR. EBR is SRAM physically
 inside the FPGA; the SDR SDRAM chip is a separate device on the board. LiteDRAM
 is not used in the ULX3S native SDR path.
+
+ULX4M-LD DDR3 configuration and qualification
+----------------------------------------------
+
+ULX4M-LD production boards may not all contain the same DDR3 device. The
+project is intended to support at least these x16 parts through separate
+LiteDRAM generated profiles:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 22 20 30
+
+   * - Device
+     - Density
+     - Approximate capacity
+     - Project note
+   * - Micron ``MT41K512M16HA``
+     - 8 Gbit, x16
+     - 1 GiB
+     - The currently hardware-qualified board uses this family. Its LiteDRAM
+       geometry is 16 row bits, 10 column bits, and 3 bank bits.
+   * - Alliance ``AS4C256M16D3``
+     - 4 Gbit, x16
+     - 512 MiB
+     - Supported as a board-population alternative through a different
+       generated LiteDRAM module/profile.
+
+The physical chip capacity is larger than the current Hazard3-Doom software
+map. Hazard3-Doom intentionally exposes a 64 MiB external-memory profile at
+``0x20000000-0x23ffffff`` plus the diagnostic alias; unused physical capacity
+is not required by the current software.
+
+Chip selection belongs in the generated LiteDRAM configuration, not in
+``ahb_litedram.v``. The AHB-to-LiteDRAM bridge interface remains the same while
+the generated core changes for memory device, initialization CPU, frequency,
+and other build-profile settings. This keeps board-population differences out
+of the Hazard3 system bus interface.
+
+The current hardware-qualified LiteDRAM settings are:
+
+.. code-block:: text
+
+   memtype: DDR3
+   phy: ECP5DDRPHY
+   input/reference clock: 25 MHz
+   LiteDRAM user clock: 60 MHz
+   LiteDRAM init clock: 25 MHz
+   Hazard3/AHB system clock: 40 MHz
+   user port: 128-bit Wishbone
+   cmd_buffer_depth: 2
+   cmd_buffer_buffered: true
+   with_auto_precharge: false
+   initialization CPU: SERV for the qualified checkpoint
+
+``cmd_buffer_depth=0`` was rejected during timing experiments because it
+created combinational-loop/timing problems. The qualified profile retains a
+depth of 2. ``with_auto_precharge`` remains ``false`` in the qualified
+configuration.
+
+The initialization CPU (for example SERV or VexRiscv) is part of the generated
+LiteDRAM core and does not change the ``ahb_litedram.v`` bus interface. Keep
+separate generated profiles so CPU type, DDR device, and user-clock frequency
+can be swept programmatically without hand-editing generated Verilog.
+
+Hardware qualification is more than a nextpnr timing PASS. On the qualified
+Micron board, the monitor has passed all of the following against the 60 MHz
+LiteDRAM route:
+
+* 1 MiB destructive sequential test with byte/halfword/word access and zero,
+  ones, address, and inverse-address patterns;
+* sparse alias/address testing across the complete 64 MiB software-visible
+  window;
+* pseudorandom 1 MiB tests at four separated 16 MiB regions;
+* the complete ``q`` qualification suite, repeatedly;
+* the 40 MiB heap allocation/stress test;
+* the Doom platform memory/timer smoke test; and
+* copied RV32 code execution from DDR, including normal-GP and foreign-GP
+  phases with timer interrupts and guard checking.
+
+The status command is authoritative after startup. During one bring-up, the
+resident monitor printed a 5-second external-memory ``TIMEOUT`` while LiteDRAM
+was still calibrating, but a later ``s`` showed ``external_memory_ready=YES``,
+``init_done=YES``, ``init_error=NO``, ``pll_locked=YES``,
+``user_clock_ready=YES``, and ``ready=YES``. The subsequent qualification tests
+all passed. Therefore a startup timeout message should not be treated as a
+final DDR failure without checking current status.
 
 Memory ordering and ``fence.i``
 -------------------------------

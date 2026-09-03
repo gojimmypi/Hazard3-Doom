@@ -163,15 +163,43 @@ OpenOCD cannot see a working Hazard3 debug module
   has been verified with WinUSB; libusbK is not mandatory.
 * Do not confuse the ULX3S ``US1`` FT231X/JTAG driver with the separate external
   USB-UART COM-port driver used by Web Serial.
-* Reduce the JTAG clock.
+* On ULX4M-LD with Tigard, keep Interface 0 on the FTDI VCP driver for UART and
+  Interface 1 on libusbK for JTAG. OpenOCD uses ``ftdi channel 1``.
+* On ULX4M-LD, the correct LFE5UM-85F IDCODE is ``0x01113043``. If OpenOCD reads
+  that IDCODE but reports ``dtmcontrol is 0``, the physical JTAG path is alive;
+  verify that the user bitstream has left DFU and is actually running before
+  changing DTM RTL or wiring.
+* The established Tigard wiring has no target reset wire connected. Do not rely
+  on SRST/TRST to start the FPGA design.
+* Reduce the JTAG clock only after checking the active bitstream and driver
+  binding.
 * Ensure only one GDB client is attached.
 * Verify the FPGA bitstream is the expected Hazard3 build.
 * Verify the ELF matches the running hardware/monitor build.
 * Distinguish ECP5 TAP connectivity from Hazard3 debug-module connectivity.
 
-If the same FT231X also needs the browser FPGA flasher, prefer WinUSB so both
-OpenOCD/GDB and WebUSB work without another driver swap. Restore the FTDI
+If the same ULX3S FT231X also needs the browser FPGA flasher, prefer WinUSB so
+both OpenOCD/GDB and WebUSB work without another driver swap. Restore the FTDI
 VCP/D2XX driver only when a tool such as Windows ``fujprog`` requires it.
+
+ULX4M-LD reports external-memory TIMEOUT
+----------------------------------------
+
+The current monitor's initial 5-second wait can expire before LiteDRAM finishes
+calibration. Do not treat the banner ``TIMEOUT`` as a final failure by itself.
+Run ``s`` and check the live state. A usable DDR state includes:
+
+.. code-block:: text
+
+   external_memory_ready=YES
+   init_done=YES
+   init_error=NO
+   pll_locked=YES
+   user_clock_ready=YES
+   ready=YES
+
+If those fields are ready, run ``q``. The qualified 40/60 MHz ULX4M-LD route
+has passed the complete SDRAM suite repeatedly, plus ``k``, ``d``, and ``x``.
 
 Build suddenly changes because of submodules
 --------------------------------------------

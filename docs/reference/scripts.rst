@@ -33,11 +33,15 @@ memory map aligned.
    ``HAZARD3_DOOM_HDMI_RESOLUTION=320x200`` and uses an SDRAM-resident monitor.
 
 ``scripts/build-ulx4m-ld-doom.sh``
-   Complete ULX4M-LD 85F build. It uses the 64 MiB software map at 40 MHz and checks the
-   required LiteDRAM generated sources before building the monitor, embedded boot
-   image, FPGA bitstream, and Doom image. The current routed design has known
-   ``clk_sys`` and LiteDRAM timing misses, so use ``ALLOW_TIMING_FAILURE=1`` when
-   intentionally generating the current development bitstream.
+   Complete ULX4M-LD 85F build. It uses the 64 MiB software map at 40 MHz and
+   checks the selected generated LiteDRAM sources before building the monitor,
+   embedded boot image, FPGA bitstream, and Doom image. The ordinary board build
+   route is not the same as the current hardware-qualified sweep checkpoint, so
+   ``ALLOW_TIMING_FAILURE=1`` may still be used for an exploratory complete
+   build. The qualified 40 MHz Hazard3 / 60 MHz LiteDRAM checkpoint is seed 2
+   with HeAP timingweight 30, critexp 3, and timing-driven rip-up. A fresh
+   complete build creates a new netlist and must be rerouted and
+   hardware-qualified; do not assume the historical seed remains valid.
 
 Examples:
 
@@ -79,8 +83,9 @@ Monitor and bitstream build helpers
    Internal shared synthesis/place-and-route implementation used by the three
    board-specific bitstream wrappers. It is not normally invoked directly.
    ``ALLOW_TIMING_FAILURE=1`` permits a bitstream to be generated while keeping
-   timing misses visible as warnings; use it only for an intentionally accepted
-   development timing exception such as the current ULX4M-LD target.
+   timing misses visible as warnings. It is useful for exploratory routing but
+   is not a substitute for the current timing-passing ULX4M-LD sweep settings or
+   hardware qualification.
 
 ``scripts/make-boot-hex.py``
    Convert a monitor binary into the hexadecimal initialization file consumed by

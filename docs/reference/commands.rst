@@ -1,6 +1,48 @@
 Monitor Command Reference
 =========================
 
+External-memory qualification
+-----------------------------
+
+The ULX4M-LD DDR3 route was hardware-qualified with these monitor commands.
+Wait for ``s`` to report ``external_memory_ready=YES`` before destructive
+memory tests.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Command
+     - Description
+   * - ``m``
+     - Destructive 1 MiB sequential diagnostic-window test. Checks access
+       widths plus zero, ones, address, and inverse-address patterns.
+   * - ``a``
+     - Sparse address/bank alias test across the full 64 MiB software-visible
+       external-memory window.
+   * - ``r``
+     - Pseudorandom 1 MiB test in each of four separated memory regions.
+   * - ``q``
+     - Run the complete sequential + sparse + pseudorandom qualification suite.
+   * - ``k``
+     - Heap allocation/stress test. The 64 MiB ULX4M-LD profile exercises the
+       40 MiB heap window.
+   * - ``d``
+     - Doom platform memory/timer smoke test.
+   * - ``x``
+     - Copy RV32 payload code to external memory and execute it, including
+       normal-GP and foreign-GP phases with timer interrupts and guard checks.
+   * - ``z``
+     - Reset the heap; all existing heap pointers become invalid.
+   * - ``s``
+     - Print runtime status, including external-memory readiness and LiteDRAM
+       initialization/PLL/user-clock state.
+   * - ``v``
+     - Print firmware, FPGA, memory-core, and adapter version IDs.
+
+A startup ``TIMEOUT`` is not by itself a final DDR failure. During the current
+ULX4M-LD bring-up, LiteDRAM finished after the monitor's initial 5-second wait;
+``s`` later reported ready and the complete qualification suite passed.
+
 Boot and Doom
 -------------
 

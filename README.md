@@ -119,21 +119,31 @@ DoomGeneric changes by setting `HAZARD3_DOOM_ALLOW_DIRTY_DOOMGENERIC=1`.
 
 ## Board profiles
 
-| Board       | Memory profile                  | System clock |
-|-------------|---------------------------------:|-------------:|
-| ULX3S 85F    |    `64m`                         |       50 MHz |
-| ULX3S 12F    |    `32m` default; `64m` optional |       40 MHz |
-| ULX4M-LD 85F |    `64m`                         |       50 MHz |
-| ULX4M-LS 85F |    `32m`                         |       50 MHz |
+| Board       | Memory profile                  | System clock | External-memory clock/profile |
+|-------------|---------------------------------:|-------------:|-------------------------------|
+| ULX3S 85F    |    `64m`                         |       50 MHz | native SDR SDRAM              |
+| ULX3S 12F    |    `32m` default; `64m` optional |       40 MHz | native SDR SDRAM              |
+| ULX4M-LD 85F |    `64m`                         |       40 MHz | LiteDRAM user 60 MHz, init/ref 25 MHz |
+| ULX4M-LS 85F |    `32m`                         |       50 MHz | native SDR SDRAM              |
 
 The `64m` profile is the default for the 85F targets. The ULX3S 12F wrapper
 defaults to `32m`. The profile used for the monitor, Doom image, and WAD
 uploader must match.
 
+
+ULX4M-LD uses device-specific generated LiteDRAM profiles. The current Micron
+`MT41K512M16HA` population is hardware-qualified; the project also supports the
+Alliance `AS4C256M16D3` population without changing the `ahb_litedram.v` AHB
+bridge interface. Hazard3-Doom intentionally exposes only the 64 MiB software
+map even when the physical DDR device is larger.
+
 Current release validation uses seed 55 for ULX3S 85F and seed 65 for ULX3S
-12F. ULX4M-LD currently requires an explicit timing waiver to generate a
-development bitstream; see `docs/reference/board-profiles.rst` for the measured
-status and caveats.
+12F. ULX4M-LD now has a timing-passing and hardware-qualified 40/60 MHz
+checkpoint: frozen-netlist seed 2 with HeAP timingweight 30, critexp 3, and
+timing-driven rip-up. The Micron-populated board passed the complete DDR
+qualification, heap stress, Doom smoke, and RV32-from-DDR execution tests. See
+`docs/reference/board-profiles.rst` and `docs/reference/timing-sweeps.rst` for
+the exact hashes and qualification caveats.
 
 
 ## Source and build ownership
@@ -171,15 +181,19 @@ ULX3S 12F:
 ./scripts/build-ulx3s-12f-doom.sh
 ```
 
-ULX4M-LD 85F:
+ULX4M-LD 85F exploratory complete build:
 
 ```bash
 ALLOW_TIMING_FAILURE=1 ./scripts/build-ulx4m-ld-doom.sh
 ```
 
-The ULX4M-LD timing waiver is intentional for the current development target.
-It reports the timing misses but allows the bitstream and Doom package to be
-generated.
+The normal complete-build route still uses the board build flow rather than the
+known-good sweep tuning, so this command is **not** the hardware-qualified
+seed-2 route. Use the timing sweep with HeAP timingweight 30, critexp 3, and
+timing-driven rip-up to select a timing-passing ULX4M-LD image. A complete
+rebuild can also change the synthesized netlist when the resident monitor or
+generated LiteDRAM profile changes, so rerun timing and DDR qualification for
+the new netlist. `ALLOW_TIMING_FAILURE=1` is exploratory only.
 
 The wrappers build the FPGA in the pinned Hazard3 submodule, then copy the final
 bitstream into this repository:
@@ -214,7 +228,17 @@ ULX4M-LD:
 
 ```bash
 HAZARD3_MEMORY_PROFILE=64m \
-HAZARD3_SYS_CLK_HZ=50000000 \
+HAZARD3_SYS_CLK_HZ=40000000 \
+    ./scripts/build.sh
+```
+
+To keep a software-only 40 MHz monitor separate from the resident preload while
+testing an already-qualified FPGA image:
+
+```bash
+HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-40mhz/monitor" \
+HAZARD3_MEMORY_PROFILE=64m \
+HAZARD3_SYS_CLK_HZ=40000000 \
     ./scripts/build.sh
 ```
 
@@ -250,6 +274,23 @@ An explicit ELF path may be supplied as the first argument:
 
 The loader halts the target, loads and compares the ELF sections, sets `_start`,
 resumes the CPU, and disconnects.
+
+For ULX4M-LD, the working Tigard arrangement is permanent: FT2232H Interface 0
+uses the FTDI VCP driver for the 115200 UART, while Interface 1 uses libusbK for
+OpenOCD JTAG (`ftdi channel 1`). The correct LFE5UM-85F IDCODE is
+`0x01113043`. The established setup does not connect a target reset wire.
+
+ULX4M DFU programming uses VID:PID `1d50:614b`, alternate setting 0. After
+writing a user image, explicitly leave DFU to execute it:
+
+```bash
+./bin/dfu-util.exe -a 0 -e
+```
+
+Once the monitor is running, `s` should report `external_memory_ready=YES` and
+LiteDRAM `init_done=YES`, `init_error=NO`, `pll_locked=YES`,
+`user_clock_ready=YES`, and `ready=YES`. Run `q` for the complete DDR
+qualification; the qualified checkpoint also passes `k`, `d`, and `x`.
 
 Monitor commands used by Doom are:
 
