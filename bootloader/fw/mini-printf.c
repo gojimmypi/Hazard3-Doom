@@ -1,4 +1,6 @@
 /*
+ * bootloader/fw/mini-printf.c
+ *
  * The Minimal snprintf() implementation
  *
  * Copyright (c) 2013,2014 Michal Ludvig <michal@logix.cz>

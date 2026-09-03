@@ -1,5 +1,5 @@
 /*
- * top.v
+ * bootloader/rtl/top-ulx4m.v
  *
  * vim: ts=4 sw=4
  *
@@ -31,6 +31,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+`default_nettype none
+
 // define none or one of:
 `ifdef BOARD_ULX3S_V20
 `define i2c_bridge_v20
@@ -46,7 +48,6 @@
 `endif
 
 
-`default_nettype none
 
 module top
 #(
@@ -498,3 +499,5 @@ module top
 	);
 
 endmodule // top
+
+`default_nettype wire

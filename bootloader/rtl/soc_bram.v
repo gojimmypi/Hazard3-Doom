@@ -1,5 +1,5 @@
 /*
- * soc_bram.v
+ * bootloader/rtl/soc_bram.v
  *
  * vim: ts=4 sw=4
  *
@@ -60,3 +60,5 @@ module soc_bram #(
 	end
 
 endmodule // soc_bram
+
+`default_nettype wire

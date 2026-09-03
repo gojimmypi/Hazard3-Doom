@@ -1,5 +1,5 @@
 /*
- * top.v
+ * bootloader/rtl/top.v
  *
  * vim: ts=4 sw=4
  *
@@ -354,3 +354,5 @@ module top (
 	);
 
 endmodule // top
+
+`default_nettype wire

@@ -1,5 +1,5 @@
 /*
- * spi.c
+ * bootloader/fw/spi.c
  *
  * Copyright (C) 2019 Sylvain Munaut
  * All rights reserved.

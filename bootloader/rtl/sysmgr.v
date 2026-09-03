@@ -1,5 +1,5 @@
 /*
- * sysmgr.v
+ * bootloader/rtl/sysmgr.v
  *
  * vim: ts=4 sw=4
  *
@@ -114,3 +114,5 @@ EHXPLLL #(
 	assign locked = pll_lock;
 
 endmodule // sysmgr
+
+`default_nettype wire

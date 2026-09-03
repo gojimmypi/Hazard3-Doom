@@ -1,5 +1,5 @@
 /*
- * start.S
+ * bootloader/fw/start.S
  *
  * Startup code taken from picosoc/picorv32 and adapted for use here
  *

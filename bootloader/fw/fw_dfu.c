@@ -1,5 +1,5 @@
 /*
- * fw_dfu.c
+ * bootloader/fw/fw_dfu.c
  *
  * Copyright (C) 2019 Sylvain Munaut
  * All rights reserved.

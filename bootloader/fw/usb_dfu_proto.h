@@ -1,5 +1,5 @@
 /*
- * usb_dfu_proto.h
+ * bootloader/fw/usb_dfu_proto.h
  *
  * Copyright (C) 2019 Sylvain Munaut
  * All rights reserved.

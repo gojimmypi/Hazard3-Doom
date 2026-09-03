@@ -1,5 +1,5 @@
 /*
- * usb.c
+ * bootloader/fw/usb.c
  *
  * Copyright (C) 2019 Sylvain Munaut
  * All rights reserved.

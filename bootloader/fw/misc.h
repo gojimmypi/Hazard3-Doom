@@ -1,5 +1,5 @@
 /*
- * misc.h
+ * bootloader/fw/misc.h
  *
  * Copyright (C) 2019 Sylvain Munaut
  * All rights reserved.

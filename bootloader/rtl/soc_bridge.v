@@ -1,5 +1,5 @@
 /*
- * soc_bridge.v
+ * bootloader/rtl/soc_bridge.v
  *
  * vim: ts=4 sw=4
  *
@@ -193,3 +193,5 @@ module soc_bridge #(
 	assign pb_ready = ram_rdy | wb_rdy;
 
 endmodule // soc_bridge
+
+`default_nettype wire

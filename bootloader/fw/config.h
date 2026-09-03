@@ -1,5 +1,5 @@
 /*
- * config.h
+ * bootloader/fw/config.h
  *
  * Copyright (C) 2019 Sylvain Munaut
  * All rights reserved.

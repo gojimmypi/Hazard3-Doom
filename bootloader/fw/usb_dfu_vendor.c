@@ -1,5 +1,5 @@
 /*
- * usb_dfu_vendor.c
+ * bootloader/fw/usb_dfu_vendor.c
  *
  * Copyright (C) 2019 Sylvain Munaut
  * All rights reserved.

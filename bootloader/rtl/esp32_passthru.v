@@ -1,7 +1,27 @@
+/* -----------------------------------------------------------------------------
+ * File:        esp32_passthru.v
+ * Path:        bootloader/rtl/esp32_passthru.v
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Route USB-UART and control signals for ESP32 programming passthrough.
+ *
+ * Original author(s):    emard
+ *
+ * Upstream:    HAD2019 / ULX3S / ULX4M DFU bootloader
+ * Upstream license: No file-level license notice was present in this
+ *                   imported upstream file; do not infer one here.
+ *
+ * This file contains third-party material and is not relicensed by
+ * Hazard3-Doom. Preserve its upstream history and provenance.
+ * See LICENSES/HAD2019-Bootloader-NOTICE.md for provenance and licensing.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
+`default_nettype none
+
 // minimal passthru for ESP32 programming
 // thanx to liebman
 
-`default_nettype none
 module esp32_passthru
 #(
   // BTN0 delay PROGRAMN prevents exit immediately
@@ -164,4 +184,5 @@ module esp32_passthru
   assign led[0] = wifi_gpio0;   // red
 
 endmodule
+
 `default_nettype wire

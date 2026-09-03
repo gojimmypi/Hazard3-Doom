@@ -1,5 +1,5 @@
 /*
- * utils.c
+ * bootloader/fw/utils.c
  *
  * Copyright (C) 2019 Sylvain Munaut
  * All rights reserved.

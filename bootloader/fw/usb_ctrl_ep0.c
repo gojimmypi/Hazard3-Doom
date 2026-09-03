@@ -1,5 +1,5 @@
 /*
- * usb_ctrl_ep0.c
+ * bootloader/fw/usb_ctrl_ep0.c
  *
  * Copyright (C) 2019 Sylvain Munaut
  * All rights reserved.

@@ -1,5 +1,5 @@
 /*
- * console.h
+ * bootloader/fw/console.h
  *
  * Copyright (C) 2019 Sylvain Munaut
  * All rights reserved.

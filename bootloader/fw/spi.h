@@ -1,5 +1,5 @@
 /*
- * spi.h
+ * bootloader/fw/spi.h
  *
  * Copyright (C) 2019 Sylvain Munaut
  * All rights reserved.

@@ -1,3 +1,23 @@
+# -----------------------------------------------------------------------------
+# File:        Makefile
+# Path:        bootloader/fw/Makefile
+#
+# Project:     Hazard3-Doom
+# Purpose:     Build the RISC-V DFU bootloader firmware and embedded firmware image.
+#
+# Original author(s):    Sylvain Munaut (smunaut)
+# Upstream contributors: emard
+#
+# Upstream:    HAD2019 / ULX3S / ULX4M DFU bootloader
+# Upstream license: No file-level license notice was present in this
+#                   imported upstream file; do not infer one here.
+#
+# This file contains third-party material and is not relicensed by
+# Hazard3-Doom. Preserve its upstream history and provenance.
+# See LICENSES/HAD2019-Bootloader-NOTICE.md for provenance and licensing.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 BOARD ?= had2019-badge
 CROSS ?= riscv-none-embed-
 #wget -c https://github.com/xpack-dev-tools/riscv-none-embed-gcc-xpack/releases/download/v8.3.0-1.2/xpack-riscv-none-embed-gcc-8.3.0-1.2-linux-x64.tar.gz

@@ -1,5 +1,5 @@
 /*
- * soc_had_misc.v
+ * bootloader/rtl/soc_had_misc.v
  *
  * vim: ts=4 sw=4
  *
@@ -309,3 +309,5 @@ module soc_had_misc (
 	*/
 
 endmodule // soc_had_misc
+
+`default_nettype wire

@@ -1,5 +1,5 @@
 /*
- * qspi_master_wb.v
+ * bootloader/rtl/qspi_master_wb.v
  *
  * vim: ts=4 sw=4
  *
@@ -332,3 +332,5 @@ module qspi_master_wb #(
 		end
 
 endmodule // qspi_master_wb
+
+`default_nettype wire

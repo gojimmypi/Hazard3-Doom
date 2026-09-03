@@ -1,3 +1,23 @@
+/* -----------------------------------------------------------------------------
+ * File:        top-ulx3s-passthru.v
+ * Path:        bootloader/rtl/top-ulx3s-passthru.v
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Integrate the ULX3S ESP32-programming passthrough image.
+ *
+ * Original author(s):    emard
+ *
+ * Upstream:    HAD2019 / ULX3S / ULX4M DFU bootloader
+ * Upstream license: No file-level license notice was present in this
+ *                   imported upstream file; do not infer one here.
+ *
+ * This file contains third-party material and is not relicensed by
+ * Hazard3-Doom. Preserve its upstream history and provenance.
+ * See LICENSES/HAD2019-Bootloader-NOTICE.md for provenance and licensing.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
+`default_nettype none
 
 // define none or one of:
 `ifdef BOARD_ULX3S_V20
@@ -10,7 +30,6 @@
 `define i2c_bridge_v316
 `endif
 
-`default_nettype none
 
 module top
 (
@@ -110,3 +129,5 @@ module top
 	assign flash_holdn = 1;
 
 endmodule // top
+
+`default_nettype wire

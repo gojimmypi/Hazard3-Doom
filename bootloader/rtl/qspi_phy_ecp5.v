@@ -1,5 +1,5 @@
 /*
- * qspi_phy_ecp5.v
+ * bootloader/rtl/qspi_phy_ecp5.v
  *
  * vim: ts=4 sw=4
  *
@@ -150,3 +150,5 @@ module qspi_phy_ecp5 #(
 	endgenerate
 
 endmodule // qspi_phy_ecp5
+
+`default_nettype wire

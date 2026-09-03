@@ -1,4 +1,24 @@
+/* -----------------------------------------------------------------------------
+ * File:        i2c_bridge.v
+ * Path:        bootloader/rtl/i2c_bridge.v
+ *
+ * Project:     Hazard3-Doom
+ * Purpose:     Bridge two open-drain I2C bus segments.
+ *
+ * Original author(s):    emard
+ *
+ * Upstream:    HAD2019 / ULX3S / ULX4M DFU bootloader
+ * Upstream license: No file-level license notice was present in this
+ *                   imported upstream file; do not infer one here.
+ *
+ * This file contains third-party material and is not relicensed by
+ * Hazard3-Doom. Preserve its upstream history and provenance.
+ * See LICENSES/HAD2019-Bootloader-NOTICE.md for provenance and licensing.
+ * See LICENSING.md for project licensing policy and scope.
+ * -------------------------------------------------------------------------- */
+
 `default_nettype none
+
 module i2c_bridge
 (
     input  wire       clk,    // any
@@ -42,3 +62,5 @@ module i2c_bridge
   assign t[0] = state == 2'd1 ? 0:1;
 
 endmodule
+
+`default_nettype wire

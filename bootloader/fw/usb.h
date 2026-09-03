@@ -1,5 +1,5 @@
 /*
- * usb.h
+ * bootloader/fw/usb.h
  *
  * Copyright (C) 2019 Sylvain Munaut
  * All rights reserved.

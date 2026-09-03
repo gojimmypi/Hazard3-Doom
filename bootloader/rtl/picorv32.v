@@ -1,4 +1,6 @@
 /*
+ * bootloader/rtl/picorv32.v
+ *
  *  PicoRV32 -- A Small RISC-V (RV32I) Processor Core
  *
  *  Copyright (C) 2015  Clifford Wolf <clifford@clifford.at>
@@ -16,6 +18,8 @@
  *  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  */
+
+`default_nettype none
 
 `timescale 1 ns / 1 ps
 // `default_nettype none
@@ -2977,3 +2981,5 @@ module picorv32_wb #(
 		end
 	end
 endmodule
+
+`default_nettype wire
