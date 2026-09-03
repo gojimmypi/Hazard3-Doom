@@ -1,0 +1,270 @@
+# -----------------------------------------------------------------------------
+# File:        ulx4m-bootloader.yml
+# Path:        .github/workflows/ulx4m-bootloader.yml
+#
+# Project:     Hazard3-Doom
+# Purpose:     Validate and build the self-contained ULX4M-LD DFU bootloader.
+# -----------------------------------------------------------------------------
+
+name: ULX4M Bootloader
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "bootloader/**"
+      - "scripts/ulx4m-bootloader.sh"
+      - ".github/workflows/ulx4m-bootloader.yml"
+  pull_request:
+    paths:
+      - "bootloader/**"
+      - "scripts/ulx4m-bootloader.sh"
+      - ".github/workflows/ulx4m-bootloader.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ulx4m-bootloader-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ULX4M-LD 85F bootloader
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      MODEL: ulx4m
+      BOARD: ulx4m-v002
+      DEVICE: um-85k
+      IDCODE: "0x01113043"
+      USER_BITSTREAM_ADDR: "0x200000"
+      ALT5_SIZE: "2097152"
+      BOOTLOADER_DIR: ${{ github.workspace }}/bootloader
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up OSS CAD Suite
+        uses: YosysHQ/setup-oss-cad-suite@v4
+        with:
+          # Authenticate release lookup so shared-runner IP rate limits do not
+          # make the workflow flaky.
+          github-token: ${{ github.token }}
+
+      - name: Install ShellCheck if needed
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! command -v shellcheck >/dev/null 2>&1; then
+              sudo apt-get update
+              sudo apt-get install -y shellcheck
+          fi
+
+          shellcheck --version
+
+      - name: Create RISC-V compatibility tool prefix
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          shim_dir="${RUNNER_TEMP}/riscv-none-embed-tools"
+          mkdir -p "${shim_dir}"
+
+          if command -v riscv32-unknown-elf-gcc >/dev/null 2>&1; then
+              source_prefix="riscv32-unknown-elf-"
+          elif command -v riscv64-unknown-elf-gcc >/dev/null 2>&1; then
+              source_prefix="riscv64-unknown-elf-"
+          else
+              echo "OSS CAD Suite did not provide a RISC-V GCC toolchain." >&2
+              exit 1
+          fi
+
+          for tool in gcc objcopy; do
+              source_tool="$(command -v "${source_prefix}${tool}")"
+              ln -sf "${source_tool}" "${shim_dir}/riscv-none-embed-${tool}"
+          done
+
+          echo "${shim_dir}" >> "${GITHUB_PATH}"
+          echo "RISC-V compatibility prefix created from ${source_prefix}"
+
+      - name: Record tool versions
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          yosys --version
+          nextpnr-ecp5 --version
+          riscv-none-embed-gcc --version | head -n 1
+          ecppack --help 2>&1 | head -n 2 || true
+          ecpmulti --help 2>&1 | head -n 2 || true
+
+      - name: Lint bootloader scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          bash -n scripts/ulx4m-bootloader.sh
+          shellcheck scripts/ulx4m-bootloader.sh
+
+          if [[ -f bootloader/vendor-had2019-deps.sh ]]; then
+              bash -n bootloader/vendor-had2019-deps.sh
+              shellcheck bootloader/vendor-had2019-deps.sh
+          fi
+
+      - name: Validate self-contained bootloader layout
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required=(
+              bootloader/Makefile
+              bootloader/mk/project-rules.mk
+              bootloader/mk/core-magic.mk
+              bootloader/mk/core-rules.mk
+              bootloader/mk/ulx3s-passthru-inc.mk
+              bootloader/cores/misc/core.mk
+              bootloader/cores/misc/rtl/delay.v
+              bootloader/cores/usb/core.mk
+              bootloader/cores/usb/rtl/usb_defs.vh
+              bootloader/cores/usb/data/usb_ep_status.hex
+              bootloader/cores/usb/utils/microcode.py
+              bootloader/rtl/top-ulx4m.v
+              bootloader/data/top-ulx4m-v002.lpf
+          )
+
+          for path in "${required[@]}"; do
+              [[ -e "${path}" ]] || {
+                  echo "Missing required bootloader source: ${path}" >&2
+                  exit 1
+              }
+          done
+
+          if [[ -d bootloader/build ]]; then
+              echo "Obsolete bootloader/build directory exists; checked-in make rules belong in bootloader/mk." >&2
+              exit 1
+          fi
+
+          grep -Fq 'include $(ROOT)/mk/project-rules.mk' bootloader/Makefile
+          grep -Fq 'include $(ROOT)/mk/ulx3s-passthru-inc.mk' bootloader/Makefile
+          grep -Fq '$(ROOT)/mk/core-magic.mk' bootloader/cores/misc/core.mk
+          grep -Fq '$(ROOT)/mk/core-magic.mk' bootloader/cores/usb/core.mk
+
+          grep -Fq 'LOCATE COMP "btn[0]" SITE "E1"' bootloader/data/top-ulx4m-v002.lpf
+          grep -Fq 'LOCATE COMP "btn[1]" SITE "D2"' bootloader/data/top-ulx4m-v002.lpf
+          grep -Fq 'LOCATE COMP "btn[2]" SITE "F1"' bootloader/data/top-ulx4m-v002.lpf
+          grep -Eq 'IOBUF[[:space:]]+PORT "btn\[0\]" PULLMODE=DOWN' bootloader/data/top-ulx4m-v002.lpf
+          grep -Eq 'IOBUF[[:space:]]+PORT "btn\[1\]" PULLMODE=DOWN' bootloader/data/top-ulx4m-v002.lpf
+          grep -Eq 'IOBUF[[:space:]]+PORT "btn\[2\]" PULLMODE=DOWN' bootloader/data/top-ulx4m-v002.lpf
+
+          grep -Fq 'LOCATE COMP "usb_fpga_bd_dp" SITE "F4"' bootloader/data/top-ulx4m-v002.lpf
+          grep -Fq 'LOCATE COMP "usb_fpga_bd_dn" SITE "E3"' bootloader/data/top-ulx4m-v002.lpf
+          grep -Fq 'LOCATE COMP "usb_fpga_pu_dp" SITE "F5"' bootloader/data/top-ulx4m-v002.lpf
+
+          grep -Fq '.btn({sw,btn})' bootloader/rtl/top-ulx4m.v
+          grep -Fq 'btn_remap_o[1]' bootloader/rtl/top-ulx4m.v
+          grep -Fq 'btn_remap_o[2]' bootloader/rtl/top-ulx4m.v
+
+          echo "Bootloader layout and ULX4M-LD source invariants: PASS"
+
+      - name: Build normal bootloader
+        working-directory: bootloader
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          make MODEL="${MODEL}" BOARD="${BOARD}" DEVICE="${DEVICE}" clean
+          make MODEL="${MODEL}" BOARD="${BOARD}" DEVICE="${DEVICE}"
+
+          test -s build-tmp/bootloader.bit
+          test -s build-tmp/bootloader-sw.config
+
+      - name: Build SRAM validation image and passthru image
+        working-directory: bootloader
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ecppack \
+              --compress \
+              --idcode "${IDCODE}" \
+              --input build-tmp/bootloader-sw.config \
+              --bit build-tmp/bootloader-sram-ld-normal.bit
+
+          make MODEL="${MODEL}" BOARD="${BOARD}" DEVICE="${DEVICE}" passthru
+
+          test -s build-tmp/bootloader-sram-ld-normal.bit
+          test -s build-tmp/passthru.bit
+
+      - name: Build 85F multiboot and exact alt-5 image
+        working-directory: bootloader
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ecpmulti \
+              --input build-tmp/bootloader.bit \
+              --address "${USER_BITSTREAM_ADDR}" \
+              --input build-tmp/passthru.bit \
+              --flashsize 128 \
+              --input-idcode "${IDCODE}" \
+              --output-idcode "${IDCODE}" \
+              --output build-tmp/multiboot-ulx4m-85f.img \
+              2>&1 | tee build-tmp/ecpmulti-ulx4m-85f.log
+
+          dd \
+              if=build-tmp/multiboot-ulx4m-85f.img \
+              of=build-tmp/bootloader-alt5-2m.img \
+              bs=2M \
+              count=1
+
+          actual_size="$(stat -c '%s' build-tmp/bootloader-alt5-2m.img)"
+          if [[ "${actual_size}" != "${ALT5_SIZE}" ]]; then
+              echo "Unexpected alt-5 image size: ${actual_size}; expected ${ALT5_SIZE}." >&2
+              exit 1
+          fi
+
+          echo "Alt-5 image size: ${actual_size} bytes"
+
+      - name: Record build products
+        working-directory: bootloader
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          files=(
+              build-tmp/bootloader.bit
+              build-tmp/bootloader-sram-ld-normal.bit
+              build-tmp/passthru.bit
+              build-tmp/multiboot-ulx4m-85f.img
+              build-tmp/bootloader-alt5-2m.img
+          )
+
+          stat -c '%n: %s bytes' "${files[@]}"
+          sha256sum "${files[@]}" | tee build-tmp/SHA256SUMS.txt
+
+      - name: Upload bootloader artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ulx4m-bootloader-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            bootloader/build-tmp/bootloader.bit
+            bootloader/build-tmp/bootloader.svf
+            bootloader/build-tmp/bootloader-sram-ld-normal.bit
+            bootloader/build-tmp/passthru.bit
+            bootloader/build-tmp/passthru.bit.gz
+            bootloader/build-tmp/multiboot-ulx4m-85f.img
+            bootloader/build-tmp/bootloader-alt5-2m.img
+            bootloader/build-tmp/SHA256SUMS.txt
+            bootloader/build-tmp/ecpmulti-ulx4m-85f.log
+            bootloader/build-tmp/bootloader.synth.rpt
+            bootloader/build-tmp/bootloader.pnr.rpt
+            bootloader/fw/fw_dfu.elf
+            bootloader/fw/fw_dfu.bin
+            bootloader/fw/fw_dfu.hex
