@@ -69,13 +69,22 @@ if ! git rev-parse --verify --quiet "HEAD~${COMMIT_COUNT}" >/dev/null; then
 fi
 
 status=0
-while IFS= read -r script; do
+while IFS= read -r -d '' script; do
+    if [[ ! -f "${script}" ]]; then
+        continue
+    fi
+
+    IFS= read -r first_line < "${script}" || true
+    if [[ "${first_line}" != '#!'* ]]; then
+        continue
+    fi
+
     mode="$(git ls-files --stage -- "${script}" | awk '{print $1}')"
 
     if [[ "${mode}" != "100755" ]]; then
         printf '%s  %s\n' "${mode:-untracked}" "${script}"
         status=1
     fi
-done < <(git diff --name-only --diff-filter=ACMRT "HEAD~${COMMIT_COUNT}..HEAD" -- '*.sh')
+done < <(git diff --name-only --diff-filter=ACMRT -z "HEAD~${COMMIT_COUNT}..HEAD")
 
 exit "${status}"
