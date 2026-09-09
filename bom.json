@@ -1,0 +1,531 @@
+{
+  "$schema": "https://cyclonedx.org/schema/bom-1.7.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:9e2e0c75-d698-487e-a9f7-159973ab0a7b",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-09-09T14:00:19Z",
+    "component": {
+      "type": "application",
+      "bom-ref": "hazard3-doom",
+      "group": "ulx3s",
+      "name": "Hazard3-Doom",
+      "description": "Doom running on the Hazard3 RISC-V CPU in an ECP5 FPGA, including monitor firmware, a DoomGeneric application, FPGA board integrations, host-side upload/flashing tools, and supporting project assets.",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/ulx3s/Hazard3-Doom"
+        },
+        {
+          "type": "documentation",
+          "url": "https://hazard3-doom.readthedocs.io/"
+        },
+        {
+          "type": "license",
+          "url": "https://github.com/ulx3s/Hazard3-Doom/blob/main/LICENSING.md"
+        },
+        {
+          "type": "evidence",
+          "url": "https://github.com/ulx3s/Hazard3-Doom/blob/main/LICENSES/BUNDLED-BINARIES-MANIFEST.md",
+          "comment": "Repository release-audit manifest for redistributed binaries and DLLs."
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:source-revision-at-generation",
+          "value": "dba5872843352f592567c844f3bfcdea0b9686a3"
+        },
+        {
+          "name": "hazard3-doom:licensing-model",
+          "value": "Multi-license, per-file/per-component; see LICENSING.md and LICENSES/ notices."
+        },
+        {
+          "name": "hazard3-doom:sbom-scope",
+          "value": "Source tree, pinned source submodules, known bundled third-party components, and redistributed convenience binaries."
+        },
+        {
+          "name": "hazard3-doom:excluded-content",
+          "value": "DOOM IWAD/game data is not distributed by Hazard3-Doom and is not part of this SBOM."
+        },
+        {
+          "name": "hazard3-doom:build-environment",
+          "value": "External build toolchains are not modeled here unless they are redistributed in the repository."
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "hazard3-doom:sbom-generation-policy",
+        "value": "Do not invent missing versions or provenance. Regenerate for releases and replace unresolved fields when exact artifacts are known."
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "hazard3",
+      "group": "ulx3s",
+      "name": "Hazard3",
+      "version": "736a74459b3f740c47803f20a62d820fcacbe5c3",
+      "scope": "required",
+      "description": "Hazard3 RV32IMACZb* RISC-V CPU RTL, pinned as a Git submodule.",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/ulx3s/Hazard3/tree/736a74459b3f740c47803f20a62d820fcacbe5c3"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/Wren6991/Hazard3",
+          "comment": "Upstream Hazard3 project."
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:source-path",
+          "value": "third_party/Hazard3"
+        },
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Exact pinned Git revision recorded."
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "doomgeneric",
+      "group": "ulx3s",
+      "name": "doomgeneric",
+      "version": "bec511fec754ad5a54db04dfb743775f1986dd26",
+      "scope": "required",
+      "description": "Hazard3-Doom's pinned DoomGeneric/DOOM source submodule.",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-2.0-only",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/ulx3s/doomgeneric/tree/bec511fec754ad5a54db04dfb743775f1986dd26"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/ozkl/doomgeneric",
+          "comment": "Upstream DoomGeneric project."
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:source-path",
+          "value": "third_party/doomgeneric"
+        },
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Exact pinned Git revision recorded."
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "coremark",
+      "name": "CoreMark",
+      "scope": "excluded",
+      "description": "EEMBC CoreMark benchmark material used for benchmarking/verification rather than the Doom runtime.",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/eembc/coremark"
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Exact upstream revision is not established by the current root notice; preserve nested provenance when redistributed."
+        }
+      ]
+    },
+    {
+      "type": "firmware",
+      "bom-ref": "had2019-bootloader",
+      "name": "HAD2019 ULX3S/ULX4M DFU bootloader lineage",
+      "scope": "optional",
+      "description": "Bootloader source derived from the emard/had2019-playground ULX3S/ULX4M bootloader family. Licensing is determined per upstream file.",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/emard/had2019-playground/tree/master/projects/bootloader"
+        },
+        {
+          "type": "evidence",
+          "url": "https://github.com/ulx3s/Hazard3-Doom/blob/main/LICENSES/HAD2019-Bootloader-NOTICE.md"
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:license-status",
+          "value": "Mixed per-file licensing includes LGPL-3.0-or-later firmware, BSD-3-Clause RTL, ISC PicoRV32, and BSD-style mini-printf."
+        },
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Exact upstream revision should be pinned before treating a release SBOM as complete."
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "picorv32",
+      "name": "PicoRV32",
+      "scope": "optional",
+      "description": "PicoRV32 CPU core used in the upstream bootloader lineage.",
+      "licenses": [
+        {
+          "license": {
+            "id": "ISC",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/YosysHQ/picorv32"
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Version inherited from the exact bootloader source; not independently pinned here."
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "mini-printf",
+      "name": "mini-printf",
+      "scope": "optional",
+      "description": "mini-printf implementation used in the upstream bootloader lineage.",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Version inherited from the exact bootloader source; not independently pinned here."
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "bom-ref": "fujprog-v48-win64",
+      "name": "fujprog",
+      "version": "v4.8",
+      "scope": "optional",
+      "description": "Bundled Windows FPGA programming utility.",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-2-Clause",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:bundle-location",
+          "value": "bin/"
+        },
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Filename identifies v4.8; exact source commit and release-artifact hash remain to be pinned."
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "bom-ref": "dfu-util",
+      "name": "dfu-util",
+      "scope": "optional",
+      "description": "Bundled Windows dfu-util family utilities.",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-2.0-or-later",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:bundle-location",
+          "value": "bin/"
+        },
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Exact version, source archive, binary hashes, and dependent DLL provenance remain to be pinned."
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "bom-ref": "openfpgaloader",
+      "name": "openFPGALoader",
+      "scope": "optional",
+      "description": "Bundled FPGA programming utility.",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:bundle-location",
+          "value": "bin/"
+        },
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Exact version, binary hash, and dependency provenance remain to be pinned."
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "bom-ref": "openocd-xpack",
+      "name": "OpenOCD (xPack distribution)",
+      "scope": "optional",
+      "description": "Bundled OpenOCD executable from an xPack distribution.",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-2.0-or-later",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:bundle-location",
+          "value": "bin/"
+        },
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Exact xPack archive/version, binary hash, source correspondence, and bundled license set remain to be pinned."
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "bom-ref": "putty",
+      "name": "PuTTY",
+      "scope": "optional",
+      "description": "Bundled Windows terminal/serial utility.",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:bundle-location",
+          "value": "bin/"
+        },
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Exact PuTTY version, binary hash, and matching upstream licence file remain to be pinned."
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "bom-ref": "zadig-2.5",
+      "name": "Zadig",
+      "version": "2.5",
+      "scope": "optional",
+      "description": "Bundled Zadig Windows USB driver installation utility.",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-3.0-or-later",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:bundle-location",
+          "value": "bin/"
+        },
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Exact Zadig 2.5 source package, binary hash, and corresponding notices remain to be pinned."
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "libwdi",
+      "name": "libwdi",
+      "scope": "optional",
+      "description": "libwdi component associated with the bundled Zadig distribution.",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-3.0-or-later",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Exact libwdi revision/version associated with the bundled Zadig artifact remains to be pinned."
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "libftdi1",
+      "name": "libftdi1",
+      "scope": "optional",
+      "description": "Bundled libftdi1 Windows DLL.",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-only",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:bundle-location",
+          "value": "bin/"
+        },
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Exact version, source correspondence, and binary hash remain to be pinned."
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "libusb-1.0",
+      "name": "libusb-1.0",
+      "scope": "optional",
+      "description": "Bundled libusb-1.0 Windows DLL.",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:bundle-location",
+          "value": "bin/"
+        },
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Exact version, source correspondence, and binary hash remain to be pinned."
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "bom-ref": "riscv-gdb-bundle",
+      "name": "RISC-V GNU GDB bundle",
+      "scope": "optional",
+      "description": "Redistributed GDB/tooling directory recorded by the project release audit.",
+      "properties": [
+        {
+          "name": "hazard3-doom:bundle-location",
+          "value": "bin/gdb/"
+        },
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Multi-license bundle; exact tool version, source correspondence, dependent libraries, notices, and hashes require release audit."
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "bom-ref": "riscv-gcc-bundle",
+      "name": "RISC-V GNU GCC toolchain bundle",
+      "scope": "optional",
+      "description": "Redistributed RISC-V GNU toolchain directory recorded by the project release audit.",
+      "properties": [
+        {
+          "name": "hazard3-doom:bundle-location",
+          "value": "bin/riscv-gcc/"
+        },
+        {
+          "name": "hazard3-doom:provenance-status",
+          "value": "Multi-license bundle; exact toolchain version, source correspondence, runtime libraries, notices, and hashes require release audit."
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "hazard3-doom",
+      "dependsOn": [
+        "hazard3",
+        "doomgeneric"
+      ]
+    },
+    {
+      "ref": "had2019-bootloader",
+      "dependsOn": [
+        "picorv32",
+        "mini-printf"
+      ]
+    },
+    {
+      "ref": "zadig-2.5",
+      "dependsOn": [
+        "libwdi"
+      ]
+    }
+  ],
+  "compositions": [
+    {
+      "aggregate": "unknown",
+      "assemblies": [
+        "hazard3-doom"
+      ]
+    }
+  ]
+}
