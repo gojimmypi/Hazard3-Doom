@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Build and install the Hazard3-Doom reference Yosys 0.67.
+# Build and install the Hazard3-Doom reference Yosys 0.67+47.
 #
 # Intended location:
 #   <workspace>/hazard3-doom/scripts/install-yosys.sh
@@ -9,7 +9,7 @@
 #   <workspace>/yosys
 #
 # Exact revision:
-#   2d1509d1bcb8df0723f6790057e3b1d21c876683
+#   5f29546d8 (Yosys 0.67+47)
 #
 # Yosys 0.67 uses CMake, not the legacy Makefile build.
 #
@@ -23,9 +23,9 @@
 set -euo pipefail
 
 YOSYS_REPOSITORY="https://github.com/YosysHQ/yosys.git"
-YOSYS_COMMIT="2d1509d1bcb8df0723f6790057e3b1d21c876683"
-EXPECTED_VERSION_FRAGMENT="Yosys 0.67"
-EXPECTED_COMMIT_FRAGMENT="2d1509d1b"
+YOSYS_COMMIT="5f29546d8"
+EXPECTED_VERSION_FRAGMENT="Yosys 0.67+47"
+EXPECTED_COMMIT_FRAGMENT="5f29546d8"
 
 INSTALL_PREFIX="/usr/local"
 BUILD_DIR_NAME="build-hazard3"
@@ -130,7 +130,7 @@ done
 
 CMAKE_VERSION="$(cmake --version | awk 'NR == 1 {print $3}')"
 version_ge "${CMAKE_VERSION}" "3.28" ||
-    die "Yosys 0.67 requires CMake 3.28 or newer; found ${CMAKE_VERSION}"
+    die "Yosys ${EXPECTED_VERSION_FRAGMENT#Yosys } requires CMake 3.28 or newer; found ${CMAKE_VERSION}"
 
 printf 'CMake:           %s\n' "${CMAKE_VERSION}"
 printf 'C++ compiler:    %s\n\n' "$(c++ --version | head -n 1)"
@@ -155,13 +155,15 @@ git -C "${YOSYS_DIR}" fetch --tags origin
 git -C "${YOSYS_DIR}" cat-file -e "${YOSYS_COMMIT}^{commit}" 2>/dev/null ||
     die "Yosys commit not found after fetch: ${YOSYS_COMMIT}"
 
-git -C "${YOSYS_DIR}" switch --detach "${YOSYS_COMMIT}"
+EXPECTED_COMMIT="$(git -C "${YOSYS_DIR}" rev-parse "${YOSYS_COMMIT}^{commit}")"
+
+git -C "${YOSYS_DIR}" switch --detach "${EXPECTED_COMMIT}"
 git -C "${YOSYS_DIR}" submodule sync --recursive
 git -C "${YOSYS_DIR}" submodule update --init --recursive
 
 ACTUAL_COMMIT="$(git -C "${YOSYS_DIR}" rev-parse HEAD)"
-[[ "${ACTUAL_COMMIT}" == "${YOSYS_COMMIT}" ]] ||
-    die "checked out ${ACTUAL_COMMIT}, expected ${YOSYS_COMMIT}"
+[[ "${ACTUAL_COMMIT}" == "${EXPECTED_COMMIT}" ]] ||
+    die "checked out ${ACTUAL_COMMIT}, expected ${EXPECTED_COMMIT}"
 
 rm -rf "${YOSYS_BUILD_DIR}"
 
