@@ -14,6 +14,7 @@ used by this project.
 .. toctree::
    :maxdepth: 2
 
+   ulx3s/index
    ulx4m/index
 
 Why a hardware guide?

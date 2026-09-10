@@ -41,7 +41,7 @@ dokumentacija. Crowd Supply primjerice opisuje Micron
 Lokalne reference
 -----------------
 
-:download:`ULX4M sheme (lokalna kopija) <../../ulx4m-schematics.pdf>`
+:download:`ULX4M sheme (lokalna kopija) <ULX4M-LS-v0.0.3.pdf>`
 
 :download:`Alliance AS4C256M16D3 datasheet (lokalna kopija) <../../AllianceMemory_4G_DDR3_AS4C256M16D3C_May2020_Rev1.1_Final.pdf>`
 

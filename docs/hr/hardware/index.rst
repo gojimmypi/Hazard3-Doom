@@ -13,6 +13,7 @@ otklanjanje pogrešaka u ovom projektu.
 .. toctree::
    :maxdepth: 2
 
+   ulx3s/index
    ulx4m/index
 
 Zašto hardverski vodič?

@@ -15,6 +15,7 @@ projet.
 .. toctree::
    :maxdepth: 2
 
+   ulx3s/index
    ulx4m/index
 
 Pourquoi un guide matériel ?

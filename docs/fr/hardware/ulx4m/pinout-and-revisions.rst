@@ -42,7 +42,7 @@ Alliance ``AS4C256M16D3``.
 Références locales
 ------------------
 
-:download:`Schémas ULX4M (copie locale) <../../ulx4m-schematics.pdf>`
+:download:`Schémas ULX4M (copie locale) <ULX4M-LS-v0.0.3.pdf>`
 
 :download:`Fiche Alliance AS4C256M16D3 (copie locale) <../../AllianceMemory_4G_DDR3_AS4C256M16D3C_May2020_Rev1.1_Final.pdf>`
 
