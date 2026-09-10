@@ -47,6 +47,14 @@ Important outputs include:
 3. Program the FPGA for a test run
 ----------------------------------
 
+From commandline:
+
+.. code-block:: text
+
+   ./bin/fujprog-v48-win64.exe ./build/fpga_ulx3s.bit
+
+From the web application:
+
 For ULX3S, the Hazard3-Doom web application can load ``fpga_ulx3s.bit``
 directly into FPGA SRAM through the board's ``US1`` FT231X JTAG interface.
 Expand **FPGA web flasher**, select the ``.bit`` file, connect the ULX3S USB
@@ -150,3 +158,7 @@ Next steps
 * Use :doc:`../user-guide/jtag-debugging` for source-level debugging.
 * Use :doc:`../user-guide/sao` for SAO/I2C support.
 * Use :doc:`../user-guide/i2cdriver` for the HDMI I2C scanner/analyzer interface.
+
+Implementation references
+-------------------------
+* `openFPGALoader <https://trabucayre.github.io/openFPGALoader/guide/install.html>`_

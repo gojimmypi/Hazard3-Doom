@@ -18,6 +18,26 @@ Primary ULX4M sources
 * `ULX4M examples <https://github.com/lawrie/ulx4m_examples>`_ - upstream example
   designs useful when comparing basic board mappings.
 
+ULX4M schematics
+----------------
+
+Local copies of the schematics for both ULX4M variants are included with
+this documentation:
+
+:download:`ULX4M-LD v003 schematic <ULX4M-LD-v003.pdf>`
+
+:download:`ULX4M-LS v0.0.3 schematic <ULX4M-LS-v0.0.3.pdf>`
+
+ULX4M-LD and ULX4M-LS are different board variants rather than revisions
+of one another. Refer to the schematic matching the board being used.
+
+The schematics are useful when tracing the FPGA, DDR3, power, JTAG, USB,
+SD-card, video, and other board-level connections discussed throughout
+this guide.
+
+The original design files are maintained by the ULX4M project. Refer to
+the upstream repository for source files and newer schematic revisions.
+
 Hazard3-Doom sources
 --------------------
 

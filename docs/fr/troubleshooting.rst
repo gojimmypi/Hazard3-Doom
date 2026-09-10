@@ -1,6 +1,19 @@
 Dépannage
 =========
 
+Windows ``fujprog`` signale ``Cannot find JTAG cable``
+------------------------------------------------------
+
+Sous Windows, ``fujprog`` attend que l'interface FT231X ``US1`` de l'ULX3S
+utilise le pilote FTDI VCP/D2XX normal. Si cette interface a été réassociée à
+WinUSB pour le flasher WebUSB, ou à un autre pilote libusb pour le JTAG,
+restaurez le pilote FTDI dans le Gestionnaire de périphériques avant d'utiliser
+``fujprog`` sous Windows.
+
+Fermez d'abord OpenOCD, ``openFPGALoader`` et les sessions WebUSB du navigateur,
+restaurez le pilote FTDI, débranchez/rebranchez ``US1``, puis réessayez. Voir
+:doc:`user-guide/web-flasher` pour la matrice de compatibilité et la procédure de
+restauration du pilote.
 
 .. _webusb-access-denied:
 

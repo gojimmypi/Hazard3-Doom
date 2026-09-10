@@ -127,3 +127,5 @@ External ULX4M resources
 * `ULX4M project and carrier compatibility notes <https://www.crowdsupply.com/intergalaktik/ulx4m/updates/pre-launch-progress>`_
 * `Raspberry Pi Compute Module documentation <https://www.raspberrypi.com/documentation/computers/compute-module.html>`_
 * `ULX4M Open Source Hardware certification <https://certification.oshwa.org/hr000013.html>`_
+* `yosys <https://github.com/YosysHQ/yosys>`_
+* `nextpnr-ecp5 <https://github.com/YosysHQ/nextpnr>`_

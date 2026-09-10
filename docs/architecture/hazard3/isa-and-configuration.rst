@@ -217,3 +217,9 @@ For architectural study, use both:
   defaults available to this snapshot.
 * `Current upstream stable config <https://github.com/Wren6991/Hazard3/blob/stable/hdl/hazard3_config.vh>`_
   - current maintained upstream direction.
+
+
+Related links
+-------------
+
+* `RISC-V GCC XPACK <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_

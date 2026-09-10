@@ -86,3 +86,10 @@ Loading: [==================================================] 100.00%
 Done
 Disable configuration: DONE
 ```
+
+Page with openFPGALoader details
+https://trabucayre.github.io/openFPGALoader/guide/install.html
+
+new system setup:
+
+needs git and shellcheck

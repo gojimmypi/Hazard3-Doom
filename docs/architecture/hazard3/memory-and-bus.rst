@@ -304,3 +304,9 @@ This configuration is a bare-metal embedded system. It does not enable a
 virtual-memory MMU, and it does not enable user-mode/PMP isolation. Addresses
 in :doc:`../memory-map` are therefore best understood as SoC physical address
 windows used directly by machine-mode firmware and the Doom application.
+
+Related links
+-------------
+
+* `nextpnr-ecp5 <https://github.com/YosysHQ/nextpnr>`_
+* `yosys <https://github.com/YosysHQ/yosys>`_

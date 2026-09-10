@@ -445,3 +445,8 @@ VisualGDB and Windows toolchain validation
    Script behavior evolves faster than the architecture documentation. When an
    option is not documented here, use the checked-out script's usage/help text
    and environment-variable validation as the authoritative source.
+
+Related links
+-------------
+
+* `RISC-V GCC XPACK <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_

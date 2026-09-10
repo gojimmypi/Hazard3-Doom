@@ -42,7 +42,7 @@ Open `docs/_build/html-hr/index.html` or `docs/_build/html-fr/index.html`.
 
 The repository-root `.readthedocs.yaml` is the build configuration used by Read the Docs. Each translated Read the Docs project should use its matching language and be linked as a translation of the English project. All language projects can use the same repository and branch; `docs/conf.py` selects the translated source tree from `READTHEDOCS_LANGUAGE`.
 
-There was no `.readthedocs.yaml` file for the [0.1.0 Release](https://github.com/ulx3s/Hazard3-Doom/releases/tag/0.1.0) so 
+There was no `.readthedocs.yaml` file for the [0.1.0 Release](https://github.com/ulx3s/Hazard3-Doom/releases/tag/0.1.0) so
 the `readthedocs` build will fail for that version.
 
 ### Language-scoped search

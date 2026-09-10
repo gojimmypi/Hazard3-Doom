@@ -8,6 +8,7 @@ Ovaj odjeljak opisuje najkraći put od svježe kopije repozitorija do pokrenutog
 
    quick-start
    prerequisites
+   vm-tips
    build
    tiny-tapeout-ulx3s
    programming

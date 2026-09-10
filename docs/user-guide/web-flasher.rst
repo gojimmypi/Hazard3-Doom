@@ -346,3 +346,4 @@ Implementation references
 * `fujprog <https://github.com/kost/fujprog>`_
 * `Project Trellis <https://github.com/YosysHQ/prjtrellis>`_
 * `WebUSB API <https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API>`_
+* `openFPGALoader <https://trabucayre.github.io/openFPGALoader/guide/install.html>`_

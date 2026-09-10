@@ -43,8 +43,8 @@ dna, Hazard3-Doom je napravljen za istraživanje.
 
 .. note::
 
-   Ove stranice prate aktivnu granu ``develop``. Značajke koje se još razvijaju
-   izričito su označene. Detaljne stranice o arhitekturi procesora dodatno su
+   Ove stranice opisuju odabranu verziju dokumentacije. Značajke koje se još
+   razvijaju izričito su označene. Detaljne stranice o arhitekturi procesora
    vezane uz točan snimak izvornog koda Hazard3 naveden u
    :doc:`architecture/hazard3/index`.
 

@@ -1,6 +1,18 @@
 Otklanjanje poteškoća
 =====================
 
+Windows ``fujprog`` prijavljuje ``Cannot find JTAG cable``
+----------------------------------------------------------
+
+Na Windowsu ``fujprog`` očekuje da ULX3S ``US1`` FT231X sučelje koristi normalni
+FTDI VCP/D2XX driver. Ako je to sučelje prebačeno na WinUSB za WebUSB flasher ili
+na drugi libusb driver za JTAG, prije korištenja Windows ``fujprog`` alata vratite
+FTDI driver u Device Manageru.
+
+Najprije zatvorite OpenOCD, ``openFPGALoader`` i WebUSB sesije preglednika,
+vratite FTDI driver, odspojite/ponovno spojite ``US1`` i pokušajte ponovno.
+Pogledajte :doc:`user-guide/web-flasher` za tablicu kompatibilnosti drivera i
+postupak vraćanja.
 
 .. _webusb-access-denied:
 

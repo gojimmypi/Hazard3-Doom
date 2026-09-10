@@ -1,6 +1,18 @@
 Troubleshooting
 ===============
 
+Windows ``fujprog`` reports ``Cannot find JTAG cable``
+------------------------------------------------------
+
+On Windows, ``fujprog`` expects the ULX3S ``US1`` FT231X interface to use the
+normal FTDI VCP/D2XX driver. If that interface was rebound to WinUSB for the
+browser WebUSB flasher, or to another libusb driver for JTAG, restore the FTDI
+driver in Device Manager before using Windows ``fujprog``.
+
+Close OpenOCD, ``openFPGALoader``, and browser WebUSB sessions first, restore the
+FTDI driver, unplug/reconnect ``US1``, and retry. See
+:doc:`user-guide/web-flasher` for the driver compatibility table and restore
+procedure.
 
 .. _webusb-access-denied:
 
@@ -155,6 +167,67 @@ control and the 100-kHz SAO bus rate, but does not reconstruct the frame that
 was visible before the GUI started. Launch Doom or present another monitor
 video frame to replace the last analyzer image.
 
+``shellcheck`` is not installed
+-------------------------------
+
+Project shell scripts are expected to pass ShellCheck. On Ubuntu/WSL, install it with:
+
+.. code-block:: bash
+
+   sudo apt-get install shellcheck
+
+For a broader host check, run ``./scripts/requirements-check.sh``.
+
+
+Missing required executable: /opt/riscv/bin/riscv32-unknown-elf-gcc
+-------------------------------------------------------------------
+
+The monitor build defaults to the ``/opt/riscv/bin/riscv32-unknown-elf-`` prefix.
+If your RISC-V toolchain uses another prefix, set ``TOOLCHAIN_PREFIX`` explicitly.
+For example, an xPack installation commonly uses:
+
+.. code-block:: bash
+
+   TOOLCHAIN_PREFIX=riscv-none-elf- ./scripts/build.sh
+
+Run ``./scripts/requirements-check.sh`` to detect common RISC-V toolchain prefixes
+and verify that the compiler accepts the Hazard3 ISA/ABI options.
+
+c++: fatal error: Killed signal terminated program cc1plus
+----------------------------------------------------------
+
+This almost always means the Ubuntu VM ran out of available RAM and the kernel's
+OOM killer terminated one of the C++ compiler processes. It is not a C++ compile error.
+Increase the VM memory or swap allocation, or reduce build parallelism before retrying.
+
+Workflow reports that CMake is too old
+--------------------------------------
+
+The machine requirements checker treats CMake as an optional development tool.
+If a particular workflow requires a newer version, install or upgrade CMake to
+the version requested by that workflow, then verify with ``cmake --version``.
+
+See the ``install-cmake.sh`` script in the ``scripts/`` directory to
+install CMake 3.25 or higher.
+
+ROR: Max frequency for clock '$glbnet$clk_sys': XX.YY MHz (FAIL at 50 MHz)
+--------------------------------------------------------------------------
+
+If the routed frequency is below the target when using the default seeds, first
+confirm that Yosys and nextpnr match the versions recorded with the authoritative
+routing defaults in ``scripts/build-ecp5-bitstream-common.sh``. Routing seeds are
+tool-version-specific.
+
+Record the local versions with:
+
+.. code-block:: text
+
+   yosys --version
+   nextpnr-ecp5 --version
+   ecppack --version
+
+
+
 OpenOCD cannot see a working Hazard3 debug module
 -------------------------------------------------
 
@@ -215,3 +288,8 @@ Check both the superproject and submodule state:
    git -C third_party/doomgeneric branch --show-current
 
 A clean superproject does not imply that a submodule is on the branch or commit you expected.
+
+Related links
+-------------
+
+* `RISC-V GCC XPACK <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_

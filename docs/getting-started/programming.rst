@@ -40,10 +40,27 @@ The intended standalone sequence is:
 #. ``DOOM.H3D`` and ``DOOM.WAD`` are read from the SD card.
 #. Doom is launched on HDMI.
 
-ULX4M-LD DFU programming
-------------------------
+ULX4M-LD temporary FPGA load
+----------------------------
 
-ULX4M-LD uses its Micro-B USB DFU bootloader for FPGA image storage. Windows
+With Tigard connected to the ULX4M-LD JTAG header, ``openFPGALoader`` can load a
+new ECP5 configuration directly into SRAM without replacing the persistent user
+image:
+
+.. code-block:: bash
+
+   ./bin/openFPGALoader.exe \
+       -c tigard \
+       ./build/fpga_ulx4m_ld.bit
+
+This load is volatile. A power cycle or FPGA reconfiguration discards it, so it
+is useful for testing a candidate bitstream before writing the persistent image.
+
+ULX4M-LD persistent DFU programming
+-----------------------------------
+
+ULX4M-LD uses its Micro-B USB DFU bootloader to store the persistent user
+bitstream in SPI flash. That user image is retained across power cycles. Windows
 normally sees the DFU device as VID:PID ``1d50:614b`` with WinUSB. This USB
 connection is separate from the external Tigard JTAG/UART debug adapter.
 
@@ -116,3 +133,7 @@ replacement.
    alone is not sufficient.
 
 See :doc:`../user-guide/sd-card` for SD card contents and boot diagnostics.
+
+Implementation references
+-------------------------
+* `openFPGALoader <https://trabucayre.github.io/openFPGALoader/guide/install.html>`_

@@ -34,6 +34,45 @@ Predviđeni samostalni slijed jest:
 #. ``DOOM.H3D`` i ``DOOM.WAD`` čitaju se sa SD kartice.
 #. Doom se pokreće na HDMI-ju.
 
+ULX4M-LD: privremeno učitavanje FPGA-a
+--------------------------------------
+
+Kada je Tigard spojen na ULX4M-LD JTAG, ``openFPGALoader`` može novu ECP5
+konfiguraciju učitati izravno u SRAM bez zamjene trajne korisničke slike:
+
+.. code-block:: bash
+
+   ./bin/openFPGALoader.exe \
+       -c tigard \
+       ./build/fpga_ulx4m_ld.bit
+
+Ovo je privremeno učitavanje. Isključivanje napajanja ili ponovna konfiguracija
+FPGA-a uklanja ga, pa je prikladno za provjeru kandidata prije trajnog upisa.
+
+ULX4M-LD: trajno DFU programiranje
+----------------------------------
+
+ULX4M-LD Micro-B DFU bootloader zapisuje trajni korisnički bitstream u SPI flash.
+Ta slika ostaje nakon isključivanja napajanja i odvojena je od samog DFU
+bootloadera.
+
+.. code-block:: bash
+
+   ./bin/openFPGALoader.exe --dfu \
+       --vid 0x1d50 --pid 0x614b --altsetting 0 \
+       ./build/fpga_ulx4m_ld.bit
+
+Ako pločica nakon upisa ostane u DFU načinu rada, zatražite od bootloadera da
+pokrene već spremljenu sliku:
+
+.. code-block:: bash
+
+   ./bin/dfu-util.exe -a 0 -e
+
+Naredba ``-e`` ne preuzima niti briše FPGA podatke. Pogledajte
+:doc:`../user-guide/bootloader` za bootloader i oporavak te
+:doc:`../user-guide/jtag-debugging` za otklanjanje pogrešaka putem Tigarda.
+
 .. warning::
 
    Provjerite bitstream privremenim učitavanjem prije nego što ga trajno zapišete. Neispravnu trajnu sliku moguće je oporaviti, ali privremeno ispitivanje je brže i sigurnije tijekom razvoja.
