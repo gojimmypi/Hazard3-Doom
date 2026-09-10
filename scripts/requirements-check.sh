@@ -8,9 +8,45 @@
 set -u
 set -o pipefail
 
+CHECK_PROFILE="full"
 PASS_COUNT=0
 WARN_COUNT=0
 FAIL_COUNT=0
+
+usage()
+{
+    cat <<EOF_USAGE
+Usage: ${0##*/} [--test-scripts]
+
+With no options, check the full Hazard3-Doom development environment.
+
+  --test-scripts  Check only prerequisites needed by scripts/test-scripts.sh.
+  -h, --help      Show this help text.
+EOF_USAGE
+}
+
+parse_args()
+{
+    while (( $# > 0 )); do
+        case "$1" in
+        --test-scripts)
+            CHECK_PROFILE="test-scripts"
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            printf 'Unknown option: %s\n\n' "$1" >&2
+            usage >&2
+            exit 2
+            ;;
+        esac
+        shift
+    done
+}
+
+parse_args "$@"
 
 section()
 {
@@ -33,6 +69,30 @@ fail()
 {
     FAIL_COUNT=$((FAIL_COUNT + 1))
     printf '[FAIL] %s\n' "$1" >&2
+}
+
+finish()
+{
+    section "Summary"
+    printf 'Pass: %d\n' "${PASS_COUNT}"
+    printf 'Warn: %d\n' "${WARN_COUNT}"
+    printf 'Fail: %d\n' "${FAIL_COUNT}"
+
+    if (( FAIL_COUNT > 0 )); then
+        if [[ "${CHECK_PROFILE}" == "test-scripts" ]]; then
+            printf '\nRESULT: FAIL - test-scripts prerequisites are missing.\n' >&2
+        else
+            printf '\nRESULT: FAIL - this machine is missing one or more required items.\n' >&2
+        fi
+        exit 1
+    fi
+
+    if [[ "${CHECK_PROFILE}" == "test-scripts" ]]; then
+        printf '\nRESULT: PASS - test-scripts prerequisites were found.\n'
+    else
+        printf '\nRESULT: PASS - all required items were found.\n'
+    fi
+    exit 0
 }
 
 check_tool()
@@ -238,22 +298,24 @@ else
 fi
 
 section "Required host tools"
+printf 'Profile: %s\n' "${CHECK_PROFILE}"
 check_tool required git "Git" "sudo apt-get install git" --version
-check_tool required make "GNU Make" "sudo apt-get install make" --version
 check_tool required python3 "Python 3" "sudo apt-get install python3" --version
 check_tool required shellcheck "ShellCheck" "sudo apt-get install shellcheck"
-if command -v shellcheck >/dev/null 2>&1; then
-    if shellcheck "$0"; then
-        pass "This requirements script passes ShellCheck"
-    else
-        fail "This requirements script failed ShellCheck"
-    fi
-fi
 check_tool required grep "Host utility grep" "sudo apt-get install grep"
 check_tool required awk "Host utility awk" "sudo apt-get install gawk"
-for tool in stat install sha256sum; do
+for tool in cat cmp diff find mkdir sha256sum sort tail tee; do
     check_tool required "${tool}" "Host utility ${tool}" "sudo apt-get install coreutils"
 done
+
+if [[ "${CHECK_PROFILE}" == "full" ]]; then
+    check_tool required make "GNU Make" "sudo apt-get install make" --version
+    for tool in env install stat; do
+        check_tool required "${tool}" "Host utility ${tool}" "sudo apt-get install coreutils"
+    done
+else
+    finish
+fi
 
 section "Python"
 if command -v python3 >/dev/null 2>&1; then
@@ -386,14 +448,4 @@ if command -v git >/dev/null 2>&1 && \
     fi
 fi
 
-section "Summary"
-printf 'Pass: %d\n' "${PASS_COUNT}"
-printf 'Warn: %d\n' "${WARN_COUNT}"
-printf 'Fail: %d\n' "${FAIL_COUNT}"
-
-if (( FAIL_COUNT > 0 )); then
-    printf '\nRESULT: FAIL - this machine is missing one or more required items.\n' >&2
-    exit 1
-fi
-
-printf '\nRESULT: PASS - all required items were found.\n'
+finish

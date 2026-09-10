@@ -10,9 +10,9 @@ the bytes in a file; it does not by itself establish provenance or intent.
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 70
+Files inventoried: 71
 
-Total bytes: 509312
+Total bytes: 523049
 
 ## Verification
 
@@ -74,6 +74,7 @@ should be identified before a public release.
 | `make-boot-hex.py` | 2794 | `bd4e1d863e021e5cb7345d5c57e0e37cf1751d3f8c333652eb52fd48d2ab05ac` | REVIEW | File |
 | `peek-elf.sh` | 24394 | `9ae200bee9f45c3ceddb53543efe362f5b79997bad4b23d147d06e625be18052` | REVIEW | Shell script |
 | `publish-check.sh` | 593 | `c6acadfd1a319ee319da3999854c98c287c8096521bf9e5a7e57b4ca35cc5363` | REVIEW | Shell script |
+| `requirements-check.sh` | 13536 | `bb3b70b0cb187a4ed42ed519b5f6e334d9ec2648dbd64dac5bcc45c39de3f3c4` | REVIEW | Shell script |
 | `restart-from-monitor.py` | 2180 | `62fafcba0da53b21b5704f221c655c63eb5520f2def0fbe7312005a65c59dd2d` | REVIEW | File |
 | `return-to-monitor.py` | 2144 | `0214047d05bf37b06453388892bc8c5a13a49af1154f962e1680eaa644316ceb` | REVIEW | File |
 | `run-coremark.sh` | 5148 | `ee257f329b138a6bfcc01224c96c8f4459b171f493f437f423190cb1d811a336` | REVIEW | Shell script |
@@ -92,6 +93,6 @@ should be identified before a public release.
 | `sweep-ulx3s-85f.sh` | 13111 | `9d37223b804741c6b6e4abc992c26df60c089fb39c07072dbfcc4207e4156e68` | REVIEW | Shell script |
 | `sweep-ulx4m-ld.sh` | 16562 | `a1dccb5925b207479f06cc9fa2bd43c29d2a0ca03f4cfe45d758203014b194bf` | REVIEW | Shell script |
 | `sweep.sh` | 775 | `73dfc7d13c2d77e1ccc5e6ce72856621c639e27c01d88e13bfc4225dcb1f3895` | REVIEW | Shell script |
-| `test-scripts.sh` | 19658 | `852749eb0839ca298e80442b4550807509aaf4ce46a9c11f331bb433d98a2e20` | REVIEW | Shell script |
+| `test-scripts.sh` | 19859 | `736bb7c5575e24ee1a9a4f7042855861afd88a929e0ced7e1139ce5b417972b7` | REVIEW | Shell script |
 | `ulx4m-bootloader.sh` | 26270 | `02ba90022e84da07a23138f7d8cc1d7365655ef081f56eb99b399e30756ebb6b` | REVIEW | Shell script |
 | `watch-ecp5-sweep-results.sh` | 18199 | `4d7b1bd134af275ad36d608811c64b9b2bf4ee201ee419d677bdf0b8b886536d` | REVIEW | Shell script |
