@@ -279,6 +279,7 @@ self_lint()
 setup_riscv_tool_shim()
 {
     local tool
+    local tool_dir
     local suffix
     local shim_dir="/tmp/had2019-riscv-tools"
     local found=0
@@ -288,14 +289,15 @@ setup_riscv_tool_shim()
         return 0
     fi
 
-    if ! compgen -G '/opt/riscv/bin/riscv32-unknown-elf-*' >/dev/null; then
-        fail "Neither riscv-none-embed-* nor /opt/riscv/bin/riscv32-unknown-elf-* tools were found."
+    if ! command -v riscv-none-elf-gcc >/dev/null 2>&1; then
+        fail "Neither riscv-none-embed-* nor riscv-none-elf-* tools were found on PATH."
     fi
 
+    tool_dir="$(dirname -- "$(command -v riscv-none-elf-gcc)")"
     mkdir -p "${shim_dir}"
-    for tool in /opt/riscv/bin/riscv32-unknown-elf-*; do
+    for tool in "${tool_dir}"/riscv-none-elf-*; do
         [[ -e "${tool}" ]] || continue
-        suffix="${tool##*/riscv32-unknown-elf-}"
+        suffix="${tool##*/riscv-none-elf-}"
         ln -sf "${tool}" "${shim_dir}/riscv-none-embed-${suffix}"
         found=1
     done

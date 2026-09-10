@@ -47,13 +47,35 @@
 
 set -euo pipefail
 
+if [[ -z "${CC:-}" ]]; then
+    if [[ -x /opt/riscv/bin/riscv32-unknown-elf-gcc ]]; then
+        CC="/opt/riscv/bin/riscv32-unknown-elf-gcc"
+    elif command -v riscv-none-elf-gcc >/dev/null 2>&1; then
+        CC="riscv-none-elf-gcc"
+    else
+        echo "ERROR: RISC-V GCC not found" >&2
+        exit 1
+    fi
+fi
+readonly CC
+
+if [[ -z "${READELF:-}" ]]; then
+    if [[ -x /opt/riscv/bin/riscv32-unknown-elf-readelf ]]; then
+        READELF="/opt/riscv/bin/riscv32-unknown-elf-readelf"
+    elif command -v riscv-none-elf-readelf >/dev/null 2>&1; then
+        READELF="riscv-none-elf-readelf"
+    else
+        echo "ERROR: RISC-V readelf not found" >&2
+        exit 1
+    fi
+fi
+readonly READELF
+
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_DIR
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 readonly REPO_ROOT
 
-readonly CC="${CC:-/opt/riscv/bin/riscv32-unknown-elf-gcc}"
-readonly READELF="${READELF:-/opt/riscv/bin/riscv32-unknown-elf-readelf}"
 readonly ARCH="${ARCH:--march=rv32imc_zicsr_zifencei_zba_zbb_zbs}"
 readonly ABI="${ABI:--mabi=ilp32}"
 readonly DEFAULT_MAP_FILE="${REPO_ROOT}/build/coremark/baseline/coremark-performance.map"
@@ -67,8 +89,7 @@ MY_SHELLCHECK="shellcheck"
 
 # Check if the executable is available in the PATH
 if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
-    # Run your command here
-    shellcheck "$0" || exit 1
+    "${MY_SHELLCHECK}" -x "${BASH_SOURCE[0]}" >&2 || exit 1
 else
     echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
 fi

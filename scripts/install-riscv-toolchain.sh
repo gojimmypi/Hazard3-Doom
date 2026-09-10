@@ -81,6 +81,8 @@ ln -sfn \
     "xpack-riscv-none-elf-gcc-${XPACK_VERSION}" \
     "${CURRENT_LINK}"
 
+# Keep $HOME and $PATH literal for expansion when the shell startup file is sourced.
+# shellcheck disable=SC2016
 PATH_LINE='export PATH="$HOME/.local/xPacks/riscv-none-elf-gcc/current/bin:$PATH"'
 
 if ! grep -Fqx "${PATH_LINE}" "${HOME}/.bashrc" 2>/dev/null; then

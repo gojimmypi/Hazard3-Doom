@@ -20,12 +20,34 @@
 
 set -euo pipefail
 
+# Run shellcheck to ensure this is a good script.
+# Specify the executable shell checker you want to use:
+MY_SHELLCHECK="shellcheck"
+
+# Check if the executable is available in the PATH
+if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
+    "${MY_SHELLCHECK}" -x "${BASH_SOURCE[0]}" >&2 || exit 1
+else
+    echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
+fi
+
+if [[ -z "${TOOLCHAIN_PREFIX:-}" ]]; then
+    if [[ -x /opt/riscv/bin/riscv32-unknown-elf-gcc ]]; then
+        TOOLCHAIN_PREFIX="/opt/riscv/bin/riscv32-unknown-elf-"
+    elif command -v riscv-none-elf-gcc >/dev/null 2>&1; then
+        TOOLCHAIN_PREFIX="riscv-none-elf-"
+    else
+        echo "ERROR: RISC-V GCC toolchain not found" >&2
+        exit 1
+    fi
+fi
+export TOOLCHAIN_PREFIX
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PREPARE="${ROOT_DIR}/doom/prepare-doomgeneric.sh"
 BUILD="${ROOT_DIR}/doom/build-doom-image.sh"
 TRANSFORM="${SCRIPT_DIR}/apply-doom-noncombat.py"
-TOOLCHAIN_PREFIX="${TOOLCHAIN_PREFIX:-/opt/riscv/bin/riscv32-unknown-elf-}"
 NM="${TOOLCHAIN_PREFIX}nm"
 BUILD_DIR="${HAZARD3_DOOM_NONCOMBAT_BUILD_DIR:-${ROOT_DIR}/build/doom-image-noncombat}"
 PREPARED_ROOT="${BUILD_DIR}/doomgeneric-source"
@@ -46,13 +68,27 @@ require_executable()
     }
 }
 
+require_tool()
+{
+    local tool="$1"
+
+    if [[ "${tool}" == */* ]]; then
+        require_executable "${tool}"
+    else
+        command -v "${tool}" >/dev/null 2>&1 || {
+            printf 'Missing required tool: %s\n' "${tool}" >&2
+            exit 1
+        }
+    fi
+}
+
 require_file "${PREPARE}"
 require_file "${BUILD}"
 require_file "${TRANSFORM}"
 require_executable "${PREPARE}"
 require_executable "${BUILD}"
 require_executable "${TRANSFORM}"
-require_executable "${NM}"
+require_tool "${NM}"
 command -v python3 >/dev/null 2>&1 || {
     echo 'Missing required tool: python3' >&2
     exit 1

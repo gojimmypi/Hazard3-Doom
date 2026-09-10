@@ -23,15 +23,32 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-if command -v shellcheck >/dev/null 2>&1; then
-    shellcheck "$0"
+# Run shellcheck to ensure this is a good script.
+# Specify the executable shell checker you want to use:
+MY_SHELLCHECK="shellcheck"
+
+# Check if the executable is available in the PATH
+if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
+    "${MY_SHELLCHECK}" -x "${BASH_SOURCE[0]}" >&2 || exit 1
 else
-    echo "shellcheck is not installed; skipping script self-check."
+    echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
 fi
+
+if [[ -z "${TOOLCHAIN_PREFIX:-}" ]]; then
+    if [[ -x /opt/riscv/bin/riscv32-unknown-elf-gcc ]]; then
+        TOOLCHAIN_PREFIX="/opt/riscv/bin/riscv32-unknown-elf-"
+    elif command -v riscv-none-elf-gcc >/dev/null 2>&1; then
+        TOOLCHAIN_PREFIX="riscv-none-elf-"
+    else
+        echo "ERROR: RISC-V GCC toolchain not found" >&2
+        exit 1
+    fi
+fi
+export TOOLCHAIN_PREFIX
+
 PORT_DIR="${ROOT_DIR}/benchmarks/coremark"
 HAZARD3_ROOT="${HAZARD3_ROOT:-${ROOT_DIR}/third_party/Hazard3}"
 COREMARK_DIR="${COREMARK_DIR:-${HAZARD3_ROOT}/test/sim/coremark/dist}"
-TOOLCHAIN_PREFIX="${TOOLCHAIN_PREFIX:-/opt/riscv/bin/riscv32-unknown-elf-}"
 CC="${TOOLCHAIN_PREFIX}gcc"
 SIZE="${TOOLCHAIN_PREFIX}size"
 READELF="${TOOLCHAIN_PREFIX}readelf"
@@ -43,17 +60,6 @@ BUILD_DIR="${HAZARD3_COREMARK_BUILD_DIR:-${ROOT_DIR}/build/coremark/${PROFILE}}"
 SOURCE_CHECKER="${PORT_DIR}/check_coremark_sources.py"
 ELF_ANALYZER="${PORT_DIR}/analyze_elf.py"
 
-# Run shellcheck to ensure this is a good script.
-# Specify the executable shell checker you want to use:
-MY_SHELLCHECK="shellcheck"
-
-# Check if the executable is available in the PATH
-if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
-    # Run your command here
-    shellcheck "$0" || exit 1
-else
-    echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
-fi
 
 require_tool()
 {

@@ -66,7 +66,7 @@ placement-sensitive RTL, memory, video, clock, or toolchain changes.
 
 ## Build Scripts
 
-- `build.sh` - Builds the shared Hazard3 monitor firmware. Defaults to the 64 MiB map at 50 MHz; accepts `HAZARD3_MEMORY_PROFILE`, `HAZARD3_SYS_CLK_HZ`, `HAZARD3_BUILD_DIR`, `TOOLCHAIN_PREFIX`, and `HAZARD3_MONITOR_LINKER_SCRIPT` overrides.
+- `build.sh` - Builds the shared Hazard3 monitor firmware. Defaults to the 64 MiB map at 50 MHz. Unless `TOOLCHAIN_PREFIX` is set, it prefers `/opt/riscv/bin/riscv32-unknown-elf-*` when installed and otherwise uses `riscv-none-elf-*` from `PATH`; accepts `HAZARD3_MEMORY_PROFILE`, `HAZARD3_SYS_CLK_HZ`, `HAZARD3_BUILD_DIR`, `TOOLCHAIN_PREFIX`, and `HAZARD3_MONITOR_LINKER_SCRIPT` overrides.
 - `build-ecp5-bitstream-common.sh` - Internal shared ECP5 synthesis/place-and-route implementation used by the board-specific bitstream wrappers. Normally do not invoke it directly.
 - `build-ulx3s-85f-bitstream.sh` - ULX3S 85F entry point for the shared ECP5 flow.
 - `build-ulx3s-doom.sh` - Complete ULX3S 85F build: monitor, boot image, FPGA bitstream, Doom image, and SD-card staging files under `build/ulx3s/`.
@@ -314,6 +314,7 @@ test run.
 
 ## Setup and Toolchain Helpers
 
+- `install-riscv-toolchain.sh` - Installs xPack `riscv-none-elf-gcc` under `~/.local/xPacks` and adds its `current/bin` directory to `PATH` for Linux/WSL builds. Build scripts automatically use the historical `/opt/riscv/bin/riscv32-unknown-elf-*` toolchain when present, otherwise `riscv-none-elf-*` from `PATH`; an explicit `TOOLCHAIN_PREFIX` takes precedence.
 - `setup-xpack-riscv-gcc.cmd` - Installs/configures the xPack GNU RISC-V Embedded GCC toolchain under `bin/riscv-gcc` for native Windows builds.
 
 ## Supercon Helpers
