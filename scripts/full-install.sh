@@ -1,7 +1,7 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------
 # File:        full-install.sh
-# Path:        scriptsfull-install.sh
+# Path:        scripts/full-install.sh
 #
 # Project:     Hazard3-Doom
 # Purpose:     Install all requirements
@@ -18,6 +18,28 @@
 # -----------------------------------------------------------------------------
 
 set -euo pipefail
+
+
+# this can be a long running script. we'll keep sudo alive for the duration of the script
+sudo -v
+
+## being sudo keep alive
+# without this section, an unattended Install may fail with "sudo: timed out"
+while true; do
+    sudo -n true
+    sleep 60
+done 2>/dev/null &
+# keep track of the pid of the sudo keepalive process so we can kill it when the script exits
+sudo_keepalive_pid=$!
+
+cleanup()
+{
+    kill "${sudo_keepalive_pid}" 2>/dev/null || true
+    wait "${sudo_keepalive_pid}" 2>/dev/null || true
+}
+
+trap cleanup EXIT
+## end sudo keepalive
 
 sudo apt-get update
 
