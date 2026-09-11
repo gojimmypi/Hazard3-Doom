@@ -32,6 +32,16 @@ else
     REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." 2>/dev/null && pwd)" || REPO_ROOT=""
 fi
 BIN_DIR="${REPO_ROOT:+${REPO_ROOT}/bin}"
+SYSTEM_REQUIREMENTS_SCRIPT="${SCRIPT_DIR}/check-system-requirements.sh"
+
+if [[ ! -r "${SYSTEM_REQUIREMENTS_SCRIPT}" ]]; then
+    printf '[FAIL] Missing required helper: %s\n' "${SYSTEM_REQUIREMENTS_SCRIPT}" >&2
+    exit 1
+fi
+
+# The path is resolved from this script directory.
+# shellcheck disable=SC1090
+. "${SYSTEM_REQUIREMENTS_SCRIPT}"
 
 usage()
 {
@@ -707,6 +717,12 @@ if (( BASH_VERSINFO[0] >= 4 )); then
     pass "Bash ${BASH_VERSION}"
 else
     fail "Bash 4 or newer is required; found ${BASH_VERSION}"
+fi
+
+if [[ "${CHECK_PROFILE}" == "full" ]]; then
+    if ! check_system_requirements "${REPO_ROOT:-.}" pass warn fail; then
+        :
+    fi
 fi
 
 check_repository_state

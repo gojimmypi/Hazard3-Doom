@@ -60,6 +60,22 @@ cd Hazard3-Doom
 # development branch
 git checkout develop
 
+SYSTEM_REQUIREMENTS_SCRIPT="${PWD}/scripts/check-system-requirements.sh"
+if [[ ! -r "${SYSTEM_REQUIREMENTS_SCRIPT}" ]]; then
+    printf 'Missing required helper: %s\n' "${SYSTEM_REQUIREMENTS_SCRIPT}" >&2
+    exit 1
+fi
+
+# The path is resolved from the newly cloned repository.
+# shellcheck disable=SC1090
+. "${SYSTEM_REQUIREMENTS_SCRIPT}"
+
+if ! check_system_requirements "${PWD}"; then
+    printf '\nSystem does not meet the minimum Hazard3-Doom development requirements.\n' >&2
+    printf 'Increase VM resources before continuing the full install.\n' >&2
+    exit 1
+fi
+
 git submodule sync --recursive
 
 git submodule update --init --recursive
