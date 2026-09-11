@@ -12,6 +12,7 @@ CHECK_PROFILE="full"
 PASS_COUNT=0
 WARN_COUNT=0
 FAIL_COUNT=0
+IS_WSL=0
 
 usage()
 {
@@ -280,6 +281,24 @@ check_riscv_isa()
     fi
 }
 
+# Check environment
+section "Environment"
+if [ -n "$WSL_DISTRO_NAME" ]; then
+    # we found a non-blank WSL environment distro name
+    echo "Found WSL: $WSL_DISTRO_NAME"
+    IS_WSL=1
+    current_path="$(pwd)"
+    pattern="/mnt/?"
+    if echo "$current_path" | grep -Eq "^$pattern"; then
+        # if we are in WSL and shared Windows file system, 'ln' does not work.
+        echo "WSL detected and current working directory is on a Windows filesystem."
+    else
+        echo "WSL detected and current working directory is NOT on a Windows filesystem."
+    fi
+else
+
+fi
+
 section "Host"
 if [[ -r /etc/os-release ]]; then
     # shellcheck disable=SC1091
@@ -299,11 +318,11 @@ fi
 
 section "Required host tools"
 printf 'Profile: %s\n' "${CHECK_PROFILE}"
-check_tool required git "Git" "sudo apt-get install git" --version
-check_tool required python3 "Python 3" "sudo apt-get install python3" --version
-check_tool required shellcheck "ShellCheck" "sudo apt-get install shellcheck"
-check_tool required grep "Host utility grep" "sudo apt-get install grep"
-check_tool required awk "Host utility awk" "sudo apt-get install gawk"
+check_tool required git        "Git"               "sudo apt-get install git" --version
+check_tool required python3    "Python 3"          "sudo apt-get install python3" --version
+check_tool required shellcheck "ShellCheck"        "sudo apt-get install shellcheck"
+check_tool required grep       "Host utility grep" "sudo apt-get install grep"
+check_tool required awk        "Host utility awk"  "sudo apt-get install gawk"
 for tool in cat cmp diff find mkdir sha256sum sort tail tee; do
     check_tool required "${tool}" "Host utility ${tool}" "sudo apt-get install coreutils"
 done
@@ -359,23 +378,20 @@ else
 fi
 
 section "ECP5 FPGA build tools"
-check_tool required yosys "Yosys synthesis" "sudo apt-get install yosys" --version
-check_tool required nextpnr-ecp5 "nextpnr ECP5 place-and-route" \
-    "sudo apt-get install nextpnr-ecp5" --version
-check_tool required ecppack "Project Trellis bitstream packer" \
-    "sudo apt-get install fpga-trellis"
+check_tool required yosys        "Yosys synthesis"                   "./scripts/install-yosys.sh"         --version
+check_tool required nextpnr-ecp5 "nextpnr ECP5 place-and-route"      "./script/install-nextpnr-ecp5.sh"   --version
+check_tool required ecppack      "Project Trellis bitstream packer"  "./script/install-nextpnr-ecp5.sh"   --version
 printf '%s\n' \
     'INFO: Record Yosys and nextpnr versions for release builds.' \
     '      Routing seeds are tool-version-specific; package presence alone does' \
     '      not prove equivalence with a previously qualified release toolchain.'
 
 section "Hardware programming and debug"
-check_tool optional openocd "OpenOCD JTAG debugger" "sudo apt-get install openocd" --version
-check_tool optional dfu-util "DFU utility" "sudo apt-get install dfu-util" --version
-check_tool optional openFPGALoader "openFPGALoader" \
-    "sudo apt-get install openfpgaloader" --version
-check_tool optional fujprog "ULX3S fujprog" ""
-check_tool optional lsusb "USB device listing" "sudo apt-get install usbutils"
+check_tool optional openocd   "OpenOCD JTAG debugger" "sudo apt-get install openocd    # or see /bin/"      --version
+check_tool optional dfu-util  "DFU utility"           "sudo apt-get install dfu-util\n # or see /bin/"      --version
+check_tool optional openFPGALoader "openFPGALoader"   "sudo apt-get install openfpgaloader # or see /bin/"  --version
+check_tool optional fujprog   "ULX3S fujprog"         "Build from https://github.com/kost/fujprog # or see /bin/"
+check_tool optional lsusb     "USB device listing"    "sudo apt-get install usbutils"
 
 if command -v id >/dev/null 2>&1; then
     if id -nG 2>/dev/null | tr ' ' '\n' | grep -qx dialout; then
@@ -386,15 +402,15 @@ if command -v id >/dev/null 2>&1; then
 fi
 
 section "Development, simulation, and documentation"
-check_tool optional gcc "Host C compiler" "sudo apt-get install build-essential" --version
-check_tool optional g++ "Host C++ compiler" "sudo apt-get install build-essential" --version
-check_tool optional cmake "CMake" "sudo apt-get install cmake" --version
-check_tool optional ninja "Ninja" "sudo apt-get install ninja-build" --version
-check_tool optional iverilog "Icarus Verilog" "sudo apt-get install iverilog" -V
-check_tool optional verilator "Verilator" "sudo apt-get install verilator" --version
-check_tool optional clang-tidy "clang-tidy" "sudo apt-get install clang-tidy" --version
-check_tool optional timeout "timeout for timing sweeps" "sudo apt-get install coreutils"
-check_tool optional nproc "nproc for parallel builds" "sudo apt-get install coreutils"
+check_tool optional gcc             "Host C compiler" "sudo apt-get install build-essential"   --version
+check_tool optional g++             "Host C++ compiler" "sudo apt-get install build-essential" --version
+check_tool optional cmake           "CMake" "sudo apt-get install cmake" --version
+check_tool optional ninja           "Ninja" "sudo apt-get install ninja-build" --version
+check_tool optional iverilog        "Icarus Verilog" "sudo apt-get install iverilog" -V
+check_tool optional verilator       "Verilator" "sudo apt-get install verilator" --version
+check_tool optional clang-tidy      "clang-tidy" "sudo apt-get install clang-tidy" --version
+check_tool optional timeout         "timeout for timing sweeps" "sudo apt-get install coreutils"
+check_tool optional nproc           "nproc for parallel builds" "sudo apt-get install coreutils"
 check_python_module optional sphinx "Sphinx" \
     "python3 -m pip install -r docs/requirements.txt"
 
