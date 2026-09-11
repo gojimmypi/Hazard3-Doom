@@ -10,8 +10,36 @@ with HDMI output. ULX4M-LD 85F is also hardware-qualified with Hazard3/AHB at
 ULX4M-LS profiles are documented where their clock, video, or memory layout
 differs.
 
-Confirm System Requirements
----------------------------
+System Requirements
+-------------------
+
+Minimum development system:
+
+* RAM: 8 GiB configured (VM guests may report slightly less usable memory)
+* CPUs: 2
+* Disk: 40 GiB filesystem capacity
+* Swap: 4 GiB recommended
+
+Recommended for source builds:
+
+* RAM: 12-16 GiB
+* CPUs: 4
+* Disk: 60 GiB or more
+* Swap: 4-8 GiB
+
+Building Yosys and nextpnr from source can use substantial memory, especially
+with parallel builds. Systems below the minimum RAM requirement may terminate
+build processes due to memory pressure.
+
+The ``check-system-requirements.sh`` script reports the detected resources:
+
+.. code-block:: bash
+
+   ./scripts/check-system-requirements.sh
+
+
+Install Software Requirements
+-----------------------------
 
 On a fresh system, everything can be installed with a single script. The script is also useful for updating:
 
@@ -35,6 +63,8 @@ On a fresh system, everything can be installed with a single script. The script 
 
 1. Clone the repository
 -----------------------
+
+If using the ``./full-install.sh`` (above), this step was completed automatically.
 
 Use a recursive clone so the Hazard3 and DoomGeneric submodules are present:
 
