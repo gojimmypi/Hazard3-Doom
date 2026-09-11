@@ -19,7 +19,11 @@
 
 # Keep the thresholds and resource detection in one place. This file may be
 # executed directly or sourced by other Hazard3-Doom scripts.
-H3_MIN_RAM_MIB=8192
+# /proc/meminfo reports guest-visible RAM, which may be less than the amount
+# configured in a VM or physical host. Treat 7168 MiB guest-visible RAM as
+# satisfying the documented 8 GiB configured-memory minimum.
+H3_MIN_CONFIGURED_RAM_GIB=8
+H3_MIN_RAM_MIB=7168
 H3_MIN_CPU_COUNT=2
 H3_MIN_DISK_GIB=40
 H3_RECOMMENDED_SWAP_MIB=4096
@@ -82,18 +86,21 @@ check_system_requirements()
     disk_avail_gib=$((disk_avail_kib / 1024 / 1024))
 
     printf '\n=== System resources ===\n'
-    printf 'Minimum: %d MiB RAM, %d CPUs, %d GiB filesystem capacity\n' \
-        "${H3_MIN_RAM_MIB}" "${H3_MIN_CPU_COUNT}" "${H3_MIN_DISK_GIB}"
+    printf 'Minimum: %d GiB configured RAM (%d MiB guest-visible), %d CPUs, %d GiB filesystem capacity\n' \
+        "${H3_MIN_CONFIGURED_RAM_GIB}" "${H3_MIN_RAM_MIB}" \
+        "${H3_MIN_CPU_COUNT}" "${H3_MIN_DISK_GIB}"
     printf 'Swap: %d MiB recommended for source builds\n' \
         "${H3_RECOMMENDED_SWAP_MIB}"
     printf 'Filesystem checked: %s\n' "${disk_path}"
-    printf 'Detected: %d MiB RAM, %d CPUs, %d GiB filesystem capacity, %d GiB free, %d MiB swap\n' \
+    printf 'Detected: %d MiB guest-visible RAM, %d CPUs, %d GiB filesystem capacity, %d GiB free, %d MiB swap\n' \
         "${ram_mib}" "${cpu_count}" "${disk_gib}" "${disk_avail_gib}" "${swap_mib}"
 
     if (( ram_mib >= H3_MIN_RAM_MIB )); then
-        "${pass_callback}" "RAM meets the ${H3_MIN_RAM_MIB} MiB minimum"
+        "${pass_callback}" \
+            "RAM meets the ${H3_MIN_CONFIGURED_RAM_GIB} GiB configured-memory minimum (${H3_MIN_RAM_MIB} MiB guest-visible threshold)"
     else
-        "${fail_callback}" "RAM is below the ${H3_MIN_RAM_MIB} MiB minimum"
+        "${fail_callback}" \
+            "RAM is below the ${H3_MIN_CONFIGURED_RAM_GIB} GiB configured-memory minimum (${H3_MIN_RAM_MIB} MiB guest-visible threshold)"
         printf '%s\n' '       Increase VM memory before long Yosys/nextpnr source builds.'
         failures=$((failures + 1))
     fi
