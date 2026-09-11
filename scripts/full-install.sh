@@ -6,6 +6,8 @@
 # Project:     Hazard3-Doom
 # Purpose:     Install all requirements
 #
+# WARNING:     Existing installs of yoysys and nextpnr may be overwritten by this script.
+#
 # Copyright (c) 2026 gojimmypi
 #
 # Licensed under the Apache License, Version 2.0.
@@ -18,6 +20,41 @@
 # -----------------------------------------------------------------------------
 
 set -euo pipefail
+
+confirm_full_install()
+{
+    local reply=""
+
+    cat <<'EOF_CONFIRM'
+Hazard3-Doom full development environment installer
+
+This script will:
+  - install/update required Ubuntu packages using sudo;
+  - clone the Hazard3-Doom repository and initialize its submodules;
+  - install the RISC-V toolchain and CMake;
+  - build and install Yosys and nextpnr-ecp5/Project Trellis;
+  - run the final requirements check.
+
+WARNING: The Yosys and nextpnr installation steps may overwrite or replace
+existing installations in their target install locations.
+
+This can take a long time and use substantial CPU, RAM, disk, and swap.
+EOF_CONFIRM
+
+    printf '\nContinue with the full install? [y/N] '
+    read -r reply
+
+    case "${reply,,}" in
+    y|yes)
+        ;;
+    *)
+        printf 'Install cancelled.\n'
+        exit 0
+        ;;
+    esac
+}
+
+confirm_full_install
 
 # This can be a long-running script. Keep sudo alive for the duration of the script.
 sudo -v
@@ -54,11 +91,11 @@ else
     echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
 fi
 
-git clone --recursive https://github.com/gojimmypi/Hazard3-Doom.git
+git clone --recursive https://github.com/ulx3s/Hazard3-Doom.git
 cd Hazard3-Doom
 
-# development branch
-git checkout develop
+# Change branch here as desired
+# git checkout develop
 
 SYSTEM_REQUIREMENTS_SCRIPT="${PWD}/scripts/check-system-requirements.sh"
 if [[ ! -r "${SYSTEM_REQUIREMENTS_SCRIPT}" ]]; then
@@ -72,7 +109,7 @@ fi
 
 if ! check_system_requirements "${PWD}"; then
     printf '\nSystem does not meet the minimum Hazard3-Doom development requirements.\n' >&2
-    printf 'Increase VM resources before continuing the full install.\n' >&2
+    printf 'Increase system resources before continuing the full install.\n' >&2
     exit 1
 fi
 
@@ -86,6 +123,13 @@ git submodule update --init --recursive
 
 ./scripts/install-yosys.sh
 
+hash -r
+yosys -V
+
 ./scripts/install-nextpnr-ecp5.sh
+
+hash -r
+ecppack --version
+nextpnr-ecp5 --version
 
 ./scripts/requirements-check.sh
