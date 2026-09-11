@@ -504,6 +504,161 @@ check_bin_inventory()
     fi
 }
 
+check_repository_state()
+{
+    local branch=""
+    local commit=""
+    local origin=""
+    local upstream=""
+    local counts=""
+    local ahead=0
+    local behind=0
+    local status=""
+    local submodule_status=""
+    local submodule_count=0
+    local submodules_initialized=1
+    local submodules_match=1
+    local line=""
+
+    section "Repository"
+    printf 'Repository: %s\n' "${REPO_ROOT:-not detected}"
+
+    if ! command -v git >/dev/null 2>&1; then
+        info "Repository details are unavailable until Git is installed."
+        return 0
+    fi
+
+    if [[ -z "${REPO_ROOT}" ]] ||
+        ! git -C "${REPO_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        fail "Hazard3-Doom Git worktree was not detected"
+        return 0
+    fi
+
+    if branch="$(git -C "${REPO_ROOT}" symbolic-ref --quiet --short HEAD 2>/dev/null)"; then
+        printf 'Branch: %s\n' "${branch}"
+    else
+        printf '%s\n' 'Branch: detached HEAD'
+    fi
+
+    if commit="$(git -C "${REPO_ROOT}" rev-parse --short=12 HEAD 2>/dev/null)"; then
+        printf 'Commit: %s\n' "${commit}"
+    else
+        fail "Unable to determine the current Git commit"
+    fi
+
+    if origin="$(git -C "${REPO_ROOT}" remote get-url origin 2>/dev/null)"; then
+        printf 'Origin: %s\n' "${origin}"
+    else
+        warn "Git remote 'origin' is not configured"
+    fi
+
+    if status="$(git -C "${REPO_ROOT}" status --short --untracked-files=normal 2>/dev/null)"; then
+        if [[ -z "${status}" ]]; then
+            pass "Git working tree is clean"
+        else
+            warn "Git working tree has local changes"
+            printf '%s\n' '       Inspect: git status --short'
+        fi
+    else
+        fail "Unable to read Git working-tree status"
+    fi
+
+    if upstream="$(
+        git -C "${REPO_ROOT}" rev-parse \
+            --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null
+    )"; then
+        printf 'Upstream: %s\n' "${upstream}"
+        if counts="$(
+            git -C "${REPO_ROOT}" rev-list --left-right --count \
+                "HEAD...${upstream}" 2>/dev/null
+        )"; then
+            read -r ahead behind <<< "${counts}"
+            if (( ahead == 0 && behind == 0 )); then
+                pass "HEAD matches ${upstream} at the locally known remote-tracking state"
+            elif (( ahead > 0 && behind == 0 )); then
+                info "HEAD is ${ahead} commit(s) ahead of ${upstream}"
+            elif (( ahead == 0 && behind > 0 )); then
+                warn "HEAD is ${behind} commit(s) behind ${upstream}"
+                printf '%s\n' '       Update remote state and review before building: git fetch'
+            else
+                warn "HEAD and ${upstream} have diverged: ${ahead} ahead, ${behind} behind"
+                printf '%s\n' '       Update remote state and review before merging or rebasing: git fetch'
+            fi
+        else
+            warn "Unable to compare HEAD with ${upstream}"
+        fi
+        info "Upstream comparison uses existing remote-tracking refs; no network fetch is performed."
+    elif [[ -n "${branch}" ]]; then
+        info "Branch ${branch} has no configured upstream."
+    else
+        info "Detached HEAD has no branch upstream to compare."
+    fi
+
+    if [[ ! -f "${REPO_ROOT}/.gitmodules" ]]; then
+        fail "No .gitmodules file was found; required pinned submodules cannot be validated"
+        return 0
+    fi
+
+    if ! submodule_status="$(
+        git -C "${REPO_ROOT}" submodule status --recursive 2>&1
+    )"; then
+        fail "Unable to read recursive Git submodule status"
+        if [[ -n "${submodule_status}" ]]; then
+            while IFS= read -r line; do
+                printf '       %s\n' "${line}" >&2
+            done <<< "${submodule_status}"
+        fi
+        return 0
+    fi
+
+    if [[ -z "${submodule_status}" ]]; then
+        fail ".gitmodules exists, but no submodules were reported"
+        return 0
+    fi
+
+    while IFS= read -r line; do
+        [[ -n "${line}" ]] || continue
+        submodule_count=$((submodule_count + 1))
+        case "${line:0:1}" in
+        -)
+            submodules_initialized=0
+            ;;
+        +|U)
+            submodules_match=0
+            ;;
+        esac
+    done <<< "${submodule_status}"
+
+    if (( submodules_initialized == 1 )); then
+        pass "All ${submodule_count} recursive Git submodule entries are initialized"
+    else
+        fail "One or more Git submodules are not initialized"
+        printf '%s\n' '       Fix: git submodule sync --recursive'
+        printf '%s\n' '       Fix: git submodule update --init --recursive'
+    fi
+
+    if (( submodules_initialized == 0 )); then
+        info "Gitlink match validation is incomplete until all submodules are initialized."
+    elif (( submodules_match == 1 )); then
+        pass "All recursive Git submodules match their recorded gitlinks"
+    else
+        fail "One or more Git submodules do not match their recorded gitlinks or have conflicts"
+        printf '%s\n' '       Inspect: git submodule status --recursive'
+        printf '%s\n' '       Fix mismatched commits: git submodule update --init --recursive'
+    fi
+
+    if (( submodules_initialized == 0 || submodules_match == 0 )); then
+        printf '%s\n' '       Problem entries:'
+        while IFS= read -r line; do
+            case "${line:0:1}" in
+            -|+|U)
+                printf '         %s\n' "${line}"
+                ;;
+            esac
+        done <<< "${submodule_status}"
+    fi
+}
+
 parse_args "$@"
 detect_environment
 
@@ -543,15 +698,18 @@ if [[ -r /etc/os-release ]]; then
 else
     printf 'OS: %s\n' "$(uname -s)"
 fi
+printf 'Hostname: %s\n' "$(uname -n)"
 printf 'Architecture: %s\n' "$(uname -m)"
 printf 'Kernel: %s\n' "$(uname -r)"
-printf 'Repository: %s\n' "${REPO_ROOT:-not detected}"
+printf 'Kernel build: %s\n' "$(uname -v)"
 
 if (( BASH_VERSINFO[0] >= 4 )); then
     pass "Bash ${BASH_VERSION}"
 else
     fail "Bash 4 or newer is required; found ${BASH_VERSION}"
 fi
+
+check_repository_state
 
 section "Required host tools"
 printf 'Profile: %s\n' "${CHECK_PROFILE}"
@@ -725,9 +883,6 @@ fi
 
 if command -v git >/dev/null 2>&1 &&
     git -C "${REPO_ROOT:-.}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    printf 'Repository: %s\n' "${REPO_ROOT}"
-    git remote --verbose
-
     if [[ "$(git -C "${REPO_ROOT}" config --get core.symlinks 2>/dev/null || true)" == "false" ]]; then
         warn "Git core.symlinks=false; tracked symlinks may appear as type changes"
     else
@@ -738,21 +893,6 @@ if command -v git >/dev/null 2>&1 &&
         info "WSL checkout is on a Windows filesystem; preserve Git symlink and LF behavior carefully."
     fi
 
-    if [[ -f "${REPO_ROOT}/.gitmodules" ]]; then
-        SUBMODULE_STATUS="$(git -C "${REPO_ROOT}" submodule status --recursive 2>/dev/null || true)"
-        if grep -q '^-' <<< "${SUBMODULE_STATUS}"; then
-            fail "One or more Git submodules are not initialized"
-            printf '%s\n' '       Run: git submodule sync --recursive'
-            printf '%s\n' '       Run: git submodule update --init --recursive'
-        elif grep -q '^U' <<< "${SUBMODULE_STATUS}"; then
-            fail "One or more Git submodules have merge conflicts"
-        elif [[ -n "${SUBMODULE_STATUS}" ]]; then
-            pass "Git submodules are initialized"
-            if grep -q '^+' <<< "${SUBMODULE_STATUS}"; then
-                warn "One or more submodules differ from the recorded gitlinks"
-            fi
-        fi
-    fi
 fi
 
 finish
