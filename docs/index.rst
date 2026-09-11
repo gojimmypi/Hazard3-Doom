@@ -32,8 +32,9 @@ video and framebuffer support, external memory controllers, SD card access,
 UART and JTAG debugging, a resident boot monitor, host-side upload tools, and a
 loadable DoomGeneric application.
 
-There's also an I2C diagnostic tool, based on the `I2CDriver <https://i2cdriver.com/>`
-by Excamera Labs. Leveraging the same code - there's also a bonus :doc:`Hackaday Supercon SAO feature <user-guide/sao>`.
+There's also an I2C diagnostic tool, based on the `I2CDriver <https://i2cdriver.com/>`_
+by Excamera Labs. Leveraging the same code - there's also a bonus
+:doc:`Hackaday Supercon SAO feature <user-guide/sao>`.
 
 You can use Hazard3-Doom simply to play Doom on a RISC-V soft CPU, or dig deeper
 into the system to see how a complete FPGA-based computer is built. Explore

@@ -10,6 +10,29 @@ with HDMI output. ULX4M-LD 85F is also hardware-qualified with Hazard3/AHB at
 ULX4M-LS profiles are documented where their clock, video, or memory layout
 differs.
 
+Confirm System Requirements
+---------------------------
+
+On a fresh system, everything can be installed with a single script. The script is also useful for updating:
+
+.. code-block:: bash
+
+   curl -L \
+       https://raw.githubusercontent.com/gojimmypi/Hazard3-Doom/develop/scripts/full-install.sh \
+       -o ./full-install.sh
+
+    chmod +x ./full-install.sh
+
+    ./full-install.sh
+
+.. admonition:: yoysys and nextpnr versions
+
+   The scripts install specific versions of yoysys and nextpnr that are known to pass timing with the default seeds.
+   Existing installed versions are quietly overwritten. If you have a different version of yosys or nextpnr installed,
+   you may need to adjust the build scripts to match your installed versions. See the :doc:`/user-guide/build` for details.
+   and the `build-ecp5-bitstream-common.sh <https://github.com/ulx3s/Hazard3-Doom/blob/main/scripts/build-ecp5-bitstream-common.sh>`_
+   script.
+
 1. Clone the repository
 -----------------------
 

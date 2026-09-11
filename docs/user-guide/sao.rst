@@ -6,21 +6,52 @@ Hazard3-Doom exposes a Hackaday-style SAO connector through an APB-controlled I2
 Connector signals
 -----------------
 
+The Supercon SAO cannot be plugged directly into the ULX3S because the 3.3V and ground pins are perpendicular
+to the other pins on the ULX3S header.
+
 The documented ULX3S SAO signals are:
 
 .. list-table::
    :header-rows: 1
 
    * - Signal
-     - ULX3S pin
+     - FPGA pin
+     - Header GP/GN
+     - J1 Row
+     - Header Pin
+   * - Power
+     - 3.3V
+     - 3.3V
+     - 1
+     - 1
+   * - Ground
+     - GND
+     - GND
+     - 2
+     - 3
    * - SDA
      - A9
+     - GP2
+     - 2
+     - 10
    * - SCL
      - B10
+     - GN2
+     - 2
+     - 11
    * - GPIO1
      - B9
+     - GP3
+     - 3
+     - 12
    * - GPIO2
      - C10
+     - GN3
+     - 3
+     - 11
+
+.. image:: ../images/ulx3s-pinout.png
+   :alt: ULX3S pinout
 
 Hazard3 APB base
 ----------------
