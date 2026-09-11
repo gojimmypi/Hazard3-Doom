@@ -22,6 +22,18 @@
 
 set -euo pipefail
 
+# Check environment. We can run Windows .exe files from WSL, not other Linux
+kernel_release=""
+
+kernel_release="$(uname -r 2>/dev/null || true)"
+IS_WSL=0
+if [[ -n "${WSL_DISTRO_NAME:-}" || -n "${WSL_INTEROP:-}" ]] ||
+    [[ "${kernel_release,,}" == *microsoft* ]]; then
+    echo "Detected WSL environment: ${kernel_release}" >&2
+    IS_WSL=1
+fi
+
+
 # Resolve the repository root from this script's location.
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
@@ -30,13 +42,24 @@ ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 if [[ $# -ge 1 ]]; then
     OPENOCD="$1"
 else
-    OPENOCD="${ROOT_DIR}/bin/openocd.exe"
+    if (( IS_WSL == 1 )); then
+        OPENOCD="${ROOT_DIR}/bin/openocd.exe"
+    else
+        OPENOCD="openocd"
+    fi
 fi
 
 OPENOCD_CONFIG="${ROOT_DIR}/openocd/ulx3s-openocd-doom.cfg"
 
-if [[ ! -f "${OPENOCD}" ]]; then
-    printf 'ERROR: OpenOCD not found:\n  %s\n' "${OPENOCD}" >&2
+# Verify that OpenOCD exists. Explicit paths are checked directly; command
+# names such as "openocd" are resolved through PATH.
+if [[ "${OPENOCD}" == */* ]]; then
+    if [[ ! -f "${OPENOCD}" ]]; then
+        printf 'ERROR: OpenOCD not found:\n  %s\n' "${OPENOCD}" >&2
+        exit 1
+    fi
+elif ! command -v "${OPENOCD}" >/dev/null 2>&1; then
+    printf 'ERROR: OpenOCD not found in PATH:\n  %s\n' "${OPENOCD}" >&2
     exit 1
 fi
 
@@ -50,16 +73,27 @@ fi
 # /mnt/c/workspace/.... Convert the configuration filename to Windows syntax
 # when invoking an .exe from WSL. Native Linux OpenOCD keeps the POSIX path.
 OPENOCD_CONFIG_ARG="${OPENOCD_CONFIG}"
-if [[ "${OPENOCD,,}" == *.exe ]]; then
-    if ! command -v wslpath >/dev/null 2>&1; then
-        printf 'ERROR: wslpath is required when using Windows OpenOCD:\n  %s\n' \
+
+if (( IS_WSL == 1 )); then
+    if [[ "${OPENOCD,,}" == *.exe ]]; then
+        if ! command -v wslpath >/dev/null 2>&1; then
+            printf 'ERROR: wslpath is required when using Windows OpenOCD:\n  %s\n' \
+                "${OPENOCD}" >&2
+            exit 1
+        fi
+
+        # Convert config to DOS path
+        OPENOCD_CONFIG_ARG="$(wslpath -w "${OPENOCD_CONFIG}")"
+    fi
+else
+    if [[ "${OPENOCD,,}" == *.exe ]]; then
+        printf 'ERROR: Windows OpenOCD cannot be used from native Linux:\n  %s\n' \
             "${OPENOCD}" >&2
+        printf 'Install and use the native Linux OpenOCD executable instead.\n' >&2
         exit 1
     fi
-
-    # Convert config to DOS path
-    OPENOCD_CONFIG_ARG="$(wslpath -w "${OPENOCD_CONFIG}")"
 fi
+
 
 printf 'Repository root:\n   %s\n\n' "${ROOT_DIR}"
 printf 'Using config:\n      %s\n\n' "${OPENOCD_CONFIG_ARG}"

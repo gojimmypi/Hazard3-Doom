@@ -56,6 +56,17 @@ EOF_CONFIRM
 
 confirm_full_install
 
+
+# Check environment. We can run Windows .exe files from WSL, not other Linux
+kernel_release=""
+
+kernel_release="$(uname -r 2>/dev/null || true)"
+IS_WSL=0
+if [[ -n "${WSL_DISTRO_NAME:-}" || -n "${WSL_INTEROP:-}" ]] ||
+    [[ "${kernel_release,,}" == *microsoft* ]]; then
+    IS_WSL=1
+fi
+
 # This can be a long-running script. Keep sudo alive for the duration of the script.
 sudo -v
 
@@ -131,5 +142,11 @@ yosys -V
 hash -r
 ecppack --version
 nextpnr-ecp5 --version
+
+if (( IS_WSL == 1 )); then
+    echo "openocd.exe available in ./bin/"
+else
+    sudo apt-get install -y openocd
+fi
 
 ./scripts/requirements-check.sh
