@@ -22,6 +22,7 @@ WARN_COUNT=0
 FAIL_COUNT=0
 IS_WSL=0
 WSL_INTEROP_AVAILABLE=0
+WSL_VERSION=0
 REPO_ON_WINDOWS_FS=0
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -131,7 +132,10 @@ check_tool()
     if path="$(command -v "${command_name}" 2>/dev/null)"; then
         if (( $# > 0 )); then
             output="$("${path}" "$@" 2>&1 || true)"
-            output="${output%%$'\n'*}"
+            output="$(normalize_first_line "${output}")"
+            if [[ "${command_name}" == "iverilog" ]]; then
+                output="${output% ()}"
+            fi
         fi
 
         if [[ -n "${output}" ]]; then
@@ -204,6 +208,18 @@ resolve_executable()
     fi
 }
 
+normalize_first_line()
+{
+    local output="$1"
+
+    # Windows executables launched through WSL commonly emit CRLF. Strip CR
+    # before selecting the first line so captured version text cannot rewrite
+    # the beginning of the status line when printed by a Linux terminal.
+    output="${output//$'\r'/}"
+    output="${output%%$'\n'*}"
+    printf '%s' "${output}"
+}
+
 detect_environment()
 {
     local kernel_release=""
@@ -217,6 +233,13 @@ detect_environment()
     fi
 
     if (( IS_WSL == 1 )); then
+        if [[ "${kernel_release,,}" == *wsl2* ]] ||
+            grep -qi 'wsl2' /proc/version 2>/dev/null; then
+            WSL_VERSION=2
+        else
+            WSL_VERSION=1
+        fi
+
         if [[ -n "${WSL_INTEROP:-}" ]] ||
             [[ -e /proc/sys/fs/binfmt_misc/WSLInterop ]] ||
             command -v cmd.exe >/dev/null 2>&1; then
@@ -262,7 +285,7 @@ check_tool_with_wsl_bundle()
     if path="$(command -v "${command_name}" 2>/dev/null)"; then
         if (( $# > 0 )); then
             output="$("${path}" "$@" 2>&1 || true)"
-            output="${output%%$'\n'*}"
+            output="$(normalize_first_line "${output}")"
         fi
         if [[ -n "${output}" ]]; then
             pass "${description}: ${output} (${path})"
@@ -349,7 +372,7 @@ check_riscv_tool()
     if path="$(resolve_executable "${executable}")"; then
         if [[ "${suffix}" == "gcc" ]]; then
             output="$("${path}" --version 2>&1 || true)"
-            output="${output%%$'\n'*}"
+            output="$(normalize_first_line "${output}")"
             pass "RISC-V ${suffix}: ${output} (${path})"
         else
             pass "RISC-V ${suffix}: ${path}"
@@ -412,7 +435,7 @@ check_windows_xpack()
 
     if windows_bundle_usable; then
         if output="$("${gcc_path}" --version 2>&1)"; then
-            output="${output%%$'\n'*}"
+            output="$(normalize_first_line "${output}")"
             pass "Optional native-Windows xPack RISC-V GCC: ${output} (${gcc_path})"
         else
             warn "Native-Windows xPack RISC-V GCC exists but could not be executed from WSL"
@@ -448,7 +471,14 @@ detect_environment
 
 section "Environment"
 if (( IS_WSL == 1 )); then
-    printf 'Environment: WSL (%s)\n' "${WSL_DISTRO_NAME:-distribution name unavailable}"
+    printf 'Environment: WSL%d (%s)\n' \
+        "${WSL_VERSION}" "${WSL_DISTRO_NAME:-distribution name unavailable}"
+    if (( WSL_VERSION == 1 )); then
+        info "WSL1 detected; Linux USB tool presence does not by itself prove direct device access."
+    else
+        info "WSL2 detected; USB/programmer device access may require host-to-WSL passthrough."
+    fi
+
     if (( WSL_INTEROP_AVAILABLE == 1 )); then
         pass "WSL Windows interop is available"
     else
@@ -575,6 +605,9 @@ printf '%s\n' \
     '      not prove equivalence with a previously qualified release toolchain.'
 
 section "Hardware programming and debug"
+if (( IS_WSL == 1 )); then
+    info "Installed tools are checked here; physical USB/JTAG/serial device accessibility is not."
+fi
 check_tool_with_wsl_bundle openocd \
     "openocd.exe" \
     "OpenOCD JTAG debugger" \
@@ -654,6 +687,7 @@ fi
 if command -v git >/dev/null 2>&1 &&
     git -C "${REPO_ROOT:-.}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     printf 'Repository: %s\n' "${REPO_ROOT}"
+    git remote --verbose
 
     if [[ "$(git -C "${REPO_ROOT}" config --get core.symlinks 2>/dev/null || true)" == "false" ]]; then
         warn "Git core.symlinks=false; tracked symlinks may appear as type changes"
