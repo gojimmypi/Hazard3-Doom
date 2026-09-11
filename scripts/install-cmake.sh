@@ -1,5 +1,27 @@
 #!/usr/bin/env bash
-#
+
+set -euo pipefail
+
+if [[ ! -r /etc/os-release ]]; then
+    echo "ERROR: /etc/os-release is unavailable; cannot determine Ubuntu release." >&2
+    exit 1
+fi
+
+# shellcheck disable=SC1091
+. /etc/os-release
+
+if [[ "${ID:-}" != "ubuntu" ]]; then
+    printf 'ERROR: This installer currently supports Ubuntu only; detected: %s\n' \
+        "${PRETTY_NAME:-${ID:-unknown}}" >&2
+    exit 1
+fi
+
+KITWARE_CODENAME="${VERSION_CODENAME:-${UBUNTU_CODENAME:-}}"
+if [[ -z "${KITWARE_CODENAME}" ]]; then
+    echo "ERROR: Could not determine the Ubuntu release codename." >&2
+    exit 1
+fi
+
 sudo apt-get update
 sudo apt-get install -y ca-certificates gpg wget
 
@@ -8,7 +30,8 @@ wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null |
     gpg --dearmor - |
     sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
 
-echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ jammy main' |
+printf 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ %s main\n' \
+    "${KITWARE_CODENAME}" |
     sudo tee /etc/apt/sources.list.d/kitware.list >/dev/null
 
 sudo apt-get update

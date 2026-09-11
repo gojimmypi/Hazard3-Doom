@@ -98,10 +98,13 @@ else
         "  - Hazard3-Doom web console flasher is not connected." \
         "  - The ULX3S USB device US1 is connected and using the expected driver." \
         "      (For Windows: WinUSB or libusbK, not FTDI)." \
+        "      (For native Linux: verify OpenOCD udev/raw USB permissions)." \
+        "      After installing OpenOCD on Linux, unplug and reconnect the ULX3S." \
         "" \
         "Useful checks:" \
         "  pgrep -af openocd" \
         "  ss -ltnp | grep ':3333'" \
+        "  lsusb -d 0403:6015" \
         "" >&2
 
     exit "${rc}"

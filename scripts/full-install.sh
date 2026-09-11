@@ -93,7 +93,8 @@ sudo apt-get update
 sudo apt-get install -y \
     git \
     shellcheck \
-    python3-serial
+    python3-serial \
+    usbutils
 
 MY_SHELLCHECK="shellcheck"
 if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
@@ -147,6 +148,17 @@ if (( IS_WSL == 1 )); then
     echo "openocd.exe available in ./bin/"
 else
     sudo apt-get install -y openocd
+    if command -v udevadm >/dev/null 2>&1; then
+        if sudo udevadm control --reload-rules; then
+            printf '%s\n' \
+                'Reloaded udev rules for native Linux OpenOCD access.' \
+                'If the ULX3S is already connected, unplug and reconnect it.'
+        else
+            printf '%s\n' \
+                'WARNING: Could not reload udev rules automatically.' \
+                'Reconnect the ULX3S after udev is available.' >&2
+        fi
+    fi
 fi
 
 ./scripts/requirements-check.sh

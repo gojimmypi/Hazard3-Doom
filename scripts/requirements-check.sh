@@ -318,6 +318,69 @@ windows_bundle_usable()
     [[ -n "${BIN_DIR}" && -d "${BIN_DIR}" ]]
 }
 
+check_native_linux_ulx3s_usb_access()
+{
+    local candidate=""
+    local rules_file=""
+    local bus=""
+    local device=""
+    local node=""
+    local device_count=0
+
+    (( IS_WSL == 0 )) || return 0
+
+    for candidate in \
+        /usr/lib/udev/rules.d/60-openocd.rules \
+        /lib/udev/rules.d/60-openocd.rules \
+        /etc/udev/rules.d/60-openocd.rules
+    do
+        if [[ -r "${candidate}" ]] &&
+            grep -Eiq 'idVendor.*"0403".*idProduct.*"6015"' "${candidate}"; then
+            rules_file="${candidate}"
+            break
+        fi
+    done
+
+    if [[ -n "${rules_file}" ]]; then
+        pass "OpenOCD udev rule covers ULX3S FT231X 0403:6015: ${rules_file}"
+    else
+        warn "OpenOCD udev rule for ULX3S FT231X 0403:6015 was not found"
+        printf '%s\n' \
+            '       The Ubuntu openocd package normally supplies 60-openocd.rules.' \
+            '       Install/reinstall: sudo apt-get install openocd' \
+            '       Then reconnect the board so the udev rule is applied.'
+    fi
+
+    if ! command -v lsusb >/dev/null 2>&1; then
+        info "Cannot test ULX3S raw USB access because lsusb is unavailable."
+        return 0
+    fi
+
+    while read -r bus device; do
+        [[ -n "${bus}" && -n "${device}" ]] || continue
+        device_count=$((device_count + 1))
+        node="/dev/bus/usb/${bus}/${device}"
+
+        if [[ -r "${node}" && -w "${node}" ]]; then
+            pass "ULX3S FT231X raw USB access: ${node}"
+        else
+            warn "ULX3S FT231X is present but raw USB access is unavailable: ${node}"
+            printf '%s\n' \
+                "       Inspect: ls -l ${node}" \
+                '       Reload rules if needed: sudo udevadm control --reload-rules' \
+                '       Then unplug and reconnect the ULX3S.' \
+                '       Avoid chmod 0666 on /dev/bus/usb; that change is temporary.'
+        fi
+    done < <(
+        lsusb -d 0403:6015 2>/dev/null |
+            awk '$1 == "Bus" && $3 == "Device" { gsub(":", "", $4); print $2, $4 }'
+    )
+
+    if (( device_count == 0 )); then
+        info "ULX3S FT231X 0403:6015 is not currently visible; raw USB access was not tested."
+    fi
+}
+
 check_tool_with_wsl_bundle()
 {
     local command_name="$1"
@@ -842,6 +905,7 @@ check_tool_with_wsl_bundle fujprog \
     "ULX3S fujprog" \
     "build from https://github.com/kost/fujprog"
 check_tool optional lsusb "USB device listing" "sudo apt-get install usbutils"
+check_native_linux_ulx3s_usb_access
 
 if (( IS_WSL == 1 )); then
     check_tool optional wslpath "WSL path conversion" "installed with WSL"

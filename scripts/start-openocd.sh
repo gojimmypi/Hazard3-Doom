@@ -29,7 +29,6 @@ kernel_release="$(uname -r 2>/dev/null || true)"
 IS_WSL=0
 if [[ -n "${WSL_DISTRO_NAME:-}" || -n "${WSL_INTEROP:-}" ]] ||
     [[ "${kernel_release,,}" == *microsoft* ]]; then
-    echo "Detected WSL environment: ${kernel_release}" >&2
     IS_WSL=1
 fi
 
@@ -38,15 +37,38 @@ fi
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 
-# Use the first argument as the OpenOCD path, or use the prebuilt binary.
+WSL_INTEROP_AVAILABLE=0
+REPO_ON_WINDOWS_FS=0
+if (( IS_WSL == 1 )); then
+    if [[ -n "${WSL_INTEROP:-}" ]] ||
+        [[ -e /proc/sys/fs/binfmt_misc/WSLInterop ]] ||
+        command -v cmd.exe >/dev/null 2>&1; then
+        WSL_INTEROP_AVAILABLE=1
+    fi
+
+    fs_type="$(stat -f -c '%T' "${ROOT_DIR}" 2>/dev/null || true)"
+    case "${ROOT_DIR}" in
+    /mnt/[a-zA-Z]|/mnt/[a-zA-Z]/*)
+        REPO_ON_WINDOWS_FS=1
+        ;;
+    esac
+    case "${fs_type}" in
+    9p|drvfs)
+        REPO_ON_WINDOWS_FS=1
+        ;;
+    esac
+fi
+
+# Use the first argument as the OpenOCD path. Otherwise use the bundled Windows
+# executable only when WSL interop and a Windows-mounted checkout make it a
+# supported default; use native OpenOCD in all other Linux/WSL cases.
 if [[ $# -ge 1 ]]; then
     OPENOCD="$1"
+elif (( IS_WSL == 1 && WSL_INTEROP_AVAILABLE == 1 && REPO_ON_WINDOWS_FS == 1 )) &&
+    [[ -f "${ROOT_DIR}/bin/openocd.exe" ]]; then
+    OPENOCD="${ROOT_DIR}/bin/openocd.exe"
 else
-    if (( IS_WSL == 1 )); then
-        OPENOCD="${ROOT_DIR}/bin/openocd.exe"
-    else
-        OPENOCD="openocd"
-    fi
+    OPENOCD="openocd"
 fi
 
 OPENOCD_CONFIG="${ROOT_DIR}/openocd/ulx3s-openocd-doom.cfg"
