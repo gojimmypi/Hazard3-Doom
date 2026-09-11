@@ -29,7 +29,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 if REPO_ROOT="$(git -C "${SCRIPT_DIR}" rev-parse --show-toplevel 2>/dev/null)"; then
     :
 else
-    REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." 2>/dev/null && pwd || true)"
+    REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." 2>/dev/null && pwd)" || REPO_ROOT=""
 fi
 BIN_DIR="${REPO_ROOT:+${REPO_ROOT}/bin}"
 
@@ -218,6 +218,44 @@ normalize_first_line()
     output="${output//$'\r'/}"
     output="${output%%$'\n'*}"
     printf '%s' "${output}"
+}
+
+version_ge()
+{
+    printf '%s\n%s\n' "$2" "$1" | sort -V -C
+}
+
+check_cmake()
+{
+    local path=""
+    local output=""
+    local version=""
+
+    if ! path="$(command -v cmake 2>/dev/null)"; then
+        fail "Missing required tool: cmake (CMake 3.28 or newer)"
+        printf '%s\n' '       Install: ./scripts/install-cmake.sh'
+        return 0
+    fi
+
+    output="$("${path}" --version 2>&1 || true)"
+    output="$(normalize_first_line "${output}")"
+
+    if [[ "${output}" =~ ^cmake[[:space:]]version[[:space:]]([0-9]+(\.[0-9]+)+) ]]; then
+        version="${BASH_REMATCH[1]}"
+    fi
+
+    if [[ -z "${version}" ]]; then
+        fail "Could not determine CMake version from: ${output:-no output}"
+        printf '%s\n' '       Install: ./scripts/install-cmake.sh'
+        return 0
+    fi
+
+    if version_ge "${version}" "3.28"; then
+        pass "CMake: ${output} (${path})"
+    else
+        fail "CMake 3.28 or newer is required for the reference Yosys 0.67 build; found ${version} (${path})"
+        printf '%s\n' '       Install/update: ./scripts/install-cmake.sh'
+    fi
 }
 
 detect_environment()
@@ -527,7 +565,8 @@ for tool in cat cmp diff find mkdir sha256sum sort tail tee; do
 done
 
 if [[ "${CHECK_PROFILE}" == "full" ]]; then
-    check_tool required make "GNU Make" "sudo apt-get install make" --version
+    check_tool required make "GNU Make" $'sudo apt-get install make\n       Also installed automatically by: ./scripts/install-nextpnr-ecp5.sh' --version
+    check_cmake
     for tool in env install stat; do
         check_tool required "${tool}" "Host utility ${tool}" "sudo apt-get install coreutils"
     done
@@ -583,6 +622,7 @@ else
     printf '%s\n' \
         '       Project reference: /opt/riscv/bin/riscv32-unknown-elf-' \
         '       Linux xPack installations commonly use: riscv-none-elf-' \
+        '         use: ./scripts/install-riscv-toolchain.sh' \
         '       Ubuntu alternative: sudo apt-get install gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf'
 fi
 
@@ -640,14 +680,13 @@ if command -v id >/dev/null 2>&1; then
         info "Current user is not in dialout; WSL serial access may instead use Windows COM-port integration."
     else
         warn "Current user is not in the dialout group; serial access may need permissions"
-        printf '%s\n' '       Typical fix: sudo usermod -aG dialout "$USER"; then log out and back in.'
+        printf '%s\n' "       Typical fix: sudo usermod -aG dialout \"\$USER\"; then log out and back in."
     fi
 fi
 
 section "Development, simulation, and documentation"
 check_tool optional gcc        "Host C compiler"   "sudo apt-get install build-essential" --version
 check_tool optional g++        "Host C++ compiler" "sudo apt-get install build-essential" --version
-check_tool optional cmake      "CMake"             "sudo apt-get install cmake" --version
 check_tool optional ninja      "Ninja"             "sudo apt-get install ninja-build" --version
 check_tool optional iverilog   "Icarus Verilog"    "sudo apt-get install iverilog" -V
 check_tool optional verilator  "Verilator"         "sudo apt-get install verilator" --version
