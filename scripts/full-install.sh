@@ -19,17 +19,16 @@
 
 set -euo pipefail
 
-
-# this can be a long running script. we'll keep sudo alive for the duration of the script
+# This can be a long-running script. Keep sudo alive for the duration of the script.
 sudo -v
 
-## being sudo keep alive
-# without this section, an unattended Install may fail with "sudo: timed out"
+## begin sudo keepalive
+# Without this section, an unattended install may fail with "sudo: timed out".
 while true; do
     sudo -n true
     sleep 60
 done 2>/dev/null &
-# keep track of the pid of the sudo keepalive process so we can kill it when the script exits
+# Keep track of the PID so the sudo keepalive can be stopped when the script exits.
 sudo_keepalive_pid=$!
 
 cleanup()
