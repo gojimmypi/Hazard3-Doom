@@ -11,6 +11,36 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd -P)"
 
+kernel_release="$(uname -r 2>/dev/null || true)"
+IS_WSL=0
+WSL_INTEROP_AVAILABLE=0
+REPO_ON_WINDOWS_FS=0
+
+if [[ -n "${WSL_DISTRO_NAME:-}" || -n "${WSL_INTEROP:-}" ]] ||
+    [[ "${kernel_release,,}" == *microsoft* ]]; then
+    IS_WSL=1
+fi
+
+if (( IS_WSL == 1 )); then
+    if [[ -n "${WSL_INTEROP:-}" ]] ||
+        [[ -e /proc/sys/fs/binfmt_misc/WSLInterop ]] ||
+        command -v cmd.exe >/dev/null 2>&1; then
+        WSL_INTEROP_AVAILABLE=1
+    fi
+
+    repo_fs_type="$(stat -f -c '%T' "${REPO_ROOT}" 2>/dev/null || true)"
+    case "${REPO_ROOT}" in
+    /mnt/[a-zA-Z]|/mnt/[a-zA-Z]/*)
+        REPO_ON_WINDOWS_FS=1
+        ;;
+    esac
+    case "${repo_fs_type}" in
+    9p|drvfs)
+        REPO_ON_WINDOWS_FS=1
+        ;;
+    esac
+fi
+
 MODEL="ulx4m"
 BOARD="ulx4m-v002"
 DEVICE="um-85k"
@@ -21,8 +51,16 @@ DFU_MATCH="1d50:614b"
 ALT5_SIZE=2097152
 USER_BITSTREAM_ADDR="0x200000"
 
-OPENFPGALOADER="${REPO_ROOT}/bin/openFPGALoader.exe"
-DFU_UTIL="${REPO_ROOT}/bin/dfu-util.exe"
+if (( IS_WSL == 1 && WSL_INTEROP_AVAILABLE == 1 && REPO_ON_WINDOWS_FS == 1 )); then
+    OPENFPGALOADER_DEFAULT="${REPO_ROOT}/bin/openFPGALoader.exe"
+    DFU_UTIL_DEFAULT="${REPO_ROOT}/bin/dfu-util.exe"
+else
+    OPENFPGALOADER_DEFAULT="openFPGALoader"
+    DFU_UTIL_DEFAULT="dfu-util"
+fi
+
+OPENFPGALOADER="${ULX4M_OPENFPGALOADER:-${OPENFPGALOADER_DEFAULT}}"
+DFU_UTIL="${ULX4M_DFU_UTIL:-${DFU_UTIL_DEFAULT}}"
 
 BOOTLOADER_PROJECT_DIR=""
 BOOTLOADER_DEP_ROOT=""
@@ -72,6 +110,14 @@ Environment overrides:
 
     ULX4M_BOOTLOADER_SKIP_SHELLCHECK=1
         Skip the optional ShellCheck self-lint. bash -n still runs.
+
+    ULX4M_OPENFPGALOADER
+        Override openFPGALoader. Native Linux defaults to openFPGALoader on
+        PATH. WSL may use the bundled bin/openFPGALoader.exe when usable.
+
+    ULX4M_DFU_UTIL
+        Override dfu-util. Native Linux defaults to dfu-util on PATH. WSL may
+        use the bundled bin/dfu-util.exe when usable.
 
 Recommended Hazard3-Doom vendored layout:
     Hazard3-Doom/
@@ -147,6 +193,38 @@ require_command()
     local command_name="$1"
     command -v "${command_name}" >/dev/null 2>&1 || \
         fail "Required command not found on PATH: ${command_name}"
+}
+
+require_tool()
+{
+    local tool="$1"
+    local description="$2"
+
+    if [[ "${tool}" == */* ]]; then
+        [[ -f "${tool}" ]] || fail "Missing ${description}: ${tool}"
+    else
+        command -v "${tool}" >/dev/null 2>&1 || \
+            fail "Required ${description} not found on PATH: ${tool}"
+    fi
+
+    if [[ "${tool,,}" == *.exe ]]; then
+        (( IS_WSL == 1 )) || fail "Windows ${description} cannot be used from native Linux: ${tool}"
+        (( WSL_INTEROP_AVAILABLE == 1 )) || \
+            fail "WSL Windows interop is required for ${description}: ${tool}"
+        require_command wslpath
+    fi
+}
+
+tool_path_arg()
+{
+    local tool="$1"
+    local input_path="$2"
+
+    if (( IS_WSL == 1 )) && [[ "${tool,,}" == *.exe ]]; then
+        wslpath -w "${input_path}" | tr -d '\r'
+    else
+        printf '%s\n' "${input_path}"
+    fi
 }
 
 resolve_bootloader_project_dir()
@@ -279,6 +357,7 @@ self_lint()
 setup_riscv_tool_shim()
 {
     local tool
+    local tool_dir
     local suffix
     local shim_dir="/tmp/had2019-riscv-tools"
     local found=0
@@ -288,14 +367,15 @@ setup_riscv_tool_shim()
         return 0
     fi
 
-    if ! compgen -G '/opt/riscv/bin/riscv32-unknown-elf-*' >/dev/null; then
-        fail "Neither riscv-none-embed-* nor /opt/riscv/bin/riscv32-unknown-elf-* tools were found."
+    if ! command -v riscv-none-elf-gcc >/dev/null 2>&1; then
+        fail "Neither riscv-none-embed-* nor riscv-none-elf-* tools were found on PATH."
     fi
 
+    tool_dir="$(dirname -- "$(command -v riscv-none-elf-gcc)")"
     mkdir -p "${shim_dir}"
-    for tool in /opt/riscv/bin/riscv32-unknown-elf-*; do
+    for tool in "${tool_dir}"/riscv-none-elf-*; do
         [[ -e "${tool}" ]] || continue
-        suffix="${tool##*/riscv32-unknown-elf-}"
+        suffix="${tool##*/riscv-none-elf-}"
         ln -sf "${tool}" "${shim_dir}/riscv-none-embed-${suffix}"
         found=1
     done
@@ -327,10 +407,9 @@ preflight()
     require_command cp
     require_command realpath
     require_command tr
-    require_command wslpath
 
-    [[ -f "${OPENFPGALOADER}" ]] || fail "Missing ${OPENFPGALOADER}"
-    [[ -f "${DFU_UTIL}" ]] || fail "Missing ${DFU_UTIL}"
+    require_tool "${OPENFPGALOADER}" "openFPGALoader"
+    require_tool "${DFU_UTIL}" "dfu-util"
 
     setup_riscv_tool_shim
 
@@ -341,6 +420,8 @@ preflight()
     printf '  Bootloader project:    %s\n' "${BOOTLOADER_PROJECT_DIR}"
     printf '  FPGA IDCODE:           %s\n' "${IDCODE}"
     printf '  DFU VID:PID:           %s:%s\n' "${DFU_VID}" "${DFU_PID}"
+    printf '  openFPGALoader:        %s\n' "${OPENFPGALOADER}"
+    printf '  dfu-util:              %s\n' "${DFU_UTIL}"
     printf '  User bitstream start:  %s\n' "${USER_BITSTREAM_ADDR}"
 }
 
@@ -357,12 +438,6 @@ start_session_log()
     exec > >(tee -a "${SESSION_LOG}") 2>&1
 
     printf 'Session artifacts: %s\n' "${SESSION_DIR}"
-}
-
-to_windows_path()
-{
-    local input_path="$1"
-    wslpath -w "${input_path}" | tr -d '\r'
 }
 
 require_file()
@@ -514,16 +589,16 @@ load_normal_sram()
     local buttons="$1"
     local verification_mode="$2"
     local sram_bit="${BOOTLOADER_PROJECT_DIR}/build-tmp/bootloader-sram-ld-normal.bit"
-    local sram_bit_win
+    local sram_bit_arg
     local list_file="${SESSION_DIR}/dfu-${verification_mode}.txt"
 
     require_file "${sram_bit}"
-    sram_bit_win="$(to_windows_path "${sram_bit}")"
+    sram_bit_arg="$(tool_path_arg "${OPENFPGALOADER}" "${sram_bit}")"
 
     require_continue "Hold ${buttons} now. Keep the button(s) held through JTAG loading and until USB has enumerated. Press Y when ready to load SRAM."
 
     cd "${REPO_ROOT}"
-    run_command "${OPENFPGALOADER}" -c tigard "${sram_bit_win}"
+    run_command "${OPENFPGALOADER}" -c tigard "${sram_bit_arg}"
 
     require_continue "Check openFPGALoader output. Keep ${buttons} held until USB enumeration is complete. Then release the button(s) and press Y to list DFU interfaces."
 
@@ -572,9 +647,9 @@ prepare_upgrade_session()
 backup_alt5()
 {
     local backup_file="${SESSION_DIR}/bootloader-alt5-before-update.bin"
-    local backup_win
+    local backup_arg
 
-    backup_win="$(to_windows_path "${backup_file}")"
+    backup_arg="$(tool_path_arg "${DFU_UTIL}" "${backup_file}")"
 
     printf '\n=== Back up current persistent bootloader region ===\n'
     require_continue "Alt 5 must be visible. Press Y to read and preserve the current first 2 MiB before overwriting it."
@@ -582,7 +657,7 @@ backup_alt5()
     run_command "${DFU_UTIL}" \
         -d "${DFU_MATCH}" \
         -a 5 \
-        -U "${backup_win}"
+        -U "${backup_arg}"
 
     require_size "${backup_file}" "${ALT5_SIZE}"
     stat -c '%n: %s bytes' "${backup_file}"
@@ -596,15 +671,15 @@ write_and_verify_alt5()
     local alt5_img="${BOOTLOADER_PROJECT_DIR}/build-tmp/bootloader-alt5-2m.img"
     local source_copy="${SESSION_DIR}/bootloader-alt5-2m.img"
     local readback_file="${SESSION_DIR}/bootloader-alt5-after-update.bin"
-    local alt5_win
-    local readback_win
+    local alt5_arg
+    local readback_arg
 
     require_file "${alt5_img}"
     require_size "${alt5_img}" "${ALT5_SIZE}"
 
     cp -f "${alt5_img}" "${source_copy}"
-    alt5_win="$(to_windows_path "${alt5_img}")"
-    readback_win="$(to_windows_path "${readback_file}")"
+    alt5_arg="$(tool_path_arg "${DFU_UTIL}" "${alt5_img}")"
+    readback_arg="$(tool_path_arg "${DFU_UTIL}" "${readback_file}")"
 
     printf '\n=== DESTRUCTIVE STEP: write bootloader flash region through DFU alt 5 ===\n'
     printf 'Source image:\n'
@@ -617,14 +692,14 @@ write_and_verify_alt5()
     run_command "${DFU_UTIL}" \
         -d "${DFU_MATCH}" \
         -a 5 \
-        -D "${alt5_win}"
+        -D "${alt5_arg}"
 
     require_continue "Check that the download reached 100 percent and ended with status(0) / Done. Do NOT power-cycle. Press Y to read alt 5 back now."
 
     run_command "${DFU_UTIL}" \
         -d "${DFU_MATCH}" \
         -a 5 \
-        -U "${readback_win}"
+        -U "${readback_arg}"
 
     require_size "${readback_file}" "${ALT5_SIZE}"
 
@@ -695,16 +770,16 @@ cold_tests()
 load_emergency_sram()
 {
     local emergency_image="$1"
-    local emergency_win
+    local emergency_arg
     local list_file="${SESSION_DIR}/dfu-emergency.txt"
 
     require_file "${emergency_image}"
-    emergency_win="$(to_windows_path "${emergency_image}")"
+    emergency_arg="$(tool_path_arg "${OPENFPGALOADER}" "${emergency_image}")"
 
-    require_continue "Prepare Tigard JTAG: target power OFF, Vref 3.3 V, channel B/libusbK. No button is required for EMERGENCY_RESTORE2. Press Y to load the emergency SRAM image."
+    require_continue "Prepare Tigard JTAG: target power OFF, Vref 3.3 V, channel B. On Windows, channel B should use libusbK. No button is required for EMERGENCY_RESTORE2. Press Y to load the emergency SRAM image."
 
     cd "${REPO_ROOT}"
-    run_command "${OPENFPGALOADER}" -c tigard "${emergency_win}"
+    run_command "${OPENFPGALOADER}" -c tigard "${emergency_arg}"
 
     require_continue "Check openFPGALoader output. When USB has enumerated, press Y to list DFU interfaces."
     run_dfu_list "${list_file}"
@@ -730,7 +805,7 @@ program_user_bitstream()
     local default_user_bitstream="${REPO_ROOT}/build/fpga_ulx4m_ld.bit"
     local user_bitstream="${1:-${default_user_bitstream}}"
     local user_bitstream_abs
-    local user_bitstream_win
+    local user_bitstream_arg
     local list_file
     local post_file
 
@@ -739,7 +814,7 @@ program_user_bitstream()
     [[ -f "${user_bitstream}" ]] || fail "User bitstream not found: ${user_bitstream}"
     user_bitstream_abs="$(realpath "${user_bitstream}")"
     require_file "${user_bitstream_abs}"
-    user_bitstream_win="$(to_windows_path "${user_bitstream_abs}")"
+    user_bitstream_arg="$(tool_path_arg "${OPENFPGALOADER}" "${user_bitstream_abs}")"
     list_file="${SESSION_DIR}/program-user-before.txt"
     post_file="${SESSION_DIR}/program-user-after-cold-boot.txt"
 
@@ -759,7 +834,7 @@ program_user_bitstream()
         --vid "${DFU_VID}" \
         --pid "${DFU_PID}" \
         --altsetting 0 \
-        "${user_bitstream_win}"
+        "${user_bitstream_arg}"
 
     require_continue "Check openFPGALoader DFU programming output. Remove all power, then cold-boot with NO buttons. Press Y when the user bitstream is running."
     run_dfu_list "${post_file}"

@@ -123,10 +123,12 @@ Ulazi actiona
 
 ``lpf``
    Putanja do Lattice Preference File datoteke koja sadrži fizička ograničenja
-   pinova i takta za ULX3S. Trenutačna datoteka ograničenja za ULX3S v2.x/v3.0.x
-   je ``tt/fpga/ulx3s/ulx3s_v20.lpf``. Ona mapira ``clk_25mhz`` na oscilator
-   pločice i ograničava taj port na 25 MHz te mapira LED-ove, tipke, GPIO i druge
-   signale pločice koje koristi wrapper.
+   pinova i takta za ULX3S. Hazard3-Doom za ovaj workflow izričito odabire
+   ``tt/fpga/ulx3s/ulx3s_v20.lpf``. Višekratno upotrebljiva ULX3S action
+   trenutačno zadano koristi ``ulx3s_v316.lpf``, pa eksplicitni LPF sprječava
+   tihu promjenu ograničenja pločice ako se zadana vrijednost actiona promijeni.
+   Odabrana v20 datoteka mapira ``clk_25mhz`` na oscilator pločice, ograničava
+   taj port na 25 MHz te mapira LED-ove, tipke, GPIO i druge signale wrappera.
 
 ``artifact-name``
    Osnovni naziv GitHub Actions artifacta. Action dodaje odabrani ECP5 uređaj,

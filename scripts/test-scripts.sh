@@ -62,20 +62,14 @@ skip()
     skipped=$((skipped + 1))
 }
 
-require_tool()
-{
-    if ! command -v "$1" >/dev/null 2>&1; then
-        printf 'Missing required tool: %s\n' "$1" >&2
-        return 1
-    fi
-}
-
 usage()
 {
     cat <<EOF_USAGE
 Usage: ${0##*/} [--integration] [--dry-run]
 
-With no options, run syntax, lint, and safe smoke tests.
+With no options, run syntax, lint, and safe smoke tests. The default run
+first checks its host prerequisites with requirements-check.sh --test-scripts.
+Integration mode uses the full development requirements check.
 
   --integration  Also run real builds and two-seed routed FPGA sweeps.
   --dry-run      With --integration, print long-running commands only.
@@ -135,6 +129,28 @@ run_quiet()
         fail "${label}"
         cat "${COMMAND_LOG}" >&2
     fi
+}
+
+check_requirements()
+{
+    local -a args=()
+
+    if (( run_integration == 0 )); then
+        args+=(--test-scripts)
+    fi
+
+    if "${SCRIPT_DIR}/requirements-check.sh" "${args[@]}" > "${COMMAND_LOG}" 2>&1; then
+        if (( run_integration == 1 )); then
+            pass 'requirements-check.sh: full development environment'
+        else
+            pass 'requirements-check.sh: test-scripts prerequisites'
+        fi
+        return 0
+    fi
+
+    fail 'requirements-check.sh: prerequisites'
+    cat "${COMMAND_LOG}" >&2
+    return 1
 }
 
 print_command()
@@ -580,17 +596,7 @@ main()
     parse_args "$@"
     mkdir -p "${PYTHON_CACHE_DIR}"
 
-    require_tool bash || return 2
-    require_tool cat || return 2
-    require_tool cmp || return 2
-    require_tool diff || return 2
-    require_tool find || return 2
-    require_tool python3 || return 2
-    require_tool shellcheck || return 2
-    require_tool sha256sum || return 2
-    require_tool sort || return 2
-    require_tool tail || return 2
-    require_tool tee || return 2
+    check_requirements || return 2
 
     check_shell_scripts
     check_python_scripts

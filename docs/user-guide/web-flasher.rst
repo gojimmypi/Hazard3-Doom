@@ -149,6 +149,187 @@ reinstall the appropriate FTDI VCP/D2XX package.
    Device Manager can be used to restore the normal FTDI driver when an FTDI
    VCP/D2XX application such as Windows ``fujprog`` is required.
 
+Linux and Ubuntu USB access
+---------------------------
+
+On Linux, the browser must have direct access to the ULX3S USB device in
+order to use the WebUSB FPGA programming interface.
+
+This is especially important when running Ubuntu in a virtual machine.
+For example, with VMware Workstation, first make sure the ULX3S USB device
+is connected to the guest operating system rather than the Windows host.
+
+The ULX3S FTDI device normally appears as::
+
+   0403:6015 Future Technology Devices International, Ltd Bridge(I2C/SPI/UART/FIFO)
+
+Confirm that Ubuntu can see it:
+
+.. code-block:: console
+
+   $ lsusb -d 0403:6015
+   Bus 001 Device 004: ID 0403:6015 Future Technology Devices International, Ltd Bridge(I2C/SPI/UART/FIFO)
+
+The bus and device numbers will vary.
+
+WebUSB ``Access denied``
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+If the Device Tool reports an error similar to::
+
+   Failed to execute 'open' on 'USBDevice': Access denied.
+
+the browser can see the ULX3S, but the logged-in user does not have
+sufficient permission to open the raw USB device.
+
+Using the example above, ``Bus 001 Device 004`` corresponds to:
+
+.. code-block:: text
+
+   /dev/bus/usb/001/004
+
+Check its permissions:
+
+.. code-block:: console
+
+   $ ls -l /dev/bus/usb/001/004
+   $ getfacl /dev/bus/usb/001/004
+
+A typical failing configuration looks like::
+
+   crw-rw-r-- 1 root root ... /dev/bus/usb/001/004
+
+In that case, an ordinary user has read-only access.
+
+For a temporary diagnostic test, grant read/write access to the device:
+
+.. code-block:: console
+
+   $ sudo chmod 0666 /dev/bus/usb/001/004
+
+Then try ``Connect ULX3S USB`` in the Device Tool again.
+
+.. warning::
+
+   The ``chmod`` command above is intended only as a diagnostic test.
+   The permission change is lost when the USB device is disconnected or
+   re-enumerated.
+
+For persistent access, create a udev rule:
+
+.. code-block:: console
+
+   $ sudo tee /etc/udev/rules.d/70-ulx3s-webusb.rules >/dev/null <<'EOF'
+   SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6015", TAG+="uaccess"
+   EOF
+
+Reload the udev rules:
+
+.. code-block:: console
+
+   $ sudo udevadm control --reload-rules
+
+Then disconnect and reconnect the ULX3S USB device.
+
+After reconnecting, run ``lsusb`` again because the device number may have
+changed.
+
+WebUSB ``Unable to claim interface``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A second Linux-specific problem can occur after USB permissions have been
+fixed. The Device Tool may report::
+
+   Could not claim the ULX3S FT231X interface:
+   Failed to execute 'claimInterface' on 'USBDevice':
+   Unable to claim interface.
+
+This normally means the Linux ``ftdi_sio`` kernel driver has already
+claimed the FTDI interface.
+
+Check the USB driver assignments:
+
+.. code-block:: console
+
+   $ lsusb -t
+
+A conflicting ULX3S interface looks similar to::
+
+   Dev 004, If 0, Class=Vendor Specific Class, Driver=ftdi_sio, 12M
+
+The browser cannot claim that interface while ``ftdi_sio`` owns it.
+
+Determine the FTDI interface name:
+
+.. code-block:: console
+
+   $ ls -l /sys/bus/usb/drivers/ftdi_sio/
+
+For example, the ULX3S interface may appear as::
+
+   1-2.1:1.0
+
+The exact name depends on the USB topology of the computer or virtual
+machine.
+
+Temporarily release only that interface from ``ftdi_sio``:
+
+.. code-block:: console
+
+   $ echo '1-2.1:1.0' | sudo tee /sys/bus/usb/drivers/ftdi_sio/unbind
+
+Replace ``1-2.1:1.0`` with the interface name reported on your system.
+
+Verify the result:
+
+.. code-block:: console
+
+   $ lsusb -t
+
+The ULX3S interface should no longer show ``Driver=ftdi_sio``.
+
+Without unplugging the ULX3S, return to the Device Tool and select
+``Connect ULX3S USB`` again.
+
+After using WebUSB
+~~~~~~~~~~~~~~~~~~
+
+The FTDI interface can be returned to the normal Linux serial driver with:
+
+.. code-block:: console
+
+   $ echo '1-2.1:1.0' | sudo tee /sys/bus/usb/drivers/ftdi_sio/bind
+
+Again, replace ``1-2.1:1.0`` with the interface name for your system.
+
+.. note::
+
+   Do not normally unload the entire ``ftdi_sio`` kernel module. Unbinding
+   only the ULX3S interface avoids interfering with other FTDI USB devices
+   connected to the system.
+
+   Also avoid automatically unbinding every ``0403:6015`` device with a
+   udev rule unless the machine is dedicated to WebUSB programming. Doing
+   so prevents Linux from using the normal FTDI serial interface while the
+   driver is detached.
+
+Ubuntu virtual machines
+~~~~~~~~~~~~~~~~~~~~~~~
+
+When using VMware Workstation, both layers must be correct:
+
+#. The ULX3S USB device must be connected to the Ubuntu guest rather than
+   the host operating system.
+
+#. Ubuntu must allow the browser to open the raw USB device.
+
+#. The Linux ``ftdi_sio`` driver must not own the FTDI interface while the
+   browser is using WebUSB.
+
+If ``lsusb`` does not show ``0403:6015``, fix the virtual-machine USB
+connection first. Browser or udev changes will not help until the device is
+visible inside the guest.
+
 Programming a ``.bit`` file
 ---------------------------
 
@@ -346,3 +527,4 @@ Implementation references
 * `fujprog <https://github.com/kost/fujprog>`_
 * `Project Trellis <https://github.com/YosysHQ/prjtrellis>`_
 * `WebUSB API <https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API>`_
+* `openFPGALoader <https://trabucayre.github.io/openFPGALoader/guide/install.html>`_

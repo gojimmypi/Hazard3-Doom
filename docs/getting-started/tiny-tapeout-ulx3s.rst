@@ -121,10 +121,13 @@ Action inputs
 
 ``lpf``
    Path to the Lattice Preference File containing the ULX3S physical pin and
-   clock constraints. The current ULX3S v2.x/v3.0.x constraint file is
-   ``tt/fpga/ulx3s/ulx3s_v20.lpf``. It maps ``clk_25mhz`` to the board oscillator
-   and constrains that port to 25 MHz in addition to mapping the LEDs, buttons,
-   GPIO, and other board signals used by the wrapper.
+   clock constraints. Hazard3-Doom explicitly selects
+   ``tt/fpga/ulx3s/ulx3s_v20.lpf`` for this workflow. The reusable ULX3S action
+   currently defaults to ``ulx3s_v316.lpf``, so keeping the LPF explicit avoids
+   silently changing board constraints when the action default changes. The
+   selected v20 file maps ``clk_25mhz`` to the board oscillator and constrains
+   that port to 25 MHz in addition to mapping the LEDs, buttons, GPIO, and other
+   board signals used by the wrapper.
 
 ``artifact-name``
    Base name of the GitHub Actions artifact. The action appends the selected
@@ -354,7 +357,8 @@ The workflow works but a manual build does not
 Related links
 -------------
 
+* `Hazard3-Doom ULX3S TT workflow <https://github.com/ulx3s/Hazard3-Doom/blob/main/.github/workflows/tt-fpga-ulx.yaml>`_
 * `ULX3S tt-gds-action experimental branch <https://github.com/ulx3s/tt-gds-action/tree/experimental>`_
 * `ULX3S tt-support-tools experimental branch <https://github.com/ulx3s/tt-support-tools/tree/experimental>`_
-* `Hazard3-Doom ULX3S TT workflow <https://github.com/ulx3s/Hazard3-Doom/blob/main/.github/workflows/tt-fpga-ulx.yaml>`_
 * `ULX3S Tiny Tapeout template <https://github.com/ulx3s/ttsky-verilog-template/tree/ulx3s>`_
+* `ULX3S Tiny Tapeout Github Marketplace Action <https://github.com/marketplace/actions/tiny-tapeout-gds-action-for-the-ulx3s-and-ulx4m-ecp5-fpga>`_

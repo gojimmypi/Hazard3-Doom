@@ -91,7 +91,7 @@ Using the local schematic copy
 
 The repository includes a local ULX4M schematic PDF for development reference:
 
-:download:`ULX4M schematics (local copy) <../../ulx4m-schematics.pdf>`
+:download:`ULX4M schematics (local copy) <ULX4M-LS-v0.0.3.pdf>`
 
 It also includes the Alliance DDR3 datasheet used during the alternate-memory
 work:

@@ -4,6 +4,7 @@ Guide utilisateur
 .. toctree::
    :maxdepth: 1
 
+   build
    monitor
    web-tool
    web-serial

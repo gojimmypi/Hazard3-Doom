@@ -44,10 +44,11 @@ inspecter et modifier de bout en bout, Hazard3-Doom est conçu pour être explor
 
 .. note::
 
-   Ces pages suivent la branche ``develop`` active. Les fonctionnalités encore
-   en évolution sont signalées explicitement. Les pages détaillées sur
-   l'architecture du processeur sont également rattachées à l'instantané exact
-   du code source Hazard3 indiqué dans :doc:`architecture/hazard3/index`.
+   Ces pages décrivent la version de documentation sélectionnée. Les
+   fonctionnalités encore en évolution sont signalées explicitement. Les pages
+   détaillées sur l'architecture du processeur sont également rattachées à
+   l'instantané exact du code source Hazard3 indiqué dans
+   :doc:`architecture/hazard3/index`.
 
 Commencer ici
 -------------

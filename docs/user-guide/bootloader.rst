@@ -364,3 +364,8 @@ source documentation included with the Hazard3-Doom tree:
   notes.
 * ``bootloader/README_ULX4M_BOOTLOADER.md`` - validated ULX4M-LD build, SRAM
   test, backup, recovery, installation, readback, and cold-boot procedure.
+
+
+Implementation references
+-------------------------
+* `openFPGALoader <https://trabucayre.github.io/openFPGALoader/guide/install.html>`_

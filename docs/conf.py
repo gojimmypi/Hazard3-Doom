@@ -29,6 +29,12 @@ version = release
 extensions = []
 templates_path = []
 language = os.environ.get("READTHEDOCS_LANGUAGE", "en").lower().replace("-", "_")
+
+# The special case exists because Sphinx has Croatian support for the generated
+# documentation/UI language, but its HTML search index does not have a
+# Croatian search stemmer. French and English do, so they don't need a fallback.
+html_search_language = "en" if language == "hr" else language
+
 translation_languages = {
     "fr": "French",
     "hr": "Croatian",

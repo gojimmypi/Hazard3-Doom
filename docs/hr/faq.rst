@@ -80,6 +80,21 @@ vanjski USB-UART adapter. Samo zaustavljanje OpenOCD-a možda neće pokrenuti
 ponovnu enumeraciju serijskog uređaja u Windowsu/Chromeu potrebnu da port
 ponovno postane dostupan za odabir.
 
+Chrome vidi ``ttyUSB`` na Ubuntuu, ali Web Serial ga ne može otvoriti. Zašto?
+-------------------------------------------------------------------------------
+
+Chromeovo odobrenje uređaja i Linux TTY dozvole odvojene su stvari. Ako je
+``/dev/ttyUSB1`` u vlasništvu ``root:dialout``, a trenutačni izlaz naredbe
+``groups`` ne sadrži ``dialout``, Chrome može prikazati uređaj u izborniku, ali
+``SerialPort.open()`` i dalje može ne uspjeti.
+
+Dodajte korisnika naredbom ``sudo usermod -aG dialout "$USER"`` i otvorite
+novu prijavnu sesiju. Za privremenu dijagnostiku bez ponovnog pokretanja ACL
+poput ``sudo setfacl -m u:"$USER":rw /dev/ttyUSB1`` može trenutačnom
+korisniku dati pristup postojećem čvoru uređaja. Pogledajte
+:doc:`troubleshooting` za provjeru vlasništva porta, ModemManagera i UART
+ožičenja.
+
 Može li OpenOCD koristiti WinUSB na ULX3S-u?
 --------------------------------------------
 

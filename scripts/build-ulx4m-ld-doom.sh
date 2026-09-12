@@ -22,6 +22,29 @@
 #
 set -euo pipefail
 
+# Run shellcheck to ensure this is a good script.
+# Specify the executable shell checker you want to use:
+MY_SHELLCHECK="shellcheck"
+
+# Check if the executable is available in the PATH
+if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
+    "${MY_SHELLCHECK}" -x "${BASH_SOURCE[0]}" >&2 || exit 1
+else
+    echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
+fi
+
+if [[ -z "${TOOLCHAIN_PREFIX:-}" ]]; then
+    if [[ -x /opt/riscv/bin/riscv32-unknown-elf-gcc ]]; then
+        TOOLCHAIN_PREFIX="/opt/riscv/bin/riscv32-unknown-elf-"
+    elif command -v riscv-none-elf-gcc >/dev/null 2>&1; then
+        TOOLCHAIN_PREFIX="riscv-none-elf-"
+    else
+        echo "ERROR: RISC-V GCC toolchain not found" >&2
+        exit 1
+    fi
+fi
+export TOOLCHAIN_PREFIX
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 HAZARD3_ROOT="${HAZARD3_ROOT:-${ROOT_DIR}/third_party/Hazard3}"
@@ -39,16 +62,6 @@ LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM"
 HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-40}"
 ULX4M_LITEDRAM_CPU="${ULX4M_LITEDRAM_CPU:-serv}"
 
-# Run shellcheck to ensure this is a good script.
-# Specify the executable shell checker you want to use:
-MY_SHELLCHECK="shellcheck"
-
-# Check if the executable is available in the PATH
-if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
-    "${MY_SHELLCHECK}" -x "${BASH_SOURCE[0]}" >&2 || exit 1
-else
-    echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
-fi
 
 require_file()
 {

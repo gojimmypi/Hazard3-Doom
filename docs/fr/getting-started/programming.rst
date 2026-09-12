@@ -36,6 +36,47 @@ La séquence autonome prévue est :
 #. ``DOOM.H3D`` et ``DOOM.WAD`` sont lus depuis la carte SD.
 #. Doom est lancé sur HDMI.
 
+ULX4M-LD : chargement FPGA temporaire
+-------------------------------------
+
+Avec Tigard connecté au JTAG de l'ULX4M-LD, ``openFPGALoader`` peut charger une
+nouvelle configuration ECP5 directement en SRAM sans remplacer l'image
+utilisateur persistante :
+
+.. code-block:: bash
+
+   ./bin/openFPGALoader.exe \
+       -c tigard \
+       ./build/fpga_ulx4m_ld.bit
+
+Ce chargement est volatile. Une coupure d'alimentation ou une reconfiguration du
+FPGA le supprime ; il convient donc aux essais d'un bitstream avant son écriture
+persistante.
+
+ULX4M-LD : programmation DFU persistante
+----------------------------------------
+
+Le bootloader DFU Micro-B de l'ULX4M-LD écrit le bitstream utilisateur persistant
+dans la flash SPI. Cette image est conservée après une coupure d'alimentation et
+est distincte du bootloader DFU lui-même.
+
+.. code-block:: bash
+
+   ./bin/openFPGALoader.exe --dfu \
+       --vid 0x1d50 --pid 0x614b --altsetting 0 \
+       ./build/fpga_ulx4m_ld.bit
+
+Après l'écriture, si la carte reste en mode DFU, demandez au bootloader de lancer
+l'image déjà stockée :
+
+.. code-block:: bash
+
+   ./bin/dfu-util.exe -a 0 -e
+
+Cette commande ``-e`` ne télécharge ni n'efface les données FPGA. Voir
+:doc:`../user-guide/bootloader` pour le bootloader et la récupération, et
+:doc:`../user-guide/jtag-debugging` pour le débogage via Tigard.
+
 .. warning::
 
    Validez un bitstream avec un chargement temporaire avant de l'écrire de manière persistante. Une image persistante défectueuse peut être récupérée, mais les tests temporaires sont plus rapides et plus sûrs pendant le développement.

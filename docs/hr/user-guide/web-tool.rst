@@ -50,19 +50,29 @@ Koristite aktualni preglednik temeljen na Chromiumu, primjerice Chrome ili
 Edge. Web Serial i WebUSB zahtijevaju siguran kontekst. ``localhost`` je
 prihvatljiv za lokalni rad, a HTTPS za hostanu kopiju poput GitHub Pagesa.
 
-Za puni alat, uključujući uploader firmwarea konzole, iz direktorija ``web/``
-pokrenite:
+Za puni alat, uključujući uploader firmwarea konzole, pokrenite projektni
+server iz korijena repozitorija:
 
 .. code-block:: bash
 
-   cd web
-   ./web-server.py
+   python3 web/web-server.py
 
 Zatim otvorite:
 
 .. code-block:: text
 
-   http://localhost:8000/
+   http://127.0.0.1:8000/
+
+``http://localhost:8000/`` je ekvivalent kada lokalni server koristi zadani
+loopback binding.
+
+.. warning::
+
+   Nemojte dvokliknuti ``web/index.html`` niti ga otvarati s ``file://`` URL-om
+   kada je potreban uploader firmwarea konzole. Stranica se može prikazati kao
+   lokalna datoteka, ali iza nje nema HTTP API-ja, pa će lokalni GDB/OpenOCD
+   loader biti prijavljen kao nedostupan. Adresna traka preglednika treba
+   prikazivati ``http://127.0.0.1:8000/`` (ili ``localhost:8000``).
 
 Ako uploader firmwarea konzole nije potreban, dovoljan je običan statični
 server:
@@ -134,6 +144,19 @@ debug modul. Ne traži od aktivnog monitora da zamijeni sam sebe. Postupak je:
 Najprije pokrenite odgovarajuću OpenOCD konfiguraciju i ostavite GDB server na
 portu ``3333``. Nemojte ostaviti browser FPGA flasher spojen na ``US1`` dok
 OpenOCD koristi isto FT231X JTAG sučelje.
+
+Stanje **Local loader Ready** potvrđuje da preglednik može pristupiti
+``web-server.py``; ono ne zamjenjuje niti pokreće OpenOCD. OpenOCD je zaseban,
+dugotrajan proces koji je već morao prepoznati Hazard3 jezgru. Provjerite izlaz
+sličan ovome:
+
+.. code-block:: text
+
+   Examined RISC-V core; found 1 harts
+   Listening on port 3333 for gdb connections
+
+Vanjski J1 USB-UART adapter koji koristi Web Serial neovisan je o ``US1`` FT231X
+JTAG sučelju, pa UART konzola može ostati spojena dok OpenOCD radi.
 
 Ovaj uploader radi samo preko lokalnog ``web/web-server.py``. Onemogućen je kada
 se stranica poslužuje kao statični sadržaj.
@@ -229,18 +252,28 @@ Preporučeni slijed za pokretanje
 
 Za tipičnu ULX3S razvojnu sesiju:
 
-#. Pokrenite ``web/web-server.py`` ako bi moglo trebati učitavanje firmwarea
-   konzole.
-#. Otvorite web alat u Chromeu ili Edgeu.
+#. Pokrenite ``python3 web/web-server.py`` i otvorite
+   ``http://127.0.0.1:8000/`` ako bi moglo trebati učitavanje firmwarea konzole.
 #. Po potrebi otvorite **Device uploading -> FPGA web flasher** i programirajte
    odgovarajući ``.bit`` u FPGA SRAM.
-#. Otvorite **Serial connection**, odaberite UART i spojite se s ``115200 8N1``.
-#. Provjerite da je aktivan ``>`` prompt rezidentnog monitora.
-#. Po potrebi upotrijebite **Console firmware uploader** dok odgovarajući
-   OpenOCD server već radi.
+#. Nakon programiranja **odspojite FPGA web flasher s US1**. OpenOCD i
+   preglednikov WebUSB ne mogu istodobno koristiti FT231X JTAG sučelje.
+#. U zasebnom terminalu pokrenite ``./scripts/start-openocd.sh`` i pričekajte
+   poruke ``Examined RISC-V core`` i ``Listening on port 3333``.
+#. Otvorite **Serial connection**, odaberite vanjski UART pločice i spojite se s
+   ``115200 8N1``. UART može ostati spojen dok OpenOCD radi.
+#. Po potrebi upotrijebite **Console firmware uploader** za učitavanje
+   odgovarajućeg ``hazard3-boot-monitor.elf`` kroz već pokrenuti OpenOCD server.
+#. Provjerite da je nova poruka monitora čitljiva i da prompt ``>`` odgovara na
+   ``h`` ili ``?``.
 #. Prenesite zapakiranu Doom ``.h3d`` sliku.
 #. Prenesite zakonito pribavljen IWAD s memorijskim profilom monitora.
 #. Pokrenite s ``j`` iz opcije u uploaderu ili terminala.
+
+Na pločici bez umetnute micro-SD kartice monitor najprije može prijaviti pogrešku
+inicijalizacije poput ``CMD0 failed r1=0x000000FF`` prije prikaza prompta ``>``.
+To je očekivano kada kartica nije prisutna; nije kvar UART-a, SDRAM-a ili
+OpenOCD-a.
 
 Naredbeni upload skripti i dalje su korisni za automatizaciju i dijagnostiku;
 web uploaderi koriste iste H3L/H3W protokole monitora.

@@ -10,8 +10,64 @@ with HDMI output. ULX4M-LD 85F is also hardware-qualified with Hazard3/AHB at
 ULX4M-LS profiles are documented where their clock, video, or memory layout
 differs.
 
+System Requirements
+-------------------
+
+Minimum development system:
+
+* RAM: 8 GiB configured (VM guests may report slightly less usable memory)
+* CPUs: 2
+* Disk: 40 GiB filesystem capacity
+* Swap: 4 GiB recommended
+
+Recommended for source builds:
+
+* RAM: 12-16 GiB
+* CPUs: 4
+* Disk: 60 GiB or more
+* Swap: 4-8 GiB
+
+Building Yosys and nextpnr from source can use substantial memory, especially
+with parallel builds. Systems below the minimum RAM requirement may terminate
+build processes due to memory pressure.
+
+The ``check-system-requirements.sh`` script reports the detected resources:
+
+.. code-block:: bash
+
+   ./scripts/check-system-requirements.sh
+
+
+Install Software Requirements
+-----------------------------
+
+On a fresh system, everything can be installed with a single script. The script is also useful for updating:
+
+.. code-block:: bash
+
+   mkdir -p workspace
+   cd workspace
+
+   wget -L \
+       https://raw.githubusercontent.com/ulx3s/Hazard3-Doom/main/scripts/full-install.sh \
+       -O ./full-install.sh
+
+   chmod +x ./full-install.sh
+
+   ./full-install.sh
+
+.. admonition:: Yosys and nextpnr versions
+
+   The scripts install specific versions of Yosys and nextpnr that are known to pass timing with the default seeds.
+   Existing installed versions are quietly overwritten. If you have a different version of yosys or nextpnr installed,
+   you may need to adjust the build scripts to match your installed versions. See the :doc:`/user-guide/build` for details.
+   and the `build-ecp5-bitstream-common.sh <https://github.com/ulx3s/Hazard3-Doom/blob/main/scripts/build-ecp5-bitstream-common.sh>`_
+   script.
+
 1. Clone the repository
 -----------------------
+
+If using the ``./full-install.sh`` (above), this step was completed automatically.
 
 Use a recursive clone so the Hazard3 and DoomGeneric submodules are present:
 
@@ -47,6 +103,14 @@ Important outputs include:
 3. Program the FPGA for a test run
 ----------------------------------
 
+From commandline:
+
+.. code-block:: text
+
+   ./bin/fujprog-v48-win64.exe ./build/fpga_ulx3s.bit
+
+From the web application:
+
 For ULX3S, the Hazard3-Doom web application can load ``fpga_ulx3s.bit``
 directly into FPGA SRAM through the board's ``US1`` FT231X JTAG interface.
 Expand **FPGA web flasher**, select the ``.bit`` file, connect the ULX3S USB
@@ -59,6 +123,47 @@ driver, target-verification, and troubleshooting procedure.
 A volatile FPGA load does **not** survive removal of power. Other ULX3S
 programming tools can still be used when preferred. For a permanent standalone
 installation, see :doc:`programming` and :doc:`../user-guide/sd-card`.
+
+Optional: load the current monitor ELF through OpenOCD
+------------------------------------------------------
+
+A software-only monitor update can be loaded without rerouting or reprogramming
+the FPGA. This path uses the Hazard3 debug module and requires three cooperating
+processes: OpenOCD, the local web server, and the browser.
+
+First disconnect the browser **FPGA web flasher** from ``US1`` so OpenOCD can
+own the FT231X JTAG interface. In one terminal, from the repository root, start
+OpenOCD:
+
+.. code-block:: bash
+
+   ./scripts/start-openocd.sh
+
+A healthy ULX3S 85F session includes lines similar to:
+
+.. code-block:: text
+
+   JTAG tap: lfe5u85.hazard3 tap/device found: 0x41113043
+   Examined RISC-V core; found 1 harts
+   Listening on port 3333 for gdb connections
+
+Leave OpenOCD running. In a second terminal start the project web server:
+
+.. code-block:: bash
+
+   python3 web/web-server.py
+
+Open ``http://127.0.0.1:8000/`` in Chrome or Edge. Do **not** open
+``web/index.html`` with a ``file://`` URL; the static page cannot call the local
+firmware-loader API. Expand **Console firmware uploader**, select
+``build/ulx3s/monitor/hazard3-boot-monitor.elf``, and load it. GDB connects to
+the already-running OpenOCD server, verifies the ELF sections, resumes Hazard3,
+and disconnects.
+
+The external J1 USB-UART adapter is a separate path from the ``US1`` JTAG
+interface, so Web Serial may remain connected while OpenOCD is running. See
+:doc:`../user-guide/web-tool` and :doc:`../user-guide/jtag-debugging` for the
+full workflow and troubleshooting details.
 
 4. Load Doom over UART
 ----------------------
@@ -150,3 +255,7 @@ Next steps
 * Use :doc:`../user-guide/jtag-debugging` for source-level debugging.
 * Use :doc:`../user-guide/sao` for SAO/I2C support.
 * Use :doc:`../user-guide/i2cdriver` for the HDMI I2C scanner/analyzer interface.
+
+Implementation references
+-------------------------
+* `openFPGALoader <https://trabucayre.github.io/openFPGALoader/guide/install.html>`_

@@ -74,6 +74,22 @@ débranchez/rebranchez physiquement l'adaptateur USB-UART externe. Arrêter
 OpenOCD seul peut ne pas déclencher la ré-énumération du périphérique série par
 Windows / Chrome nécessaire pour rendre le port à nouveau sélectionnable.
 
+Chrome voit ``ttyUSB`` sous Ubuntu mais Web Serial ne peut pas l'ouvrir. Pourquoi ?
+-----------------------------------------------------------------------------------
+
+L'autorisation du périphérique dans Chrome et les permissions TTY de Linux sont
+indépendantes. Si ``/dev/ttyUSB1`` appartient à ``root:dialout`` et que la
+sortie actuelle de ``groups`` ne contient pas ``dialout``, Chrome peut afficher
+le périphérique dans son sélecteur alors que ``SerialPort.open()`` échoue tout
+de même.
+
+Ajoutez l'utilisateur avec ``sudo usermod -aG dialout "$USER"`` puis ouvrez
+une nouvelle session. Pour un diagnostic temporaire sans redémarrage, une ACL
+telle que ``sudo setfacl -m u:"$USER":rw /dev/ttyUSB1`` peut donner à
+l'utilisateur courant l'accès au nœud de périphérique existant. Voir
+:doc:`troubleshooting` pour la propriété du port, ModemManager et les
+vérifications du câblage UART.
+
 OpenOCD peut-il utiliser WinUSB sur l'ULX3S ?
 ---------------------------------------------
 

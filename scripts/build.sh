@@ -20,12 +20,23 @@
 
 set -euo pipefail
 
+if [[ -z "${TOOLCHAIN_PREFIX:-}" ]]; then
+    if [[ -x /opt/riscv/bin/riscv32-unknown-elf-gcc ]]; then
+        TOOLCHAIN_PREFIX="/opt/riscv/bin/riscv32-unknown-elf-"
+    elif command -v riscv-none-elf-gcc >/dev/null 2>&1; then
+        TOOLCHAIN_PREFIX="riscv-none-elf-"
+    else
+        echo "ERROR: RISC-V GCC toolchain not found" >&2
+        exit 1
+    fi
+fi
+export TOOLCHAIN_PREFIX
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SRC_DIR="${ROOT_DIR}/src"
 DOOM_DIR="${ROOT_DIR}/doom"
 BUILD_DIR="${HAZARD3_BUILD_DIR:-${ROOT_DIR}/build}"
-TOOLCHAIN_PREFIX="${TOOLCHAIN_PREFIX:-/opt/riscv/bin/riscv32-unknown-elf-}"
 CC="${TOOLCHAIN_PREFIX}gcc"
 OBJCOPY="${TOOLCHAIN_PREFIX}objcopy"
 OUTPUT_ELF="${BUILD_DIR}/hazard3-boot-monitor.elf"
@@ -39,11 +50,11 @@ MY_SHELLCHECK="shellcheck"
 
 # Check if the executable is available in the PATH
 if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
-    # Run your command here
-    shellcheck "$0" || exit 1
+    "${MY_SHELLCHECK}" -x "${BASH_SOURCE[0]}" >&2 || exit 1
 else
     echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
 fi
+
 
 require_tool()
 {

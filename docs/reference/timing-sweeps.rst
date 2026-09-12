@@ -622,3 +622,9 @@ The main sweep implementation is spread across these files:
 
 See :doc:`scripts` for the broader script catalog and
 :doc:`board-profiles` for target clocks and current routed checkpoints.
+
+Related links
+-------------
+
+* `RISC-V GCC XPACK <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_
+* `nextpnr-ecp5 <https://github.com/YosysHQ/nextpnr>`_

@@ -127,11 +127,13 @@ Entrées de l'action
 
 ``lpf``
    Chemin vers le Lattice Preference File contenant les contraintes physiques
-   de broches et d'horloge de l'ULX3S. Le fichier de contraintes actuel pour les
-   ULX3S v2.x/v3.0.x est ``tt/fpga/ulx3s/ulx3s_v20.lpf``. Il associe
-   ``clk_25mhz`` à l'oscillateur de la carte et contraint ce port à 25 MHz, tout
-   en mappant les LED, boutons, GPIO et autres signaux de carte utilisés par le
-   wrapper.
+   de broches et d'horloge de l'ULX3S. Hazard3-Doom sélectionne explicitement
+   ``tt/fpga/ulx3s/ulx3s_v20.lpf`` pour ce workflow. L'action ULX3S réutilisable
+   utilise actuellement ``ulx3s_v316.lpf`` par défaut ; conserver le LPF
+   explicite évite donc de changer silencieusement les contraintes de la carte
+   si la valeur par défaut de l'action évolue. Le fichier v20 sélectionné associe
+   ``clk_25mhz`` à l'oscillateur de la carte, contraint ce port à 25 MHz et mappe
+   les LED, boutons, GPIO et autres signaux utilisés par le wrapper.
 
 ``artifact-name``
    Nom de base de l'artifact GitHub Actions. L'action ajoute le périphérique

@@ -20,9 +20,20 @@
 
 set -euo pipefail
 
+if [[ -z "${GDB:-}" ]]; then
+    if [[ -x /opt/riscv/bin/riscv32-unknown-elf-gdb ]]; then
+        GDB="/opt/riscv/bin/riscv32-unknown-elf-gdb"
+    elif command -v riscv-none-elf-gdb >/dev/null 2>&1; then
+        GDB="riscv-none-elf-gdb"
+    else
+        echo "ERROR: RISC-V GDB not found" >&2
+        exit 1
+    fi
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-GDB="${GDB:-/opt/riscv/bin/riscv32-unknown-elf-gdb}"
+
 ELF="${1:-${ROOT_DIR}/build/hazard3-boot-monitor.elf}"
 
 # Run shellcheck to ensure this is a good script.
@@ -31,15 +42,21 @@ MY_SHELLCHECK="shellcheck"
 
 # Check if the executable is available in the PATH
 if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
-    # Run your command here
-    shellcheck "$0" || exit 1
+    "${MY_SHELLCHECK}" -x "${BASH_SOURCE[0]}" >&2 || exit 1
 else
     echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
 fi
 
-if [[ ! -x "${GDB}" ]]; then
-    echo "Missing RISC-V GDB executable: ${GDB}" >&2
-    exit 1
+if [[ "${GDB}" == */* ]]; then
+    [[ -x "${GDB}" ]] || {
+        echo "Missing RISC-V GDB executable: ${GDB}" >&2
+        exit 1
+    }
+else
+    command -v "${GDB}" >/dev/null 2>&1 || {
+        echo "Missing RISC-V GDB executable on PATH: ${GDB}" >&2
+        exit 1
+    }
 fi
 
 if [[ ! -f "${ELF}" ]]; then
@@ -81,10 +98,13 @@ else
         "  - Hazard3-Doom web console flasher is not connected." \
         "  - The ULX3S USB device US1 is connected and using the expected driver." \
         "      (For Windows: WinUSB or libusbK, not FTDI)." \
+        "      (For native Linux: verify OpenOCD udev/raw USB permissions)." \
+        "      After installing OpenOCD on Linux, unplug and reconnect the ULX3S." \
         "" \
         "Useful checks:" \
         "  pgrep -af openocd" \
         "  ss -ltnp | grep ':3333'" \
+        "  lsusb -d 0403:6015" \
         "" >&2
 
     exit "${rc}"

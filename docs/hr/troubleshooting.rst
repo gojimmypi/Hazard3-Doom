@@ -1,6 +1,18 @@
 Otklanjanje poteškoća
 =====================
 
+Windows ``fujprog`` prijavljuje ``Cannot find JTAG cable``
+----------------------------------------------------------
+
+Na Windowsu ``fujprog`` očekuje da ULX3S ``US1`` FT231X sučelje koristi normalni
+FTDI VCP/D2XX driver. Ako je to sučelje prebačeno na WinUSB za WebUSB flasher ili
+na drugi libusb driver za JTAG, prije korištenja Windows ``fujprog`` alata vratite
+FTDI driver u Device Manageru.
+
+Najprije zatvorite OpenOCD, ``openFPGALoader`` i WebUSB sesije preglednika,
+vratite FTDI driver, odspojite/ponovno spojite ``US1`` i pokušajte ponovno.
+Pogledajte :doc:`user-guide/web-flasher` za tablicu kompatibilnosti drivera i
+postupak vraćanja.
 
 .. _webusb-access-denied:
 
@@ -100,6 +112,99 @@ serijskih drivera provjerite preglednik.
    dovršite ažuriranje i ponovno pokrenite preglednik prije promjene serijskih
    drivera.
 
+Web Serial odabere Linux TTY, ali ga ne može otvoriti
+-----------------------------------------------------
+
+Ako Chrome može vidjeti i odobriti port poput ``USB2.0-Serial (ttyUSB1)``, ali
+``SerialPort.open()`` ne uspije, odvojeno provjerite preglednikovo odobrenje i
+Linux dozvole uređaja.
+
+Provjerite čvor uređaja, grupe trenutačne prijavne sesije i trenutačnog vlasnika:
+
+.. code-block:: bash
+
+   ls -l /dev/ttyUSB1
+   groups
+   fuser -v /dev/ttyUSB1
+
+Uobičajen rezultat na Ubuntuu je:
+
+.. code-block:: text
+
+   crw-rw---- 1 root dialout ... /dev/ttyUSB1
+
+Ako ``dialout`` posjeduje uređaj, ali ga nema u izlazu ``groups``, dodajte
+korisnika:
+
+.. code-block:: bash
+
+   sudo usermod -aG dialout "$USER"
+
+Promjena vrijedi za **novu prijavnu sesiju**. Izlaz ``groups`` u postojećoj
+sesiji radne površine neće se promijeniti samo zato što je ``usermod`` uspio, a
+već pokrenuti Chrome zadržava stare dodatne grupe.
+
+Za privremenu dijagnostiku bez ponovnog pokretanja, odjave ili ponovnog spajanja
+USB-a dodijelite trenutačnom korisniku ACL na postojećem čvoru uređaja:
+
+.. code-block:: bash
+
+   sudo setfacl -m u:"$USER":rw /dev/ttyUSB1
+
+Zamijenite ``ttyUSB1`` stvarnim portom. Ovaj ACL može nestati kada se uređaj
+ponovno enumerira; članstvo u ``dialout`` ostaje uobičajeno trajno rješenje.
+``newgrp dialout`` može odmah stvoriti shell s novom grupom, ali ne mijenja već
+pokrenutu radnu površinu ili Chrome proces.
+
+Ako su dozvole ispravne, ali otvaranje i dalje ne uspijeva, naredbom ``fuser``
+provjerite koristi li drugi proces port. Ubuntuov ModemManager također može
+ispitivati USB serijske adaptere. Za dijagnostiku ga privremeno zaustavite:
+
+.. code-block:: bash
+
+   sudo systemctl stop ModemManager
+
+Trajno onemogućite ModemManager samo na sustavu na kojem njegove modemske
+funkcije namjerno nisu potrebne.
+
+UART izlaz je čitljiv, ali monitor ignorira naredbe
+---------------------------------------------------
+
+Čitljiv tekst pri pokretanju na ``115200 8N1`` potvrđuje FPGA TX put i baud
+rate, ali **ne** potvrđuje suprotni UART smjer. Ako monitor ispiše čistu poruku
+pri pokretanju i prompt ``>``, ali ``h`` ili ``?`` ne daje odgovor, najprije
+provjerite put od TX izlaza adaptera do RX ulaza FPGA-a. Labava spojna žica može
+uzrokovati upravo ovakav jednosmjerni simptom.
+
+Projektom provjereno ULX3S ožičenje je:
+
+.. code-block:: text
+
+   adapter TX  -> ULX3S J1 pin 8 / GP1 / Hazard3 RxD
+   adapter RX  <- ULX3S J1 pin 6 / GP0 / Hazard3 TxD
+   adapter GND -> ULX3S GND
+
+Pogledajte :doc:`hardware/ulx3s/interfaces` za opis sučelja pločice.
+
+Da biste razlikovali ponašanje preglednika od fizičkog UART-a, odspojite Web
+Serial kako bi oslobodio port, a zatim izravno testirajte na Linuxu:
+
+.. code-block:: bash
+
+   stty -F /dev/ttyUSB1 \
+       115200 cs8 -cstopb -parenb \
+       -ixon -ixoff -crtscts raw -echo
+
+   # U jednom terminalu:
+   cat /dev/ttyUSB1
+
+   # U drugom terminalu pošaljite monitorovu jednobajtnu naredbu za pomoć:
+   printf 'h' > /dev/ttyUSB1
+
+Ako je izlaz pri pokretanju čist, ali ova naredba i dalje ne daje odgovor,
+usredotočite se na TX žicu adaptera, sjedanje konektora, masu i FPGA RX pin
+umjesto mijenjanja OpenOCD-a ili baud ratea.
+
 Doom upload istječe
 -------------------
 
@@ -107,6 +212,25 @@ Doom upload istječe
 * Zatvorite PuTTY ili drugi program koji koristi UART port.
 * Potvrdite odabrani COM/TTY uređaj.
 * Potvrdite da monitor i uploader koriste isti memorijski profil.
+
+Nema micro-SD kartice, ali hladno pokretanje prijavljuje CMD0 pogrešku
+-----------------------------------------------------------------------
+
+To je očekivano. Rezidentni monitor pokušava put hladnog pokretanja s micro-SD
+kartice prije povratka na interaktivni prompt. Bez umetnute kartice izlaz može
+sadržavati:
+
+.. code-block:: text
+
+   ULX3S cold boot: trying micro-SD...
+   SD boot: initializing micro-SD...
+   SD: CMD0 failed r1=0x000000FF
+   SD boot: card initialization failed
+   Type h or ? for help.
+   >
+
+Ako su SDRAM/video dijagnostike prošle i pojavi se prompt ``>``, poruka o
+nedostajućoj kartici nije kvar sustava.
 
 SD kartica se montira, ali datoteke nisu pronađene
 --------------------------------------------------
@@ -161,6 +285,66 @@ To je očekivano s trenutačnim softverom. Izlazak vraća UART upravljanje
 monitorom i SAO brzinu sabirnice od 100 kHz, ali ne rekonstruira frame koji je
 bio vidljiv prije pokretanja GUI-a. Pokrenite Doom ili prikažite drugi video
 frame monitora kako biste zamijenili zadnju sliku analizatora.
+
+Uploader firmwarea konzole ostaje na ``Loading...``
+---------------------------------------------------
+
+Preglednikov uploader firmwarea konzole ne pokreće OpenOCD. Tri dijela moraju
+raditi istodobno:
+
+.. code-block:: text
+
+   preglednik -> web-server.py -> GDB -> OpenOCD :3333 -> Hazard3
+
+Pokrenite OpenOCD u jednom terminalu i ostavite ga pokrenutog:
+
+.. code-block:: bash
+
+   ./scripts/start-openocd.sh
+
+Upotrebljiva sesija mora doći do poruka ``Examined RISC-V core`` i ``Listening
+on port 3333 for gdb connections``. U drugom terminalu pokrenite:
+
+.. code-block:: bash
+
+   python3 web/web-server.py
+
+Otvorite ``http://127.0.0.1:8000/``. Nemojte koristiti ``file://`` URL za
+``web/index.html``. Stanje **Local loader Ready** na web-stranici znači da je
+lokalni HTTP pomoćni proces dostupan; OpenOCD i dalje mora zasebno raditi.
+Tijekom normalnog batch učitavanja OpenOCD može zabilježiti prihvaćenu GDB vezu,
+a zatim ``dropped 'gdb' connection`` kada se loader odspoji nakon nastavka rada
+jezgre.
+
+Korisne provjere su:
+
+.. code-block:: bash
+
+   ss -ltnp | grep ':3333'
+   curl http://127.0.0.1:8000/api/console-firmware/status
+
+Također odspojite preglednikov FPGA web flasher s ``US1`` prije pokretanja
+OpenOCD-a jer oba koriste isto FT231X JTAG sučelje. Vanjski J1 USB-UART adapter
+je odvojen i može ostati spojen.
+
+OpenOCD prijavljuje USB timeout ili potpuno nulti JTAG scan u VM-u
+------------------------------------------------------------------
+
+USB passthrough virtualnog stroja ponekad može pri početku proizvesti poruku
+poput ``LIBUSB_ERROR_TIMEOUT`` nakon koje slijedi ``JTAG scan chain interrogation
+failed: all zeroes``. Prije zaključka da sesija nije uspjela provjerite kasnije
+OpenOCD stanje. Ako zatim prijavi:
+
+.. code-block:: text
+
+   Examined RISC-V core; found 1 harts
+   Listening on port 3333 for gdb connections
+
+GDB može koristiti server. Za potvrdu jednom zaustavite i odmah ponovno
+pokrenite OpenOCD kako biste provjerili da je scan čist. Ako OpenOCD nikada ne
+pronađe ECP5 TAP ili Hazard3 jezgru, provjerite VMware USB vezu prema gostu,
+zatvorite preglednikov WebUSB FPGA flasher i provjerite koristi li netko drugi
+JTAG prije promjene taktova ili RTL-a.
 
 OpenOCD ne vidi ispravan Hazard3 debug modul
 --------------------------------------------

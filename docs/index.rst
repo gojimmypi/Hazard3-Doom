@@ -32,6 +32,10 @@ video and framebuffer support, external memory controllers, SD card access,
 UART and JTAG debugging, a resident boot monitor, host-side upload tools, and a
 loadable DoomGeneric application.
 
+There's also an I2C diagnostic tool, based on the `I2CDriver <https://i2cdriver.com/>`_
+by Excamera Labs. Leveraging the same code - there's also a bonus
+:doc:`Hackaday Supercon SAO feature <user-guide/sao>`.
+
 You can use Hazard3-Doom simply to play Doom on a RISC-V soft CPU, or dig deeper
 into the system to see how a complete FPGA-based computer is built. Explore
 processor integration, memory interfaces, clocking and timing, video generation,
@@ -112,8 +116,8 @@ Project links
 * `Hazard3-Doom repository <https://github.com/ulx3s/Hazard3-Doom>`_
 * `ULX3S Hazard3 hardware fork on ulx-doom branch <https://github.com/ulx3s/Hazard3/tree/ulx-doom>`_
 * `Hazard3 upstream <https://github.com/Wren6991/Hazard3>`_
-* `Hazard3-libfpga form on ulx-doom branch <https://github.com/ulx3s/Hazard3-libfpga/tree/ulx-doom>` _
-* `Hazard3-libfpga upstream <https://github.com/Wren6991/libfpga>` _
+* `Hazard3-libfpga fork on ulx-doom branch <https://github.com/ulx3s/Hazard3-libfpga/tree/ulx-doom>`_
+* `Hazard3-libfpga upstream <https://github.com/Wren6991/libfpga>`_
 * `DoomGeneric upstream <https://github.com/ozkl/doomgeneric>`_
 * `ULX4M hardware sources <https://github.com/intergalaktik/ulx4m>`_
 * `ULX4M hardware documentation <https://github.com/intergalaktik/ulx4m-documentation>`_

@@ -75,6 +75,20 @@ the COM port was removed during a debug session, physically unplug/reconnect the
 external USB-UART adapter. Stopping OpenOCD alone may not trigger the Windows /
 Chrome serial-device re-enumeration needed to make the port selectable again.
 
+Chrome sees ``ttyUSB`` on Ubuntu but Web Serial cannot open it. Why?
+--------------------------------------------------------------------
+
+Chrome device authorization and Linux TTY permissions are separate. If
+``/dev/ttyUSB1`` is owned by ``root:dialout`` and the current ``groups`` output
+does not contain ``dialout``, Chrome can show the device in its chooser but
+``SerialPort.open()`` can still fail.
+
+Add the user with ``sudo usermod -aG dialout "$USER"`` and use a new login
+session. For a temporary no-reboot diagnostic, an ACL such as
+``sudo setfacl -m u:"$USER":rw /dev/ttyUSB1`` can grant the current user access
+to the existing device node. See :doc:`troubleshooting` for port ownership,
+ModemManager, and UART wiring checks.
+
 Can OpenOCD use WinUSB on the ULX3S?
 ------------------------------------
 

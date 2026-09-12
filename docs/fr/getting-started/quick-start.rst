@@ -58,6 +58,48 @@ D'autres outils de programmation ULX3S peuvent toujours être utilisés si vous
 les préférez. Pour une installation autonome permanente, voir
 :doc:`programming` et :doc:`../user-guide/sd-card`.
 
+Optionnel : charger l'ELF actuel du moniteur via OpenOCD
+--------------------------------------------------------
+
+Une mise à jour logicielle du moniteur peut être chargée sans rerouter ni
+reprogrammer le FPGA. Ce chemin utilise le module de débogage Hazard3 et exige
+trois processus coopérants : OpenOCD, le serveur web local et le navigateur.
+
+Déconnectez d'abord le **FPGA web flasher** du navigateur de ``US1`` afin
+qu'OpenOCD puisse posséder l'interface JTAG FT231X. Dans un terminal, depuis la
+racine du dépôt, démarrez OpenOCD :
+
+.. code-block:: bash
+
+   ./scripts/start-openocd.sh
+
+Une session ULX3S 85F saine contient des lignes similaires à :
+
+.. code-block:: text
+
+   JTAG tap: lfe5u85.hazard3 tap/device found: 0x41113043
+   Examined RISC-V core; found 1 harts
+   Listening on port 3333 for gdb connections
+
+Laissez OpenOCD en cours d'exécution. Dans un second terminal, démarrez le
+serveur web du projet :
+
+.. code-block:: bash
+
+   python3 web/web-server.py
+
+Ouvrez ``http://127.0.0.1:8000/`` dans Chrome ou Edge. N'ouvrez **pas**
+``web/index.html`` avec une URL ``file://`` ; la page statique ne peut pas
+appeler l'API locale de chargement du firmware. Développez **Console firmware
+uploader**, sélectionnez ``build/ulx3s/monitor/hazard3-boot-monitor.elf`` puis
+chargez-le. GDB se connecte au serveur OpenOCD déjà actif, vérifie les sections
+ELF, reprend Hazard3 puis se déconnecte.
+
+L'adaptateur USB-UART J1 externe utilise un chemin distinct de l'interface JTAG
+``US1`` ; Web Serial peut donc rester connecté pendant qu'OpenOCD fonctionne.
+Voir :doc:`../user-guide/web-tool` et :doc:`../user-guide/jtag-debugging` pour
+le workflow complet et les détails de dépannage.
+
 4. Charger Doom via UART
 ------------------------
 
