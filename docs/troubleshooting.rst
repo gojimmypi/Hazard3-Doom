@@ -110,6 +110,119 @@ before changing hardware or USB serial drivers.
    If the Web Serial chooser is empty while Chrome shows a pending update,
    complete the update and relaunch before changing serial drivers.
 
+Web Serial selects a Linux TTY but fails to open it
+---------------------------------------------------
+
+If Chrome can see and authorize a port such as ``USB2.0-Serial (ttyUSB1)`` but
+``SerialPort.open()`` fails, separate browser authorization from Linux device
+permissions.
+
+Check the device node, current login groups, and current owner:
+
+.. code-block:: bash
+
+   ls -l /dev/ttyUSB1
+   groups
+   fuser -v /dev/ttyUSB1
+
+A common Ubuntu result is:
+
+.. code-block:: text
+
+   crw-rw---- 1 root dialout ... /dev/ttyUSB1
+
+If ``dialout`` owns the device but is missing from ``groups``, add the user:
+
+.. code-block:: bash
+
+   sudo usermod -aG dialout "$USER"
+
+The change applies to a **new login session**. ``groups`` in an existing desktop
+session will not change just because ``usermod`` succeeded, and an already
+running Chrome process keeps the old supplementary groups.
+
+For a temporary diagnostic that does not require a reboot, logout, or USB
+reconnect, grant the current user an ACL on the existing device node:
+
+.. code-block:: bash
+
+   sudo setfacl -m u:"$USER":rw /dev/ttyUSB1
+
+Replace ``ttyUSB1`` with the actual port. This ACL may disappear when the device
+is re-enumerated; ``dialout`` membership remains the normal persistent fix.
+``newgrp dialout`` can create a shell with the new group immediately, but it does
+not change an already-running desktop or Chrome process.
+
+If permissions are correct but open still fails, check whether another process
+owns the port with ``fuser``. Ubuntu's ModemManager can also probe USB serial
+adapters. Temporarily stop it for diagnosis with:
+
+.. code-block:: bash
+
+   sudo systemctl stop ModemManager
+
+Disable ModemManager permanently only on a system where its modem functionality
+is intentionally not needed.
+
+UART output is readable but the monitor ignores commands
+--------------------------------------------------------
+
+Readable boot text at ``115200 8N1`` proves the FPGA transmit path and baud rate,
+but it does **not** prove the opposite UART direction. If the monitor prints a
+clean banner and ``>`` prompt but ``h`` or ``?`` receives no response, inspect
+the adapter TX-to-FPGA-RX path first. A loose jumper can create exactly this
+one-way symptom.
+
+The project-tested ULX3S wiring is:
+
+.. code-block:: text
+
+   adapter TX  -> ULX3S J1 pin 8 / GP1 / Hazard3 RxD
+   adapter RX  <- ULX3S J1 pin 6 / GP0 / Hazard3 TxD
+   adapter GND -> ULX3S GND
+
+See :doc:`hardware/ulx3s/interfaces` for the board interface description.
+
+To distinguish browser behavior from the physical UART, disconnect Web Serial so
+it releases the port, then test directly on Linux:
+
+.. code-block:: bash
+
+   stty -F /dev/ttyUSB1 \
+       115200 cs8 -cstopb -parenb \
+       -ixon -ixoff -crtscts raw -echo
+
+   # In one terminal:
+   cat /dev/ttyUSB1
+
+   # In another terminal, send the monitor's one-byte help command:
+   printf 'h' > /dev/ttyUSB1
+
+If boot output is clean but this command still produces no response, focus on the
+adapter TX wire, connector seating, ground, and FPGA RX pin rather than changing
+OpenOCD or the baud rate.
+
+WebUSB cannot open or claim the ULX3S
+------------------------------------
+
+On Linux, the Hazard3-Doom Device Tool may be able to detect the ULX3S but
+still fail to open it.
+
+Two common errors are:
+
+``Access denied``
+   The browser does not have read/write permission for the raw USB device.
+
+``Unable to claim interface``
+   The Linux ``ftdi_sio`` driver already owns the FT231X USB interface.
+
+See :doc:`user-guide/web-flasher` for the Linux udev permission setup and
+the procedure for temporarily releasing the ULX3S interface from
+``ftdi_sio``.
+
+When using a virtual machine, also verify that the ULX3S USB device is
+connected to the guest operating system rather than the host.
+
 Doom upload times out
 ---------------------
 
@@ -117,6 +230,24 @@ Doom upload times out
 * Close PuTTY or any other program that owns the UART port.
 * Confirm the selected COM/TTY device.
 * Confirm that the monitor and uploader use the same memory profile.
+
+No micro-SD card is installed, but cold boot reports CMD0 failure
+-----------------------------------------------------------------
+
+This is expected. The resident monitor tries the micro-SD cold-boot path before
+returning to the interactive prompt. With no card installed, output may include:
+
+.. code-block:: text
+
+   ULX3S cold boot: trying micro-SD...
+   SD boot: initializing micro-SD...
+   SD: CMD0 failed r1=0x000000FF
+   SD boot: card initialization failed
+   Type h or ? for help.
+   >
+
+If SDRAM/video diagnostics passed and the ``>`` prompt appears, the missing-card
+message is not a system failure.
 
 SD card mounts but files are not found
 --------------------------------------
@@ -227,6 +358,65 @@ Record the local versions with:
    ecppack --version
 
 
+
+Console firmware uploader remains on ``Loading...``
+---------------------------------------------------
+
+The browser console firmware uploader does not start OpenOCD. Three pieces must
+be running at the same time:
+
+.. code-block:: text
+
+   browser -> web-server.py -> GDB -> OpenOCD :3333 -> Hazard3
+
+Start OpenOCD in one terminal and leave it running:
+
+.. code-block:: bash
+
+   ./scripts/start-openocd.sh
+
+A usable session reaches both ``Examined RISC-V core`` and ``Listening on port
+3333 for gdb connections``. In another terminal start:
+
+.. code-block:: bash
+
+   python3 web/web-server.py
+
+Open ``http://127.0.0.1:8000/``. Do not use a ``file://`` URL for
+``web/index.html``. The web page's **Local loader Ready** state means the local
+HTTP helper is reachable; OpenOCD must still be running separately. During a
+normal batch load, OpenOCD may log an accepted GDB connection followed by a
+``dropped 'gdb' connection`` when the loader disconnects after resuming the
+core.
+
+Useful checks are:
+
+.. code-block:: bash
+
+   ss -ltnp | grep ':3333'
+   curl http://127.0.0.1:8000/api/console-firmware/status
+
+Also disconnect the browser FPGA web flasher from ``US1`` before OpenOCD starts,
+because both use the same FT231X JTAG interface. The external J1 USB-UART adapter
+is separate and may remain connected.
+
+OpenOCD reports USB timeout or an all-zero JTAG scan in a VM
+------------------------------------------------------------
+
+VM USB passthrough can occasionally produce an initial message such as
+``LIBUSB_ERROR_TIMEOUT`` followed by ``JTAG scan chain interrogation failed: all
+zeroes``. Read the later OpenOCD state before deciding that the session failed.
+If it subsequently reports:
+
+.. code-block:: text
+
+   Examined RISC-V core; found 1 harts
+   Listening on port 3333 for gdb connections
+
+then GDB can use the server. Stop and immediately restart OpenOCD once to confirm
+that the scan is clean. If OpenOCD never finds the ECP5 TAP or Hazard3 core,
+verify VMware USB attachment to the guest, close the browser WebUSB FPGA flasher,
+and check for another JTAG owner before changing clocks or RTL.
 
 OpenOCD cannot see a working Hazard3 debug module
 -------------------------------------------------

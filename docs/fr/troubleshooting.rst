@@ -117,6 +117,106 @@ avant de modifier le matériel ou les pilotes série USB.
    en attente, terminez la mise à jour et relancez le navigateur avant de
    modifier les pilotes série.
 
+Web Serial sélectionne un TTY Linux mais ne parvient pas à l'ouvrir
+-------------------------------------------------------------------
+
+Si Chrome peut voir et autoriser un port tel que ``USB2.0-Serial (ttyUSB1)``
+mais que ``SerialPort.open()`` échoue, distinguez l'autorisation du navigateur
+des permissions du périphérique Linux.
+
+Vérifiez le nœud de périphérique, les groupes de la session actuelle et le
+propriétaire actuel :
+
+.. code-block:: bash
+
+   ls -l /dev/ttyUSB1
+   groups
+   fuser -v /dev/ttyUSB1
+
+Un résultat Ubuntu courant est :
+
+.. code-block:: text
+
+   crw-rw---- 1 root dialout ... /dev/ttyUSB1
+
+Si ``dialout`` possède le périphérique mais n'apparaît pas dans ``groups``,
+ajoutez l'utilisateur :
+
+.. code-block:: bash
+
+   sudo usermod -aG dialout "$USER"
+
+La modification s'applique à une **nouvelle session de connexion**. La sortie de
+``groups`` dans une session de bureau existante ne change pas simplement parce
+que ``usermod`` a réussi, et un processus Chrome déjà lancé conserve les anciens
+groupes supplémentaires.
+
+Pour un diagnostic temporaire sans redémarrage, déconnexion ou reconnexion USB,
+accordez à l'utilisateur courant une ACL sur le nœud de périphérique existant :
+
+.. code-block:: bash
+
+   sudo setfacl -m u:"$USER":rw /dev/ttyUSB1
+
+Remplacez ``ttyUSB1`` par le port réel. Cette ACL peut disparaître lorsque le
+périphérique est ré-énuméré ; l'appartenance à ``dialout`` reste la correction
+persistante normale. ``newgrp dialout`` peut créer immédiatement un shell avec
+le nouveau groupe, mais ne modifie pas un bureau ou un processus Chrome déjà en
+cours d'exécution.
+
+Si les permissions sont correctes mais que l'ouverture échoue encore, vérifiez
+avec ``fuser`` si un autre processus possède le port. ModemManager sous Ubuntu
+peut aussi sonder les adaptateurs série USB. Pour le diagnostic, arrêtez-le
+temporairement avec :
+
+.. code-block:: bash
+
+   sudo systemctl stop ModemManager
+
+Ne désactivez ModemManager définitivement que sur un système où ses fonctions
+de modem ne sont volontairement pas nécessaires.
+
+La sortie UART est lisible mais le moniteur ignore les commandes
+----------------------------------------------------------------
+
+Un texte de démarrage lisible en ``115200 8N1`` prouve le chemin d'émission du
+FPGA et le débit, mais ne prouve **pas** le sens UART opposé. Si le moniteur
+affiche une bannière propre et l'invite ``>`` mais que ``h`` ou ``?`` ne donne
+aucune réponse, inspectez d'abord le chemin TX de l'adaptateur vers RX du FPGA.
+Un cavalier mal connecté peut produire exactement ce symptôme unidirectionnel.
+
+Le câblage ULX3S testé par le projet est :
+
+.. code-block:: text
+
+   adaptateur TX  -> ULX3S J1 broche 8 / GP1 / RxD Hazard3
+   adaptateur RX  <- ULX3S J1 broche 6 / GP0 / TxD Hazard3
+   adaptateur GND -> GND ULX3S
+
+Voir :doc:`hardware/ulx3s/interfaces` pour la description des interfaces de la
+carte.
+
+Pour distinguer un problème du navigateur d'un problème UART physique,
+déconnectez Web Serial afin qu'il libère le port, puis testez directement sous
+Linux :
+
+.. code-block:: bash
+
+   stty -F /dev/ttyUSB1 \
+       115200 cs8 -cstopb -parenb \
+       -ixon -ixoff -crtscts raw -echo
+
+   # Dans un terminal :
+   cat /dev/ttyUSB1
+
+   # Dans un autre terminal, envoyez la commande d'aide d'un octet du moniteur :
+   printf 'h' > /dev/ttyUSB1
+
+Si la sortie de démarrage est propre mais que cette commande ne produit toujours
+aucune réponse, concentrez-vous sur le fil TX de l'adaptateur, l'enfichage du
+connecteur, la masse et la broche RX du FPGA plutôt que de modifier OpenOCD ou
+le débit.
+
 Le téléversement de Doom expire
 -------------------------------
 
@@ -124,6 +224,25 @@ Le téléversement de Doom expire
 * Fermez PuTTY ou tout autre programme qui possède le port UART.
 * Confirmez le périphérique COM/TTY sélectionné.
 * Confirmez que le moniteur et l'outil de téléversement utilisent le même profil mémoire.
+
+Aucune carte micro-SD n'est installée, mais le démarrage à froid signale un échec CMD0
+-----------------------------------------------------------------------------------------
+
+C'est normal. Le moniteur résident essaie le chemin de démarrage à froid depuis
+la micro-SD avant de revenir à l'invite interactive. Sans carte installée, la
+sortie peut contenir :
+
+.. code-block:: text
+
+   ULX3S cold boot: trying micro-SD...
+   SD boot: initializing micro-SD...
+   SD: CMD0 failed r1=0x000000FF
+   SD boot: card initialization failed
+   Type h or ? for help.
+   >
+
+Si les diagnostics SDRAM/vidéo ont réussi et que l'invite ``>`` apparaît, le
+message de carte absente n'indique pas une panne du système.
 
 La carte SD est montée mais les fichiers sont introuvables
 ----------------------------------------------------------
@@ -174,6 +293,67 @@ C'est le comportement attendu avec le logiciel actuel. Quitter restaure le
 contrôle UART du moniteur et le débit SAO 100 kHz, mais ne reconstruit pas
 l'image visible avant le démarrage de l'interface. Lancez Doom ou présentez une
 autre image vidéo du moniteur pour remplacer la dernière image de l'analyseur.
+
+Le chargeur du firmware console reste sur ``Loading...``
+--------------------------------------------------------
+
+Le chargeur de firmware console du navigateur ne démarre pas OpenOCD. Trois
+éléments doivent fonctionner simultanément :
+
+.. code-block:: text
+
+   navigateur -> web-server.py -> GDB -> OpenOCD :3333 -> Hazard3
+
+Démarrez OpenOCD dans un terminal et laissez-le en cours d'exécution :
+
+.. code-block:: bash
+
+   ./scripts/start-openocd.sh
+
+Une session utilisable atteint à la fois ``Examined RISC-V core`` et
+``Listening on port 3333 for gdb connections``. Dans un autre terminal,
+démarrez :
+
+.. code-block:: bash
+
+   python3 web/web-server.py
+
+Ouvrez ``http://127.0.0.1:8000/``. N'utilisez pas une URL ``file://`` pour
+``web/index.html``. L'état **Local loader Ready** de la page web signifie que
+l'assistant HTTP local est joignable ; OpenOCD doit tout de même fonctionner
+séparément. Pendant un chargement batch normal, OpenOCD peut journaliser une
+connexion GDB acceptée puis ``dropped 'gdb' connection`` lorsque le chargeur se
+déconnecte après avoir repris le cœur.
+
+Vérifications utiles :
+
+.. code-block:: bash
+
+   ss -ltnp | grep ':3333'
+   curl http://127.0.0.1:8000/api/console-firmware/status
+
+Déconnectez également le flasher FPGA web de ``US1`` avant de démarrer OpenOCD,
+car les deux utilisent la même interface JTAG FT231X. L'adaptateur USB-UART J1
+externe est distinct et peut rester connecté.
+
+OpenOCD signale un délai USB ou un scan JTAG entièrement nul dans une VM
+------------------------------------------------------------------------
+
+Le passthrough USB d'une VM peut parfois produire au départ un message tel que
+``LIBUSB_ERROR_TIMEOUT`` suivi de ``JTAG scan chain interrogation failed: all
+zeroes``. Examinez l'état final d'OpenOCD avant de conclure que la session a
+échoué. S'il signale ensuite :
+
+.. code-block:: text
+
+   Examined RISC-V core; found 1 harts
+   Listening on port 3333 for gdb connections
+
+alors GDB peut utiliser le serveur. Arrêtez puis redémarrez immédiatement
+OpenOCD une fois pour confirmer que le scan est propre. Si OpenOCD ne trouve
+jamais le TAP ECP5 ni le cœur Hazard3, vérifiez que le périphérique USB VMware
+est attaché à l'invité, fermez le flasher FPGA WebUSB du navigateur et recherchez
+un autre propriétaire du JTAG avant de modifier les horloges ou le RTL.
 
 OpenOCD ne voit pas un module de débogage Hazard3 fonctionnel
 -------------------------------------------------------------

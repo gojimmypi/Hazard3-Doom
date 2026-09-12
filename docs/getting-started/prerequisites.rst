@@ -55,6 +55,46 @@ Python uploader dependency
 
    python3 -m pip install pyserial
 
+Linux serial-port access
+------------------------
+
+On native Linux, including an Ubuntu VM, USB-UART adapters commonly appear as
+``/dev/ttyUSB0``, ``/dev/ttyUSB1``, and so on. The device node is normally owned
+by ``root:dialout`` with mode ``0660``. Check the active device and your current
+login groups before using Web Serial or the Python uploaders:
+
+.. code-block:: bash
+
+   ls -l /dev/ttyUSB*
+   groups
+
+If the UART device belongs to ``dialout`` but your user does not, add the user to
+the group:
+
+.. code-block:: bash
+
+   sudo usermod -aG dialout "$USER"
+
+The new supplementary group applies to a **new login session**. Log out of the
+Ubuntu desktop and log back in before starting the browser. Running ``groups``
+in an already-open terminal immediately after ``usermod`` will still show the
+old session groups.
+
+For a temporary test that does not require a reboot, logout, or USB reconnect,
+grant the current user access to the existing device node with an ACL:
+
+.. code-block:: bash
+
+   sudo setfacl -m u:"$USER":rw /dev/ttyUSB1
+
+Replace ``ttyUSB1`` with the actual device. ``setfacl`` is provided by the
+Ubuntu ``acl`` package. This ACL is diagnostic/session-local state on that device
+node and may disappear when the USB device is re-enumerated; ``dialout``
+membership is the normal persistent setup.
+
+See :doc:`../troubleshooting` for port-ownership, ModemManager, Web Serial, and
+one-way UART diagnostics.
+
 IWAD
 ----
 

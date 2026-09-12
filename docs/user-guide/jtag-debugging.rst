@@ -18,6 +18,24 @@ open the USB JTAG adapter directly. The USB driver and adapter configuration
 therefore belong to OpenOCD, while ``scripts/load-firmware.sh`` uses GDB only
 after OpenOCD has successfully examined the target.
 
+For ULX3S, the preferred launcher is:
+
+.. code-block:: bash
+
+   ./scripts/start-openocd.sh
+
+The launcher is intentionally usable from both WSL and native Linux. On native
+Linux it resolves ``openocd`` from ``PATH``. Under WSL it can use the bundled
+Windows ``openocd.exe`` for a Windows-mounted checkout when WSL interop is
+available; otherwise it uses native Linux OpenOCD. This keeps repository paths
+and executable formats matched to the host environment.
+
+The project ULX3S configurations are written to work with the Ubuntu OpenOCD
+``0.12.0`` release and the newer OpenOCD builds currently used by the project. In particular, the
+``gdb_report_data_abort`` compatibility spelling is accepted by 0.12.0; newer
+builds may print a deprecation warning while continuing to accept it. Do not
+replace a distro OpenOCD installation merely to eliminate that warning.
+
 With OpenOCD already running and no other GDB client attached:
 
 .. code-block:: bash
@@ -45,6 +63,23 @@ FTDI-native tools such as Windows ``fujprog`` and is not the libusb OpenOCD
 path.
 
 See :doc:`web-flasher` for the ULX3S driver compatibility matrix.
+
+A healthy ULX3S 85F OpenOCD start includes output similar to:
+
+.. code-block:: text
+
+   JTAG tap: lfe5u85.hazard3 tap/device found: 0x41113043
+   Examined RISC-V core; found 1 harts
+   hart 0: XLEN=32
+   Listening on port 3333 for gdb connections
+
+In a VM, an initial USB transaction can occasionally report
+``LIBUSB_ERROR_TIMEOUT`` or a failed all-zero JTAG interrogation. Judge the final
+state, not just the first warning: if OpenOCD subsequently examines the RISC-V
+core and opens port 3333, the debug server is usable. A clean immediate restart
+is a useful confirmation. If the TAP/core is never found, verify that the
+FT231X is attached to the guest, the browser FPGA flasher is disconnected, and
+no other process owns the JTAG interface.
 
 ULX4M-LD with Tigard
 --------------------

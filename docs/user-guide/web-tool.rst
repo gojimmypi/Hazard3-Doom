@@ -52,18 +52,28 @@ WebUSB require a secure context. ``localhost`` is accepted for local use, and
 HTTPS is suitable for a hosted copy such as GitHub Pages.
 
 For the complete tool, including the console firmware uploader, start the
-project server from ``web/``:
+project server from the repository root:
 
 .. code-block:: bash
 
-   cd web
-   ./web-server.py
+   python3 web/web-server.py
 
 Then open:
 
 .. code-block:: text
 
-   http://localhost:8000/
+   http://127.0.0.1:8000/
+
+``http://localhost:8000/`` is equivalent when the local server uses its default
+loopback binding.
+
+.. warning::
+
+   Do not double-click ``web/index.html`` or open it with a ``file://`` URL when
+   the console firmware uploader is needed. The page can render as a local file,
+   but there is no HTTP API behind it, so the local GDB/OpenOCD loader will be
+   reported as unavailable. The browser address bar should show
+   ``http://127.0.0.1:8000/`` (or ``localhost:8000``).
 
 A generic static server is sufficient when the console firmware uploader is not
 needed:
@@ -139,6 +149,20 @@ Instead:
 Start the matching OpenOCD configuration first and leave its GDB server
 listening on port ``3333``. Do not leave the browser FPGA flasher connected to
 ``US1`` while OpenOCD needs the same FT231X JTAG interface.
+
+The **Local loader Ready** state confirms that the browser can reach
+``web-server.py``; it does not replace or start OpenOCD. OpenOCD is a separate
+long-running process and must already have examined the Hazard3 core. Verify it
+with output similar to:
+
+.. code-block:: text
+
+   Examined RISC-V core; found 1 harts
+   Listening on port 3333 for gdb connections
+
+The external J1 USB-UART adapter used by Web Serial is independent of the
+``US1`` FT231X JTAG interface, so the UART console can remain connected while
+OpenOCD is running.
 
 This uploader is available only through ``web/web-server.py`` on the local
 machine. It is disabled when the page is hosted as static content.
@@ -239,18 +263,28 @@ Suggested browser bring-up flow
 
 For a normal ULX3S development session, a convenient order is:
 
-#. Start ``web/web-server.py`` if console firmware loading may be needed.
-#. Open the web tool in Chrome or Edge.
+#. Start ``python3 web/web-server.py`` and open
+   ``http://127.0.0.1:8000/`` if console firmware loading may be needed.
 #. If necessary, expand **Device uploading -> FPGA web flasher** and program the
    matching ``.bit`` image into FPGA SRAM.
-#. Expand **Serial connection**, select the board UART, and connect at
-   ``115200 8N1``.
-#. Confirm that the resident monitor ``>`` prompt is active.
-#. If necessary, use **Console firmware uploader** with the matching OpenOCD
-   server already running.
+#. **Disconnect the FPGA web flasher from US1** after programming. OpenOCD and
+   browser WebUSB cannot own the FT231X JTAG interface at the same time.
+#. In a separate terminal, run ``./scripts/start-openocd.sh`` and wait for both
+   ``Examined RISC-V core`` and ``Listening on port 3333``.
+#. Expand **Serial connection**, select the external board UART, and connect at
+   ``115200 8N1``. The UART can remain connected while OpenOCD is running.
+#. If necessary, use **Console firmware uploader** to load the matching
+   ``hazard3-boot-monitor.elf`` through the already-running OpenOCD server.
+#. Confirm that the new monitor banner is readable and the ``>`` prompt responds
+   to ``h`` or ``?``.
 #. Upload the packaged Doom ``.h3d`` image.
 #. Upload a legally obtained IWAD using the memory profile matching the monitor.
 #. Launch with ``j`` from the uploader option or the terminal.
+
+On a board with no micro-SD card installed, the monitor may first report an SD
+initialization failure such as ``CMD0 failed r1=0x000000FF`` before presenting
+the ``>`` prompt. That is expected when no card is present; it is not a UART,
+SDRAM, or OpenOCD failure.
 
 The command-line upload scripts remain useful for automation and debugging; the
 web uploaders implement the same monitor H3L/H3W protocols rather than a

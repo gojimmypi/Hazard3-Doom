@@ -56,6 +56,48 @@ Dépendance Python de l'outil de téléversement
 
    python3 -m pip install pyserial
 
+Accès au port série sous Linux
+-------------------------------
+
+Sous Linux natif, y compris dans une VM Ubuntu, les adaptateurs USB-UART
+apparaissent généralement sous ``/dev/ttyUSB0``, ``/dev/ttyUSB1``, etc. Le nœud
+de périphérique appartient normalement à ``root:dialout`` avec le mode
+``0660``. Vérifiez le périphérique actif et les groupes de votre session avant
+d'utiliser Web Serial ou les chargeurs Python :
+
+.. code-block:: bash
+
+   ls -l /dev/ttyUSB*
+   groups
+
+Si le périphérique UART appartient à ``dialout`` mais pas votre utilisateur,
+ajoutez celui-ci au groupe :
+
+.. code-block:: bash
+
+   sudo usermod -aG dialout "$USER"
+
+Le nouveau groupe supplémentaire s'applique à une **nouvelle session de
+connexion**. Déconnectez-vous du bureau Ubuntu puis reconnectez-vous avant de
+lancer le navigateur. Exécuter ``groups`` dans un terminal déjà ouvert juste
+après ``usermod`` montre encore les anciens groupes de la session.
+
+Pour un test temporaire sans redémarrage, déconnexion ou reconnexion USB,
+accordez à l'utilisateur courant l'accès au nœud de périphérique existant avec
+une ACL :
+
+.. code-block:: bash
+
+   sudo setfacl -m u:"$USER":rw /dev/ttyUSB1
+
+Remplacez ``ttyUSB1`` par le périphérique réel. ``setfacl`` est fourni par le
+paquet Ubuntu ``acl``. Cette ACL est un état de diagnostic lié au nœud de
+périphérique et peut disparaître lors d'une ré-énumération USB ; l'appartenance
+à ``dialout`` est la configuration persistante normale.
+
+Voir :doc:`../troubleshooting` pour la propriété du port, ModemManager, Web
+Serial et les diagnostics d'un UART fonctionnant dans un seul sens.
+
 IWAD
 ----
 

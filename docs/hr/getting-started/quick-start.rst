@@ -56,6 +56,47 @@ Nestabilno učitavanje FPGA-a **ne** preživljava prekid napajanja. Po želji se
 dalje mogu koristiti drugi ULX3S alati za programiranje. Za trajnu samostalnu
 instalaciju pogledajte :doc:`programming` i :doc:`../user-guide/sd-card`.
 
+Neobavezno: učitajte trenutačni monitor ELF kroz OpenOCD
+--------------------------------------------------------
+
+Softversko ažuriranje monitora može se učitati bez ponovnog place-and-routea ili
+ponovnog programiranja FPGA-a. Ovaj put koristi Hazard3 debug modul i zahtijeva
+tri procesa koji surađuju: OpenOCD, lokalni web server i preglednik.
+
+Najprije odspojite preglednikov **FPGA web flasher** s ``US1`` kako bi OpenOCD
+mogao preuzeti FT231X JTAG sučelje. U jednom terminalu, iz korijena
+repozitorija, pokrenite OpenOCD:
+
+.. code-block:: bash
+
+   ./scripts/start-openocd.sh
+
+Ispravna ULX3S 85F sesija sadrži retke slične ovima:
+
+.. code-block:: text
+
+   JTAG tap: lfe5u85.hazard3 tap/device found: 0x41113043
+   Examined RISC-V core; found 1 harts
+   Listening on port 3333 for gdb connections
+
+Ostavite OpenOCD pokrenut. U drugom terminalu pokrenite projektni web server:
+
+.. code-block:: bash
+
+   python3 web/web-server.py
+
+Otvorite ``http://127.0.0.1:8000/`` u Chromeu ili Edgeu. **Nemojte** otvarati
+``web/index.html`` s ``file://`` URL-om; statična stranica ne može pozvati
+lokalni API loadera firmwarea. Proširite **Console firmware uploader**, odaberite
+``build/ulx3s/monitor/hazard3-boot-monitor.elf`` i učitajte ga. GDB se spaja na
+već pokrenuti OpenOCD server, provjerava ELF sekcije, nastavlja Hazard3 i
+prekida vezu.
+
+Vanjski J1 USB-UART adapter odvojen je put od ``US1`` JTAG sučelja, pa Web Serial
+može ostati spojen dok OpenOCD radi. Pogledajte :doc:`../user-guide/web-tool` i
+:doc:`../user-guide/jtag-debugging` za cijeli postupak i detalje otklanjanja
+poteškoća.
+
 4. Učitajte Doom putem UART-a
 -----------------------------
 

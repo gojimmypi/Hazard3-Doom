@@ -54,18 +54,29 @@ Serial et WebUSB exigent un contexte sécurisé. ``localhost`` est accepté en
 local et HTTPS convient à un hébergement tel que GitHub Pages.
 
 Pour disposer de toutes les fonctions, y compris le chargeur du firmware
-console, lancez depuis ``web/`` :
+console, lancez le serveur du projet depuis la racine du dépôt :
 
 .. code-block:: bash
 
-   cd web
-   ./web-server.py
+   python3 web/web-server.py
 
 Puis ouvrez :
 
 .. code-block:: text
 
-   http://localhost:8000/
+   http://127.0.0.1:8000/
+
+``http://localhost:8000/`` est équivalent lorsque le serveur local utilise son
+binding loopback par défaut.
+
+.. warning::
+
+   Ne double-cliquez pas sur ``web/index.html`` et ne l'ouvrez pas avec une URL
+   ``file://`` lorsque le chargeur du firmware console est nécessaire. La page
+   peut s'afficher comme fichier local, mais aucune API HTTP ne se trouve
+   derrière elle ; le chargeur GDB/OpenOCD local sera donc signalé comme
+   indisponible. La barre d'adresse doit afficher ``http://127.0.0.1:8000/``
+   (ou ``localhost:8000``).
 
 Un serveur statique générique suffit si le chargeur de firmware console n'est
 pas nécessaire :
@@ -142,6 +153,20 @@ lui-même. Le flux est le suivant :
 Démarrez d'abord la configuration OpenOCD correspondante et laissez son serveur
 GDB écouter sur le port ``3333``. Ne laissez pas le flasher FPGA du navigateur
 connecté à ``US1`` pendant qu'OpenOCD utilise la même interface JTAG FT231X.
+
+L'état **Local loader Ready** confirme que le navigateur peut joindre
+``web-server.py`` ; il ne remplace ni ne démarre OpenOCD. OpenOCD est un
+processus distinct et de longue durée qui doit déjà avoir examiné le cœur
+Hazard3. Vérifiez une sortie similaire à :
+
+.. code-block:: text
+
+   Examined RISC-V core; found 1 harts
+   Listening on port 3333 for gdb connections
+
+L'adaptateur USB-UART J1 externe utilisé par Web Serial est indépendant de
+l'interface JTAG FT231X ``US1`` ; la console UART peut donc rester connectée
+pendant qu'OpenOCD fonctionne.
 
 Ce chargeur n'est disponible qu'avec ``web/web-server.py`` sur la machine
 locale. Il est désactivé lorsque la page est hébergée comme contenu statique.
@@ -243,19 +268,31 @@ Flux de mise en route conseillé
 
 Pour une session de développement ULX3S typique :
 
-#. Lancez ``web/web-server.py`` si le chargement du firmware console peut être
+#. Lancez ``python3 web/web-server.py`` et ouvrez
+   ``http://127.0.0.1:8000/`` si le chargement du firmware console peut être
    nécessaire.
-#. Ouvrez l'outil web dans Chrome ou Edge.
 #. Si nécessaire, développez **Device uploading -> FPGA web flasher** et
    programmez le ``.bit`` correspondant dans la SRAM FPGA.
-#. Développez **Serial connection**, choisissez l'UART et connectez-vous en
-   ``115200 8N1``.
-#. Vérifiez que l'invite ``>`` du moniteur résident est active.
-#. Si nécessaire, utilisez **Console firmware uploader** avec le serveur OpenOCD
-   correspondant déjà actif.
+#. **Déconnectez le FPGA web flasher de US1** après la programmation. OpenOCD et
+   WebUSB dans le navigateur ne peuvent pas posséder simultanément l'interface
+   JTAG FT231X.
+#. Dans un terminal distinct, exécutez ``./scripts/start-openocd.sh`` et attendez
+   ``Examined RISC-V core`` ainsi que ``Listening on port 3333``.
+#. Développez **Serial connection**, choisissez l'UART externe de la carte et
+   connectez-vous en ``115200 8N1``. L'UART peut rester connecté pendant
+   qu'OpenOCD fonctionne.
+#. Si nécessaire, utilisez **Console firmware uploader** pour charger
+   ``hazard3-boot-monitor.elf`` correspondant via le serveur OpenOCD déjà actif.
+#. Vérifiez que la nouvelle bannière du moniteur est lisible et que l'invite
+   ``>`` répond à ``h`` ou ``?``.
 #. Téléversez l'image Doom ``.h3d`` empaquetée.
 #. Téléversez un IWAD obtenu légalement avec le profil mémoire du moniteur.
 #. Lancez avec ``j`` depuis l'option du chargeur ou depuis le terminal.
+
+Sur une carte sans micro-SD installée, le moniteur peut d'abord signaler un échec
+d'initialisation SD tel que ``CMD0 failed r1=0x000000FF`` avant d'afficher
+l'invite ``>``. C'est normal lorsqu'aucune carte n'est présente ; il ne s'agit
+pas d'une panne UART, SDRAM ou OpenOCD.
 
 Les scripts en ligne de commande restent utiles pour l'automatisation et le
 dépannage ; les chargeurs web utilisent les mêmes protocoles H3L/H3W du

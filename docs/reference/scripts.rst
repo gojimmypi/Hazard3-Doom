@@ -287,9 +287,13 @@ Programming and OpenOCD
 -----------------------
 
 ``scripts/start-openocd.sh``
-   Start OpenOCD from Linux or WSL using the repository ULX3S configuration. If
-   a native Windows OpenOCD ``.exe`` is invoked from WSL, the script converts the
-   configuration path to Windows syntax.
+   Start OpenOCD from native Linux or WSL using the repository ULX3S
+   configuration. Native Linux uses ``openocd`` from ``PATH``. WSL may use the
+   bundled Windows ``openocd.exe`` for a Windows-mounted checkout when interop is
+   available; otherwise it uses native Linux OpenOCD. When a Windows executable
+   is selected, the script converts the configuration path to Windows syntax.
+   The current ULX3S configuration supports the Ubuntu OpenOCD 0.12.0 release
+   and the newer builds currently used by the project.
 
 ``scripts/start-openocd.bat``
    Native Windows OpenOCD launcher. An explicit OpenOCD executable may be passed

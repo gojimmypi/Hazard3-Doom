@@ -53,9 +53,9 @@ On a fresh system, everything can be installed with a single script. The script 
 
     ./full-install.sh
 
-.. admonition:: yoysys and nextpnr versions
+.. admonition:: Yosys and nextpnr versions
 
-   The scripts install specific versions of yoysys and nextpnr that are known to pass timing with the default seeds.
+   The scripts install specific versions of Yosys and nextpnr that are known to pass timing with the default seeds.
    Existing installed versions are quietly overwritten. If you have a different version of yosys or nextpnr installed,
    you may need to adjust the build scripts to match your installed versions. See the :doc:`/user-guide/build` for details.
    and the `build-ecp5-bitstream-common.sh <https://github.com/ulx3s/Hazard3-Doom/blob/main/scripts/build-ecp5-bitstream-common.sh>`_
@@ -120,6 +120,47 @@ driver, target-verification, and troubleshooting procedure.
 A volatile FPGA load does **not** survive removal of power. Other ULX3S
 programming tools can still be used when preferred. For a permanent standalone
 installation, see :doc:`programming` and :doc:`../user-guide/sd-card`.
+
+Optional: load the current monitor ELF through OpenOCD
+------------------------------------------------------
+
+A software-only monitor update can be loaded without rerouting or reprogramming
+the FPGA. This path uses the Hazard3 debug module and requires three cooperating
+processes: OpenOCD, the local web server, and the browser.
+
+First disconnect the browser **FPGA web flasher** from ``US1`` so OpenOCD can
+own the FT231X JTAG interface. In one terminal, from the repository root, start
+OpenOCD:
+
+.. code-block:: bash
+
+   ./scripts/start-openocd.sh
+
+A healthy ULX3S 85F session includes lines similar to:
+
+.. code-block:: text
+
+   JTAG tap: lfe5u85.hazard3 tap/device found: 0x41113043
+   Examined RISC-V core; found 1 harts
+   Listening on port 3333 for gdb connections
+
+Leave OpenOCD running. In a second terminal start the project web server:
+
+.. code-block:: bash
+
+   python3 web/web-server.py
+
+Open ``http://127.0.0.1:8000/`` in Chrome or Edge. Do **not** open
+``web/index.html`` with a ``file://`` URL; the static page cannot call the local
+firmware-loader API. Expand **Console firmware uploader**, select
+``build/ulx3s/monitor/hazard3-boot-monitor.elf``, and load it. GDB connects to
+the already-running OpenOCD server, verifies the ELF sections, resumes Hazard3,
+and disconnects.
+
+The external J1 USB-UART adapter is a separate path from the ``US1`` JTAG
+interface, so Web Serial may remain connected while OpenOCD is running. See
+:doc:`../user-guide/web-tool` and :doc:`../user-guide/jtag-debugging` for the
+full workflow and troubleshooting details.
 
 4. Load Doom over UART
 ----------------------

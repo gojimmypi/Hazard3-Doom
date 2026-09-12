@@ -26,6 +26,27 @@ GDB se connecte à OpenOCD par TCP, normalement sur ``localhost:3333``. Il héri
 donc de la compatibilité USB du processus OpenOCD ; GDB lui-même n'ouvre pas le
 FT231X. Voir :doc:`web-flasher` pour la matrice de compatibilité des pilotes.
 
+Pour ULX3S, le lanceur recommandé est :
+
+.. code-block:: bash
+
+   ./scripts/start-openocd.sh
+
+Le lanceur est volontairement utilisable depuis WSL comme depuis Linux natif.
+Sous Linux natif, il résout ``openocd`` depuis ``PATH``. Sous WSL, il peut
+utiliser le ``openocd.exe`` Windows fourni pour un checkout situé sur un disque
+Windows lorsque l'interopérabilité WSL est disponible ; sinon il utilise
+OpenOCD Linux natif. Cela maintient les chemins du dépôt et le format de
+l'exécutable cohérents avec l'environnement hôte.
+
+Les configurations ULX3S du projet sont écrites pour fonctionner avec la
+version Ubuntu OpenOCD ``0.12.0`` ainsi qu'avec les builds OpenOCD plus récents
+actuellement utilisés par le projet. En particulier, l'orthographe de
+compatibilité ``gdb_report_data_abort`` est acceptée par 0.12.0 ; les builds
+plus récents peuvent afficher un avertissement de dépréciation tout en
+continuant de l'accepter. Ne remplacez pas l'installation OpenOCD de la
+distribution uniquement pour supprimer cet avertissement.
+
 Un workflow typique est :
 
 #. Connecter l'ULX3S via son interface USB/JTAG normale.
@@ -47,6 +68,24 @@ Ou fournissez explicitement un ELF :
 .. code-block:: bash
 
    ./scripts/load-firmware.sh /path/to/hazard3-boot-monitor.elf
+
+Un démarrage OpenOCD sain sur ULX3S 85F contient une sortie similaire à :
+
+.. code-block:: text
+
+   JTAG tap: lfe5u85.hazard3 tap/device found: 0x41113043
+   Examined RISC-V core; found 1 harts
+   hart 0: XLEN=32
+   Listening on port 3333 for gdb connections
+
+Dans une VM, une transaction USB initiale peut parfois signaler
+``LIBUSB_ERROR_TIMEOUT`` ou une interrogation JTAG entièrement nulle. Jugez
+l'état final, pas seulement le premier avertissement : si OpenOCD examine ensuite
+le cœur RISC-V et ouvre le port 3333, le serveur de débogage est utilisable. Un
+redémarrage immédiat et propre est une confirmation utile. Si le TAP/cœur n'est
+jamais trouvé, vérifiez que le FT231X est attaché à l'invité, que le flasher FPGA
+du navigateur est déconnecté et qu'aucun autre processus ne possède l'interface
+JTAG.
 
 VisualGDB
 ---------

@@ -7,7 +7,7 @@ Hazard3-Doom toolchain, but they may improve your experience.
 VMware Tools
 ------------
 
-Ubuntu 24.04 uses ``open-vm-tools`` rather than the older bundled VMware Tools
+Ubuntu 24.04 and 26.04 use ``open-vm-tools`` rather than the older bundled VMware Tools
 installer. For an Ubuntu Desktop guest, install both the core tools and desktop
 integration:
 
@@ -41,6 +41,27 @@ manually with ``vmhgfs-fuse``:
         -o allow_other \
         -o uid="$(id -u)" \
         -o gid="$(id -g)"
+
+USB passthrough for FPGA and UART devices
+-----------------------------------------
+
+When using VMware, make sure the FPGA/JTAG adapter and external USB-UART adapter
+are connected to the **guest**, not left attached to the Windows host. Inside the
+guest, useful checks are:
+
+.. code-block:: bash
+
+   lsusb
+   lsusb -t
+
+A typical ULX3S development setup may expose the on-board FT231X as
+``0403:6015`` for JTAG and a separate CH340/CH341 adapter as ``1a86:7523`` for
+the Hazard3 monitor UART. These are independent USB paths: OpenOCD can own the
+FT231X while Chrome Web Serial owns the external UART adapter.
+
+On Ubuntu, also verify serial-device permissions before launching the browser.
+See :doc:`prerequisites` for ``dialout`` setup and :doc:`../troubleshooting` for
+``fuser``, ModemManager, temporary ACLs, and one-way UART diagnostics.
 
 If FPGA synthesis or C++ compilation is killed unexpectedly in a small VM, see
 :doc:`../troubleshooting` before treating it as a compiler failure.

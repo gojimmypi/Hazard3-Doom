@@ -278,9 +278,13 @@ Programiranje i OpenOCD
 -----------------------
 
 ``scripts/start-openocd.sh``
-   Pokreće OpenOCD iz Linuxa ili WSL-a koristeći repozitorijsku ULX3S
-   konfiguraciju. Ako se native Windows OpenOCD ``.exe`` pozove iz WSL-a,
-   skripta pretvara put konfiguracije u Windows sintaksu.
+   Pokreće OpenOCD iz izvornog Linuxa ili WSL-a s ULX3S konfiguracijom
+   repozitorija. Izvorni Linux koristi ``openocd`` iz ``PATH``. WSL može koristiti
+   priloženi Windows ``openocd.exe`` za checkout na Windows datotečnom sustavu
+   kada je interop dostupan; inače koristi izvorni Linux OpenOCD. Kada je odabran
+   Windows izvršni program, skripta pretvara putanju konfiguracije u Windows
+   sintaksu. Trenutačna ULX3S konfiguracija podržava Ubuntu OpenOCD 0.12.0 i
+   novije buildove koje projekt trenutačno koristi.
 
 ``scripts/start-openocd.bat``
    Native Windows pokretač OpenOCD-a. Izričita OpenOCD izvršna datoteka može se
