@@ -41,7 +41,7 @@ The conceptual chain is:
     `--> system-bus access
 
 The ECP5-specific transport is implemented in
-`hazard3_ecp5_jtag_dtm.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/debug/dtm/hazard3_ecp5_jtag_dtm.v>`_. It
+:hazard3-src:`hazard3_ecp5_jtag_dtm.v <hdl/debug/dtm/hazard3_ecp5_jtag_dtm.v>`. It
 uses the ECP5 ``JTAGG`` primitive to attach the DTMCS and DMI data registers to
 the FPGA's existing chip TAP. The design can therefore use the board's normal
 USB/JTAG connection rather than requiring a second soft JTAG TAP in fabric.
@@ -50,7 +50,7 @@ Debug Module
 ------------
 
 The standard Hazard3 Debug Module is in
-`hazard3_dm.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/debug/dm/hazard3_dm.v>`_. It implements the control
+:hazard3-src:`hazard3_dm.v <hdl/debug/dm/hazard3_dm.v>`. It implements the control
 plane between a debugger and one or more Hazard3 harts. Important mechanisms
 include:
 

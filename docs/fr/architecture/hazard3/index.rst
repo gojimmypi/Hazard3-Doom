@@ -44,8 +44,8 @@ Instantané source utilisé par ce projet
 Les descriptions techniques de ces pages sont rattachées à l'instantané du
 code source Hazard3 utilisé pour cette revue de documentation :
 
-* Commit du fork Hazard3 ULX3S : ``736a74459b3f740c47803f20a62d820fcacbe5c3``
-* `Parcourir la source épinglée <https://github.com/ulx3s/Hazard3/tree/736a74459b3f740c47803f20a62d820fcacbe5c3>`_
+* Commit du fork Hazard3 ULX3S : |hazard3_commit|
+* :hazard3-tree:`Parcourir la source épinglée </>`
 * `Parcourir la branche stable Hazard3 amont actuelle <https://github.com/Wren6991/Hazard3/tree/stable>`_
 
 .. important::
@@ -151,9 +151,9 @@ performances. Les principaux réglages effectifs sont :
      - Activé
      - Le petit prédicteur de branche arrière de Hazard3 est synthétisé.
 
-Le wrapper exact est `fpga_ulx3s.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/fpga/fpga_ulx3s.v>`_.
+Le wrapper exact est :hazard3-src:`fpga_ulx3s.v <example_soc/fpga/fpga_ulx3s.v>`.
 Les définitions génériques des paramètres se trouvent dans
-`hazard3_config.vh <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config.vh>`_.
+:hazard3-src:`hazard3_config.vh <hdl/hazard3_config.vh>`.
 
 Parcours d'apprentissage
 ------------------------

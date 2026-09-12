@@ -12,7 +12,7 @@ Base de comparaison
 
 Cette page a été revue le **2026-08-19** par rapport à :
 
-* instantané du projet : `ulx3s/Hazard3 à 736a74459b3f740c47803f20a62d820fcacbe5c3 <https://github.com/ulx3s/Hazard3/tree/736a74459b3f740c47803f20a62d820fcacbe5c3>`_ ;
+* instantané du projet : :hazard3-tree:`ulx3s/Hazard3 </>` à |hazard3_commit| ;
 * branche amont maintenue actuelle : `Wren6991/Hazard3 stable <https://github.com/Wren6991/Hazard3/tree/stable>`_.
 
 L'amont actuel peut changer après cette date. Le SHA épinglé reste la source de

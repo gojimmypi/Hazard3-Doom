@@ -65,9 +65,9 @@ Snimak izvornog koda Hazard3
 
 Dokumentacija procesora vezana je uz projektni Hazard3 snimak:
 
-``736a74459b3f740c47803f20a62d820fcacbe5c3``
+|hazard3_commit|
 
-* `Fiksirani ULX3S Hazard3 izvor <https://github.com/ulx3s/Hazard3/tree/736a74459b3f740c47803f20a62d820fcacbe5c3>`_
+* :hazard3-tree:`Fiksirani ULX3S Hazard3 izvor </>`
 * `Trenutačni upstream Hazard3 stable <https://github.com/Wren6991/Hazard3/tree/stable>`_
 * :doc:`hazard3/project-integration` - detaljna usporedba upstreama i projekta.
 

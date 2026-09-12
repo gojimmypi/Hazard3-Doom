@@ -2,7 +2,7 @@ Guided Source-Code Tour
 =======================
 
 This page is a reading map for students who want to move from the block diagram
-to actual RTL. All project links below are pinned to commit ``736a74459b3f740c47803f20a62d820fcacbe5c3``, so line
+to actual RTL. All project links below are pinned to commit |hazard3_commit|, so line
 content will not silently change when a branch advances.
 
 Recommended reading order
@@ -12,8 +12,8 @@ Recommended reading order
 ~~~~~~~~~~~~~~~~~~~~~~
 
 Start with
-`hazard3_config.vh <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config.vh>`_ and
-`hazard3_config_inst.vh <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config_inst.vh>`_.
+:hazard3-src:`hazard3_config.vh <hdl/hazard3_config.vh>` and
+:hazard3-src:`hazard3_config_inst.vh <hdl/hazard3_config_inst.vh>`.
 
 Questions to answer before reading the datapath:
 
@@ -23,20 +23,20 @@ Questions to answer before reading the datapath:
 * How are parameters propagated through nested module instances?
 
 Then open
-`fpga_ulx3s.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/fpga/fpga_ulx3s.v>`_ and compare the project
+:hazard3-src:`fpga_ulx3s.v <example_soc/fpga/fpga_ulx3s.v>` and compare the project
 values with those generic defaults.
 
 2. Find the CPU in the SoC
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Open
-`example_soc.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/example_soc.v>`_ and locate
+:hazard3-src:`example_soc.v <example_soc/soc/example_soc.v>` and locate
 ``hazard3_cpu_1port``. Note the fixed system-level choices around the instance:
 reset vector, trap CSR support, debug enable, IRQ count, UART interrupt, and
 timer interrupt.
 
 Next open
-`hazard3_cpu_1port.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_cpu_1port.v>`_. Identify three groups
+:hazard3-src:`hazard3_cpu_1port.v <hdl/hazard3_cpu_1port.v>`. Identify three groups
 of signals:
 
 * the single SoC-facing AHB5 master;
@@ -49,7 +49,7 @@ does not have to contain the policy for sharing one external bus.
 3. Walk the pipeline
 ~~~~~~~~~~~~~~~~~~~~
 
-Open `hazard3_core.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_core.v>`_ and search for the stage
+Open :hazard3-src:`hazard3_core.v <hdl/hazard3_core.v>` and search for the stage
 headings. Follow:
 
 * F-stage inputs from the front end;
@@ -65,8 +65,8 @@ instruction such as ``addi``, then a load, then a branch.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Open
-`hazard3_frontend.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_frontend.v>`_ and
-`hazard3_instr_decompress.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_instr_decompress.v>`_.
+:hazard3-src:`hazard3_frontend.v <hdl/hazard3_frontend.v>` and
+:hazard3-src:`hazard3_instr_decompress.v <hdl/hazard3_instr_decompress.v>`.
 
 Look for:
 
@@ -83,7 +83,7 @@ address ending in ``...2`` while ``C`` is enabled.
 5. Decode a few instructions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Open `hazard3_decode.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_decode.v>`_. Pick one instruction
+Open :hazard3-src:`hazard3_decode.v <hdl/hazard3_decode.v>`. Pick one instruction
 from each class:
 
 * ``add`` - base integer ALU;
@@ -102,9 +102,9 @@ through illegal-instruction traps.
 
 Relevant arithmetic sources include:
 
-* `hazard3_alu.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/arith/hazard3_alu.v>`_
-* `hazard3_mul_fast.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/arith/hazard3_mul_fast.v>`_
-* `hazard3_muldiv_seq.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/arith/hazard3_muldiv_seq.v>`_
+* :hazard3-src:`hazard3_alu.v <hdl/arith/hazard3_alu.v>`
+* :hazard3-src:`hazard3_mul_fast.v <hdl/arith/hazard3_mul_fast.v>`
+* :hazard3-src:`hazard3_muldiv_seq.v <hdl/arith/hazard3_muldiv_seq.v>`
 
 Compare the fast multiplier with the iterative unit and relate them back to
 ``MUL_FAST``, ``MUL_FASTER``, ``MULH_FAST``, and ``MULDIV_UNROLL``. This is a
@@ -114,7 +114,7 @@ latency.
 7. Read CSR and trap state
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Open `hazard3_csr.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_csr.v>`_. Search for these names in
+Open :hazard3-src:`hazard3_csr.v <hdl/hazard3_csr.v>`. Search for these names in
 order:
 
 .. code-block:: text
@@ -137,9 +137,9 @@ and find where trap entry and return drive pipeline redirection.
 
 Use this order:
 
-* `hazard3_dm.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/debug/dm/hazard3_dm.v>`_ - Debug Module state,
+* :hazard3-src:`hazard3_dm.v <hdl/debug/dm/hazard3_dm.v>` - Debug Module state,
   abstract commands, program buffer, and system-bus access.
-* `hazard3_ecp5_jtag_dtm.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/debug/dtm/hazard3_ecp5_jtag_dtm.v>`_ -
+* :hazard3-src:`hazard3_ecp5_jtag_dtm.v <hdl/debug/dtm/hazard3_ecp5_jtag_dtm.v>` -
   DMI transport through ECP5 JTAGG.
 * ``hazard3_frontend.v`` and ``hazard3_core.v`` - core-side halt/debug-mode and
   injected-instruction behavior.
@@ -159,17 +159,17 @@ SoC additions:
 
    * - Pinned source
      - What to learn
-   * - `ahb_sdram.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/ahb_sdram.v>`_
+   * - :hazard3-src:`ahb_sdram.v <example_soc/soc/ahb_sdram.v>`
      - How normal AHB CPU traffic is adapted to external SDRAM behavior.
-   * - `ulx3s_sdram_controller.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/ulx3s_sdram_controller.v>`_
+   * - :hazard3-src:`ulx3s_sdram_controller.v <example_soc/soc/ulx3s_sdram_controller.v>`
      - Board-oriented SDR SDRAM command/data timing.
-   * - `apb_sd_spi.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/apb_sd_spi.v>`_
+   * - :hazard3-src:`apb_sd_spi.v <example_soc/soc/apb_sd_spi.v>`
      - A compact APB peripheral and SPI state machine.
-   * - `apb_sao_bridge.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/apb_sao_bridge.v>`_
+   * - :hazard3-src:`apb_sao_bridge.v <example_soc/soc/apb_sao_bridge.v>`
      - Memory-mapped project control around the SAO subsystem.
-   * - `sao_shared_controller.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/sao_shared_controller.v>`_
+   * - :hazard3-src:`sao_shared_controller.v <example_soc/soc/sao_shared_controller.v>`
      - Ownership/arbitration policy for shared board resources.
-   * - `sao_esp32_uart_bridge.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/sao_esp32_uart_bridge.v>`_
+   * - :hazard3-src:`sao_esp32_uart_bridge.v <example_soc/soc/sao_esp32_uart_bridge.v>`
      - Project sideband communication with the ESP32.
 
 This ordering helps prevent a common source-reading mistake: assuming every

@@ -42,8 +42,9 @@ Source snapshot used by this project
 The technical descriptions in these pages are anchored to the Hazard3 source
 snapshot used for this documentation review:
 
-* ULX3S Hazard3 fork commit: ``736a74459b3f740c47803f20a62d820fcacbe5c3``
-* `Browse the pinned source <https://github.com/ulx3s/Hazard3/tree/736a74459b3f740c47803f20a62d820fcacbe5c3>`_
+* ULX3S Hazard3 fork commit: |hazard3_commit|
+* Upstream Hazard3 stable commit: at ``8af992930f71a69b0e06c38734c1094f41a05ca0`` (`here <https://github.com/Wren6991/Hazard3/commit/8af992930f71a69b0e06c38734c1094f41a05ca0>`_)
+* :hazard3-tree:`Browse the pinned source </>`
 * `Browse current upstream Hazard3 stable <https://github.com/Wren6991/Hazard3/tree/stable>`_
 
 .. important::
@@ -145,9 +146,9 @@ configuration. The important effective settings are:
      - Enabled
      - Hazard3's small backward-branch predictor is synthesized.
 
-The exact wrapper is `fpga_ulx3s.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/fpga/fpga_ulx3s.v>`_.
+The exact wrapper is :hazard3-src:`fpga_ulx3s.v <example_soc/fpga/fpga_ulx3s.v>`.
 The generic parameter definitions are in
-`hazard3_config.vh <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config.vh>`_.
+:hazard3-src:`hazard3_config.vh <hdl/hazard3_config.vh>`.
 
 Learning path
 -------------

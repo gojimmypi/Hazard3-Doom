@@ -4,7 +4,7 @@ Traps, interruptions et CSR
 RISC-V utilise le terme **trap** pour un transfert de contrôle provoqué soit
 par une exception synchrone, soit par une interruption asynchrone. Hazard3
 implémente l'état de trap en mode machine utilisé par ce projet dans
-`hazard3_csr.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_csr.v>`_.
+:hazard3-src:`hazard3_csr.v <hdl/hazard3_csr.v>`.
 
 Modèle de privilèges du projet
 ------------------------------
@@ -103,7 +103,7 @@ Câblage des interruptions externes dans ce projet
 -------------------------------------------------
 
 Le fichier épinglé
-`example_soc.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/example_soc.v>`_ connecte les ports d'interruption du processeur comme suit :
+:hazard3-src:`example_soc.v <example_soc/soc/example_soc.v>` connecte les ports d'interruption du processeur comme suit :
 
 .. code-block:: text
 
@@ -151,6 +151,6 @@ d'interruption CSR**, **redirection du pipeline** et **logiciel du handler**.
 
 Utilisez ensemble ces fichiers épinglés :
 
-* `hazard3_csr.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_csr.v>`_ - décodage CSR, ``mstatus``, ``mepc``, ``mcause``, état d'interruption et mises à jour de l'état de trap.
-* `hazard3_core.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_core.v>`_ - détection des exceptions, séquencement des traps, redirections de fetch et achèvement à l'étage M.
-* `example_soc.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/example_soc.v>`_ - câblage réel des interruptions UART/timer dans le projet.
+* :hazard3-src:`hazard3_csr.v <hdl/hazard3_csr.v>` - décodage CSR, ``mstatus``, ``mepc``, ``mcause``, état d'interruption et mises à jour de l'état de trap.
+* :hazard3-src:`hazard3_core.v <hdl/hazard3_core.v>` - détection des exceptions, séquencement des traps, redirections de fetch et achèvement à l'étage M.
+* :hazard3-src:`example_soc.v <example_soc/soc/example_soc.v>` - câblage réel des interruptions UART/timer dans le projet.

@@ -6,6 +6,8 @@
 
 # When changing the Hazard3 submodule, refresh and confirm:
 #
+# REMINDER: Update readthedocs commit references in conf.py file.
+#
 # Optional: inspect and preserve any tracked local changes that would
 # prevent checkout. Untracked WIP files normally do not need to be stashed.
 #

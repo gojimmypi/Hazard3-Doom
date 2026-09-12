@@ -26,7 +26,27 @@ copyright = f"{datetime.now().year}, {author}"
 release = os.environ.get("READTHEDOCS_VERSION", "develop")
 version = release
 
-extensions = []
+hazard3_repo = "https://github.com/ulx3s/Hazard3"
+hazard3_commit = "3c0aca063517bb7fdbe869019c984954c7dd5c97"
+
+extensions = ["sphinx.ext.extlinks"]
+
+rst_epilog = f"""
+.. |hazard3_commit| replace:: ``{hazard3_commit}``
+"""
+
+extlinks = {
+    "hazard3-src": (
+        f"{hazard3_repo}/blob/{hazard3_commit}/%s",
+        "%s",
+    ),
+    "hazard3-tree": (
+        f"{hazard3_repo}/tree/{hazard3_commit}%s",
+        "%s",
+    ),
+}
+
+extlinks_detect_hardcoded_links = True
 templates_path = []
 language = os.environ.get("READTHEDOCS_LANGUAGE", "en").lower().replace("-", "_")
 

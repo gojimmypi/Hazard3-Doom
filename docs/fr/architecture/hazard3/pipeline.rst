@@ -3,8 +3,8 @@ Pipeline à trois étages
 
 La meilleure façon de comprendre Hazard3 est de suivre une instruction à
 travers les étages ``F``, ``X`` et ``M`` dans
-`hazard3_core.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_core.v>`_ et
-`hazard3_frontend.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_frontend.v>`_.
+:hazard3-src:`hazard3_core.v <hdl/hazard3_core.v>` et
+:hazard3-src:`hazard3_frontend.v <hdl/hazard3_frontend.v>`.
 
 Étage F : fetch et préparation
 ------------------------------

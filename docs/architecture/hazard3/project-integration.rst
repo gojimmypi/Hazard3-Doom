@@ -11,7 +11,7 @@ Comparison basis
 
 This page was reviewed on **2026-08-19** against:
 
-* project snapshot: `ulx3s/Hazard3 at 736a74459b3f740c47803f20a62d820fcacbe5c3 <https://github.com/ulx3s/Hazard3/tree/736a74459b3f740c47803f20a62d820fcacbe5c3>`_;
+* project snapshot: :hazard3-tree:`ulx3s/Hazard3 </>` at |hazard3_commit|;
 * current upstream maintained branch: `Wren6991/Hazard3 stable <https://github.com/Wren6991/Hazard3/tree/stable>`_.
 
 Current upstream can change after that date. The pinned SHA remains the source

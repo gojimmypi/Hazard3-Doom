@@ -7,10 +7,10 @@ structure est suffisamment simple pour suivre le chemin d'une instruction du
 fetch jusqu'au retrait dans le RTL.
 
 Le centre architectural est
-`hazard3_core.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_core.v>`_. Le cœur présente des interfaces de transaction séparées pour le fetch d'instructions et les loads/stores. Des modules wrappers adaptent ensuite ces interfaces internes aux bus AHB5 :
+:hazard3-src:`hazard3_core.v <hdl/hazard3_core.v>`. Le cœur présente des interfaces de transaction séparées pour le fetch d'instructions et les loads/stores. Des modules wrappers adaptent ensuite ces interfaces internes aux bus AHB5 :
 
-* `hazard3_cpu_1port.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_cpu_1port.v>`_ arbitre le trafic d'instructions et de données sur un port maître AHB5 unique.
-* `hazard3_cpu_2port.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_cpu_2port.v>`_ expose des ports maîtres AHB5 indépendants pour les instructions et les données.
+* :hazard3-src:`hazard3_cpu_1port.v <hdl/hazard3_cpu_1port.v>` arbitre le trafic d'instructions et de données sur un port maître AHB5 unique.
+* :hazard3-src:`hazard3_cpu_2port.v <hdl/hazard3_cpu_2port.v>` expose des ports maîtres AHB5 indépendants pour les instructions et les données.
 
 Hazard3-Doom utilise le wrapper **un port** ; les fetches d'instructions et les
 accès de données partagent donc finalement le même chemin AHB côté SoC.

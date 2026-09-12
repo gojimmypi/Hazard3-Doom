@@ -41,8 +41,8 @@ Snimak izvornog koda koji ovaj projekt koristi
 Tehnički opisi na ovim stranicama vezani su uz Hazard3 snimak izvornog koda
 korišten za ovaj pregled dokumentacije:
 
-* commit ULX3S Hazard3 forka: ``736a74459b3f740c47803f20a62d820fcacbe5c3``
-* `Pregled fiksiranog izvora <https://github.com/ulx3s/Hazard3/tree/736a74459b3f740c47803f20a62d820fcacbe5c3>`_
+* commit ULX3S Hazard3 forka: |hazard3_commit|
+* :hazard3-tree:`Pregled fiksiranog izvora </>`
 * `Pregled trenutačnog upstream Hazard3 stable <https://github.com/Wren6991/Hazard3/tree/stable>`_
 
 .. important::
@@ -144,9 +144,9 @@ performanse. Važne efektivne postavke su:
      - Omogućeno
      - Sintetizira se Hazard3 mali prediktor grananja unatrag.
 
-Točan wrapper je `fpga_ulx3s.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/fpga/fpga_ulx3s.v>`_.
+Točan wrapper je :hazard3-src:`fpga_ulx3s.v <example_soc/fpga/fpga_ulx3s.v>`.
 Definicije generičkih parametara nalaze se u
-`hazard3_config.vh <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config.vh>`_.
+:hazard3-src:`hazard3_config.vh <hdl/hazard3_config.vh>`.
 
 Put učenja
 ----------

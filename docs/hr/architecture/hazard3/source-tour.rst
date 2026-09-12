@@ -3,7 +3,7 @@ Vođeni obilazak izvornog koda
 
 Ova je stranica karta čitanja za studente koji žele prijeći s blok dijagrama na
 stvarni RTL. Sve poveznice projekta u nastavku prikvačene su na commit
-``736a74459b3f740c47803f20a62d820fcacbe5c3``, pa se sadržaj redaka neće tiho
+|hazard3_commit|, pa se sadržaj redaka neće tiho
 promijeniti kada grana napreduje.
 
 Preporučeni redoslijed čitanja
@@ -13,8 +13,8 @@ Preporučeni redoslijed čitanja
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Počnite s
-`hazard3_config.vh <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config.vh>`_ i
-`hazard3_config_inst.vh <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config_inst.vh>`_.
+:hazard3-src:`hazard3_config.vh <hdl/hazard3_config.vh>` i
+:hazard3-src:`hazard3_config_inst.vh <hdl/hazard3_config_inst.vh>`.
 
 Pitanja na koja treba odgovoriti prije čitanja datapatha:
 
@@ -24,20 +24,20 @@ Pitanja na koja treba odgovoriti prije čitanja datapatha:
 * Kako se parametri propagiraju kroz ugniježđene instance modula?
 
 Zatim otvorite
-`fpga_ulx3s.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/fpga/fpga_ulx3s.v>`_ i usporedite vrijednosti
+:hazard3-src:`fpga_ulx3s.v <example_soc/fpga/fpga_ulx3s.v>` i usporedite vrijednosti
 projekta s tim generičkim zadanim vrijednostima.
 
 2. Pronađite CPU u SoC-u
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 Otvorite
-`example_soc.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/example_soc.v>`_ i pronađite
+:hazard3-src:`example_soc.v <example_soc/soc/example_soc.v>` i pronađite
 ``hazard3_cpu_1port``. Zabilježite fiksne sistemske odluke oko instance: reset
 vektor, podršku za trap CSR, omogućavanje debugiranja, broj IRQ-ova, UART prekid
 i timerski prekid.
 
 Zatim otvorite
-`hazard3_cpu_1port.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_cpu_1port.v>`_. Prepoznajte tri skupine
+:hazard3-src:`hazard3_cpu_1port.v <hdl/hazard3_cpu_1port.v>`. Prepoznajte tri skupine
 signala:
 
 * jedan AHB5 master prema SoC-u;
@@ -50,7 +50,7 @@ sadržavati politiku dijeljenja jedne vanjske sabirnice.
 3. Prođite kroz cjevovod
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Otvorite `hazard3_core.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_core.v>`_ i potražite naslove stupnjeva.
+Otvorite :hazard3-src:`hazard3_core.v <hdl/hazard3_core.v>` i potražite naslove stupnjeva.
 Pratite:
 
 * ulaze F-stupnja iz front enda;
@@ -66,8 +66,8 @@ instrukciju poput ``addi``, zatim load, pa branch.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Otvorite
-`hazard3_frontend.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_frontend.v>`_ i
-`hazard3_instr_decompress.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_instr_decompress.v>`_.
+:hazard3-src:`hazard3_frontend.v <hdl/hazard3_frontend.v>` i
+:hazard3-src:`hazard3_instr_decompress.v <hdl/hazard3_instr_decompress.v>`.
 
 Potražite:
 
@@ -84,7 +84,7 @@ na adresi koja završava s ``...2`` dok je ``C`` omogućeno.
 5. Dekodirajte nekoliko instrukcija
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Otvorite `hazard3_decode.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_decode.v>`_. Odaberite po jednu
+Otvorite :hazard3-src:`hazard3_decode.v <hdl/hazard3_decode.v>`. Odaberite po jednu
 instrukciju iz svake klase:
 
 * ``add`` - osnovni cjelobrojni ALU;
@@ -103,9 +103,9 @@ trap ilegalne instrukcije.
 
 Relevantni aritmetički izvori uključuju:
 
-* `hazard3_alu.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/arith/hazard3_alu.v>`_
-* `hazard3_mul_fast.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/arith/hazard3_mul_fast.v>`_
-* `hazard3_muldiv_seq.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/arith/hazard3_muldiv_seq.v>`_
+* :hazard3-src:`hazard3_alu.v <hdl/arith/hazard3_alu.v>`
+* :hazard3-src:`hazard3_mul_fast.v <hdl/arith/hazard3_mul_fast.v>`
+* :hazard3-src:`hazard3_muldiv_seq.v <hdl/arith/hazard3_muldiv_seq.v>`
 
 Usporedite brzi množitelj s iterativnom jedinicom i povežite ih s
 ``MUL_FAST``, ``MUL_FASTER``, ``MULH_FAST`` i ``MULDIV_UNROLL``. To je
@@ -115,7 +115,7 @@ latenciju.
 7. Čitajte CSR i stanje trapa
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Otvorite `hazard3_csr.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_csr.v>`_. Ovim redom tražite nazive:
+Otvorite :hazard3-src:`hazard3_csr.v <hdl/hazard3_csr.v>`. Ovim redom tražite nazive:
 
 .. code-block:: text
 
@@ -138,9 +138,9 @@ preusmjeravanjem cjevovoda.
 
 Koristite ovaj redoslijed:
 
-* `hazard3_dm.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/debug/dm/hazard3_dm.v>`_ - stanje Debug Modulea,
+* :hazard3-src:`hazard3_dm.v <hdl/debug/dm/hazard3_dm.v>` - stanje Debug Modulea,
   apstraktne naredbe, program buffer i pristup sistemskoj sabirnici.
-* `hazard3_ecp5_jtag_dtm.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/debug/dtm/hazard3_ecp5_jtag_dtm.v>`_ -
+* :hazard3-src:`hazard3_ecp5_jtag_dtm.v <hdl/debug/dtm/hazard3_ecp5_jtag_dtm.v>` -
   DMI transport kroz ECP5 JTAGG.
 * ``hazard3_frontend.v`` i ``hazard3_core.v`` - ponašanje halt/debug načina na
   strani jezgre i ubrizganih instrukcija.
@@ -160,17 +160,17 @@ projekt:
 
    * - Prikvačeni izvor
      - Što naučiti
-   * - `ahb_sdram.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/ahb_sdram.v>`_
+   * - :hazard3-src:`ahb_sdram.v <example_soc/soc/ahb_sdram.v>`
      - Kako se uobičajeni AHB CPU promet prilagođava ponašanju vanjskog SDRAM-a.
-   * - `ulx3s_sdram_controller.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/ulx3s_sdram_controller.v>`_
+   * - :hazard3-src:`ulx3s_sdram_controller.v <example_soc/soc/ulx3s_sdram_controller.v>`
      - Vremenski odnosi SDR SDRAM naredbi/podataka usmjereni na pločicu.
-   * - `apb_sd_spi.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/apb_sd_spi.v>`_
+   * - :hazard3-src:`apb_sd_spi.v <example_soc/soc/apb_sd_spi.v>`
      - Kompaktna APB periferija i SPI automat stanja.
-   * - `apb_sao_bridge.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/apb_sao_bridge.v>`_
+   * - :hazard3-src:`apb_sao_bridge.v <example_soc/soc/apb_sao_bridge.v>`
      - Memorijski mapirano projektno upravljanje oko SAO podsustava.
-   * - `sao_shared_controller.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/sao_shared_controller.v>`_
+   * - :hazard3-src:`sao_shared_controller.v <example_soc/soc/sao_shared_controller.v>`
      - Politika vlasništva/arbitraže za zajedničke resurse pločice.
-   * - `sao_esp32_uart_bridge.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/sao_esp32_uart_bridge.v>`_
+   * - :hazard3-src:`sao_esp32_uart_bridge.v <example_soc/soc/sao_esp32_uart_bridge.v>`
      - Projektna sporedna komunikacija s ESP32.
 
 Ovaj redoslijed pomaže spriječiti čestu pogrešku pri čitanju izvora:

@@ -9,7 +9,7 @@ CPU jezgre.
 Transakcijska sučelja na strani jezgre
 --------------------------------------
 
-`hazard3_core.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_core.v>`_ ima logički odvojene kanale
+:hazard3-src:`hazard3_core.v <hdl/hazard3_core.v>` ima logički odvojene kanale
 za:
 
 * dohvat instrukcija; i
@@ -25,7 +25,7 @@ Standardni Hazard3 omotači prikazuju dva uobičajena izbora:
    Arbitrira zahtjeve instrukcija i podataka na jedan AHB5 glavni port.
 
 Hazard3-Doom instancira
-`hazard3_cpu_1port.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_cpu_1port.v>`_. Ovo je prvo mjesto
+:hazard3-src:`hazard3_cpu_1port.v <hdl/hazard3_cpu_1port.v>`. Ovo je prvo mjesto
 na kojem student treba razlikovati **paralelizam cjevovoda** od **paralelizma
 memorijske sabirnice**: i F i M mogu istodobno imati razlog za pristup
 memoriji, ali jednoulazni omotač mora serijalizirati pristup zajedničkom
@@ -82,11 +82,11 @@ tako da hladno pokretanje ne ovisi o prethodnom preuzimanju koda kroz debugger.
 
 Relevantne lokacije izvornog koda su:
 
-* `example_soc.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/example_soc.v>`_ - CPU reset vektor i
+* :hazard3-src:`example_soc.v <example_soc/soc/example_soc.v>` - CPU reset vektor i
   integracija memorije/periferije SoC-a.
-* `fpga_ulx3s.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/fpga/fpga_ulx3s.v>`_ - dubina SRAM-a od 128 KiB,
+* :hazard3-src:`fpga_ulx3s.v <example_soc/fpga/fpga_ulx3s.v>` - dubina SRAM-a od 128 KiB,
   naziv datoteke za predpunjenje, opcije pločice i odabrani CPU parametri.
-* `hazard3_boot.hex <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/hazard3_boot.hex>`_ - generirana
+* :hazard3-src:`hazard3_boot.hex <example_soc/soc/hazard3_boot.hex>` - generirana
   inicijalizacijska slika rezidentnog monitora u ovoj snimci forka.
 
 Pogledajte :doc:`../memory-map` za memorijsku mapu projekta Hazard3-Doom

@@ -8,7 +8,7 @@ Hazard3 est fortement paramétrable. Il est important de distinguer trois choses
 #. ce que le wrapper ULX3S Hazard3-Doom sélectionne réellement.
 
 La liste de paramètres épinglée faisant autorité est
-`hazard3_config.vh <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config.vh>`_. Les valeurs ULX3S sélectionnées se trouvent dans `fpga_ulx3s.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/fpga/fpga_ulx3s.v>`_.
+:hazard3-src:`hazard3_config.vh <hdl/hazard3_config.vh>`. Les valeurs ULX3S sélectionnées se trouvent dans :hazard3-src:`fpga_ulx3s.v <example_soc/fpga/fpga_ulx3s.v>`.
 
 Profil ISA du projet
 --------------------
@@ -108,7 +108,7 @@ Vue simplifiée :
 
 Le décodeur utilise ensuite ces paramètres pour rendre illégaux les encodages
 d'instructions non pris en charge. Voir
-`hazard3_decode.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_decode.v>`_ pour le décodage conditionné par les extensions. Par exemple, les opcodes de l'extension M ne sont routés vers le chemin multiplication/division que lorsque ``EXTENSION_M`` est activé, et les encodages atomiques exigent ``EXTENSION_A``.
+:hazard3-src:`hazard3_decode.v <hdl/hazard3_decode.v>` pour le décodage conditionné par les extensions. Par exemple, les opcodes de l'extension M ne sont routés vers le chemin multiplication/division que lorsque ``EXTENSION_M`` est activé, et les encodages atomiques exigent ``EXTENSION_A``.
 
 Configuration des privilèges et de la protection
 ------------------------------------------------
@@ -212,5 +212,5 @@ questions de cycle ou de configuration concernant cette image FPGA précise.
 
 Pour l'étude architecturale, utilisez les deux :
 
-* `Configuration projet épinglée <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config.vh>`_ - options exactes et valeurs par défaut disponibles dans cet instantané.
+* :hazard3-src:`Configuration projet épinglée <hdl/hazard3_config.vh>` - options exactes et valeurs par défaut disponibles dans cet instantané.
 * `Configuration stable amont actuelle <https://github.com/Wren6991/Hazard3/blob/stable/hdl/hazard3_config.vh>`_ - direction actuellement maintenue en amont.

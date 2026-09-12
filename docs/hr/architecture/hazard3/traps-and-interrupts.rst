@@ -4,7 +4,7 @@ Trapovi, prekidi i CSR registri
 RISC-V koristi izraz **trap** za prijenos upravljanja uzrokovan sinkronom
 iznimkom ili asinkronim prekidom. Hazard3 implementira stanje trapa strojnog
 načina koje ovaj projekt koristi u
-`hazard3_csr.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_csr.v>`_.
+:hazard3-src:`hazard3_csr.v <hdl/hazard3_csr.v>`.
 
 Model privilegija projekta
 --------------------------
@@ -100,7 +100,7 @@ Ožičenje vanjskih prekida u ovom projektu
 -----------------------------------------
 
 Prikvačeni
-`example_soc.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/example_soc.v>`_ povezuje portove
+:hazard3-src:`example_soc.v <example_soc/soc/example_soc.v>` povezuje portove
 prekida procesora ovako:
 
 .. code-block:: text
@@ -147,9 +147,9 @@ Proučavanje izvornog koda
 
 Ove prikvačene datoteke koristite zajedno:
 
-* `hazard3_csr.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_csr.v>`_ - CSR dekodiranje, ``mstatus``,
+* :hazard3-src:`hazard3_csr.v <hdl/hazard3_csr.v>` - CSR dekodiranje, ``mstatus``,
   ``mepc``, ``mcause``, stanje prekida i ažuriranja stanja trapa.
-* `hazard3_core.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_core.v>`_ - detekcija iznimki, slijed
+* :hazard3-src:`hazard3_core.v <hdl/hazard3_core.v>` - detekcija iznimki, slijed
   trapa, preusmjeravanja dohvata i dovršavanje M-stupnja.
-* `example_soc.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/example_soc.v>`_ - stvarno ožičenje UART/timer
+* :hazard3-src:`example_soc.v <example_soc/soc/example_soc.v>` - stvarno ožičenje UART/timer
   prekida u projektu.

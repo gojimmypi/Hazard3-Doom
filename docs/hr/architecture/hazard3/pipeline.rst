@@ -3,8 +3,8 @@ Trostupanjski pipeline
 
 Najbolji način za razumijevanje Hazard3-a jest pratiti instrukciju kroz stupnjeve
 ``F``, ``X`` i ``M`` u
-`hazard3_core.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_core.v>`_ i
-`hazard3_frontend.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_frontend.v>`_.
+:hazard3-src:`hazard3_core.v <hdl/hazard3_core.v>` i
+:hazard3-src:`hazard3_frontend.v <hdl/hazard3_frontend.v>`.
 
 Stupanj F: dohvat i priprema
 ----------------------------

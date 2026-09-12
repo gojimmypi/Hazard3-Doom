@@ -6,13 +6,13 @@ pipeline. It is not a microcoded teaching CPU, but its structure is simple
 enough to follow from instruction fetch to retirement in the RTL.
 
 The architectural center is
-`hazard3_core.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_core.v>`_. The core presents separate
+:hazard3-src:`hazard3_core.v <hdl/hazard3_core.v>`. The core presents separate
 instruction-fetch and load/store transaction interfaces. Wrapper modules then
 adapt those internal interfaces to AHB5 buses:
 
-* `hazard3_cpu_1port.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_cpu_1port.v>`_ arbitrates instruction
+* :hazard3-src:`hazard3_cpu_1port.v <hdl/hazard3_cpu_1port.v>` arbitrates instruction
   and data traffic onto one AHB5 master port.
-* `hazard3_cpu_2port.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_cpu_2port.v>`_ exposes independent
+* :hazard3-src:`hazard3_cpu_2port.v <hdl/hazard3_cpu_2port.v>` exposes independent
   instruction and data AHB5 master ports.
 
 Hazard3-Doom uses the **one-port** wrapper, so instruction fetches and data

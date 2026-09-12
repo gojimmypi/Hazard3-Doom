@@ -9,7 +9,7 @@ du projet, et non une partie du cœur CPU.
 Interfaces de transaction côté cœur
 -----------------------------------
 
-`hazard3_core.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_core.v>`_ possède des canaux logiquement séparés pour :
+:hazard3-src:`hazard3_core.v <hdl/hazard3_core.v>` possède des canaux logiquement séparés pour :
 
 * le fetch d'instructions ; et
 * les accès de données load/store.
@@ -24,7 +24,7 @@ Les wrappers Hazard3 standard illustrent deux choix courants :
    Arbitre les requêtes instructions et données sur un port maître AHB5 unique.
 
 Hazard3-Doom instancie
-`hazard3_cpu_1port.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_cpu_1port.v>`_. C'est le premier endroit où un étudiant doit distinguer le **parallélisme du pipeline** du **parallélisme du bus mémoire** : F et M peuvent tous deux avoir besoin d'accéder à la mémoire, mais le wrapper un port doit sérialiser les accès vers l'interface maître externe partagée.
+:hazard3-src:`hazard3_cpu_1port.v <hdl/hazard3_cpu_1port.v>`. C'est le premier endroit où un étudiant doit distinguer le **parallélisme du pipeline** du **parallélisme du bus mémoire** : F et M peuvent tous deux avoir besoin d'accéder à la mémoire, mais le wrapper un port doit sérialiser les accès vers l'interface maître externe partagée.
 
 Concepts AHB5 visibles dans le wrapper
 --------------------------------------
@@ -81,9 +81,9 @@ premier téléchargement de code via le débogueur.
 
 Les emplacements source pertinents sont :
 
-* `example_soc.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/example_soc.v>`_ - vecteur de reset CPU et intégration mémoire/périphériques du SoC.
-* `fpga_ulx3s.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/fpga/fpga_ulx3s.v>`_ - profondeur SRAM 128 Kio, nom du fichier de préchargement, options de carte et paramètres CPU sélectionnés.
-* `hazard3_boot.hex <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/hazard3_boot.hex>`_ - image générée d'initialisation du moniteur résident dans cet instantané du fork.
+* :hazard3-src:`example_soc.v <example_soc/soc/example_soc.v>` - vecteur de reset CPU et intégration mémoire/périphériques du SoC.
+* :hazard3-src:`fpga_ulx3s.v <example_soc/fpga/fpga_ulx3s.v>` - profondeur SRAM 128 Kio, nom du fichier de préchargement, options de carte et paramètres CPU sélectionnés.
+* :hazard3-src:`hazard3_boot.hex <example_soc/soc/hazard3_boot.hex>` - image générée d'initialisation du moniteur résident dans cet instantané du fork.
 
 Voir :doc:`../memory-map` pour la cartographie mémoire visible par le logiciel
 Hazard3-Doom.
