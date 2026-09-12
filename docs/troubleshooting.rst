@@ -203,7 +203,7 @@ adapter TX wire, connector seating, ground, and FPGA RX pin rather than changing
 OpenOCD or the baud rate.
 
 WebUSB cannot open or claim the ULX3S
-------------------------------------
+-------------------------------------
 
 On Linux, the Hazard3-Doom Device Tool may be able to detect the ULX3S but
 still fail to open it.
