@@ -45,13 +45,16 @@ On a fresh system, everything can be installed with a single script. The script 
 
 .. code-block:: bash
 
-   curl -L \
-       https://raw.githubusercontent.com/gojimmypi/Hazard3-Doom/develop/scripts/full-install.sh \
-       -o ./full-install.sh
+   mkdir -p workspace
+   cd workspace
 
-    chmod +x ./full-install.sh
+   wget -L \
+       https://raw.githubusercontent.com/ulx3s/Hazard3-Doom/main/scripts/full-install.sh \
+       -O ./full-install.sh
 
-    ./full-install.sh
+   chmod +x ./full-install.sh
+
+   ./full-install.sh
 
 .. admonition:: Yosys and nextpnr versions
 
