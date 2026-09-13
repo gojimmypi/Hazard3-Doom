@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#171a21">
     <title>Hazard3-Doom Device Tool and Console</title>
-    <link rel="stylesheet" href="styles.css?v=20260913-r4">
+    <link rel="stylesheet" href="styles.css?v=20260913-r9">
     <link rel="icon" href="icons/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
@@ -56,7 +56,16 @@
             </summary>
             <div class="upload-panel-body">
                 <details id="fpgaFlasher" class="flasher-section">
-                    <summary>FPGA web flasher <span class="summary-tag">ULX3S US1 / JTAG</span></summary>
+                    <summary>
+                        <span class="summary-title">FPGA web flasher</span>
+                        <span class="summary-tag">ULX3S US1 / JTAG</span>
+                        <span class="flasher-header-actions" aria-label="FPGA flasher actions">
+                            <button id="flasherConnectButton" type="button" class="secondary compact-action-button">Connect ULX3S USB</button>
+                            <button id="flasherProbeButton" type="button" class="secondary compact-action-button" disabled>Probe JTAG</button>
+                            <button id="flasherProgramButton" type="button" class="primary compact-action-button" disabled>Program FPGA SRAM</button>
+                            <button id="flasherDisconnectButton" type="button" class="secondary compact-action-button" disabled>Disconnect USB</button>
+                        </span>
+                    </summary>
                     <div class="flasher-body">
                         <div class="flasher-intro">
                             <div>
@@ -92,13 +101,6 @@
                             </div>
                         </div>
 
-                        <div class="flasher-actions">
-                            <button id="flasherConnectButton" type="button" class="secondary">Connect ULX3S USB</button>
-                            <button id="flasherProbeButton" type="button" class="secondary" disabled>Probe JTAG</button>
-                            <button id="flasherProgramButton" type="button" class="primary" disabled>Program FPGA SRAM</button>
-                            <button id="flasherDisconnectButton" type="button" class="secondary" disabled>Disconnect USB</button>
-                        </div>
-
                         <div class="flasher-progress-row">
                             <progress id="flasherProgress" max="100" value="0"></progress>
                             <span id="flasherProgressLabel">Idle</span>
@@ -124,7 +126,13 @@
                 </details>
 
                 <details id="consoleFirmwareUploader" class="flasher-section">
-                    <summary>Console firmware uploader <span class="summary-tag">Local GDB / OpenOCD</span></summary>
+                    <summary>
+                        <span class="summary-title">Console firmware uploader</span>
+                        <span class="summary-tag">Local GDB / OpenOCD</span>
+                        <span class="flasher-header-actions" aria-label="Console firmware actions">
+                            <button id="firmwareUploadButton" type="button" class="primary compact-action-button" disabled>Load console firmware</button>
+                        </span>
+                    </summary>
                     <div class="flasher-body">
                         <div class="flasher-intro">
                             <div>
@@ -165,10 +173,6 @@
                             </div>
                         </div>
 
-                        <div class="flasher-actions">
-                            <button id="firmwareUploadButton" type="button" class="primary" disabled>Load console firmware</button>
-                        </div>
-
                         <div class="flasher-progress-row">
                             <progress id="firmwareProgress" max="100" value="0"></progress>
                             <span id="firmwareProgressLabel">Checking local loader...</span>
@@ -181,7 +185,14 @@
                 </details>
 
                 <details id="h3dUploader" class="flasher-section">
-                    <summary>Doom H3D uploader <span class="summary-tag">UART / H3L</span></summary>
+                    <summary>
+                        <span class="summary-title">Doom H3D uploader</span>
+                        <span class="summary-tag">UART / H3L</span>
+                        <span class="flasher-header-actions" aria-label="H3D uploader actions">
+                            <button id="h3dConnectUartButton" type="button" class="primary compact-action-button">Connect UART</button>
+                            <button id="h3dUploadButton" type="button" class="primary compact-action-button" disabled>Upload H3D</button>
+                        </span>
+                    </summary>
                     <div class="flasher-body">
                         <div class="flasher-intro">
                             <div>
@@ -202,7 +213,6 @@
                                 <strong id="h3dUartRequirementTitle">UART connection required</strong>
                                 <span id="h3dUartRequirementDetail">Connect Web Serial before uploading an H3D image.</span>
                             </div>
-                            <button id="h3dConnectUartButton" type="button" class="primary uart-connect-button">Connect UART</button>
                         </div>
 
                         <div class="flasher-grid">
@@ -223,10 +233,6 @@
                             </div>
                         </div>
 
-                        <div class="flasher-actions">
-                            <button id="h3dUploadButton" type="button" class="primary" disabled>Upload H3D</button>
-                        </div>
-
                         <div class="flasher-progress-row">
                             <progress id="h3dProgress" max="100" value="0"></progress>
                             <span id="h3dProgressLabel">Idle</span>
@@ -239,7 +245,14 @@
                 </details>
 
                 <details id="wadUploader" class="flasher-section">
-                    <summary>Doom IWAD uploader <span class="summary-tag">UART / H3W</span></summary>
+                    <summary>
+                        <span class="summary-title">Doom IWAD uploader</span>
+                        <span class="summary-tag">UART / H3W</span>
+                        <span class="flasher-header-actions" aria-label="IWAD uploader actions">
+                            <button id="wadConnectUartButton" type="button" class="primary compact-action-button">Connect UART</button>
+                            <button id="wadUploadButton" type="button" class="primary compact-action-button" disabled>Upload IWAD</button>
+                        </span>
+                    </summary>
                     <div class="flasher-body">
                         <div class="flasher-intro">
                             <div>
@@ -260,7 +273,6 @@
                                 <strong id="wadUartRequirementTitle">UART connection required</strong>
                                 <span id="wadUartRequirementDetail">Connect Web Serial before uploading an IWAD.</span>
                             </div>
-                            <button id="wadConnectUartButton" type="button" class="primary uart-connect-button">Connect UART</button>
                         </div>
 
                         <div class="flasher-grid">
@@ -294,10 +306,6 @@
                             </div>
                         </div>
 
-                        <div class="flasher-actions">
-                            <button id="wadUploadButton" type="button" class="primary" disabled>Upload IWAD</button>
-                        </div>
-
                         <div class="flasher-progress-row">
                             <progress id="wadProgress" max="100" value="0"></progress>
                             <span id="wadProgressLabel">Idle</span>
@@ -317,7 +325,12 @@
                     <h2 id="serial-title">Serial connection</h2>
                     <p>Direct browser connection using the Web Serial API.</p>
                 </div>
-                <span class="summary-tag">Web Serial</span>
+                <span class="serial-header-actions" aria-label="Serial connection actions">
+                    <span id="serialPanelStatus" class="section-status">UART disconnected</span>
+                    <button id="reconnectButton" type="button" class="secondary compact-action-button">Reconnect</button>
+                    <button id="connectButton" type="button" class="primary compact-action-button">Connect</button>
+                </span>
+                <span class="summary-tag serial-summary-tag">Web Serial</span>
             </summary>
             <div class="serial-panel-body">
                 <div class="settings-grid">
@@ -371,11 +384,6 @@
                             <option value="none">None</option>
                         </select>
                     </label>
-                </div>
-
-                <div class="connection-actions serial-connection-actions">
-                    <button id="reconnectButton" type="button" class="secondary">Reconnect</button>
-                    <button id="connectButton" type="button" class="primary">Connect</button>
                 </div>
 
                 <div id="unsupportedNotice" class="notice error hidden" role="alert">
@@ -489,7 +497,7 @@
         <span>UART and FPGA programming data stay between this browser and the selected devices; console firmware uses the local loader.</span>
     </footer>
 
-    <script src="app.js?v=20260913-r4" defer></script>
+    <script src="app.js?v=20260913-r6" defer></script>
     <script src="flasher.js?v=20260821-r1" defer></script>
 </body>
 </html>

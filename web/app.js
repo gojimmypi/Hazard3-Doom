@@ -104,6 +104,7 @@ const els = {
     unsupportedNotice: document.getElementById("unsupportedNotice"),
     connectButton: document.getElementById("connectButton"),
     reconnectButton: document.getElementById("reconnectButton"),
+    serialPanelStatus: document.getElementById("serialPanelStatus"),
     authorizedPort: document.getElementById("authorizedPort"),
     baudRate: document.getElementById("baudRate"),
     dataBits: document.getElementById("dataBits"),
@@ -1585,6 +1586,17 @@ function setConnectionUi(connected, detail = "") {
 
     els.statusDot.classList.toggle("connected", connected);
     els.connectionStatus.textContent = connected ? "Connected" : "Not connected";
+    els.serialPanelStatus.classList.toggle("connected", connected);
+    els.serialPanelStatus.classList.toggle("error", !connected && Boolean(state.uartConnectionIssue));
+    if (connected) {
+        els.serialPanelStatus.textContent = "UART connected";
+    } else if (state.uartConnecting) {
+        els.serialPanelStatus.textContent = "Connecting UART";
+    } else if (state.uartConnectionIssue) {
+        els.serialPanelStatus.textContent = "UART unavailable";
+    } else {
+        els.serialPanelStatus.textContent = "UART disconnected";
+    }
     if (connected) {
         els.connectButton.textContent = "Disconnect";
     } else if (state.uartConnecting) {
@@ -2437,6 +2449,12 @@ function commandHistoryKey(event) {
 }
 
 function wireEvents() {
+    document.querySelectorAll(".serial-header-actions, .flasher-header-actions").forEach((actions) => {
+        actions.addEventListener("click", (event) => {
+            event.stopPropagation();
+        });
+    });
+
     els.connectButton.addEventListener("click", connect);
     els.reconnectButton.addEventListener("click", reconnect);
     els.authorizedPort.addEventListener("change", updateAuthorizedPortDetails);
