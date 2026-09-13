@@ -44,6 +44,13 @@ const CONSOLE_FIRMWARE_LOOPBACK_ORIGIN = "http://127.0.0.1:8000";
 const CONSOLE_FIRMWARE_STATUS_TIMEOUT_MS = 8000;
 const CONSOLE_FIRMWARE_HEALTH_TIMEOUT_MS = 2000;
 const CONSOLE_FIRMWARE_HEALTH_INTERVAL_MS = 5000;
+const DEVICE_TOOL_CHANNEL_NAME = "hazard3-doom-device-tool";
+const DEVICE_TOOL_HEARTBEAT_INTERVAL_MS = 10_000;
+const DEVICE_TOOL_STALE_AFTER_MS = 30_000;
+const UART_LOCK_NAME = "hazard3-doom-uart";
+const PAGE_INSTANCE_ID = typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 const state = {
     port: null,
@@ -78,6 +85,15 @@ const state = {
     consoleFirmwareCheckSequence: 0,
     consoleFirmwareHealthTimer: null,
     serialOperation: null,
+    uartConnecting: false,
+    uartConnectionIssue: null,
+    uartLockHeld: false,
+    uartLockRelease: null,
+    uartLockRequest: null,
+    deviceToolChannel: null,
+    deviceToolHeartbeatTimer: null,
+    otherDeviceToolPages: new Map(),
+    otherUartOwners: new Set(),
     textDecoder: new TextDecoder(),
 };
 
@@ -151,6 +167,228 @@ const els = {
 };
 
 const serialSupported = "serial" in navigator;
+
+class UartOwnershipError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = "UartOwnershipError";
+    }
+}
+
+function otherDeviceToolPageCount() {
+    return state.otherDeviceToolPages.size;
+}
+
+function anotherDeviceToolOwnsUart() {
+    return state.otherUartOwners.size !== 0;
+}
+
+function updateDeviceToolPeerUi() {
+    if (!state.port) {
+        updateAuthorizedPortDetails();
+    }
+    updateH3dUploaderUi();
+    updateWadUploaderUi();
+}
+
+function broadcastDeviceToolState(type = "presence") {
+    if (!state.deviceToolChannel) {
+        return;
+    }
+
+    state.deviceToolChannel.postMessage({
+        type,
+        instanceId: PAGE_INSTANCE_ID,
+        uartOwned: Boolean(state.port),
+        timestamp: Date.now(),
+    });
+}
+
+function rememberDeviceToolPeer(message) {
+    const instanceId = message?.instanceId;
+    if (typeof instanceId !== "string" || instanceId === PAGE_INSTANCE_ID) {
+        return;
+    }
+
+    state.otherDeviceToolPages.set(instanceId, Date.now());
+    if (message.uartOwned) {
+        state.otherUartOwners.add(instanceId);
+    } else {
+        state.otherUartOwners.delete(instanceId);
+    }
+    if (!anotherDeviceToolOwnsUart() &&
+        state.uartConnectionIssue?.kind === "ownership") {
+        clearUartConnectionIssue();
+    }
+    updateDeviceToolPeerUi();
+}
+
+function forgetDeviceToolPeer(instanceId) {
+    if (typeof instanceId !== "string") {
+        return;
+    }
+
+    state.otherDeviceToolPages.delete(instanceId);
+    state.otherUartOwners.delete(instanceId);
+    if (!anotherDeviceToolOwnsUart() &&
+        state.uartConnectionIssue?.kind === "ownership") {
+        clearUartConnectionIssue();
+    }
+    updateDeviceToolPeerUi();
+}
+
+function pruneDeviceToolPeers() {
+    const staleBefore = Date.now() - DEVICE_TOOL_STALE_AFTER_MS;
+    let changed = false;
+
+    for (const [instanceId, lastSeen] of state.otherDeviceToolPages) {
+        if (lastSeen >= staleBefore) {
+            continue;
+        }
+        state.otherDeviceToolPages.delete(instanceId);
+        state.otherUartOwners.delete(instanceId);
+        changed = true;
+    }
+
+    if (changed) {
+        if (!anotherDeviceToolOwnsUart() &&
+            state.uartConnectionIssue?.kind === "ownership") {
+            clearUartConnectionIssue();
+        }
+        updateDeviceToolPeerUi();
+    }
+}
+
+function startDeviceToolCoordination() {
+    if (!("BroadcastChannel" in window)) {
+        return;
+    }
+
+    const channel = new BroadcastChannel(DEVICE_TOOL_CHANNEL_NAME);
+    state.deviceToolChannel = channel;
+    channel.addEventListener("message", (event) => {
+        const message = event.data;
+        if (!message || message.instanceId === PAGE_INSTANCE_ID) {
+            return;
+        }
+
+        if (message.type === "goodbye") {
+            forgetDeviceToolPeer(message.instanceId);
+            return;
+        }
+
+        if (message.type === "hello" || message.type === "presence" ||
+            message.type === "uart-owner") {
+            rememberDeviceToolPeer(message);
+            if (message.type === "hello") {
+                broadcastDeviceToolState("presence");
+            }
+        }
+    });
+
+    broadcastDeviceToolState("hello");
+    state.deviceToolHeartbeatTimer = window.setInterval(() => {
+        pruneDeviceToolPeers();
+        broadcastDeviceToolState("presence");
+    }, DEVICE_TOOL_HEARTBEAT_INTERVAL_MS);
+}
+
+function webLocksSupported() {
+    return "locks" in navigator && typeof navigator.locks.request === "function";
+}
+
+async function acquireUartLock() {
+    if (!webLocksSupported()) {
+        return true;
+    }
+
+    if (state.uartLockRequest !== null) {
+        try {
+            await state.uartLockRequest;
+        } catch {
+            // A failed Web Lock request falls back to the serial port's own exclusivity.
+        }
+    }
+
+    let resolveAcquired;
+    let settled = false;
+    const acquired = new Promise((resolve) => {
+        resolveAcquired = resolve;
+    });
+
+    try {
+        const request = navigator.locks.request(
+            UART_LOCK_NAME,
+            { mode: "exclusive", ifAvailable: true },
+            async (lock) => {
+                if (!lock) {
+                    settled = true;
+                    resolveAcquired(false);
+                    return;
+                }
+
+                let releaseLock;
+                const holdLock = new Promise((resolve) => {
+                    releaseLock = resolve;
+                });
+                state.uartLockHeld = true;
+                state.uartLockRelease = releaseLock;
+                settled = true;
+                resolveAcquired(true);
+                await holdLock;
+                state.uartLockHeld = false;
+                state.uartLockRelease = null;
+            },
+        );
+        state.uartLockRequest = request;
+        void request.catch((error) => {
+            if (!settled) {
+                settled = true;
+                resolveAcquired(true);
+                appendSystem(`UART tab-lock warning: ${error.message}`);
+            }
+        }).finally(() => {
+            if (state.uartLockRequest === request) {
+                state.uartLockRequest = null;
+            }
+        });
+    } catch (error) {
+        appendSystem(`UART tab-lock warning: ${error.message}`);
+        return true;
+    }
+
+    return acquired;
+}
+
+function releaseUartLock() {
+    const releaseLock = state.uartLockRelease;
+    if (releaseLock) {
+        state.uartLockRelease = null;
+        releaseLock();
+    }
+}
+
+function clearUartConnectionIssue() {
+    state.uartConnectionIssue = null;
+}
+
+function setUartConnectionIssue(error) {
+    if (error?.name === "UartOwnershipError") {
+        state.uartConnectionIssue = {
+            kind: "ownership",
+            title: "UART already in use",
+            detail: "Another Hazard3-Doom Device Tool page from this site owns the UART. Disconnect it there, then retry.",
+        };
+        return;
+    }
+
+    const browserDetail = error?.message ? ` Browser: ${error.message}` : "";
+    state.uartConnectionIssue = {
+        kind: "open",
+        title: "UART connection failed",
+        detail: "The selected serial port could not be opened. It may already be in use by another Device Tool page, PuTTY, or another serial application." + browserDetail,
+    };
+}
 
 function screenSnipStatusText() {
     if (!state.port) {
@@ -738,9 +976,14 @@ function validateH3dPackage(bytes) {
 function updateUploaderUartRequirement(container, title, detail, button, protocol) {
     const connected = Boolean(state.port);
     const busy = state.serialOperation !== null || state.consoleFirmwareBusy;
+    const anotherOwner = anotherDeviceToolOwnsUart();
+    const issue = state.uartConnectionIssue;
 
     container.classList.toggle("connected", connected);
     container.classList.toggle("unavailable", !serialSupported);
+    container.classList.toggle("connecting", !connected && state.uartConnecting);
+    container.classList.toggle("error", !connected && !state.uartConnecting &&
+        (Boolean(issue) || anotherOwner));
 
     if (!serialSupported) {
         title.textContent = "Web Serial unavailable";
@@ -758,8 +1001,35 @@ function updateUploaderUartRequirement(container, title, detail, button, protoco
         return;
     }
 
+    if (state.uartConnecting) {
+        title.textContent = "Connecting UART";
+        detail.textContent = "Complete the browser serial-port chooser and wait for the port to open.";
+        button.textContent = "Connecting...";
+        button.disabled = true;
+        return;
+    }
+
+    if (issue) {
+        title.textContent = issue.title;
+        detail.textContent = issue.detail;
+        button.textContent = "Retry UART";
+        button.disabled = busy;
+        return;
+    }
+
+    if (anotherOwner) {
+        title.textContent = "UART already in use";
+        detail.textContent = "Another Device Tool page from this site reports that it owns the UART. Disconnect it there, then retry.";
+        button.textContent = "Retry UART";
+        button.disabled = busy;
+        return;
+    }
+
     title.textContent = "UART connection required";
     detail.textContent = `Connect Web Serial before starting the ${protocol} upload.`;
+    if (otherDeviceToolPageCount() !== 0) {
+        detail.textContent += " Another Device Tool page is also open; only one page can own the UART.";
+    }
     button.textContent = "Connect UART";
     button.disabled = busy;
 }
@@ -1315,9 +1585,17 @@ function setConnectionUi(connected, detail = "") {
 
     els.statusDot.classList.toggle("connected", connected);
     els.connectionStatus.textContent = connected ? "Connected" : "Not connected";
-    els.connectButton.textContent = connected ? "Disconnect" : "Connect";
+    if (connected) {
+        els.connectButton.textContent = "Disconnect";
+    } else if (state.uartConnecting) {
+        els.connectButton.textContent = "Connecting...";
+    } else if (state.uartConnectionIssue) {
+        els.connectButton.textContent = "Retry";
+    } else {
+        els.connectButton.textContent = "Connect";
+    }
     els.connectButton.disabled = state.serialOperation !== null ||
-        state.consoleFirmwareBusy;
+        state.consoleFirmwareBusy || state.uartConnecting;
     els.commandInput.disabled = !interactive;
     els.sendButton.disabled = !interactive;
     els.macroSendButton.disabled = !interactive;
@@ -1330,12 +1608,13 @@ function setConnectionUi(connected, detail = "") {
         control.disabled = connected;
     });
     els.authorizedPort.disabled = connected || state.authorizedPorts.length === 0;
-    els.reconnectButton.disabled = connected || state.authorizedPorts.length === 0;
+    els.reconnectButton.disabled = connected || state.authorizedPorts.length === 0 ||
+        state.uartConnecting || state.serialOperation !== null || state.consoleFirmwareBusy;
 
     if (detail) {
         els.portDetails.textContent = detail;
     } else if (!connected) {
-        els.portDetails.textContent = "No serial port selected.";
+        updateAuthorizedPortDetails();
     }
 }
 
@@ -1421,22 +1700,41 @@ function updateAuthorizedPortDetails() {
         return;
     }
 
+    if (state.uartConnecting) {
+        els.portDetails.textContent = "Connecting to the selected serial port...";
+        return;
+    }
+
+    if (state.uartConnectionIssue) {
+        els.portDetails.textContent = `${state.uartConnectionIssue.title}: ${state.uartConnectionIssue.detail}`;
+        return;
+    }
+
+    if (anotherDeviceToolOwnsUart()) {
+        els.portDetails.textContent = "Another Device Tool page from this site currently owns the UART. Disconnect it there before connecting here.";
+        return;
+    }
+
+    const duplicateNote = otherDeviceToolPageCount() !== 0
+        ? " Another Device Tool page is also open; only one page can own the UART."
+        : "";
+
     if (state.authorizedPorts.length === 0) {
-        els.portDetails.textContent = "No authorized serial ports. Click Connect to choose one.";
+        els.portDetails.textContent = "No authorized serial ports. Click Connect to choose one." + duplicateNote;
         return;
     }
 
     const selectedIndex = Number(els.authorizedPort.value);
     const selectedPort = state.authorizedPorts[selectedIndex];
     if (!selectedPort) {
-        els.portDetails.textContent = `${state.authorizedPorts.length} authorized serial ports are available.`;
+        els.portDetails.textContent = `${state.authorizedPorts.length} authorized serial ports are available.` + duplicateNote;
         return;
     }
 
     const suffix = state.authorizedPorts.length === 1
         ? "Click Connect to grant/select another port."
         : "Choose a port above, then click Reconnect.";
-    els.portDetails.textContent = `${portIdentity(selectedPort, selectedIndex)}. ${suffix}`;
+    els.portDetails.textContent = `${portIdentity(selectedPort, selectedIndex)}. ${suffix}` + duplicateNote;
 }
 
 async function refreshAuthorizedPorts(preferredPort = null) {
@@ -1465,8 +1763,10 @@ async function refreshAuthorizedPorts(preferredPort = null) {
         els.authorizedPort.value = String(selectedIndex >= 0 ? selectedIndex : 0);
     }
 
-    els.authorizedPort.disabled = Boolean(state.port) || ports.length === 0;
-    els.reconnectButton.disabled = Boolean(state.port) || ports.length === 0;
+    els.authorizedPort.disabled = Boolean(state.port) || ports.length === 0 ||
+        state.uartConnecting;
+    els.reconnectButton.disabled = Boolean(state.port) || ports.length === 0 ||
+        state.uartConnecting || state.serialOperation !== null || state.consoleFirmwareBusy;
     updateAuthorizedPortDetails();
     return ports;
 }
@@ -1751,7 +2051,18 @@ async function openPort(port) {
         await disconnect();
     }
 
-    await port.open(serialOptions());
+    const lockAcquired = await acquireUartLock();
+    if (!lockAcquired) {
+        throw new UartOwnershipError(
+            "Another Hazard3-Doom Device Tool page already owns the UART.");
+    }
+
+    try {
+        await port.open(serialOptions());
+    } catch (error) {
+        releaseUartLock();
+        throw error;
+    }
     state.port = port;
     state.keepReading = true;
     state.rxBytes = 0;
@@ -1767,6 +2078,8 @@ async function openPort(port) {
     setConnectionUi(true, describePort(port));
     startSessionTimer();
     saveSettings();
+    clearUartConnectionIssue();
+    broadcastDeviceToolState("uart-owner");
     appendSystem(`Connected: ${describePort(port)}`);
     state.readLoopPromise = readLoop();
     void probeScreenSnipCapability();
@@ -1783,14 +2096,22 @@ async function connect() {
         return;
     }
 
+    clearUartConnectionIssue();
+    state.uartConnecting = true;
+    setConnectionUi(false);
+
     try {
         const port = await navigator.serial.requestPort();
         await refreshAuthorizedPorts(port);
         await openPort(port);
     } catch (error) {
         if (error.name !== "NotFoundError") {
+            setUartConnectionIssue(error);
             appendSystem(`Connect failed: ${error.message}`);
         }
+    } finally {
+        state.uartConnecting = false;
+        setConnectionUi(Boolean(state.port), state.port ? describePort(state.port) : "");
     }
 }
 
@@ -1798,6 +2119,10 @@ async function reconnect() {
     if (!serialSupported || state.port) {
         return;
     }
+
+    clearUartConnectionIssue();
+    state.uartConnecting = true;
+    setConnectionUi(false);
 
     try {
         const ports = await refreshAuthorizedPorts();
@@ -1814,7 +2139,11 @@ async function reconnect() {
         }
         await openPort(port);
     } catch (error) {
+        setUartConnectionIssue(error);
         appendSystem(`Reconnect failed: ${error.message}`);
+    } finally {
+        state.uartConnecting = false;
+        setConnectionUi(Boolean(state.port), state.port ? describePort(state.port) : "");
     }
 }
 
@@ -1851,6 +2180,8 @@ async function disconnect() {
         state.readLoopPromise = null;
         state.port = null;
         state.connectedAt = null;
+        releaseUartLock();
+        broadcastDeviceToolState("uart-owner");
         stopSessionTimer();
         setConnectionUi(false);
         appendSystem("Disconnected.");
@@ -2203,6 +2534,11 @@ function wireEvents() {
 
     window.addEventListener("beforeunload", () => {
         saveSettings();
+        broadcastDeviceToolState("goodbye");
+        releaseUartLock();
+        if (state.deviceToolHeartbeatTimer !== null) {
+            window.clearInterval(state.deviceToolHeartbeatTimer);
+        }
     });
 }
 
@@ -2210,6 +2546,7 @@ async function initialize() {
     loadSettings();
     wireEvents();
     setConnectionUi(false);
+    startDeviceToolCoordination();
     updateConsoleFirmwareUi();
     void checkConsoleFirmwareLoader();
 

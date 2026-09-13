@@ -10,7 +10,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import socket
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
@@ -306,15 +305,61 @@ def check_python_script() -> None:
             file=sys.stderr,
         )
 
-def openocd_gdb_port_is_ready() -> bool:
-    try:
-        with socket.create_connection(
-            (OPENOCD_GDB_HOST, OPENOCD_GDB_PORT),
-            timeout=0.25,
-        ):
-            return True
-    except OSError:
+def _linux_tcp_listener_is_present(port: int) -> bool:
+    """Check Linux TCP socket tables without connecting to the service."""
+    port_hex = f"{port:04X}"
+    for table in (Path("/proc/net/tcp"), Path("/proc/net/tcp6")):
+        try:
+            lines = table.read_text(encoding="ascii").splitlines()[1:]
+        except OSError:
+            continue
+
+        for line in lines:
+            fields = line.split()
+            if len(fields) < 4 or fields[3] != "0A":
+                continue
+            local_address = fields[1]
+            if local_address.rsplit(":", 1)[-1].upper() == port_hex:
+                return True
+    return False
+
+
+def _windows_tcp_listener_is_present(port: int) -> bool:
+    """Check the Windows TCP listener table without opening a connection."""
+    netstat = shutil.which("netstat.exe")
+    if netstat is None and os.name == "nt":
+        netstat = shutil.which("netstat")
+    if netstat is None:
         return False
+
+    try:
+        result = subprocess.run(
+            [netstat, "-an", "-p", "tcp"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+    wanted_port = str(port)
+    for line in result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) < 4 or fields[0].upper() != "TCP":
+            continue
+        if fields[-1].upper() != "LISTENING":
+            continue
+        if fields[1].rsplit(":", 1)[-1] == wanted_port:
+            return True
+    return False
+
+
+def openocd_gdb_port_is_ready() -> bool:
+    """Passively check for a GDB listener; never connect to OpenOCD port 3333."""
+    if _linux_tcp_listener_is_present(OPENOCD_GDB_PORT):
+        return True
+    return _windows_tcp_listener_is_present(OPENOCD_GDB_PORT)
 
 def main() -> None:
     check_python_script()
@@ -404,7 +449,7 @@ def main() -> None:
     print()
     print("Console firmware loader:")
     print(f"  {firmware_loader}")
-    print(f"  access key: {'required' if access_key is not None else 'disabled'}")
+    print(f"  access key: {'required' if access_key is not None else 'disabled, consider using --access-key'}")
 
     if openocd_gdb_port_is_ready():
         print(

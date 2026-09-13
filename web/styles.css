@@ -907,6 +907,16 @@ input[type="text"] {
     background: #2c1c20;
 }
 
+.uart-requirement.connecting {
+    border-color: #60728a;
+    background: #1d2734;
+}
+
+.uart-requirement.error {
+    border-color: #8b4b52;
+    background: #321d21;
+}
+
 .uart-requirement-indicator {
     width: 0.72rem;
     height: 0.72rem;
@@ -921,6 +931,16 @@ input[type="text"] {
 }
 
 .uart-requirement.unavailable .uart-requirement-indicator {
+    background: var(--danger);
+    box-shadow: 0 0 0 4px rgb(255 138 138 / 0.12);
+}
+
+.uart-requirement.connecting .uart-requirement-indicator {
+    background: #8fb5e6;
+    box-shadow: 0 0 0 4px rgb(143 181 230 / 0.12);
+}
+
+.uart-requirement.error .uart-requirement-indicator {
     background: var(--danger);
     box-shadow: 0 0 0 4px rgb(255 138 138 / 0.12);
 }
@@ -941,6 +961,14 @@ input[type="text"] {
 }
 
 .uart-requirement.unavailable .uart-requirement-copy strong {
+    color: var(--danger);
+}
+
+.uart-requirement.connecting .uart-requirement-copy strong {
+    color: #b8d6fa;
+}
+
+.uart-requirement.error .uart-requirement-copy strong {
     color: var(--danger);
 }
 

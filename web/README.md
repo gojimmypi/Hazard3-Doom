@@ -118,9 +118,11 @@ starting the helper. Once the helper reports **Ready**, the page rechecks it eve
 five seconds and marks it unavailable if the loopback server stops responding.
 The same status response reports whether a GDB server is listening on
 `127.0.0.1:3333`, so the page can show a live OpenOCD status and disable the ELF
-load button until OpenOCD is available. Each status request includes a one-time
-challenge that the helper must echo, so a stale cached response cannot be mistaken
-for a live helper. Do not keep the browser FPGA flasher connected to US1 while
+load button until OpenOCD is available. The helper checks the operating system TCP
+listener tables rather than opening a connection to the GDB port; health checks must
+not consume or disturb OpenOCD GDB connections. Each status request includes a
+one-time challenge that the helper must echo, so a stale cached response cannot be
+mistaken for a live helper. Do not keep the browser FPGA flasher connected to US1 while
 OpenOCD owns that interface. An already-running GDB session may also own port 3333;
 exit it before using the web loader.
 
@@ -228,6 +230,8 @@ If the Hazard3-Doom monitor expects a different line ending, select LF, CR, or N
 Web Serial is not implemented in every browser. The app checks for `navigator.serial` and displays an error if the API is unavailable.
 
 `navigator.serial.getPorts()` returns ports for which this site already has permission; it is not an unrestricted enumeration of every Windows COM port. Use **Connect** to open the browser picker and grant/select another serial port. The Web Serial API exposes USB VID/PID information to the page but does not provide the Windows `COMx` name, so the authorized-port selector labels ports by position and VID/PID. Only one port is opened by this UART terminal at a time.
+
+Device Tool pages from the same browser origin coordinate UART ownership with `BroadcastChannel` and an exclusive Web Lock. A second same-origin page is warned when another page owns the UART and is prevented from opening it concurrently. If the port is instead owned by another origin or application, such as another Device Tool URL, PuTTY, or another serial terminal, the browser does not expose the owner; the page reports the `port.open()` failure and suggests checking for another tab or application.
 
 Useful references:
 
