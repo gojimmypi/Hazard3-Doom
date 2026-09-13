@@ -61,7 +61,9 @@ Neobavezno: učitajte trenutačni monitor ELF kroz OpenOCD
 
 Softversko ažuriranje monitora može se učitati bez ponovnog place-and-routea ili
 ponovnog programiranja FPGA-a. Ovaj put koristi Hazard3 debug modul i zahtijeva
-tri procesa koji surađuju: OpenOCD, lokalni web server i preglednik.
+tri dijela koji surađuju: OpenOCD, loopback helper ``web-server.py`` i preglednik.
+Stranica preglednika može biti javni GitHub Pages; samo helper, GDB i OpenOCD
+moraju raditi lokalno.
 
 Najprije odspojite preglednikov **FPGA web flasher** s ``US1`` kako bi OpenOCD
 mogao preuzeti FT231X JTAG sučelje. U jednom terminalu, iz korijena
@@ -79,18 +81,22 @@ Ispravna ULX3S 85F sesija sadrži retke slične ovima:
    Examined RISC-V core; found 1 harts
    Listening on port 3333 for gdb connections
 
-Ostavite OpenOCD pokrenut. U drugom terminalu pokrenite projektni web server:
+Ostavite OpenOCD pokrenut. U drugom terminalu pokrenite loopback helper:
 
 .. code-block:: bash
 
    python3 web/web-server.py
 
-Otvorite ``http://127.0.0.1:8000/`` u Chromeu ili Edgeu. **Nemojte** otvarati
-``web/index.html`` s ``file://`` URL-om; statična stranica ne može pozvati
-lokalni API loadera firmwarea. Proširite **Console firmware uploader**, odaberite
-``build/ulx3s/monitor/hazard3-boot-monitor.elf`` i učitajte ga. GDB se spaja na
-već pokrenuti OpenOCD server, provjerava ELF sekcije, nastavlja Hazard3 i
-prekida vezu.
+Zatim možete nastaviti s javnom stranicom
+``https://ulx3s.github.io/Hazard3-Doom/`` ili otvoriti lokalnu kopiju
+``http://127.0.0.1:8000/``. **Console firmware uploader** treba prikazati
+**Local loader Ready** i **OpenOCD Ready**; **refresh** pokreće trenutačnu
+provjeru.
+
+Odaberite ``build/ulx3s/monitor/hazard3-boot-monitor.elf`` i učitajte ga. GDB se
+spaja na već pokrenuti OpenOCD server, provjerava ELF sekcije, nastavlja Hazard3
+i prekida vezu. OpenOCD status provjera u helperu pasivna je i ne troši GDB
+connection slot.
 
 Vanjski J1 USB-UART adapter odvojen je put od ``US1`` JTAG sučelja, pa Web Serial
 može ostati spojen dok OpenOCD radi. Pogledajte :doc:`../user-guide/web-tool` i

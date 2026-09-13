@@ -16,8 +16,14 @@ The current page provides four main areas:
 * **Hazard3-Doom controls** - one-click monitor, SAO, and I2CDriver commands.
 
 The **Device uploading** and **Serial connection** panels are collapsible. The
-individual uploaders inside **Device uploading** are collapsible as well, so the
-terminal can retain most of the browser window during normal use.
+individual uploaders inside **Device uploading** are collapsible as well. Major
+actions are kept in the section headers, the full page scrolls normally, and
+flasher/firmware logs can be resized vertically when more or less history is
+useful.
+
+Short hover text is used throughout the page. Transport badges explain what
+path a section uses, enabled buttons describe the action they perform, and a
+disabled button explains why it is not currently available.
 
 Transport overview
 ------------------
@@ -26,7 +32,7 @@ The web tool uses three independent device paths:
 
 .. code-block:: text
 
-   Browser
+   Browser page (localhost or HTTPS/GitHub Pages)
      |
      +-- Web Serial --> USB-UART --> resident monitor / Doom
      |                  |             |
@@ -36,56 +42,111 @@ The web tool uses three independent device paths:
      |
      +-- WebUSB ------> ULX3S US1 FT231X --> ECP5 JTAG --> FPGA SRAM
      |
-     +-- localhost ---> web-server.py --> GDB --> OpenOCD --> Hazard3 debug
-                         console firmware ELF only
+     +-- loopback HTTP --> web-server.py --> GDB --> OpenOCD --> Hazard3 debug
+                           127.0.0.1:8000             :3333
+                           console firmware ELF only
 
 Web Serial and WebUSB communicate directly from the browser to devices selected
 in the browser permission dialogs. The console firmware uploader is different:
-it requires the project's local ``web-server.py`` helper because a static web
-page cannot invoke the user's local GDB/OpenOCD tools.
+a browser cannot directly start GDB or OpenOCD, so it calls the project's local
+``web-server.py`` helper over loopback HTTP.
 
-Browser requirements
---------------------
+The browser page itself does **not** have to be served by ``web-server.py``.
+The public HTTPS page can use the helper running on the same computer. This is
+why the page can remain at GitHub Pages while GDB/OpenOCD continue to run only
+on the user's machine.
+
+Browser and serving requirements
+--------------------------------
 
 Use a current Chromium-based browser such as Chrome or Edge. Web Serial and
 WebUSB require a secure context. ``localhost`` is accepted for local use, and
-HTTPS is suitable for a hosted copy such as GitHub Pages.
+HTTPS is suitable for the hosted tool.
 
-For the complete tool, including the console firmware uploader, start the
-project server from the repository root:
+The hosted Device Tool is available at:
+
+.. code-block:: text
+
+   https://ulx3s.github.io/Hazard3-Doom/
+
+For UART, H3D/IWAD upload, screen snip, and FPGA WebUSB programming, no local web
+server is required. The browser performs those operations directly.
+
+Console firmware loading additionally requires the local helper. From the
+repository root, start:
 
 .. code-block:: bash
 
    python3 web/web-server.py
 
-Then open:
+The helper binds only to loopback and listens on ``127.0.0.1:8000`` by default.
+After it starts, either:
 
-.. code-block:: text
+* continue using the public GitHub Pages Device Tool; or
+* open the same page from ``http://127.0.0.1:8000/``.
 
-   http://127.0.0.1:8000/
+A browser using the public HTTPS page may ask for permission to access a local
+network or loopback service. Grant that permission if the console firmware
+loader is needed.
 
-``http://localhost:8000/`` is equivalent when the local server uses its default
-loopback binding.
-
-.. warning::
-
-   Do not double-click ``web/index.html`` or open it with a ``file://`` URL when
-   the console firmware uploader is needed. The page can render as a local file,
-   but there is no HTTP API behind it, so the local GDB/OpenOCD loader will be
-   reported as unavailable. The browser address bar should show
-   ``http://127.0.0.1:8000/`` (or ``localhost:8000``).
-
-A generic static server is sufficient when the console firmware uploader is not
-needed:
+The helper accepts only explicitly allowed browser origins. Its defaults include
+the Hazard3-Doom GitHub Pages origins plus its own exact loopback origin. A
+different development origin can be added explicitly, for example:
 
 .. code-block:: bash
 
-   cd web
-   python3 -m http.server 8000
+   python3 web/web-server.py --allow-origin http://127.0.0.1:9000
 
-With a generic static server or GitHub Pages, the UART terminal, H3D uploader,
-IWAD uploader, screen snip, and FPGA WebUSB flasher remain available. The
-**Console firmware uploader** reports that its local loader is unavailable.
+A wildcard origin is intentionally not accepted.
+
+Optional local-loader access key
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For additional protection, start the helper with an access key:
+
+.. code-block:: bash
+
+   python3 web/web-server.py --access-key
+
+The helper prompts for the key without echoing it. Enter the same key in the
+**Console firmware uploader**. The browser keeps the key only in page memory;
+it is not saved in ``localStorage``.
+
+Passing a key directly on the command line is also supported, but is less
+desirable because shell history or process listings may expose it:
+
+.. code-block:: bash
+
+   python3 web/web-server.py --access-key 'example-key'
+
+The access key is defense in depth. The helper also binds only to loopback,
+checks the browser ``Origin`` against an exact allow-list, and requires the
+expected local-loader request headers.
+
+.. warning::
+
+   Do not double-click ``web/index.html`` or use a ``file://`` URL for the
+   complete Device Tool. Serve the page from HTTPS or localhost so Web Serial,
+   WebUSB, and the loopback loader API receive the browser security context they
+   expect.
+
+Local-loader health checks
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The **Console firmware uploader** periodically checks the loopback helper and
+also provides a **refresh** control. Each check carries a fresh ``challenge``
+value and the helper echoes it in the response. This prevents a stale cached
+``Ready`` response from making a stopped helper appear alive.
+
+Server log lines such as the following are therefore normal:
+
+.. code-block:: text
+
+   GET /api/console-firmware/status?challenge=... HTTP/1.1
+
+Once a helper has reported **Ready**, the page continues to revalidate it. If
+``web-server.py`` stops, the status returns to unavailable without requiring a
+page reload.
 
 Serial connection
 -----------------
@@ -105,9 +166,25 @@ The page also exposes the command line ending separately. ``CR + LF`` is the
 normal interactive setting.
 
 **Connect** opens the browser serial-device chooser. **Reconnect** opens the
-selected port from the ports that the site has already been authorized to use.
-Only one application can own a serial port at a time, so close PuTTY, another
-browser tab, or a command-line uploader before connecting.
+selected port from the ports that the current browser origin has already been
+authorized to use. Reconnect is disabled while the UART is already connected,
+and its hover text explains that state.
+
+Only one application can own a serial port at a time. The Device Tool uses a
+same-origin browser lock and ``BroadcastChannel`` coordination so a second copy
+of the same Device Tool can warn that another tab already owns the UART. If the
+competing owner is another origin, PuTTY, or another application, the browser
+cannot identify that process, but a failed serial ``open()`` is reported as a
+likely port-ownership conflict.
+
+``http://127.0.0.1:8000`` and ``https://ulx3s.github.io`` are different
+browser origins, so their tab locks cannot coordinate with each other. The
+underlying serial-port open failure still protects the port from being opened by
+both at once.
+
+The H3D and IWAD sections also show the UART prerequisite prominently. When no
+UART is connected they provide their own **Connect UART** control; when the UART
+is connected the section header reflects that state.
 
 Device uploading
 ----------------
@@ -131,6 +208,11 @@ flash is intentionally not written by this control.
 On Windows, the ULX3S FT231X used by WebUSB must be bound to WinUSB. This driver
 choice is separate from the external USB-UART adapter used by Web Serial.
 
+The browser WebUSB flasher and OpenOCD cannot own the same ULX3S FT231X at the
+same time. After programming FPGA SRAM, use **Disconnect** in the flasher before
+starting OpenOCD. WinUSB can support both paths, but ownership is handed from the
+browser to OpenOCD rather than shared concurrently.
+
 See :doc:`web-flasher` for target IDs, Windows driver compatibility, the JTAG
 sequence, and troubleshooting.
 
@@ -142,7 +224,8 @@ Hazard3 debug module. It does not ask the running monitor to replace itself.
 Instead:
 
 #. the browser validates the selected 32-bit little-endian RISC-V ELF;
-#. ``web-server.py`` passes it to the project's local firmware loader;
+#. the browser sends the ELF to the loopback ``web-server.py`` helper;
+#. ``web-server.py`` invokes the project's local firmware loader;
 #. GDB connects to OpenOCD, halts Hazard3, writes and verifies the ELF sections,
    sets the program counter, resumes the processor, and disconnects.
 
@@ -150,10 +233,22 @@ Start the matching OpenOCD configuration first and leave its GDB server
 listening on port ``3333``. Do not leave the browser FPGA flasher connected to
 ``US1`` while OpenOCD needs the same FT231X JTAG interface.
 
-The **Local loader Ready** state confirms that the browser can reach
-``web-server.py``; it does not replace or start OpenOCD. OpenOCD is a separate
-long-running process and must already have examined the Hazard3 core. Verify it
-with output similar to:
+The uploader reports two separate prerequisites:
+
+* **Local loader** - whether the browser can reach ``web-server.py``.
+* **OpenOCD** - whether a local listener is present on ``127.0.0.1:3333``.
+
+The local helper checks the OpenOCD state **passively**. It inspects the local
+listener table instead of opening a TCP connection to port ``3333``. This is
+important because an active probe would consume an OpenOCD GDB connection slot
+and could interfere with the real firmware load.
+
+At startup ``web-server.py`` reports either a ready state or a warning that no
+GDB server is detected on port ``3333``. The browser refreshes the same state
+periodically. If OpenOCD is not present, the firmware-load control remains
+disabled with hover text explaining that OpenOCD must be started first.
+
+A usable OpenOCD session includes output similar to:
 
 .. code-block:: text
 
@@ -164,8 +259,9 @@ The external J1 USB-UART adapter used by Web Serial is independent of the
 ``US1`` FT231X JTAG interface, so the UART console can remain connected while
 OpenOCD is running.
 
-This uploader is available only through ``web/web-server.py`` on the local
-machine. It is disabled when the page is hosted as static content.
+The console uploader can be driven from either the local Device Tool page or
+the public HTTPS page. In both cases, GDB and OpenOCD remain local to the user's
+computer.
 
 Doom H3D uploader
 ~~~~~~~~~~~~~~~~~
@@ -192,6 +288,13 @@ soon as the monitor accepts it.
 
 If Doom is already running, use **Stop Doom** first and wait for the monitor
 ``>`` prompt before starting an H3D transfer.
+
+If the upload times out waiting for ``H3L READY``, the Device Tool now displays
+a prominent diagnostic rather than only a log line. It first asks the user to
+confirm that the resident monitor is running at the ``>`` prompt. If the local
+helper is available and OpenOCD is also absent, it additionally suggests that
+the monitor may still need to be loaded through the console firmware uploader.
+OpenOCD does not need to remain running after the monitor has been loaded.
 
 Doom IWAD uploader
 ~~~~~~~~~~~~~~~~~~
@@ -232,7 +335,8 @@ The profile matters because the H3W header contains the SDRAM destination
 address. Selecting the wrong profile is therefore not just a UI preference.
 
 As with H3D, **Launch with ``j`` after upload** is optional and is sent only
-after the monitor reports ``H3W OK``.
+after the monitor reports ``H3W OK``. H3W timeout diagnostics use the same
+resident-monitor/OpenOCD guidance as the H3D uploader.
 
 Binary-transfer ownership
 -------------------------
@@ -251,7 +355,12 @@ resident-monitor command entry box.
 
 The **Hazard3-Doom controls** panel provides convenience buttons for common
 monitor and SAO/I2C operations. Raw one-byte controls do not append the selected
-line ending.
+line ending. The **Help** button sends one raw ``h`` byte; it does not send the
+word ``help`` or append a line ending.
+
+Hover text is also state-aware. For example, a disabled **Probe JTAG** button
+explains that ULX3S USB must be connected first, while the enabled button
+explains what the probe will do.
 
 The **Screen snip** control can capture supported HDMI application state over
 UART and reconstruct the current ``1024x600`` display as a PNG in the browser.
@@ -263,20 +372,25 @@ Suggested browser bring-up flow
 
 For a normal ULX3S development session, a convenient order is:
 
-#. Start ``python3 web/web-server.py`` and open
-   ``http://127.0.0.1:8000/`` if console firmware loading may be needed.
+#. Open ``https://ulx3s.github.io/Hazard3-Doom/`` or the locally served
+   Device Tool.
 #. If necessary, expand **Device uploading -> FPGA web flasher** and program the
    matching ``.bit`` image into FPGA SRAM.
 #. **Disconnect the FPGA web flasher from US1** after programming. OpenOCD and
    browser WebUSB cannot own the FT231X JTAG interface at the same time.
-#. In a separate terminal, run ``./scripts/start-openocd.sh`` and wait for both
-   ``Examined RISC-V core`` and ``Listening on port 3333``.
+#. If console firmware loading may be needed, start ``python3 web/web-server.py``
+   in one terminal. The public page can use this loopback helper; it does not
+   need to be reloaded from localhost.
+#. In another terminal, run ``./scripts/start-openocd.sh`` and wait for both
+   ``Examined RISC-V core`` and ``Listening on port 3333``. The Device Tool
+   should change its OpenOCD status to **Ready** automatically; **refresh** can
+   force an immediate recheck.
 #. Expand **Serial connection**, select the external board UART, and connect at
    ``115200 8N1``. The UART can remain connected while OpenOCD is running.
 #. If necessary, use **Console firmware uploader** to load the matching
    ``hazard3-boot-monitor.elf`` through the already-running OpenOCD server.
 #. Confirm that the new monitor banner is readable and the ``>`` prompt responds
-   to ``h`` or ``?``.
+   to the one-byte **Help** command (``h`` or ``?``).
 #. Upload the packaged Doom ``.h3d`` image.
 #. Upload a legally obtained IWAD using the memory profile matching the monitor.
 #. Launch with ``j`` from the uploader option or the terminal.
@@ -306,7 +420,7 @@ The browser tool deliberately keeps the persistence boundaries visible:
      - WebUSB / JTAG
      - No; FPGA SRAM only
    * - Console firmware uploader
-     - localhost + GDB/OpenOCD
+     - Loopback HTTP + GDB/OpenOCD
      - No; loaded into the running FPGA system
    * - H3D uploader
      - Web Serial / H3L

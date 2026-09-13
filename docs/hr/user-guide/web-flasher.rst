@@ -37,8 +37,18 @@ Zahtjevi
 --------
 
 Koristite aktualan preglednik temeljen na Chromiumu, poput Chromea ili Edgea.
-WebUSB zahtijeva siguran kontekst, stoga stranicu poslužujte preko HTTPS-a ili
-s ``localhost`` adrese.
+WebUSB zahtijeva siguran kontekst, pa koristite hostanu HTTPS stranicu ili
+stranicu posluženu s ``localhost`` adrese.
+
+Javna stranica može izravno programirati FPGA:
+
+.. code-block:: text
+
+   https://ulx3s.github.io/Hazard3-Doom/
+
+Odabrani ``.bit``/``.svf`` podaci ostaju u pregledniku i preko WebUSB-a se
+izravno šalju lokalnom FT231X-u. Za programiranje FPGA SRAM-a nije potreban
+lokalni web server.
 
 Za lokalni razvoj pokrenite jednostavan poslužitelj iz direktorija ``web/`` u
 repozitoriju:
@@ -56,6 +66,20 @@ Zatim otvorite:
 
 Preglednik komunicira izravno s odabranim USB uređajem. FPGA slika i JTAG
 podaci ne prenose se na web-poslužitelj.
+
+Vlasništvo WebUSB-a i OpenOCD-a
+-------------------------------
+
+Browser FPGA flasher i OpenOCD koriste isti ULX3S ``US1`` FT231X JTAG put. Mogu
+koristiti isti WinUSB binding, ali ne mogu istodobno posjedovati FT231X.
+
+Nakon uspješnog SRAM programiranja pritisnite **Disconnect** u flasheru prije
+pokretanja OpenOCD-a. Ako OpenOCD već radi, zaustavite ga prije spajanja
+browser flashera. Vanjski USB-UART koji koristi Web Serial neovisan je i može
+ostati spojen tijekom primopredaje.
+
+Onemogućene JTAG kontrole imaju hover tekst koji objašnjava nedostajući
+preduvjet, primjerice potrebu za ULX3S USB vezom prije **Probe JTAG**.
 
 Kompatibilnost Windows USB upravljačkih programa
 ------------------------------------------------

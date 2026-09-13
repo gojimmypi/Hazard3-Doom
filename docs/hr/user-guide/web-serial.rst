@@ -63,6 +63,28 @@ Uobičajene Hazard3-Doom UART postavke su:
 Web konzola izlaže te serijske postavke u korisničkom sučelju i sprema
 korisničke postavke u preglednikov ``localStorage``.
 
+Vlasništvo UART-a i dvostruke Device Tool stranice
+--------------------------------------------------
+
+Serijski port može imati samo jednog vlasnika. Device Tool koordinira stranice
+iste origine preko ``BroadcastChannel`` i ekskluzivnog Web Locka. Ako druga
+kopija istog Device Toola već posjeduje UART, drugi tab prikazuje **UART already
+in use** umjesto tihog neuspjeha nakon browser pickera.
+
+Lock vrijedi samo unutar iste origine. Zato ``http://127.0.0.1:8000`` i
+``https://ulx3s.github.io`` ne dijele isti Web Lock. PuTTY, druga aplikacija
+ili stranica druge origine ne mogu se imenovati; neuspjeli ``SerialPort.open()``
+tada se prikazuje kao vjerojatan konflikt vlasništva, a H3D/IWAD paneli nude
+**Retry UART**.
+
+Dok traje picker ili otvaranje porta, stranica prikazuje **Connecting UART**.
+H3D i IWAD odjeljci također jasno prikazuju UART preduvjet i vlastiti **Connect
+UART** kada veza nije aktivna.
+
+Gumbi i kratke transport/status oznake koriste kontekstualni hover tekst. Za
+dinamičke kontrole onemogućeno stanje objašnjava preduvjet, a omogućeno opisuje
+radnju.
+
 Pregled snimke zaslona
 ----------------------
 
@@ -192,6 +214,11 @@ ostaju nepromijenjene; posebno, monitor zadržava ``H`` kao tipku Help::
    case '?':
        console_print_help();
        break;
+
+Gumb **Help** u Device Toolu namjerno šalje jedan sirovi bajt ``h`` bez
+odabranog završetka retka. Ne šalje riječ ``help``. Time se web kontrola podudara
+s monitorovim parserom jednobajtnih naredbi i kasnija slova dulje riječi ne mogu
+postati druge monitor naredbe.
 
 Kada je ``i2c gui`` aktivan, ``hazard3_sao_console_feed(received)`` prima UART
 bajt prije switcha rezidentnog monitora i troši GUI tipke poput ``H``. Privatna

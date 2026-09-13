@@ -95,6 +95,28 @@ korisniku dati pristup postojećem čvoru uređaja. Pogledajte
 :doc:`troubleshooting` za provjeru vlasništva porta, ModemManagera i UART
 ožičenja.
 
+Može li javna GitHub Pages stranica učitati console ELF?
+--------------------------------------------------------
+
+Da, ako lokalni loopback helper radi. Stranica može ostati na
+``https://ulx3s.github.io/Hazard3-Doom/`` dok ``web-server.py``, GDB i
+OpenOCD rade na lokalnom računalu. Preglednik poziva helper na
+``127.0.0.1:8000``, a helper zatim koristi lokalni GDB/OpenOCD put.
+
+Console firmware panel odvojeno prikazuje stanje helpera i OpenOCD-a. Neobavezni
+``web-server.py --access-key`` dodaje zajednički ključ koji se unosi u stranicu,
+ali se ne sprema u ``localStorage``. Pogledajte :doc:`user-guide/web-tool`.
+
+Zašto se drugi Device Tool tab ne može spojiti na UART?
+-------------------------------------------------------
+
+Serijski port može imati samo jednog vlasnika. Tabovi iste origine koordiniraju
+se preko Web Locka i ``BroadcastChannel`` kako bi drugi tab mogao prijaviti da
+je UART već zauzet. Različite origine, primjerice ``http://127.0.0.1:8000`` i
+``https://ulx3s.github.io``, ne dijele taj lock, ali preglednik/operacijski
+sustav ipak odbija drugo otvaranje. Odspojite prvi tab i upotrijebite **Retry
+UART**.
+
 Može li OpenOCD koristiti WinUSB na ULX3S-u?
 --------------------------------------------
 

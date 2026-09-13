@@ -63,7 +63,9 @@ Optionnel : charger l'ELF actuel du moniteur via OpenOCD
 
 Une mise à jour logicielle du moniteur peut être chargée sans rerouter ni
 reprogrammer le FPGA. Ce chemin utilise le module de débogage Hazard3 et exige
-trois processus coopérants : OpenOCD, le serveur web local et le navigateur.
+trois éléments coopérants : OpenOCD, le helper loopback ``web-server.py`` et le
+navigateur. La page du navigateur peut être la copie publique GitHub Pages ;
+seuls le helper, GDB et OpenOCD doivent tourner localement.
 
 Déconnectez d'abord le **FPGA web flasher** du navigateur de ``US1`` afin
 qu'OpenOCD puisse posséder l'interface JTAG FT231X. Dans un terminal, depuis la
@@ -82,18 +84,22 @@ Une session ULX3S 85F saine contient des lignes similaires à :
    Listening on port 3333 for gdb connections
 
 Laissez OpenOCD en cours d'exécution. Dans un second terminal, démarrez le
-serveur web du projet :
+helper loopback :
 
 .. code-block:: bash
 
    python3 web/web-server.py
 
-Ouvrez ``http://127.0.0.1:8000/`` dans Chrome ou Edge. N'ouvrez **pas**
-``web/index.html`` avec une URL ``file://`` ; la page statique ne peut pas
-appeler l'API locale de chargement du firmware. Développez **Console firmware
-uploader**, sélectionnez ``build/ulx3s/monitor/hazard3-boot-monitor.elf`` puis
-chargez-le. GDB se connecte au serveur OpenOCD déjà actif, vérifie les sections
-ELF, reprend Hazard3 puis se déconnecte.
+Vous pouvez alors continuer avec la page publique
+``https://ulx3s.github.io/Hazard3-Doom/`` ou ouvrir la copie locale
+``http://127.0.0.1:8000/``. Le panneau **Console firmware uploader** doit
+indiquer **Local loader Ready** et **OpenOCD Ready** ; **refresh** force une
+vérification immédiate.
+
+Sélectionnez ``build/ulx3s/monitor/hazard3-boot-monitor.elf`` puis chargez-le.
+GDB se connecte au serveur OpenOCD déjà actif, vérifie les sections ELF, reprend
+Hazard3 puis se déconnecte. La vérification d'état OpenOCD du helper est passive
+et ne consomme pas de connexion GDB.
 
 L'adaptateur USB-UART J1 externe utilise un chemin distinct de l'interface JTAG
 ``US1`` ; Web Serial peut donc rester connecté pendant qu'OpenOCD fonctionne.

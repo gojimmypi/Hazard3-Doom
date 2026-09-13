@@ -18,6 +18,11 @@ Paneli **Device uploading** i **Serial connection** mogu se sklopiti. Svaki
 pojedini uploader unutar **Device uploading** također je sklopiv kako bi
 terminal tijekom normalnog rada zadržao većinu prostora preglednika.
 
+Glavne radnje ostaju u zaglavljima odjeljaka, cijela stranica normalno se
+pomiče, a logovi flashera/firmwarea mogu se okomito promijeniti po visini. Kratki
+hover opisi pojašnjavaju transport, radnju dostupnog gumba ili razlog zbog kojeg
+je gumb onemogućen.
+
 Pregled prijenosnih putova
 --------------------------
 
@@ -25,7 +30,7 @@ Web alat koristi tri neovisna puta:
 
 .. code-block:: text
 
-   Preglednik
+   Stranica preglednika (localhost ili HTTPS/GitHub Pages)
      |
      +-- Web Serial --> USB-UART --> rezidentni monitor / Doom
      |                  |             |
@@ -35,62 +40,98 @@ Web alat koristi tri neovisna puta:
      |
      +-- WebUSB ------> ULX3S US1 FT231X --> ECP5 JTAG --> FPGA SRAM
      |
-     +-- localhost ---> web-server.py --> GDB --> OpenOCD --> Hazard3 debug
-                         samo firmware konzole
+     +-- loopback HTTP --> web-server.py --> GDB --> OpenOCD --> Hazard3 debug
+                           127.0.0.1:8000             :3333
+                           samo firmware konzole
 
-Web Serial i WebUSB komuniciraju izravno između preglednika i uređaja koje
-korisnik odabere u dijalozima dopuštenja. Učitavanje firmwarea konzole je
-iznimka: ono zahtijeva lokalni ``web-server.py`` jer statična web-stranica ne
-može pokretati lokalne GDB/OpenOCD alate.
+Web Serial i WebUSB izravno komuniciraju s uređajima koje korisnik odabere u
+dijalozima dopuštenja. Uploader firmwarea konzole razlikuje se: preglednik ne
+može izravno pokrenuti GDB ili OpenOCD, pa preko loopback HTTP-a poziva lokalni
+``web-server.py`` helper.
+
+Sama stranica ne mora biti poslužena iz ``web-server.py``. Javna HTTPS stranica
+može koristiti helper na istom računalu, dok GDB i OpenOCD ostaju lokalni.
 
 Zahtjevi preglednika
 --------------------
 
 Koristite aktualni preglednik temeljen na Chromiumu, primjerice Chrome ili
 Edge. Web Serial i WebUSB zahtijevaju siguran kontekst. ``localhost`` je
-prihvatljiv za lokalni rad, a HTTPS za hostanu kopiju poput GitHub Pagesa.
+prihvatljiv lokalno, a HTTPS za hostani alat.
 
-Za puni alat, uključujući uploader firmwarea konzole, pokrenite projektni
-server iz korijena repozitorija:
+Javna stranica dostupna je na:
+
+.. code-block:: text
+
+   https://ulx3s.github.io/Hazard3-Doom/
+
+UART terminal, H3D/IWAD prijenos, screen snip i WebUSB programiranje FPGA-a ne
+zahtijevaju lokalni web server.
+
+Učitavanje firmwarea konzole dodatno zahtijeva lokalni helper. Iz korijena
+repozitorija pokrenite:
 
 .. code-block:: bash
 
    python3 web/web-server.py
 
-Zatim otvorite:
+Helper sluša samo na loopbacku, zadano ``127.0.0.1:8000``. Nakon pokretanja
+možete nastaviti koristiti GitHub Pages ili otvoriti
+``http://127.0.0.1:8000/``. Preglednik može zatražiti dopuštenje za lokalnu
+mrežu/loopback; dopustite ga ako je potreban console loader.
 
-.. code-block:: text
-
-   http://127.0.0.1:8000/
-
-``http://localhost:8000/`` je ekvivalent kada lokalni server koristi zadani
-loopback binding.
-
-.. warning::
-
-   Nemojte dvokliknuti ``web/index.html`` niti ga otvarati s ``file://`` URL-om
-   kada je potreban uploader firmwarea konzole. Stranica se može prikazati kao
-   lokalna datoteka, ali iza nje nema HTTP API-ja, pa će lokalni GDB/OpenOCD
-   loader biti prijavljen kao nedostupan. Adresna traka preglednika treba
-   prikazivati ``http://127.0.0.1:8000/`` (ili ``localhost:8000``).
-
-Ako uploader firmwarea konzole nije potreban, dovoljan je običan statični
-server:
+Helper prihvaća samo izričito dopuštene browser origine. Druga razvojna origina
+može se dodati, primjerice:
 
 .. code-block:: bash
 
-   cd web
-   python3 -m http.server 8000
+   python3 web/web-server.py --allow-origin http://127.0.0.1:9000
 
-Sa statičnim serverom ili GitHub Pagesom i dalje rade UART terminal, H3D i IWAD
-uploaderi, screen snip i FPGA WebUSB flasher. **Console firmware uploader** tada
-prikazuje da lokalni loader nije dostupan.
+Wildcard ``*`` namjerno nije dopušten.
+
+Neobavezni pristupni ključ
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Za dodatnu zaštitu:
+
+.. code-block:: bash
+
+   python3 web/web-server.py --access-key
+
+Helper traži ključ bez prikaza. Isti ključ unesite u **Console firmware
+uploader**. Preglednik ga drži samo u memoriji stranice, ne u ``localStorage``.
+Ključ na naredbenom retku je podržan, ali je manje poželjan jer ga mogu otkriti
+shell history ili popis procesa.
+
+Ključ je dodatna zaštita: helper i dalje sluša samo na loopbacku, provjerava
+točan ``Origin`` i zahtijeva očekivana zaglavlja lokalnog loadera.
+
+.. warning::
+
+   Za potpuni Device Tool nemojte otvarati ``web/index.html`` preko ``file://``
+   URL-a. Koristite HTTPS ili localhost kako bi Web Serial, WebUSB i loopback API
+   imali odgovarajući sigurnosni kontekst.
+
+Provjera zdravlja helpera
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Console firmware uploader** periodički provjerava helper i nudi **refresh**.
+Svaki zahtjev nosi novu ``challenge`` vrijednost koju helper vraća, pa stari
+cacheirani odgovor ``Ready`` ne može prikazati zaustavljeni helper kao živ.
+
+Zato su normalne log linije poput:
+
+.. code-block:: text
+
+   GET /api/console-firmware/status?challenge=... HTTP/1.1
+
+Nakon prvog stanja **Ready** stranica ga nastavlja provjeravati. Ako se
+``web-server.py`` zaustavi, status se vraća na nedostupno bez reloada.
 
 Serijska veza
 -------------
 
-Proširite **Serial connection** i odaberite UART uređaj. Uobičajene
-Hazard3-Doom postavke su:
+Proširite **Serial connection** i odaberite UART uređaj. Uobičajene postavke su:
 
 .. code-block:: text
 
@@ -100,13 +141,24 @@ Hazard3-Doom postavke su:
    1 stop bit
    bez kontrole toka
 
-Završetak retka postavlja se zasebno. ``CR + LF`` je uobičajena interaktivna
+Završetak retka postavlja se zasebno; ``CR + LF`` je uobičajena interaktivna
 postavka.
 
-**Connect** otvara preglednikov izbornik serijskih uređaja. **Reconnect** otvara
-odabrani port među portovima za koje je stranica već dobila dopuštenje. Serijski
-port može istodobno koristiti samo jedna aplikacija, pa prije povezivanja
-zatvorite PuTTY, drugi tab preglednika ili naredbeni uploader.
+**Connect** otvara browser picker. **Reconnect** otvara već autorizirani port i
+onemogućen je dok je UART već spojen; hover tekst objašnjava razlog.
+
+Serijski port može imati samo jednog vlasnika. Device Tool koristi Web Lock i
+``BroadcastChannel`` između tabova iste origine, pa drugi tab može prijaviti
+**UART already in use** ako prvi već drži port. Druga origina, PuTTY ili druga
+aplikacija ne mogu se imenovati, ali se neuspjeli ``open()`` prikazuje kao
+vjerojatan konflikt vlasništva porta.
+
+``http://127.0.0.1:8000`` i ``https://ulx3s.github.io`` različite su
+origine, pa ne dijele taj lock. Operacijski sustav ipak sprječava da obje
+stranice istodobno otvore isti serijski port.
+
+H3D i IWAD odjeljci također jasno prikazuju UART preduvjet i, kada UART nije
+spojen, nude vlastiti **Connect UART**.
 
 Učitavanje i programiranje
 --------------------------
@@ -134,32 +186,43 @@ Uploader firmwarea konzole
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Console firmware uploader** učitava ``hazard3-boot-monitor.elf`` kroz Hazard3
-debug modul. Ne traži od aktivnog monitora da zamijeni sam sebe. Postupak je:
+debug modul. Aktivni monitor ne mijenja sam sebe:
 
 #. preglednik provjeri 32-bitni little-endian RISC-V ELF;
-#. ``web-server.py`` preda ga lokalnom loaderu projekta;
+#. pošalje ELF loopback helperu ``web-server.py``;
+#. helper pozove lokalni firmware loader;
 #. GDB se spoji na OpenOCD, zaustavi Hazard3, upiše i provjeri ELF sekcije,
    postavi programsko brojilo, nastavi procesor i prekine vezu.
 
 Najprije pokrenite odgovarajuću OpenOCD konfiguraciju i ostavite GDB server na
-portu ``3333``. Nemojte ostaviti browser FPGA flasher spojen na ``US1`` dok
-OpenOCD koristi isto FT231X JTAG sučelje.
+portu ``3333``. Odspojite browser FPGA flasher s ``US1`` jer preglednik i
+OpenOCD ne mogu istodobno posjedovati isti FT231X JTAG.
 
-Stanje **Local loader Ready** potvrđuje da preglednik može pristupiti
-``web-server.py``; ono ne zamjenjuje niti pokreće OpenOCD. OpenOCD je zaseban,
-dugotrajan proces koji je već morao prepoznati Hazard3 jezgru. Provjerite izlaz
-sličan ovome:
+Panel odvojeno prikazuje:
+
+* **Local loader** - može li preglednik dohvatiti ``web-server.py``;
+* **OpenOCD** - postoji li lokalni listener na ``127.0.0.1:3333``.
+
+OpenOCD provjera je **pasivna**: helper pregledava tablicu lokalnih listenera
+umjesto da otvara TCP vezu prema portu ``3333``. Time ne troši GDB connection
+slot niti ometa stvarno učitavanje.
+
+Pri pokretanju ``web-server.py`` prikazuje stanje spremnosti ili upozorenje ako
+GDB server nije pronađen. Stranica periodički osvježava isto stanje; ako OpenOCD
+nije prisutan, gumb za učitavanje ostaje onemogućen uz hover objašnjenje.
+
+Upotrebljiva OpenOCD sesija sadrži, primjerice:
 
 .. code-block:: text
 
    Examined RISC-V core; found 1 harts
    Listening on port 3333 for gdb connections
 
-Vanjski J1 USB-UART adapter koji koristi Web Serial neovisan je o ``US1`` FT231X
-JTAG sučelju, pa UART konzola može ostati spojena dok OpenOCD radi.
+Vanjski J1 USB-UART za Web Serial neovisan je o ``US1`` FT231X JTAG putu, pa
+UART može ostati spojen.
 
-Ovaj uploader radi samo preko lokalnog ``web/web-server.py``. Onemogućen je kada
-se stranica poslužuje kao statični sadržaj.
+Console uploader radi i s lokalne stranice i s javne HTTPS stranice. U oba
+slučaja GDB i OpenOCD ostaju lokalni.
 
 Doom H3D uploader
 ~~~~~~~~~~~~~~~~~
@@ -184,6 +247,12 @@ after upload** može pokrenuti sliku nakon što je monitor prihvati.
 
 Ako Doom već radi, prvo upotrijebite **Stop Doom** i pričekajte da se vrati
 monitorov ``>`` prompt.
+
+Ako prijenos istekne čekajući ``H3L READY``, alat sada prikazuje istaknuti
+dijagnostički tekst. Najprije provjerite radi li rezidentni monitor na ``>``
+promptu. Ako je lokalni helper dostupan, ali OpenOCD nije, alat dodatno sugerira
+da monitor možda još treba učitati. OpenOCD ne mora ostati pokrenut nakon što je
+monitor učitan.
 
 Doom IWAD uploader
 ~~~~~~~~~~~~~~~~~~
@@ -225,6 +294,9 @@ nije samo UI postavka.
 Kao i kod H3D-a, **Launch with ``j`` after upload** šalje ``j`` tek nakon
 ``H3W OK``.
 
+H3W timeout dijagnostika koristi isti savjet za rezidentni monitor i OpenOCD kao
+H3D uploader.
+
 Vlasništvo UART-a tijekom binarnog prijenosa
 --------------------------------------------
 
@@ -243,6 +315,10 @@ naredbi monitora.
 Panel **Hazard3-Doom controls** daje gumbe za česte naredbe monitora i SAO/I2C
 operacije. Sirove jednobajtne kontrole ne dodaju odabrani završetak retka.
 
+Gumb **Help** namjerno šalje jedan sirovi bajt ``h`` bez završetka retka; ne šalje
+riječ ``help``. Hover tekst je također ovisan o stanju: onemogućeni gumb
+objašnjava koji preduvjet nedostaje, a omogućeni opisuje radnju.
+
 **Screen snip** može preko UART-a dohvatiti podržani HDMI prikaz i u pregledniku
 rekonstruirati sliku ``1024x600``. Pogledajte :doc:`web-serial` za capability
 pregovaranje, protokol, rekonstrukciju i firmware detalje.
@@ -252,31 +328,33 @@ Preporučeni slijed za pokretanje
 
 Za tipičnu ULX3S razvojnu sesiju:
 
-#. Pokrenite ``python3 web/web-server.py`` i otvorite
-   ``http://127.0.0.1:8000/`` ako bi moglo trebati učitavanje firmwarea konzole.
-#. Po potrebi otvorite **Device uploading -> FPGA web flasher** i programirajte
-   odgovarajući ``.bit`` u FPGA SRAM.
-#. Nakon programiranja **odspojite FPGA web flasher s US1**. OpenOCD i
-   preglednikov WebUSB ne mogu istodobno koristiti FT231X JTAG sučelje.
-#. U zasebnom terminalu pokrenite ``./scripts/start-openocd.sh`` i pričekajte
-   poruke ``Examined RISC-V core`` i ``Listening on port 3333``.
-#. Otvorite **Serial connection**, odaberite vanjski UART pločice i spojite se s
-   ``115200 8N1``. UART može ostati spojen dok OpenOCD radi.
-#. Po potrebi upotrijebite **Console firmware uploader** za učitavanje
-   odgovarajućeg ``hazard3-boot-monitor.elf`` kroz već pokrenuti OpenOCD server.
-#. Provjerite da je nova poruka monitora čitljiva i da prompt ``>`` odgovara na
-   ``h`` ili ``?``.
-#. Prenesite zapakiranu Doom ``.h3d`` sliku.
-#. Prenesite zakonito pribavljen IWAD s memorijskim profilom monitora.
-#. Pokrenite s ``j`` iz opcije u uploaderu ili terminala.
+#. Otvorite ``https://ulx3s.github.io/Hazard3-Doom/`` ili lokalnu stranicu.
+#. Po potrebi programirajte odgovarajući ``.bit`` preko **FPGA web flasher**.
+#. Nakon programiranja **odspojite flasher s US1**. WebUSB i OpenOCD ne mogu
+   istodobno posjedovati FT231X JTAG.
+#. Ako bi moglo trebati učitavanje console firmwarea, u jednom terminalu
+   pokrenite ``python3 web/web-server.py``. Javna stranica može koristiti taj
+   loopback helper bez ponovnog otvaranja s localhosta.
+#. U drugom terminalu pokrenite ``./scripts/start-openocd.sh`` i pričekajte
+   ``Examined RISC-V core`` te ``Listening on port 3333``. OpenOCD status u
+   Device Toolu trebao bi automatski postati **Ready**; **refresh** pokreće
+   trenutačnu provjeru.
+#. U **Serial connection** odaberite vanjski UART i spojite se s ``115200 8N1``.
+   UART može ostati spojen dok OpenOCD radi.
+#. Po potrebi učitajte ``hazard3-boot-monitor.elf`` kroz **Console firmware
+   uploader**.
+#. Provjerite banner monitora i da ``>`` prompt odgovara na jednobajtni gumb
+   **Help**.
+#. Prenesite Doom ``.h3d`` sliku.
+#. Prenesite zakonito pribavljeni IWAD s odgovarajućim memorijskim profilom.
+#. Pokrenite s ``j`` iz uploadera ili terminala.
 
-Na pločici bez umetnute micro-SD kartice monitor najprije može prijaviti pogrešku
-inicijalizacije poput ``CMD0 failed r1=0x000000FF`` prije prikaza prompta ``>``.
-To je očekivano kada kartica nije prisutna; nije kvar UART-a, SDRAM-a ili
-OpenOCD-a.
+Bez micro-SD kartice monitor može prvo prijaviti ``CMD0 failed
+r1=0x000000FF`` prije ``>`` prompta. To je očekivano i nije kvar UART-a, SDRAM-a
+ili OpenOCD-a.
 
-Naredbeni upload skripti i dalje su korisni za automatizaciju i dijagnostiku;
-web uploaderi koriste iste H3L/H3W protokole monitora.
+Naredbeni upload skripti ostaju korisni za automatizaciju i dijagnostiku; web
+uploaderi koriste iste H3L/H3W protokole.
 
 Granice podataka i trajnosti
 ----------------------------
@@ -292,7 +370,7 @@ Granice podataka i trajnosti
      - WebUSB / JTAG
      - Ne; samo FPGA SRAM
    * - Console firmware uploader
-     - localhost + GDB/OpenOCD
+     - loopback HTTP + GDB/OpenOCD
      - Ne; učitano u aktivni FPGA sustav
    * - H3D uploader
      - Web Serial / H3L

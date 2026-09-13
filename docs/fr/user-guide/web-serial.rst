@@ -65,6 +65,28 @@ Les réglages UART normaux de Hazard3-Doom sont :
 La console web expose ces réglages série dans l'interface et conserve les
 préférences utilisateur dans le ``localStorage`` du navigateur.
 
+Propriété UART et pages Device Tool en double
+---------------------------------------------
+
+Un port série ne peut avoir qu'un propriétaire. L'outil coordonne les pages de
+même origine avec ``BroadcastChannel`` et un Web Lock exclusif. Si une autre
+copie du même Device Tool possède déjà l'UART, la seconde affiche **UART already
+in use** au lieu d'échouer silencieusement après le sélecteur du navigateur.
+
+Le verrou est limité à une origine. Ainsi ``http://127.0.0.1:8000`` et
+``https://ulx3s.github.io`` ne partagent pas le même Web Lock. Un PuTTY,
+une autre application ou une page d'une autre origine ne peut pas être identifié
+par nom ; un échec de ``SerialPort.open()`` est alors présenté comme un conflit
+probable de propriété et les panneaux H3D/IWAD proposent **Retry UART**.
+
+Pendant le sélecteur ou l'ouverture du port, la page affiche **Connecting
+UART**. Les sections H3D et IWAD affichent aussi clairement le prérequis UART et
+leur propre bouton **Connect UART** lorsqu'aucune connexion n'est active.
+
+Les boutons et badges compacts utilisent des infobulles contextuelles. Pour un
+contrôle dynamique, l'état désactivé explique le prérequis manquant et l'état
+actif décrit l'action.
+
 Vue d'ensemble de la capture d'écran
 ------------------------------------
 
@@ -197,6 +219,11 @@ moniteur conserve ``H`` comme touche d'aide::
    case '?':
        console_print_help();
        break;
+
+Le bouton **Help** du Device Tool envoie intentionnellement un seul octet brut
+``h`` sans terminaison de ligne. Il n'envoie pas le mot ``help``. Le contrôle
+reste ainsi conforme au parseur de commandes à un caractère du moniteur et les
+lettres suivantes d'un mot plus long ne peuvent pas devenir d'autres commandes.
 
 Lorsque ``i2c gui`` est actif, ``hazard3_sao_console_feed(received)`` reçoit
 l'octet UART avant le switch du moniteur résident et consomme les touches de

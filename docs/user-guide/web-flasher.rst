@@ -37,7 +37,18 @@ Requirements
 ------------
 
 Use a current Chromium-based browser such as Chrome or Edge. WebUSB requires a
-secure context, so serve the page through HTTPS or from ``localhost``.
+secure context, so use the hosted HTTPS Device Tool or serve the page from
+``localhost``.
+
+The hosted page can program the FPGA directly from the browser:
+
+.. code-block:: text
+
+   https://ulx3s.github.io/Hazard3-Doom/
+
+The selected ``.bit``/``.svf`` data stays in the browser and is sent directly
+to the locally attached FT231X through WebUSB. No local web server is required
+for FPGA SRAM programming.
 
 For local development, start a simple server from the repository ``web/``
 directory:
@@ -55,6 +66,23 @@ Then open:
 
 The browser communicates directly with the selected USB device. FPGA image and
 JTAG data are not uploaded to a web server.
+
+WebUSB and OpenOCD ownership
+----------------------------
+
+The browser FPGA flasher and OpenOCD both use the same ULX3S ``US1`` FT231X
+JTAG path. They can use the same WinUSB driver binding, but they cannot own the
+FT231X concurrently.
+
+After a successful browser SRAM program, press **Disconnect** in the FPGA
+flasher before starting OpenOCD. If OpenOCD is already running, stop it before
+connecting the browser flasher. The external USB-UART adapter used by Web Serial
+is independent and may remain connected throughout this handoff.
+
+The Device Tool exposes hover text on disabled JTAG controls. For example,
+**Probe JTAG** explains that ULX3S USB must first be connected, and programming
+controls explain whether a device connection or FPGA image selection is still
+missing.
 
 Windows USB driver compatibility
 --------------------------------
