@@ -107,12 +107,17 @@ Rezervirani bajtovi su:
    * - ``0x06``
      - ACK sposobnosti
      - Vraća ga trenutačni monitor kada je njegova predmemorirana slika valjana ili podržana Doom/I2CDriver HDMI implementacija. Preglednik troši ovaj bajt i ne prikazuje ga u terminalu.
+   * - ``0x15``
+     - NAK sposobnosti
+     - Vraća se kada je protokol snimke zaslona prepoznat, ali trenutačno nije dostupan HDMI okvir koji se može snimiti. Preglednik troši ovaj bajt, označava protokol kao poznat ali nedostupan i ne prikazuje bajt u terminalu.
    * - ``0x1d``
      - Zahtjev za snimanje
      - Šalje se tek nakon potvrde sposobnosti. Aktivni pružatelj zaslona odgovara okvirom ``H3SNIP1``.
 
-Pojedinačni upit sposobnosti čeka ACK najviše 750 ms. Oko prijelaza u radu,
-primjerice pri pokretanju Dooma, web-aplikacija zadržava dulji prozor ponovnog
+Pojedinačni upit sposobnosti čeka odgovor ACK ili NAK najviše 750 ms. ACK znači
+da je snimka trenutačno dostupna. NAK znači da je protokol podržan, ali trenutačno
+nema okvira koji se može snimiti. Oko prijelaza u radu, primjerice pri pokretanju
+Dooma, web-aplikacija zadržava dulji prozor ponovnog
 stjecanja i ponavlja upite dok se novi korisnik UART-a inicijalizira. Time se
 sprječava da prerani upit tijekom pokretanja Dooma trajno ostavi gumb isključenim.
 Zahtjev za snimanje šalje se tek nakon potvrde sposobnosti.
@@ -201,8 +206,10 @@ ulaz. I2C GUI mora vratiti ACK na ``0x1c`` i implementirati ``0x1d``; u suprotno
 preglednik ispravno ostavlja **Screen snip** onemogućenim iako rukovatelj snimke
 postoji.
 
-Protokol na vezi
-----------------
+.. _h3snip1-protocol:
+
+H3SNIP1 protokol na vezi
+------------------------
 
 Nakon primitka ``0x1d`` firmware zapisuje ASCII zaglavlje završeno s ``CR LF`` i
 odmah zatim zapisuje binarni payload.

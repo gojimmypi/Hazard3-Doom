@@ -106,11 +106,16 @@ Reserved bytes are:
    * - ``0x06``
      - Capability ACK
      - Returned by the current monitor when its cached frame is valid, or by a supported Doom/I2CDriver HDMI implementation. The browser consumes this byte and does not display it in the terminal.
+   * - ``0x15``
+     - Capability NAK
+     - Returned when the screen-snip protocol is understood but no capturable HDMI frame is currently available. The browser consumes this byte, marks the protocol as known but unavailable, and does not display the byte in the terminal.
    * - ``0x1d``
      - Capture request
      - Sent only after capability has been confirmed. The active screen provider responds with an ``H3SNIP1`` frame.
 
-An individual capability probe waits up to 750 ms for an ACK. Around runtime
+An individual capability probe waits up to 750 ms for an ACK or NAK response.
+An ACK means a capture is currently available. A NAK means the protocol is
+supported, but there is currently no capturable frame. Around runtime
 transitions such as a Doom launch, the web application keeps a longer
 reacquisition window and retries while the new UART consumer initializes. This
 prevents an early probe during Doom startup from permanently leaving the button
@@ -199,8 +204,10 @@ The I2C GUI must ACK ``0x1c`` as well as implement ``0x1d``; otherwise the
 browser correctly leaves **Screen snip** disabled even though a capture handler
 exists.
 
-Wire protocol
--------------
+.. _h3snip1-protocol:
+
+H3SNIP1 wire protocol
+---------------------
 
 After receiving ``0x1d``, the firmware writes an ASCII header terminated by
 ``CR LF`` and then immediately writes a binary payload.

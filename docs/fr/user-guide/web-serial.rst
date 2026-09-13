@@ -105,12 +105,18 @@ Les octets réservés sont :
    * - ``0x06``
      - ACK de capacité
      - Renvoyé par le moniteur actuel lorsque son image mise en cache est valide, ou par une implémentation Doom/I2CDriver HDMI prise en charge. Le navigateur consomme cet octet et ne l'affiche pas dans le terminal.
+   * - ``0x15``
+     - NAK de capacité
+     - Renvoyé lorsque le protocole de capture d'écran est compris mais qu'aucune image HDMI capturable n'est actuellement disponible. Le navigateur consomme cet octet, considère le protocole comme connu mais indisponible et n'affiche pas l'octet dans le terminal.
    * - ``0x1d``
      - Requête de capture
      - Envoyée uniquement après confirmation de la capacité. Le fournisseur d'écran actif répond avec une image ``H3SNIP1``.
 
-Une sonde de capacité individuelle attend jusqu'à 750 ms un ACK. Autour des
-transitions d'exécution, comme le lancement de Doom, l'application web conserve
+Une sonde de capacité individuelle attend jusqu'à 750 ms une réponse ACK ou NAK.
+Un ACK signifie qu'une capture est actuellement disponible. Un NAK signifie que
+le protocole est pris en charge, mais qu'aucune image capturable n'est
+actuellement disponible. Autour des transitions d'exécution, comme le lancement
+de Doom, l'application web conserve
 une fenêtre de réacquisition plus longue et réessaie pendant l'initialisation du
 nouveau consommateur UART. Une sonde trop précoce pendant le démarrage de Doom
 ne laisse donc pas définitivement le bouton désactivé. Une requête de capture
@@ -206,8 +212,10 @@ actuellement l'entrée UART. L'interface I2C doit répondre par ACK à ``0x1c`` 
 plus d'implémenter ``0x1d`` ; sinon le navigateur laisse correctement **Screen
 snip** désactivé même si un handler de capture existe.
 
-Protocole sur le fil
---------------------
+.. _h3snip1-protocol:
+
+Protocole H3SNIP1 sur le fil
+----------------------------
 
 Après réception de ``0x1d``, le firmware écrit un en-tête ASCII terminé par
 ``CR LF`` puis écrit immédiatement une charge utile binaire.
