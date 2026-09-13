@@ -110,6 +110,10 @@ const els = {
     h3dLaunchAfterUpload: document.getElementById("h3dLaunchAfterUpload"),
     h3dProgress: document.getElementById("h3dProgress"),
     h3dProgressLabel: document.getElementById("h3dProgressLabel"),
+    h3dUartRequirement: document.getElementById("h3dUartRequirement"),
+    h3dUartRequirementTitle: document.getElementById("h3dUartRequirementTitle"),
+    h3dUartRequirementDetail: document.getElementById("h3dUartRequirementDetail"),
+    h3dConnectUartButton: document.getElementById("h3dConnectUartButton"),
     wadFileInput: document.getElementById("wadFileInput"),
     wadFileName: document.getElementById("wadFileName"),
     wadFileDetails: document.getElementById("wadFileDetails"),
@@ -119,6 +123,10 @@ const els = {
     wadLaunchAfterUpload: document.getElementById("wadLaunchAfterUpload"),
     wadProgress: document.getElementById("wadProgress"),
     wadProgressLabel: document.getElementById("wadProgressLabel"),
+    wadUartRequirement: document.getElementById("wadUartRequirement"),
+    wadUartRequirementTitle: document.getElementById("wadUartRequirementTitle"),
+    wadUartRequirementDetail: document.getElementById("wadUartRequirementDetail"),
+    wadConnectUartButton: document.getElementById("wadConnectUartButton"),
     firmwareLoaderStatus: document.getElementById("firmwareLoaderStatus"),
     firmwareLoaderRefreshButton: document.getElementById("firmwareLoaderRefreshButton"),
     firmwareLoaderAccessKey: document.getElementById("firmwareLoaderAccessKey"),
@@ -651,16 +659,66 @@ function validateH3dPackage(bytes) {
     };
 }
 
+function updateUploaderUartRequirement(container, title, detail, button, protocol) {
+    const connected = Boolean(state.port);
+    const busy = state.serialOperation !== null || state.consoleFirmwareBusy;
+
+    container.classList.toggle("connected", connected);
+    container.classList.toggle("unavailable", !serialSupported);
+
+    if (!serialSupported) {
+        title.textContent = "Web Serial unavailable";
+        detail.textContent = "Use a current Chromium-based browser to connect the UART.";
+        button.textContent = "UART unavailable";
+        button.disabled = true;
+        return;
+    }
+
+    if (connected) {
+        title.textContent = "UART connected";
+        detail.textContent = `${protocol} can use the active Web Serial connection.`;
+        button.textContent = "Connected";
+        button.disabled = true;
+        return;
+    }
+
+    title.textContent = "UART connection required";
+    detail.textContent = `Connect Web Serial before starting the ${protocol} upload.`;
+    button.textContent = "Connect UART";
+    button.disabled = busy;
+}
+
 function updateH3dUploaderUi() {
     const uploading = state.serialOperation === "h3d-upload";
     const ready = Boolean(state.port && state.h3dImage &&
         state.serialOperation === null && state.screenSnip === null &&
         !state.consoleFirmwareBusy);
 
+    updateUploaderUartRequirement(
+        els.h3dUartRequirement,
+        els.h3dUartRequirementTitle,
+        els.h3dUartRequirementDetail,
+        els.h3dConnectUartButton,
+        "H3L",
+    );
+
     els.h3dFileInput.disabled = uploading || state.consoleFirmwareBusy;
     els.h3dLaunchAfterUpload.disabled = uploading || state.consoleFirmwareBusy;
     els.h3dUploadButton.disabled = !ready;
-    els.h3dUploadButton.textContent = uploading ? "Uploading..." : "Upload H3D";
+
+    if (uploading) {
+        els.h3dUploadButton.textContent = "Uploading...";
+    } else if (!serialSupported) {
+        els.h3dUploadButton.textContent = "Web Serial unavailable";
+    } else if (!state.port) {
+        els.h3dUploadButton.textContent = "Connect UART first";
+    } else if (!state.h3dImage) {
+        els.h3dUploadButton.textContent = "Select H3D image";
+    } else if (!ready) {
+        els.h3dUploadButton.textContent = "UART busy";
+    } else {
+        els.h3dUploadButton.textContent = "Upload H3D";
+    }
 }
 
 function setSerialOperation(operation) {
@@ -967,12 +1025,33 @@ function updateWadUploaderUi() {
         state.serialOperation === null && state.screenSnip === null &&
         !state.consoleFirmwareBusy);
 
+    updateUploaderUartRequirement(
+        els.wadUartRequirement,
+        els.wadUartRequirementTitle,
+        els.wadUartRequirementDetail,
+        els.wadConnectUartButton,
+        "H3W",
+    );
+
     els.wadFileInput.disabled = uploading || state.consoleFirmwareBusy;
     els.wadVisibleName.disabled = uploading || state.consoleFirmwareBusy;
     els.wadMemoryProfile.disabled = uploading || state.consoleFirmwareBusy;
     els.wadLaunchAfterUpload.disabled = uploading || state.consoleFirmwareBusy;
     els.wadUploadButton.disabled = !ready;
-    els.wadUploadButton.textContent = uploading ? "Uploading..." : "Upload IWAD";
+
+    if (uploading) {
+        els.wadUploadButton.textContent = "Uploading...";
+    } else if (!serialSupported) {
+        els.wadUploadButton.textContent = "Web Serial unavailable";
+    } else if (!state.port) {
+        els.wadUploadButton.textContent = "Connect UART first";
+    } else if (!state.wadImage) {
+        els.wadUploadButton.textContent = "Select IWAD";
+    } else if (!ready) {
+        els.wadUploadButton.textContent = "UART busy";
+    } else {
+        els.wadUploadButton.textContent = "Upload IWAD";
+    }
 }
 
 function refreshWadImage() {
@@ -1962,10 +2041,12 @@ function wireEvents() {
     });
     els.h3dFileInput.addEventListener("change", selectH3dFile);
     els.h3dUploadButton.addEventListener("click", uploadH3dImage);
+    els.h3dConnectUartButton.addEventListener("click", connect);
     els.wadFileInput.addEventListener("change", selectWadFile);
     els.wadVisibleName.addEventListener("input", refreshWadImage);
     els.wadMemoryProfile.addEventListener("change", refreshWadImage);
     els.wadUploadButton.addEventListener("click", uploadWadImage);
+    els.wadConnectUartButton.addEventListener("click", connect);
 
     els.commandForm.addEventListener("submit", async (event) => {
         event.preventDefault();

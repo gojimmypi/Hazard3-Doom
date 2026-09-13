@@ -885,6 +885,74 @@ input[type="text"] {
     margin-top: 0.8rem;
 }
 
+.uart-requirement {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.7rem;
+    margin-top: 0.8rem;
+    border: 1px solid #8a6e3d;
+    border-radius: 8px;
+    background: #2a2418;
+    padding: 0.65rem 0.75rem;
+}
+
+.uart-requirement.connected {
+    border-color: #47755d;
+    background: #193225;
+}
+
+.uart-requirement.unavailable {
+    border-color: #6e474c;
+    background: #2c1c20;
+}
+
+.uart-requirement-indicator {
+    width: 0.72rem;
+    height: 0.72rem;
+    border-radius: 50%;
+    background: #e7b85a;
+    box-shadow: 0 0 0 4px rgb(231 184 90 / 0.12);
+}
+
+.uart-requirement.connected .uart-requirement-indicator {
+    background: var(--accent);
+    box-shadow: 0 0 0 4px rgb(112 214 163 / 0.14);
+}
+
+.uart-requirement.unavailable .uart-requirement-indicator {
+    background: var(--danger);
+    box-shadow: 0 0 0 4px rgb(255 138 138 / 0.12);
+}
+
+.uart-requirement-copy {
+    display: grid;
+    gap: 0.12rem;
+    min-width: 0;
+}
+
+.uart-requirement-copy strong {
+    color: #f3d995;
+    font-size: 0.82rem;
+}
+
+.uart-requirement.connected .uart-requirement-copy strong {
+    color: var(--accent-strong);
+}
+
+.uart-requirement.unavailable .uart-requirement-copy strong {
+    color: var(--danger);
+}
+
+.uart-requirement-copy span {
+    color: var(--muted);
+    font-size: 0.76rem;
+}
+
+.uart-connect-button {
+    white-space: nowrap;
+}
+
 .svf-picker,
 .flasher-checklist {
     display: grid;
@@ -1007,6 +1075,15 @@ input[type="text"] {
     .flasher-intro,
     .flasher-grid {
         grid-template-columns: 1fr;
+    }
+
+    .uart-requirement {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .uart-connect-button {
+        grid-column: 1 / -1;
+        width: 100%;
     }
 
     .flasher-progress-row {
