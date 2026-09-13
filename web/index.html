@@ -22,23 +22,24 @@
             <nav class="project-links" aria-label="Hazard3-Doom project links">
                 <button class="project-link"
                         type="button"
+                        title="Click to copy the device log URL 'chrome://device-log/' to the clipboard"
                         onclick="navigator.clipboard.writeText('chrome://device-log/'); alert('Copied chrome://device-log/ - paste it into a new Chrome tab.')">
                     Device Log
                 </button>
-                <a class="project-link" href="https://github.com/ulx3s/Hazard3-Doom" target="_blank" rel="noopener noreferrer">
+                <a class="project-link" href="https://github.com/ulx3s/Hazard3-Doom" target="_blank" rel="noopener noreferrer" title="Visit the GitHub repository">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M8.7 16.8 3.9 12l4.8-4.8 1.4 1.4L6.7 12l3.4 3.4-1.4 1.4Zm6.6 0-1.4-1.4 3.4-3.4-3.4-3.4 1.4-1.4 4.8 4.8-4.8 4.8ZM10.8 19l2.8-14 2 .4-2.8 14-2-.4Z" />
                     </svg>
                     <span>GitHub Source</span>
                 </a>
-                <a class="project-link docs-link" href="https://hazard3-doom.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer">
+                <a class="project-link docs-link" href="https://hazard3-doom.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer" title="Read the documentation">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M5 3h11a3 3 0 0 1 3 3v15H7a4 4 0 0 1-4-4V5a2 2 0 0 1 2-2Zm0 2v9.5A4 4 0 0 1 7 14h10V6a1 1 0 0 0-1-1H5Zm2 11a2 2 0 1 0 0 4h10v-4H7Z" />
                     </svg>
                     <span>Read the Docs</span>
                 </a>
             </nav>
-            <div class="connection-summary">
+            <div class="connection-summary" title="Connection status of serial UART">
                 <span id="statusDot" class="status-dot" aria-hidden="true"></span>
                 <span id="connectionStatus">Not connected</span>
             </div>
@@ -49,21 +50,25 @@
         <details class="panel upload-panel" aria-labelledby="upload-title">
             <summary class="upload-panel-summary">
                 <div>
-                    <h2 id="upload-title">Device uploading</h2>
+                    <h2 id="upload-title" title="Click to toggle visibility of this entire section.">Device uploading</h2>
                     <p>FPGA, console firmware, Doom application, and IWAD loading tools.</p>
                 </div>
-                <span class="summary-tag">FPGA / Firmware / Doom</span>
+                <span class="summary-tag" title="Load the FPGA, console firmware, Doom application, and IWAD">
+                    FPGA / Firmware / Doom
+                </span>
             </summary>
             <div class="upload-panel-body">
                 <details id="fpgaFlasher" class="flasher-section">
                     <summary>
-                        <span class="summary-title">FPGA web flasher</span>
-                        <span class="summary-tag">ULX3S US1 / JTAG</span>
+                        <span class="summary-title" title="Click to toggle visibility of this entire section.">FPGA web flasher</span>
+                        <span class="summary-tag" title="Uses WebUSB through the ULX3S US1 FT231X interface (Windows WinUSB) to program the FPGA over JTAG.">
+                            ULX3S US1 / JTAG
+                        </span>
                         <span class="flasher-header-actions" aria-label="FPGA flasher actions">
-                            <button id="flasherConnectButton" type="button" class="secondary compact-action-button">Connect ULX3S USB</button>
-                            <button id="flasherProbeButton" type="button" class="secondary compact-action-button" disabled>Probe JTAG</button>
-                            <button id="flasherProgramButton" type="button" class="primary compact-action-button" disabled>Program FPGA SRAM</button>
-                            <button id="flasherDisconnectButton" type="button" class="secondary compact-action-button" disabled>Disconnect USB</button>
+                            <button id="flasherConnectButton" type="button" class="secondary compact-action-button" title="Connect to ULX3S USB JTAG (requires WinUSB on Windows)">Connect ULX3S USB</button>
+                            <button id="flasherProbeButton" type="button" class="secondary compact-action-button" disabled title="Probe JTAG">Probe JTAG</button>
+                            <button id="flasherProgramButton" type="button" class="primary compact-action-button" disabled title="Program FPGA SRAM">Program FPGA SRAM</button>
+                            <button id="flasherDisconnectButton" type="button" class="secondary compact-action-button" disabled title="Disconnect USB" >Disconnect USB</button>
                         </span>
                     </summary>
                     <div class="flasher-body">
@@ -89,7 +94,11 @@
                             <label class="svf-picker">
                                 <span>Hazard3-Doom FPGA image (.bit or .svf)</span>
                                 <input id="svfFileInput" type="file" accept=".bit,.svf,application/octet-stream,text/plain">
-                                <strong id="svfFileName">No FPGA image selected</strong>
+                                <strong id="svfFileName">No FPGA image selected. 
+                                                         Select from <font face="Courier New">./build/</font> for fresh builds, 
+                                                                     <font face="Courier New">./bin/</font> for pre-built images, 
+                                                         or your local directory.
+                                </strong>
                                 <small id="svfFileDetails"></small>
                             </label>
 
@@ -127,8 +136,10 @@
 
                 <details id="consoleFirmwareUploader" class="flasher-section">
                     <summary>
-                        <span class="summary-title">Console firmware uploader</span>
-                        <span class="summary-tag">Local GDB / OpenOCD</span>
+                        <span class="summary-title" title="Click to toggle visibility of this entire section.">Console firmware uploader</span>
+                        <span class="summary-tag" title="Uses the local GDB client through OpenOCD to load and debug Hazard3 firmware.">
+                            Local GDB / OpenOCD
+                        </span>
                         <span class="flasher-header-actions" aria-label="Console firmware actions">
                             <button id="firmwareUploadButton" type="button" class="primary compact-action-button" disabled>Load console firmware</button>
                         </span>
@@ -186,7 +197,7 @@
 
                 <details id="h3dUploader" class="flasher-section">
                     <summary>
-                        <span class="summary-title">Doom H3D uploader</span>
+                        <span class="summary-title" title="Click to toggle visibility of this entire section.">Doom H3D uploader</span>
                         <span class="summary-tag">UART / H3L</span>
                         <span class="flasher-header-actions" aria-label="H3D uploader actions">
                             <button id="h3dConnectUartButton" type="button" class="primary compact-action-button">Connect UART</button>
@@ -201,7 +212,7 @@
                             </div>
                             <div class="flasher-state">
                                 <span>Protocol</span>
-                                <strong>H3L over Web Serial</strong>
+                                <strong  title="Custom Hazard3 L (load) protocol over Web Serial">H3L over Web Serial</strong>
                                 <span>Monitor</span>
                                 <strong>Use from the &gt; prompt</strong>
                             </div>
@@ -246,8 +257,10 @@
 
                 <details id="wadUploader" class="flasher-section">
                     <summary>
-                        <span class="summary-title">Doom IWAD uploader</span>
-                        <span class="summary-tag">UART / H3W</span>
+                        <span class="summary-title" title="Click to toggle visibility of this entire section.">Doom IWAD uploader</span>
+                        <span class="summary-tag" title="Uses Web Serial and the Hazard3 H3W protocol to upload a Doom IWAD over UART.">
+                            UART / H3W
+                        </span>
                         <span class="flasher-header-actions" aria-label="IWAD uploader actions">
                             <button id="wadConnectUartButton" type="button" class="primary compact-action-button">Connect UART</button>
                             <button id="wadUploadButton" type="button" class="primary compact-action-button" disabled>Upload IWAD</button>
@@ -261,7 +274,7 @@
                             </div>
                             <div class="flasher-state">
                                 <span>Protocol</span>
-                                <strong>H3W over Web Serial</strong>
+                                <strong title="Custom Hazard3 W (write) protocol over Web Serial">H3W over Web Serial</strong>
                                 <span>Monitor</span>
                                 <strong>Use from the &gt; prompt</strong>
                             </div>
@@ -330,7 +343,7 @@
                     <button id="reconnectButton" type="button" class="secondary compact-action-button">Reconnect</button>
                     <button id="connectButton" type="button" class="primary compact-action-button">Connect</button>
                 </span>
-                <span class="summary-tag serial-summary-tag">Web Serial</span>
+                <span class="summary-tag serial-summary-tag" title="Direct browser connection using the Web Serial API">Web Serial</span>
             </summary>
             <div class="serial-panel-body">
                 <div class="settings-grid">
@@ -401,12 +414,15 @@
                 <div class="terminal-actions">
                     <label class="check-control"><input id="autoScroll" type="checkbox" checked> Auto-scroll</label>
                     <label class="check-control"><input id="localEcho" type="checkbox"> Local echo</label>
-                    <button id="downloadButton" type="button" class="secondary">Save log</button>
+                    <button id="downloadButton" type="button" class="secondary" title="Save UART contents to file via download">
+                        Save log
+                    </button>
                     <button id="copyButton" type="button" class="secondary icon-button" title="Copy all UART terminal contents to the clipboard" aria-label="Copy all UART terminal contents to the clipboard">
+                        <!-- the copy icon in an SVG -->
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <path d="M8 7V4h10a2 2 0 0 1 2 2v11h-3v3H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2Zm2 0h5a2 2 0 0 1 2 2v6h1V6H10v1Zm-4 2v9h9V9H6Z" />
                         </svg>
-                        <span id="copyButtonLabel">Copy UART</span>
+                        <span id="copyButtonLabel" title="Copy all UART terminal contents to the clipboard">Copy UART</span>
                     </button>
                     <span id="screenSnipControl" class="screen-snip-control" title="Screen snip unavailable: connect to the board first.">
                         <button id="screenSnipButton" type="button" class="secondary" disabled>Screen snip</button>
