@@ -135,8 +135,11 @@
                                 <span>Local loader</span>
                                 <span>
                                     <strong id="firmwareLoaderStatus">Checking...</strong>
-                                    (<a id="firmwareLoaderSourceURL" href="https://github.com/ulx3s/Hazard3-Doom/blob/main/web/web-server.py">source</a>)
+                                    (<a id="firmwareLoaderSourceURL" href="https://github.com/ulx3s/Hazard3-Doom/blob/main/web/web-server.py">source</a>
+                                    | <button id="firmwareLoaderRefreshButton" class="inline-link-button" type="button">refresh</button>)
                                 </span>
+                                <span>Access key</span>
+                                <input id="firmwareLoaderAccessKey" class="firmware-loader-access-key" type="password" autocomplete="off" spellcheck="false" placeholder="Optional local-loader key" aria-label="Local loader access key">
                                 <span>OpenOCD</span>
                                 <strong>Must already listen on port 3333. See <a href="https://hazard3-doom.readthedocs.io/en/latest/user-guide/web-flasher.html#windows-usb-driver-compatibility" id="firmwareLoaderDocsURL">tips</a></strong>
                             </div>
@@ -170,7 +173,7 @@
 
                         <pre id="firmwareLog" class="flasher-log" tabindex="0" aria-live="polite" aria-label="Console firmware loader log"></pre>
 
-                        <p class="flasher-note"><strong>The firmware does not need a self-replacement listener for this path.</strong> OpenOCD and GDB load it through the Hazard3 debug module. This control is available only when the page is served by <code>web/web-server.py</code>, not from GitHub Pages or a generic static HTTP server.</p>
+                        <p class="flasher-note"><strong>The firmware does not need a self-replacement listener for this path.</strong> OpenOCD and GDB load it through the Hazard3 debug module. The public GitHub Pages UI can use <code>web/web-server.py</code> as a loopback-only helper at <code>127.0.0.1:8000</code>. A browser may ask for loopback/local-network permission. If the helper was started with <code>--access-key</code>, enter the same key above; the page keeps it only in memory and does not save it.</p>
                     </div>
                 </details>
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import argparse
+import getpass
+import hmac
 import http.server
 import json
 import os
@@ -13,6 +15,25 @@ from pathlib import Path
 
 MY_RUFF = os.environ.get("MY_RUFF", "ruff")
 MAX_FIRMWARE_BYTES = 16 * 1024 * 1024
+DEFAULT_ALLOWED_ORIGINS = frozenset(
+    {
+        "https://gojimmypi.github.io",
+        "https://ulx3s.github.io",
+    }
+)
+API_PATHS = frozenset(
+    {
+        "/api/console-firmware/status",
+        "/api/console-firmware/load",
+    }
+)
+ALLOWED_CORS_HEADERS = frozenset(
+    {
+        "content-type",
+        "x-hazard3-doom-key",
+        "x-hazard3-doom-local",
+    }
+)
 
 
 class Hazard3DoomRequestHandler(http.server.SimpleHTTPRequestHandler):
@@ -20,6 +41,21 @@ class Hazard3DoomRequestHandler(http.server.SimpleHTTPRequestHandler):
 
     firmware_loader = Path()
     repo_root = Path()
+    allowed_origins = DEFAULT_ALLOWED_ORIGINS
+    access_key: str | None = None
+
+    def is_api_request(self) -> bool:
+        return self.path in API_PATHS
+
+    def request_origin_allowed(self) -> bool:
+        origin = self.headers.get("Origin")
+        return origin is None or origin in self.allowed_origins
+
+    def send_cors_headers(self) -> None:
+        origin = self.headers.get("Origin")
+        if origin is not None and origin in self.allowed_origins:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
 
     def send_json(self, status: int, response: dict[str, object]) -> None:
         payload = json.dumps(response).encode("utf-8")
@@ -27,16 +63,81 @@ class Hazard3DoomRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(payload)))
         self.send_header("Cache-Control", "no-store")
+        if self.is_api_request():
+            self.send_cors_headers()
         self.end_headers()
         self.wfile.write(payload)
 
+    def require_allowed_origin(self) -> bool:
+        if self.request_origin_allowed():
+            return True
+        self.send_json(403, {"ok": False, "error": "Origin is not allowed."})
+        return False
+
+    def access_key_valid(self) -> bool:
+        if self.access_key is None:
+            return True
+        supplied_key = self.headers.get("X-Hazard3-Doom-Key", "")
+        return hmac.compare_digest(supplied_key, self.access_key)
+
+    def require_access_key(self) -> bool:
+        if self.access_key_valid():
+            return True
+        self.send_json(
+            401,
+            {
+                "ok": False,
+                "available": False,
+                "authentication_required": True,
+                "error": "Local loader access key is required or incorrect.",
+            },
+        )
+        return False
+
+    def do_OPTIONS(self) -> None:
+        if not self.is_api_request():
+            self.send_error(404)
+            return
+        if not self.request_origin_allowed():
+            self.send_error(403)
+            return
+
+        requested_method = self.headers.get("Access-Control-Request-Method", "")
+        if requested_method and requested_method not in {"GET", "POST"}:
+            self.send_error(405)
+            return
+
+        requested_headers = {
+            item.strip().lower()
+            for item in self.headers.get("Access-Control-Request-Headers", "").split(",")
+            if item.strip()
+        }
+        if not requested_headers.issubset(ALLOWED_CORS_HEADERS):
+            self.send_error(403)
+            return
+
+        self.send_response(204)
+        self.send_cors_headers()
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header(
+            "Access-Control-Allow-Headers",
+            "Content-Type, X-Hazard3-Doom-Local, X-Hazard3-Doom-Key",
+        )
+        self.send_header("Access-Control-Max-Age", "600")
+        if self.headers.get("Access-Control-Request-Private-Network") == "true":
+            self.send_header("Access-Control-Allow-Private-Network", "true")
+        self.end_headers()
+
     def do_GET(self) -> None:
         if self.path == "/api/console-firmware/status":
+            if not self.require_allowed_origin() or not self.require_access_key():
+                return
             self.send_json(
                 200,
                 {
                     "available": self.firmware_loader.is_file()
                     and os.access(self.firmware_loader, os.X_OK),
+                    "authentication_required": self.access_key is not None,
                 },
             )
             return
@@ -45,6 +146,8 @@ class Hazard3DoomRequestHandler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self) -> None:
         if self.path != "/api/console-firmware/load":
             self.send_error(404)
+            return
+        if not self.require_allowed_origin() or not self.require_access_key():
             return
         if self.headers.get("X-Hazard3-Doom-Local") != "1":
             self.send_json(403, {"ok": False, "error": "Missing local request header."})
@@ -192,7 +295,7 @@ def main() -> None:
     check_python_script()
 
     parser = argparse.ArgumentParser(
-        description="Serve the Hazard3-Doom web UI.",
+        description="Serve the Hazard3-Doom web UI and loopback loader API.",
     )
     parser.add_argument(
         "port",
@@ -206,7 +309,42 @@ def main() -> None:
         type=Path,
         help="firmware loader script (default: ../scripts/load-firmware.sh)",
     )
+    parser.add_argument(
+        "--access-key",
+        nargs="?",
+        const=True,
+        default=False,
+        metavar="KEY",
+        help=(
+            "require an access key for the loader API; omit KEY to prompt without echo"
+        ),
+    )
+    parser.add_argument(
+        "--allow-origin",
+        action="append",
+        default=[],
+        metavar="ORIGIN",
+        help="add an exact CORS origin allowed to use the loopback API",
+    )
     args = parser.parse_args()
+
+    access_key: str | None
+    if args.access_key is True:
+        access_key = getpass.getpass("Local loader access key: ")
+        if not access_key:
+            parser.error("--access-key requires a non-empty key")
+    elif args.access_key is False:
+        access_key = None
+    else:
+        access_key = args.access_key
+        if not access_key:
+            parser.error("--access-key requires a non-empty key")
+
+    allowed_origins = set(DEFAULT_ALLOWED_ORIGINS)
+    for origin in args.allow_origin:
+        if origin == "*":
+            parser.error("--allow-origin '*' is not permitted")
+        allowed_origins.add(origin.rstrip("/"))
 
     web_dir = Path(__file__).resolve().parent
     repo_root = web_dir.parent
@@ -217,6 +355,8 @@ def main() -> None:
     )
     Hazard3DoomRequestHandler.firmware_loader = firmware_loader
     Hazard3DoomRequestHandler.repo_root = repo_root
+    Hazard3DoomRequestHandler.allowed_origins = frozenset(allowed_origins)
+    Hazard3DoomRequestHandler.access_key = access_key
     os.chdir(web_dir)
 
     server = http.server.ThreadingHTTPServer(
@@ -232,6 +372,10 @@ def main() -> None:
     print()
     print("Console firmware loader:")
     print(f"  {firmware_loader}")
+    print(f"  access key: {'required' if access_key is not None else 'disabled'}")
+    print("  allowed public origins:")
+    for origin in sorted(allowed_origins):
+        print(f"    {origin}")
     print()
     print("Press Ctrl-C to stop.")
 

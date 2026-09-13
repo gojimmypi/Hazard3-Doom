@@ -68,7 +68,7 @@ python3 -m http.server 8000
 
 ## GitHub Pages
 
-The files can be served unchanged by GitHub Pages. HTTPS satisfies the secure-context requirement for Web Serial and WebUSB. The console firmware control is disabled on GitHub Pages because a public static site cannot invoke the user's local GDB/OpenOCD tools.
+The files can be served unchanged by GitHub Pages. HTTPS satisfies the secure-context requirement for Web Serial and WebUSB. The console firmware control can also be used from GitHub Pages when `web-server.py` is running locally as a loopback-only helper. The public page calls `http://127.0.0.1:8000/api/console-firmware/...`; Chromium may ask the user to grant loopback/local-network access.
 
 A convenient repository layout is:
 
@@ -80,7 +80,7 @@ docs/
         styles.css
 ```
 
-The app does not send UART or FPGA programming data to a server. JavaScript communicates directly with the devices selected in the browser permission dialogs. When served by `web-server.py`, a selected console firmware ELF is sent only to the loopback server, written to a temporary file, loaded by the repository's `scripts/load-firmware.sh`, and then deleted.
+The app does not send UART or FPGA programming data to a server. JavaScript communicates directly with the devices selected in the browser permission dialogs. A selected console firmware ELF is sent only to the loopback `web-server.py` helper, written to a temporary file, loaded by the repository's `scripts/load-firmware.sh`, and then deleted. The helper binds only to `127.0.0.1` and accepts cross-origin API requests only from the configured exact origins.
 
 ## Console firmware uploader
 
@@ -88,8 +88,14 @@ The collapsible **Console firmware uploader** sits between the FPGA flasher and
 the Doom H3D uploader. It accepts `hazard3-boot-monitor.elf`, validates that the
 file is a 32-bit little-endian RISC-V executable, and passes it to the existing
 GDB loader. The local server listens only on `127.0.0.1`, limits the ELF to
-16 MiB, requires a same-origin custom request header, and deletes the temporary
+16 MiB, requires a custom local-request header, applies an exact CORS origin
+allowlist, supports browser private-network preflights, and deletes the temporary
 copy after the loader exits.
+
+By default the loopback API allows the public origins
+`https://gojimmypi.github.io` and `https://ulx3s.github.io`. Additional exact
+origins can be added with repeated `--allow-origin` options. Wildcard CORS is
+intentionally rejected.
 
 The firmware does not need to listen for its own replacement. OpenOCD talks to
 the Hazard3 debug module; GDB halts the processor, writes the ELF loadable
@@ -102,10 +108,33 @@ the ULX3S 12F flow from the repository root:
     -f ./third_party/Hazard3/example_soc/ulx3s-12f-openocd.cfg
 ```
 
-Then run `web/web-server.py`, select the matching ELF, and load it. Do not keep
-the browser FPGA flasher connected to US1 while OpenOCD owns that interface.
-An already-running GDB session may also own port 3333; exit it before using the
-web loader.
+Then run `web/web-server.py`, select the matching ELF, and load it. The browser
+page may be the local page served by that helper or the public GitHub Pages site.
+On the public site, use the **refresh** control next to **Local loader** after
+starting the helper. Do not keep the browser FPGA flasher connected to US1 while
+OpenOCD owns that interface. An already-running GDB session may also own port
+3333; exit it before using the web loader.
+
+
+For an additional authorization layer, start the helper with an access key:
+
+```bash
+./web-server.py --access-key
+```
+
+With no value after `--access-key`, the helper prompts for the key without echoing
+it or placing it in the command line. Enter the same key in the web UI and press
+**refresh**. The browser keeps the key only in page memory; it is not written to
+local storage. An explicit value is also supported for automation, although it is
+less private because it can be retained in shell history or visible in the
+process command line:
+
+```bash
+./web-server.py --access-key 'example-change-me'
+```
+
+The key is defense in depth. The helper still binds only to loopback, checks the
+request `Origin`, and requires the custom local-loader request header.
 
 By default the local server invokes `../scripts/load-firmware.sh`. Override the
 loader only when testing another checkout:

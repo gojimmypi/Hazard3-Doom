@@ -40,6 +40,7 @@ const WAD_MEMORY_PROFILES = {
     "32m": { base: 0x21000000, limit: 0x21c00000 },
 };
 const CONSOLE_FIRMWARE_MAX_BYTES = 16 * 1024 * 1024;
+const CONSOLE_FIRMWARE_LOOPBACK_ORIGIN = "http://127.0.0.1:8000";
 
 const state = {
     port: null,
@@ -67,6 +68,7 @@ const state = {
     serialResponseWaiter: null,
     consoleFirmware: null,
     consoleFirmwareLoaderAvailable: false,
+    consoleFirmwareAccessKey: "",
     consoleFirmwareBusy: false,
     serialOperation: null,
     textDecoder: new TextDecoder(),
@@ -113,6 +115,8 @@ const els = {
     wadProgress: document.getElementById("wadProgress"),
     wadProgressLabel: document.getElementById("wadProgressLabel"),
     firmwareLoaderStatus: document.getElementById("firmwareLoaderStatus"),
+    firmwareLoaderRefreshButton: document.getElementById("firmwareLoaderRefreshButton"),
+    firmwareLoaderAccessKey: document.getElementById("firmwareLoaderAccessKey"),
     firmwareFileInput: document.getElementById("firmwareFileInput"),
     firmwareFileName: document.getElementById("firmwareFileName"),
     firmwareFileDetails: document.getElementById("firmwareFileDetails"),
@@ -373,26 +377,89 @@ function appendFirmwareLog(text) {
     els.firmwareLog.scrollTop = els.firmwareLog.scrollHeight;
 }
 
-async function checkConsoleFirmwareLoader() {
-    try {
-        const response = await fetch("/api/console-firmware/status", { cache: "no-store" });
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        const status = await response.json();
-        state.consoleFirmwareLoaderAvailable = status.available === true;
-    } catch {
-        state.consoleFirmwareLoaderAvailable = false;
+function isLoopbackHostname(hostname) {
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}
+
+function consoleFirmwareHelperOrigin() {
+    return isLoopbackHostname(window.location.hostname)
+        ? window.location.origin
+        : CONSOLE_FIRMWARE_LOOPBACK_ORIGIN;
+}
+
+async function fetchConsoleFirmwareHelper(path, options = {}) {
+    const headers = new Headers(options.headers || {});
+    if (state.consoleFirmwareAccessKey) {
+        headers.set("X-Hazard3-Doom-Key", state.consoleFirmwareAccessKey);
     }
 
-    els.firmwareLoaderStatus.textContent = state.consoleFirmwareLoaderAvailable
-        ? "Ready"
-        : "Unavailable - run web-server.py";
-    els.firmwareLoaderStatus.classList.toggle("ok", state.consoleFirmwareLoaderAvailable);
-    els.firmwareLoaderStatus.classList.toggle("error", !state.consoleFirmwareLoaderAvailable);
-    els.firmwareProgressLabel.textContent = state.consoleFirmwareLoaderAvailable
-        ? "Idle"
-        : "Local firmware loader unavailable";
+    const requestOptions = {
+        ...options,
+        headers,
+        cache: options.cache || "no-store",
+    };
+    if (!isLoopbackHostname(window.location.hostname)) {
+        requestOptions.targetAddressSpace = "loopback";
+    }
+
+    return fetch(`${consoleFirmwareHelperOrigin()}${path}`, requestOptions);
+}
+
+async function checkConsoleFirmwareLoader() {
+    state.consoleFirmwareAccessKey = els.firmwareLoaderAccessKey.value;
+    els.firmwareLoaderRefreshButton.disabled = true;
+    els.firmwareLoaderStatus.textContent = "Checking...";
+    els.firmwareLoaderStatus.classList.remove("ok", "error");
+    state.consoleFirmwareLoaderAvailable = false;
+    updateConsoleFirmwareUi();
+
+    try {
+        const response = await fetchConsoleFirmwareHelper(
+            "/api/console-firmware/status",
+            { method: "GET" },
+        );
+        let status = {};
+        try {
+            status = await response.json();
+        } catch {
+            // Keep the HTTP status as the useful diagnostic below.
+        }
+
+        if (response.status === 401 && status.authentication_required === true) {
+            els.firmwareLoaderStatus.textContent = state.consoleFirmwareAccessKey
+                ? "Access key rejected"
+                : "Access key required";
+            els.firmwareProgressLabel.textContent = "Enter the local-loader access key and refresh";
+        } else if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        } else {
+            state.consoleFirmwareLoaderAvailable = status.available === true;
+            els.firmwareLoaderStatus.textContent = state.consoleFirmwareLoaderAvailable
+                ? "Ready"
+                : "Helper ready - loader script unavailable";
+            els.firmwareProgressLabel.textContent = state.consoleFirmwareLoaderAvailable
+                ? "Idle"
+                : "Local helper found, but the firmware loader script is unavailable";
+        }
+    } catch {
+        els.firmwareLoaderStatus.textContent = "Unavailable - start web-server.py";
+        els.firmwareProgressLabel.textContent =
+            "Local helper unavailable; start web-server.py or allow browser loopback access";
+    } finally {
+        els.firmwareLoaderStatus.classList.toggle("ok", state.consoleFirmwareLoaderAvailable);
+        els.firmwareLoaderStatus.classList.toggle("error", !state.consoleFirmwareLoaderAvailable);
+        els.firmwareLoaderRefreshButton.disabled = false;
+        updateConsoleFirmwareUi();
+    }
+}
+
+function updateConsoleFirmwareAccessKey() {
+    state.consoleFirmwareAccessKey = els.firmwareLoaderAccessKey.value;
+    state.consoleFirmwareLoaderAvailable = false;
+    els.firmwareLoaderStatus.textContent = "Key changed - refresh";
+    els.firmwareLoaderStatus.classList.remove("ok");
+    els.firmwareLoaderStatus.classList.add("error");
+    els.firmwareProgressLabel.textContent = "Refresh the local-loader check";
     updateConsoleFirmwareUi();
 }
 
@@ -442,14 +509,17 @@ async function loadConsoleFirmware() {
     setConnectionUi(Boolean(state.port), state.port ? describePort(state.port) : "");
 
     try {
-        const response = await fetch("/api/console-firmware/load", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/octet-stream",
-                "X-Hazard3-Doom-Local": "1",
+        const response = await fetchConsoleFirmwareHelper(
+            "/api/console-firmware/load",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/octet-stream",
+                    "X-Hazard3-Doom-Local": "1",
+                },
+                body: firmware.bytes,
             },
-            body: firmware.bytes,
-        });
+        );
         const result = await response.json();
         appendFirmwareLog(result.output || "");
         if (!response.ok || result.ok !== true) {
@@ -1822,6 +1892,16 @@ function wireEvents() {
     els.screenSnipButton.addEventListener("click", requestScreenSnip);
     els.firmwareFileInput.addEventListener("change", selectConsoleFirmwareFile);
     els.firmwareUploadButton.addEventListener("click", loadConsoleFirmware);
+    els.firmwareLoaderRefreshButton.addEventListener("click", () => {
+        void checkConsoleFirmwareLoader();
+    });
+    els.firmwareLoaderAccessKey.addEventListener("input", updateConsoleFirmwareAccessKey);
+    els.firmwareLoaderAccessKey.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            void checkConsoleFirmwareLoader();
+        }
+    });
     els.h3dFileInput.addEventListener("change", selectH3dFile);
     els.h3dUploadButton.addEventListener("click", uploadH3dImage);
     els.wadFileInput.addEventListener("change", selectWadFile);
