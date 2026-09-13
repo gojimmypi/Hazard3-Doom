@@ -111,9 +111,12 @@ the ULX3S 12F flow from the repository root:
 Then run `web/web-server.py`, select the matching ELF, and load it. The browser
 page may be the local page served by that helper or the public GitHub Pages site.
 On the public site, use the **refresh** control next to **Local loader** after
-starting the helper. Do not keep the browser FPGA flasher connected to US1 while
-OpenOCD owns that interface. An already-running GDB session may also own port
-3333; exit it before using the web loader.
+starting the helper. Once the helper reports **Ready**, the page rechecks it every
+five seconds and marks it unavailable if the loopback server stops responding.
+Each status request includes a one-time challenge that the helper must echo, so a
+stale cached response cannot be mistaken for a live helper. Do not keep the browser
+FPGA flasher connected to US1 while OpenOCD owns that interface. An already-running
+GDB session may also own port 3333; exit it before using the web loader.
 
 
 For an additional authorization layer, start the helper with an access key:

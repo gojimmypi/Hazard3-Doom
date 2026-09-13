@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 
 MY_RUFF = os.environ.get("MY_RUFF", "ruff")
@@ -44,8 +45,11 @@ class Hazard3DoomRequestHandler(http.server.SimpleHTTPRequestHandler):
     allowed_origins = DEFAULT_ALLOWED_ORIGINS
     access_key: str | None = None
 
+    def request_path(self) -> str:
+        return urlsplit(self.path).path
+
     def is_api_request(self) -> bool:
-        return self.path in API_PATHS
+        return self.request_path() in API_PATHS
 
     def request_origin_allowed(self) -> bool:
         origin = self.headers.get("Origin")
@@ -62,7 +66,9 @@ class Hazard3DoomRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(payload)))
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", "no-store, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         if self.is_api_request():
             self.send_cors_headers()
         self.end_headers()
@@ -129,22 +135,25 @@ class Hazard3DoomRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:
-        if self.path == "/api/console-firmware/status":
+        if self.request_path() == "/api/console-firmware/status":
             if not self.require_allowed_origin() or not self.require_access_key():
                 return
+            query = parse_qs(urlsplit(self.path).query)
+            challenge = query.get("challenge", [""])[0]
             self.send_json(
                 200,
                 {
                     "available": self.firmware_loader.is_file()
                     and os.access(self.firmware_loader, os.X_OK),
                     "authentication_required": self.access_key is not None,
+                    "challenge": challenge,
                 },
             )
             return
         super().do_GET()
 
     def do_POST(self) -> None:
-        if self.path != "/api/console-firmware/load":
+        if self.request_path() != "/api/console-firmware/load":
             self.send_error(404)
             return
         if not self.require_allowed_origin() or not self.require_access_key():

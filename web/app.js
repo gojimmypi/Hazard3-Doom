@@ -41,6 +41,9 @@ const WAD_MEMORY_PROFILES = {
 };
 const CONSOLE_FIRMWARE_MAX_BYTES = 16 * 1024 * 1024;
 const CONSOLE_FIRMWARE_LOOPBACK_ORIGIN = "http://127.0.0.1:8000";
+const CONSOLE_FIRMWARE_STATUS_TIMEOUT_MS = 8000;
+const CONSOLE_FIRMWARE_HEALTH_TIMEOUT_MS = 2000;
+const CONSOLE_FIRMWARE_HEALTH_INTERVAL_MS = 5000;
 
 const state = {
     port: null,
@@ -70,6 +73,8 @@ const state = {
     consoleFirmwareLoaderAvailable: false,
     consoleFirmwareAccessKey: "",
     consoleFirmwareBusy: false,
+    consoleFirmwareCheckSequence: 0,
+    consoleFirmwareHealthTimer: null,
     serialOperation: null,
     textDecoder: new TextDecoder(),
 };
@@ -405,18 +410,54 @@ async function fetchConsoleFirmwareHelper(path, options = {}) {
     return fetch(`${consoleFirmwareHelperOrigin()}${path}`, requestOptions);
 }
 
-async function checkConsoleFirmwareLoader() {
+function cancelConsoleFirmwareHealthCheck() {
+    if (state.consoleFirmwareHealthTimer !== null) {
+        clearTimeout(state.consoleFirmwareHealthTimer);
+        state.consoleFirmwareHealthTimer = null;
+    }
+}
+
+function scheduleConsoleFirmwareHealthCheck() {
+    cancelConsoleFirmwareHealthCheck();
+    if (!state.consoleFirmwareLoaderAvailable) {
+        return;
+    }
+    state.consoleFirmwareHealthTimer = setTimeout(() => {
+        state.consoleFirmwareHealthTimer = null;
+        void checkConsoleFirmwareLoader({ background: true });
+    }, CONSOLE_FIRMWARE_HEALTH_INTERVAL_MS);
+}
+
+function consoleFirmwareStatusChallenge() {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+async function checkConsoleFirmwareLoader({ background = false } = {}) {
+    const checkSequence = ++state.consoleFirmwareCheckSequence;
+    const challenge = consoleFirmwareStatusChallenge();
+    const controller = new AbortController();
+    const timeoutMs = background
+        ? CONSOLE_FIRMWARE_HEALTH_TIMEOUT_MS
+        : CONSOLE_FIRMWARE_STATUS_TIMEOUT_MS;
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
     state.consoleFirmwareAccessKey = els.firmwareLoaderAccessKey.value;
-    els.firmwareLoaderRefreshButton.disabled = true;
-    els.firmwareLoaderStatus.textContent = "Checking...";
-    els.firmwareLoaderStatus.classList.remove("ok", "error");
-    state.consoleFirmwareLoaderAvailable = false;
-    updateConsoleFirmwareUi();
+    cancelConsoleFirmwareHealthCheck();
+    if (!background) {
+        els.firmwareLoaderRefreshButton.disabled = true;
+        els.firmwareLoaderStatus.textContent = "Checking...";
+        els.firmwareLoaderStatus.classList.remove("ok", "error");
+        state.consoleFirmwareLoaderAvailable = false;
+        updateConsoleFirmwareUi();
+    }
 
     try {
         const response = await fetchConsoleFirmwareHelper(
-            "/api/console-firmware/status",
-            { method: "GET" },
+            `/api/console-firmware/status?challenge=${encodeURIComponent(challenge)}`,
+            { method: "GET", signal: controller.signal },
         );
         let status = {};
         try {
@@ -425,6 +466,11 @@ async function checkConsoleFirmwareLoader() {
             // Keep the HTTP status as the useful diagnostic below.
         }
 
+        if (checkSequence !== state.consoleFirmwareCheckSequence) {
+            return;
+        }
+
+        state.consoleFirmwareLoaderAvailable = false;
         if (response.status === 401 && status.authentication_required === true) {
             els.firmwareLoaderStatus.textContent = state.consoleFirmwareAccessKey
                 ? "Access key rejected"
@@ -432,6 +478,8 @@ async function checkConsoleFirmwareLoader() {
             els.firmwareProgressLabel.textContent = "Enter the local-loader access key and refresh";
         } else if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
+        } else if (status.challenge !== challenge) {
+            throw new Error("Stale local-loader status response");
         } else {
             state.consoleFirmwareLoaderAvailable = status.available === true;
             els.firmwareLoaderStatus.textContent = state.consoleFirmwareLoaderAvailable
@@ -442,18 +490,28 @@ async function checkConsoleFirmwareLoader() {
                 : "Local helper found, but the firmware loader script is unavailable";
         }
     } catch {
+        if (checkSequence !== state.consoleFirmwareCheckSequence) {
+            return;
+        }
+        state.consoleFirmwareLoaderAvailable = false;
         els.firmwareLoaderStatus.textContent = "Unavailable - start web-server.py";
         els.firmwareProgressLabel.textContent =
             "Local helper unavailable; start web-server.py or allow browser loopback access";
     } finally {
-        els.firmwareLoaderStatus.classList.toggle("ok", state.consoleFirmwareLoaderAvailable);
-        els.firmwareLoaderStatus.classList.toggle("error", !state.consoleFirmwareLoaderAvailable);
-        els.firmwareLoaderRefreshButton.disabled = false;
-        updateConsoleFirmwareUi();
+        clearTimeout(timeout);
+        if (checkSequence === state.consoleFirmwareCheckSequence) {
+            els.firmwareLoaderStatus.classList.toggle("ok", state.consoleFirmwareLoaderAvailable);
+            els.firmwareLoaderStatus.classList.toggle("error", !state.consoleFirmwareLoaderAvailable);
+            els.firmwareLoaderRefreshButton.disabled = false;
+            updateConsoleFirmwareUi();
+            scheduleConsoleFirmwareHealthCheck();
+        }
     }
 }
 
 function updateConsoleFirmwareAccessKey() {
+    cancelConsoleFirmwareHealthCheck();
+    state.consoleFirmwareCheckSequence += 1;
     state.consoleFirmwareAccessKey = els.firmwareLoaderAccessKey.value;
     state.consoleFirmwareLoaderAvailable = false;
     els.firmwareLoaderStatus.textContent = "Key changed - refresh";
