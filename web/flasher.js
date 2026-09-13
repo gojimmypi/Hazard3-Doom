@@ -142,6 +142,14 @@
         idName: ""
     };
 
+    function setDisabledReason(button, reason = "") {
+        if (button.disabled && reason) {
+            button.title = reason;
+        } else {
+            button.removeAttribute("title");
+        }
+    }
+
     function setBusy(busy) {
         state.busy = busy;
         els.fileInput.disabled = busy;
@@ -149,6 +157,29 @@
         els.disconnectButton.disabled = busy || !state.transport;
         els.probeButton.disabled = busy || !state.transport;
         els.programButton.disabled = busy || !state.transport || !state.svfText;
+
+        setDisabledReason(
+            els.connectButton,
+            busy ? "Wait for the current FPGA operation to finish." :
+                !webUsbSupported ? "WebUSB is not available in this browser." :
+                    state.transport ? "ULX3S USB is already connected." : "",
+        );
+        setDisabledReason(
+            els.disconnectButton,
+            busy ? "Wait for the current FPGA operation to finish." :
+                !state.transport ? "Connect ULX3S USB first." : "",
+        );
+        setDisabledReason(
+            els.probeButton,
+            busy ? "Wait for the current FPGA operation to finish." :
+                !state.transport ? "Connect ULX3S USB before probing JTAG." : "",
+        );
+        setDisabledReason(
+            els.programButton,
+            busy ? "Wait for the current FPGA operation to finish." :
+                !state.transport ? "Connect ULX3S USB before programming the FPGA." :
+                    !state.svfText ? "Select a .bit or .svf FPGA image first." : "",
+        );
     }
 
     function setProgress(percent, label) {

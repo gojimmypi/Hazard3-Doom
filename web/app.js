@@ -169,6 +169,36 @@ const els = {
 
 const serialSupported = "serial" in navigator;
 
+function setButtonDisabledReason(button, reason = "") {
+    if (!button) {
+        return;
+    }
+    if (button.disabled && reason) {
+        button.title = reason;
+    } else {
+        button.removeAttribute("title");
+    }
+}
+
+function serialOperationDisabledReason() {
+    if (state.consoleFirmwareBusy) {
+        return "Wait for console firmware loading to finish.";
+    }
+    if (state.screenSnip !== null) {
+        return "Wait for the screen capture to finish.";
+    }
+    if (state.serialOperation === "h3d-upload") {
+        return "Wait for the H3D upload to finish.";
+    }
+    if (state.serialOperation === "wad-upload") {
+        return "Wait for the IWAD upload to finish.";
+    }
+    if (state.serialOperation !== null) {
+        return "Wait for the current UART operation to finish.";
+    }
+    return "";
+}
+
 class UartOwnershipError extends Error {
     constructor(message) {
         super(message);
@@ -430,6 +460,7 @@ function updateScreenSnipUi() {
     els.screenSnipButton.disabled = !available;
     els.screenSnipButton.textContent = state.screenSnip !== null ? "Capturing..." : "Screen snip";
     els.screenSnipControl.title = status;
+    els.screenSnipButton.title = status;
     els.screenSnipButton.setAttribute("aria-label", status);
     updateConsoleFirmwareUi();
     updateH3dUploaderUi();
@@ -622,14 +653,29 @@ function updateConsoleFirmwareUi() {
 
     els.firmwareFileInput.disabled = blocked;
     els.firmwareUploadButton.disabled = !ready;
+    let disabledReason = "";
     if (state.consoleFirmwareBusy) {
         els.firmwareUploadButton.textContent = "Loading...";
-    } else if (state.consoleFirmwareLoaderAvailable &&
-        state.consoleFirmwareOpenOcdKnown && !state.consoleFirmwareOpenOcdReady) {
+        disabledReason = "Console firmware loading is already in progress.";
+    } else if (!state.consoleFirmwareLoaderAvailable) {
+        els.firmwareUploadButton.textContent = "Load console firmware";
+        disabledReason = "Start the local web-server.py helper and refresh its status first.";
+    } else if (!state.consoleFirmwareOpenOcdKnown) {
+        els.firmwareUploadButton.textContent = "Load console firmware";
+        disabledReason = "Refresh the local helper status before loading console firmware.";
+    } else if (!state.consoleFirmwareOpenOcdReady) {
         els.firmwareUploadButton.textContent = "Start OpenOCD first";
+        disabledReason = "Start OpenOCD so its GDB server is listening on port 3333.";
+    } else if (state.consoleFirmware === null) {
+        els.firmwareUploadButton.textContent = "Load console firmware";
+        disabledReason = "Select a 32-bit RISC-V ELF console firmware file first.";
+    } else if (blocked) {
+        els.firmwareUploadButton.textContent = "Load console firmware";
+        disabledReason = serialOperationDisabledReason();
     } else {
         els.firmwareUploadButton.textContent = "Load console firmware";
     }
+    setButtonDisabledReason(els.firmwareUploadButton, disabledReason);
 }
 
 function updateConsoleFirmwareOpenOcdStatus() {
@@ -991,6 +1037,7 @@ function updateUploaderUartRequirement(container, title, detail, button, protoco
         detail.textContent = "Use a current Chromium-based browser to connect the UART.";
         button.textContent = "UART unavailable";
         button.disabled = true;
+        setButtonDisabledReason(button, "Web Serial is not available in this browser.");
         return;
     }
 
@@ -999,6 +1046,7 @@ function updateUploaderUartRequirement(container, title, detail, button, protoco
         detail.textContent = `${protocol} can use the active Web Serial connection.`;
         button.textContent = "Connected";
         button.disabled = true;
+        setButtonDisabledReason(button, "UART is already connected.");
         return;
     }
 
@@ -1007,6 +1055,7 @@ function updateUploaderUartRequirement(container, title, detail, button, protoco
         detail.textContent = "Complete the browser serial-port chooser and wait for the port to open.";
         button.textContent = "Connecting...";
         button.disabled = true;
+        setButtonDisabledReason(button, "A UART connection is already in progress.");
         return;
     }
 
@@ -1015,6 +1064,7 @@ function updateUploaderUartRequirement(container, title, detail, button, protoco
         detail.textContent = issue.detail;
         button.textContent = "Retry UART";
         button.disabled = busy;
+        setButtonDisabledReason(button, serialOperationDisabledReason());
         return;
     }
 
@@ -1023,6 +1073,7 @@ function updateUploaderUartRequirement(container, title, detail, button, protoco
         detail.textContent = "Another Device Tool page from this site reports that it owns the UART. Disconnect it there, then retry.";
         button.textContent = "Retry UART";
         button.disabled = busy;
+        setButtonDisabledReason(button, serialOperationDisabledReason());
         return;
     }
 
@@ -1033,6 +1084,7 @@ function updateUploaderUartRequirement(container, title, detail, button, protoco
     }
     button.textContent = "Connect UART";
     button.disabled = busy;
+    setButtonDisabledReason(button, serialOperationDisabledReason());
 }
 
 function updateH3dUploaderUi() {
@@ -1053,19 +1105,26 @@ function updateH3dUploaderUi() {
     els.h3dLaunchAfterUpload.disabled = uploading || state.consoleFirmwareBusy;
     els.h3dUploadButton.disabled = !ready;
 
+    let disabledReason = "";
     if (uploading) {
         els.h3dUploadButton.textContent = "Uploading...";
+        disabledReason = "H3D upload is already in progress.";
     } else if (!serialSupported) {
         els.h3dUploadButton.textContent = "Web Serial unavailable";
+        disabledReason = "Web Serial is not available in this browser.";
     } else if (!state.port) {
         els.h3dUploadButton.textContent = "Connect UART first";
+        disabledReason = "Connect the UART before uploading an H3D image.";
     } else if (!state.h3dImage) {
         els.h3dUploadButton.textContent = "Select H3D image";
+        disabledReason = "Select a packaged .h3d image first.";
     } else if (!ready) {
         els.h3dUploadButton.textContent = "UART busy";
+        disabledReason = serialOperationDisabledReason();
     } else {
         els.h3dUploadButton.textContent = "Upload H3D";
     }
+    setButtonDisabledReason(els.h3dUploadButton, disabledReason);
 }
 
 function setSerialOperation(operation) {
@@ -1391,19 +1450,26 @@ function updateWadUploaderUi() {
     els.wadLaunchAfterUpload.disabled = uploading || state.consoleFirmwareBusy;
     els.wadUploadButton.disabled = !ready;
 
+    let disabledReason = "";
     if (uploading) {
         els.wadUploadButton.textContent = "Uploading...";
+        disabledReason = "IWAD upload is already in progress.";
     } else if (!serialSupported) {
         els.wadUploadButton.textContent = "Web Serial unavailable";
+        disabledReason = "Web Serial is not available in this browser.";
     } else if (!state.port) {
         els.wadUploadButton.textContent = "Connect UART first";
+        disabledReason = "Connect the UART before uploading an IWAD.";
     } else if (!state.wadImage) {
         els.wadUploadButton.textContent = "Select IWAD";
+        disabledReason = "Select a valid .wad file first.";
     } else if (!ready) {
         els.wadUploadButton.textContent = "UART busy";
+        disabledReason = serialOperationDisabledReason();
     } else {
         els.wadUploadButton.textContent = "Upload IWAD";
     }
+    setButtonDisabledReason(els.wadUploadButton, disabledReason);
 }
 
 function refreshWadImage() {
@@ -1623,6 +1689,47 @@ function setConnectionUi(connected, detail = "") {
     els.reconnectButton.disabled = connected || state.authorizedPorts.length === 0 ||
         state.uartConnecting || state.serialOperation !== null || state.consoleFirmwareBusy;
 
+    let connectDisabledReason = "";
+    if (state.uartConnecting) {
+        connectDisabledReason = "A UART connection is already in progress.";
+    } else if (state.consoleFirmwareBusy) {
+        connectDisabledReason = "Wait for console firmware loading to finish.";
+    } else if (state.serialOperation !== null) {
+        connectDisabledReason = serialOperationDisabledReason();
+    }
+    setButtonDisabledReason(els.connectButton, connectDisabledReason);
+
+    let reconnectDisabledReason = "";
+    if (connected) {
+        reconnectDisabledReason = "UART is already connected. Disconnect it before reconnecting an authorized port.";
+    } else if (state.uartConnecting) {
+        reconnectDisabledReason = "A UART connection is already in progress.";
+    } else if (state.serialOperation !== null || state.consoleFirmwareBusy) {
+        reconnectDisabledReason = serialOperationDisabledReason();
+    } else if (state.authorizedPorts.length === 0) {
+        reconnectDisabledReason = "No previously authorized serial ports are available. Use Connect to choose a port.";
+    }
+    setButtonDisabledReason(els.reconnectButton, reconnectDisabledReason);
+
+    const interactiveDisabledReason = connected
+        ? serialOperationDisabledReason()
+        : "Connect the UART first.";
+    setButtonDisabledReason(els.sendButton, interactiveDisabledReason);
+    setButtonDisabledReason(els.macroSendButton, interactiveDisabledReason);
+    document.querySelectorAll(".command-button").forEach((button) => {
+        if (!button.dataset.enabledTitleCaptured) {
+            button.dataset.enabledTitle = button.getAttribute("title") || "";
+            button.dataset.enabledTitleCaptured = "1";
+        }
+        if (button.disabled) {
+            button.title = interactiveDisabledReason;
+        } else if (button.dataset.enabledTitle) {
+            button.title = button.dataset.enabledTitle;
+        } else {
+            button.removeAttribute("title");
+        }
+    });
+
     if (detail) {
         els.portDetails.textContent = detail;
     } else if (!connected) {
@@ -1779,6 +1886,17 @@ async function refreshAuthorizedPorts(preferredPort = null) {
         state.uartConnecting;
     els.reconnectButton.disabled = Boolean(state.port) || ports.length === 0 ||
         state.uartConnecting || state.serialOperation !== null || state.consoleFirmwareBusy;
+    let reconnectDisabledReason = "";
+    if (state.port) {
+        reconnectDisabledReason = "UART is already connected. Disconnect it before reconnecting an authorized port.";
+    } else if (state.uartConnecting) {
+        reconnectDisabledReason = "A UART connection is already in progress.";
+    } else if (state.serialOperation !== null || state.consoleFirmwareBusy) {
+        reconnectDisabledReason = serialOperationDisabledReason();
+    } else if (ports.length === 0) {
+        reconnectDisabledReason = "No previously authorized serial ports are available. Use Connect to choose a port.";
+    }
+    setButtonDisabledReason(els.reconnectButton, reconnectDisabledReason);
     updateAuthorizedPortDetails();
     return ports;
 }
