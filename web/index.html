@@ -65,10 +65,10 @@
                             ULX3S US1 / JTAG
                         </span>
                         <span class="flasher-header-actions" aria-label="FPGA flasher actions">
-                            <button id="flasherConnectButton" type="button" class="secondary compact-action-button" title="Connect to ULX3S USB JTAG (requires WinUSB on Windows)">Connect ULX3S USB</button>
-                            <button id="flasherProbeButton" type="button" class="secondary compact-action-button" disabled title="Probe JTAG">Probe JTAG</button>
-                            <button id="flasherProgramButton" type="button" class="primary compact-action-button" disabled title="Program FPGA SRAM">Program FPGA SRAM</button>
-                            <button id="flasherDisconnectButton" type="button" class="secondary compact-action-button" disabled title="Disconnect USB" >Disconnect USB</button>
+                            <button id="flasherConnectButton" type="button" class="secondary compact-action-button" data-enabled-title="Connect to ULX3S USB JTAG (requires WinUSB on Windows)." title="Connect to ULX3S USB JTAG (requires WinUSB on Windows).">Connect ULX3S USB</button>
+                            <button id="flasherProbeButton" type="button" class="secondary compact-action-button" data-enabled-title="Probe the FPGA JTAG chain and identify the connected ECP5 device." disabled title="Connect ULX3S USB before probing JTAG.">Probe JTAG</button>
+                            <button id="flasherProgramButton" type="button" class="primary compact-action-button" data-enabled-title="Program the selected FPGA image into volatile ECP5 SRAM." disabled title="Connect ULX3S USB and select an FPGA image before programming.">Program FPGA SRAM</button>
+                            <button id="flasherDisconnectButton" type="button" class="secondary compact-action-button" data-enabled-title="Release the ULX3S WebUSB/JTAG connection." disabled title="ULX3S USB is not connected.">Disconnect USB</button>
                         </span>
                     </summary>
                     <div class="flasher-body">
@@ -82,7 +82,7 @@
                                 <strong id="flasherDeviceStatus">Not connected</strong>
                                 <span>FPGA</span>
                                 <strong id="flasherIdcode">Not probed</strong>
-                                <a href="https://hazard3-doom.readthedocs.io/en/latest/user-guide/web-flasher.html" id="firmwareLoaderDocsURL">Docs</a>
+                                <a href="https://hazard3-doom.readthedocs.io/en/latest/user-guide/web-flasher.html" id="flasherDocsURL">Docs</a>
                             </div>
                         </div>
 
@@ -125,7 +125,7 @@
                                     </svg>
                                     <span id="flasherCopyLogButtonLabel">Copy log</span>
                                 </button>
-                                <button id="flasherClearLogButton" type="button" class="secondary">Clear log</button>
+                                <button id="flasherClearLogButton" type="button" class="secondary" title="Clear the FPGA flasher log.">Clear log</button>
                             </div>
                         </div>
                         <pre id="flasherLog" class="flasher-log" tabindex="0" aria-live="polite" aria-label="FPGA flasher status log"></pre>
@@ -141,7 +141,7 @@
                             Local GDB / OpenOCD
                         </span>
                         <span class="flasher-header-actions" aria-label="Console firmware actions">
-                            <button id="firmwareUploadButton" type="button" class="primary compact-action-button" disabled>Load console firmware</button>
+                            <button id="firmwareUploadButton" type="button" class="primary compact-action-button" data-enabled-title="Load the selected console ELF through the local GDB/OpenOCD helper." disabled>Load console firmware</button>
                         </span>
                     </summary>
                     <div class="flasher-body">
@@ -155,7 +155,7 @@
                                 <span>
                                     <strong id="firmwareLoaderStatus">Checking...</strong>
                                     (<a id="firmwareLoaderSourceURL" href="https://github.com/ulx3s/Hazard3-Doom/blob/main/web/web-server.py">source</a>
-                                    | <button id="firmwareLoaderRefreshButton" class="inline-link-button" type="button">refresh</button>)
+                                    | <button id="firmwareLoaderRefreshButton" class="inline-link-button" type="button" title="Refresh local loader and OpenOCD status.">refresh</button>)
                                 </span>
                                 <span>Access key</span>
                                 <input id="firmwareLoaderAccessKey" class="firmware-loader-access-key" type="password" autocomplete="off" spellcheck="false" placeholder="Optional local-loader key" aria-label="Local loader access key">
@@ -198,10 +198,10 @@
                 <details id="h3dUploader" class="flasher-section">
                     <summary>
                         <span class="summary-title" title="Click to toggle visibility of this entire section.">Doom H3D uploader</span>
-                        <span class="summary-tag">UART / H3L</span>
+                        <span class="summary-tag" title="Uses Web Serial and the Hazard3 H3L protocol to upload a packaged Doom image over UART.">UART / H3L</span>
                         <span class="flasher-header-actions" aria-label="H3D uploader actions">
-                            <button id="h3dConnectUartButton" type="button" class="primary compact-action-button">Connect UART</button>
-                            <button id="h3dUploadButton" type="button" class="primary compact-action-button" disabled>Upload H3D</button>
+                            <button id="h3dConnectUartButton" type="button" class="primary compact-action-button" data-enabled-title="Connect the Web Serial UART used for H3L uploads.">Connect UART</button>
+                            <button id="h3dUploadButton" type="button" class="primary compact-action-button" data-enabled-title="Upload the selected packaged H3D image over UART using the H3L protocol." disabled>Upload H3D</button>
                         </span>
                     </summary>
                     <div class="flasher-body">
@@ -262,8 +262,8 @@
                             UART / H3W
                         </span>
                         <span class="flasher-header-actions" aria-label="IWAD uploader actions">
-                            <button id="wadConnectUartButton" type="button" class="primary compact-action-button">Connect UART</button>
-                            <button id="wadUploadButton" type="button" class="primary compact-action-button" disabled>Upload IWAD</button>
+                            <button id="wadConnectUartButton" type="button" class="primary compact-action-button" data-enabled-title="Connect the Web Serial UART used for H3W uploads.">Connect UART</button>
+                            <button id="wadUploadButton" type="button" class="primary compact-action-button" data-enabled-title="Upload the selected Doom IWAD over UART using the H3W protocol." disabled>Upload IWAD</button>
                         </span>
                     </summary>
                     <div class="flasher-body">
@@ -340,8 +340,8 @@
                 </div>
                 <span class="serial-header-actions" aria-label="Serial connection actions">
                     <span id="serialPanelStatus" class="section-status">UART disconnected</span>
-                    <button id="reconnectButton" type="button" class="secondary compact-action-button">Reconnect</button>
-                    <button id="connectButton" type="button" class="primary compact-action-button">Connect</button>
+                    <button id="reconnectButton" type="button" class="secondary compact-action-button" data-enabled-title="Reconnect a previously authorized Web Serial UART port.">Reconnect</button>
+                    <button id="connectButton" type="button" class="primary compact-action-button" data-enabled-title="Connect to or disconnect from the UART using Web Serial.">Connect</button>
                 </span>
                 <span class="summary-tag serial-summary-tag" title="Direct browser connection using the Web Serial API">Web Serial</span>
             </summary>
@@ -427,7 +427,7 @@
                     <span id="screenSnipControl" class="screen-snip-control" title="Screen snip unavailable: connect to the board first.">
                         <button id="screenSnipButton" type="button" class="secondary" disabled>Screen snip</button>
                     </span>
-                    <button id="clearButton" type="button" class="secondary">Clear</button>
+                    <button id="clearButton" type="button" class="secondary" title="Clear the UART terminal display.">Clear</button>
                 </div>
             </div>
 
@@ -436,7 +436,7 @@
             <form id="commandForm" class="command-row">
                 <span class="prompt-mark" aria-hidden="true">&gt;</span>
                 <input id="commandInput" type="text" autocomplete="off" spellcheck="false" placeholder="Enter Hazard3 monitor command" disabled>
-                <button id="sendButton" type="submit" class="primary" disabled>Send</button>
+                <button id="sendButton" type="submit" class="primary" data-enabled-title="Send the command using the selected line ending." disabled>Send</button>
             </form>
 
             <div class="terminal-footer">
@@ -458,23 +458,23 @@
                 <details class="command-group" open>
                     <summary>Monitor</summary>
                     <div class="button-grid">
-                        <button type="button" class="command-button" data-command="help">Help <code>h</code></button>
-                        <button type="button" class="command-button" data-control="enter">Enter <code>CR/LF</code></button>
-                        <button type="button" class="command-button danger-soft" data-control="ctrl-c">Ctrl-C <code>0x03</code></button>
-                        <button type="button" class="command-button danger-soft" data-control="ctrl-x">Stop Doom <code>Ctrl-X</code></button>
+                        <button type="button" class="command-button" data-command="help" title="Request the resident monitor help menu.">Help <code>h</code></button>
+                        <button type="button" class="command-button" data-control="enter" title="Send Enter using CR/LF.">Enter <code>CR/LF</code></button>
+                        <button type="button" class="command-button danger-soft" data-control="ctrl-c" title="Send Ctrl-C (0x03) to the UART.">Ctrl-C <code>0x03</code></button>
+                        <button type="button" class="command-button danger-soft" data-control="ctrl-x" title="Send Ctrl-X to stop Doom and return to the resident monitor.">Stop Doom <code>Ctrl-X</code></button>
                         <button type="button" class="command-button" data-raw="c" title="Use from the resident monitor after stopping Doom">SD status / files <code>c</code></button>
-                        <button type="button" class="command-button" data-control="break">Break <code>150 ms</code></button>
+                        <button type="button" class="command-button" data-control="break" title="Send a 150 ms serial break condition.">Break <code>150 ms</code></button>
                     </div>
                 </details>
 
                 <details class="command-group" open>
                     <summary>SAO / I2C</summary>
                     <div class="button-grid">
-                        <button type="button" class="command-button" data-command="sao info">SAO info <code>sao info</code></button>
-                        <button type="button" class="command-button" data-command="sao scan">SAO scan <code>sao scan</code></button>
-                        <button type="button" class="command-button" data-command="sao recover">SAO recover <code>sao recover</code></button>
-                        <button type="button" class="command-button" data-command="sao gui">SAO GUI <code>sao gui</code></button>
-                        <button type="button" class="command-button" data-command="i2c gui">I2C GUI <code>i2c gui</code></button>
+                        <button type="button" class="command-button" data-command="sao info" title="Show information about the connected SAO.">SAO info <code>sao info</code></button>
+                        <button type="button" class="command-button" data-command="sao scan" title="Scan for SAO devices.">SAO scan <code>sao scan</code></button>
+                        <button type="button" class="command-button" data-command="sao recover" title="Run the SAO recovery command.">SAO recover <code>sao recover</code></button>
+                        <button type="button" class="command-button" data-command="sao gui" title="Open the resident monitor SAO GUI.">SAO GUI <code>sao gui</code></button>
+                        <button type="button" class="command-button" data-command="i2c gui" title="Open the resident monitor I2CDriver-style GUI.">I2C GUI <code>i2c gui</code></button>
                     </div>
                 </details>
 
@@ -482,16 +482,16 @@
                     <summary>I2CDriver GUI keys</summary>
                     <p class="group-hint">Single-byte controls for the interactive <code>i2c gui</code> screen; no CR/LF is appended.</p>
                     <div class="button-grid raw-key-grid">
-                        <button type="button" class="command-button" data-raw="S">Scan <code>S</code></button>
-                        <button type="button" class="command-button" data-raw="P">Probe <code>P</code></button>
-                        <button type="button" class="command-button" data-raw="R">Read <code>R</code></button>
-                        <button type="button" class="command-button" data-raw="W">Write <code>W</code></button>
-                        <button type="button" class="command-button" data-raw="X">Recover <code>X</code></button>
-                        <button type="button" class="command-button" data-raw="1">100 kHz <code>1</code></button>
-                        <button type="button" class="command-button" data-raw="4">400 kHz <code>4</code></button>
-                        <button type="button" class="command-button" data-raw="H">Resolution <code>H</code></button>
-                        <button type="button" class="command-button" data-raw="C">Clear <code>C</code></button>
-                        <button type="button" class="command-button danger-soft" data-raw="Q">Exit GUI <code>Q</code></button>
+                        <button type="button" class="command-button" data-raw="S" title="Send the I2C GUI Scan key (S).">Scan <code>S</code></button>
+                        <button type="button" class="command-button" data-raw="P" title="Send the I2C GUI Probe key (P).">Probe <code>P</code></button>
+                        <button type="button" class="command-button" data-raw="R" title="Send the I2C GUI Read key (R).">Read <code>R</code></button>
+                        <button type="button" class="command-button" data-raw="W" title="Send the I2C GUI Write key (W).">Write <code>W</code></button>
+                        <button type="button" class="command-button" data-raw="X" title="Send the I2C GUI Recover key (X).">Recover <code>X</code></button>
+                        <button type="button" class="command-button" data-raw="1" title="Set the I2C GUI bus rate to 100 kHz.">100 kHz <code>1</code></button>
+                        <button type="button" class="command-button" data-raw="4" title="Set the I2C GUI bus rate to 400 kHz.">400 kHz <code>4</code></button>
+                        <button type="button" class="command-button" data-raw="H" title="Show or change the I2C GUI display resolution.">Resolution <code>H</code></button>
+                        <button type="button" class="command-button" data-raw="C" title="Clear the I2C GUI display.">Clear <code>C</code></button>
+                        <button type="button" class="command-button danger-soft" data-raw="Q" title="Exit the I2C GUI and return to the monitor.">Exit GUI <code>Q</code></button>
                     </div>
                 </details>
 
@@ -501,7 +501,7 @@
                 <label for="macroInput">One-click custom command</label>
                 <div class="macro-controls">
                     <input id="macroInput" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. sao probe 0x50">
-                    <button id="macroSendButton" type="button" class="secondary" disabled>Send custom</button>
+                    <button id="macroSendButton" type="button" class="secondary" data-enabled-title="Send the saved custom monitor command using the selected line ending." disabled>Send custom</button>
                 </div>
                 <p class="hint">The custom command is saved only in this browser.</p>
             </div>
@@ -513,7 +513,7 @@
         <span>UART and FPGA programming data stay between this browser and the selected devices; console firmware uses the local loader.</span>
     </footer>
 
-    <script src="app.js?v=20260913-r7" defer></script>
-    <script src="flasher.js?v=20260913-r2" defer></script>
+    <script src="app.js?v=20260913-r8" defer></script>
+    <script src="flasher.js?v=20260913-r3" defer></script>
 </body>
 </html>

@@ -145,6 +145,8 @@
     function setDisabledReason(button, reason = "") {
         if (button.disabled && reason) {
             button.title = reason;
+        } else if (button.dataset.enabledTitle) {
+            button.title = button.dataset.enabledTitle;
         } else {
             button.removeAttribute("title");
         }
