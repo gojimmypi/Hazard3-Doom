@@ -93,9 +93,12 @@ allowlist, supports browser private-network preflights, and deletes the temporar
 copy after the loader exits.
 
 By default the loopback API allows the public origins
-`https://gojimmypi.github.io` and `https://ulx3s.github.io`. Additional exact
-origins can be added with repeated `--allow-origin` options. Wildcard CORS is
-intentionally rejected.
+`https://gojimmypi.github.io` and `https://ulx3s.github.io`, plus the helper's
+own exact loopback origins on its configured port (`http://127.0.0.1:<port>`
+and `http://localhost:<port>`). This permits the same helper to serve the local
+page and accept its ELF upload without broadening access to arbitrary localhost
+ports. Additional exact origins can be added with repeated `--allow-origin`
+options. Wildcard CORS is intentionally rejected.
 
 The firmware does not need to listen for its own replacement. OpenOCD talks to
 the Hazard3 debug module; GDB halts the processor, writes the ELF loadable

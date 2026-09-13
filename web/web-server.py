@@ -20,6 +20,7 @@ DEFAULT_ALLOWED_ORIGINS = frozenset(
     {
         "https://gojimmypi.github.io",
         "https://ulx3s.github.io",
+        # See below fir allowed_origins.update based on the port argument.
     }
 )
 API_PATHS = frozenset(
@@ -350,6 +351,13 @@ def main() -> None:
             parser.error("--access-key requires a non-empty key")
 
     allowed_origins = set(DEFAULT_ALLOWED_ORIGINS)
+    loopback_port = "" if args.port == 80 else f":{args.port}"
+    allowed_origins.update(
+        {
+            f"http://127.0.0.1{loopback_port}",
+            f"http://localhost{loopback_port}",
+        }
+    )
     for origin in args.allow_origin:
         if origin == "*":
             parser.error("--allow-origin '*' is not permitted")
@@ -382,7 +390,7 @@ def main() -> None:
     print("Console firmware loader:")
     print(f"  {firmware_loader}")
     print(f"  access key: {'required' if access_key is not None else 'disabled'}")
-    print("  allowed public origins:")
+    print("  allowed API origins:")
     for origin in sorted(allowed_origins):
         print(f"    {origin}")
     print()
