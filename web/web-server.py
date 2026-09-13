@@ -10,17 +10,20 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import socket
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 
+OPENOCD_GDB_HOST = "127.0.0.1"
+OPENOCD_GDB_PORT = 3333
 MY_RUFF = os.environ.get("MY_RUFF", "ruff")
 MAX_FIRMWARE_BYTES = 16 * 1024 * 1024
 DEFAULT_ALLOWED_ORIGINS = frozenset(
     {
         "https://gojimmypi.github.io",
         "https://ulx3s.github.io",
-        # See below fir allowed_origins.update based on the port argument.
+        # See below for allowed_origins.update based on the port argument.
     }
 )
 API_PATHS = frozenset(
@@ -300,6 +303,15 @@ def check_python_script() -> None:
             file=sys.stderr,
         )
 
+def openocd_gdb_port_is_ready() -> bool:
+    try:
+        with socket.create_connection(
+            (OPENOCD_GDB_HOST, OPENOCD_GDB_PORT),
+            timeout=0.25,
+        ):
+            return True
+    except OSError:
+        return False
 
 def main() -> None:
     check_python_script()
@@ -390,7 +402,24 @@ def main() -> None:
     print("Console firmware loader:")
     print(f"  {firmware_loader}")
     print(f"  access key: {'required' if access_key is not None else 'disabled'}")
+
+    if openocd_gdb_port_is_ready():
+        print(
+            "  OpenOCD: ready - GDB server detected on "
+            f"{OPENOCD_GDB_HOST}:{OPENOCD_GDB_PORT}"
+        )
+    else:
+        print(
+            "  OpenOCD: WARNING - no GDB server detected on "
+            f"{OPENOCD_GDB_HOST}:{OPENOCD_GDB_PORT}"
+        )
+        print(
+            "           Console ELF loading will not work until "
+            "OpenOCD is started."
+        )
+
     print("  allowed API origins:")
+
     for origin in sorted(allowed_origins):
         print(f"    {origin}")
     print()
