@@ -71,6 +71,8 @@ const state = {
     serialResponseWaiter: null,
     consoleFirmware: null,
     consoleFirmwareLoaderAvailable: false,
+    consoleFirmwareOpenOcdKnown: false,
+    consoleFirmwareOpenOcdReady: false,
     consoleFirmwareAccessKey: "",
     consoleFirmwareBusy: false,
     consoleFirmwareCheckSequence: 0,
@@ -110,6 +112,7 @@ const els = {
     h3dLaunchAfterUpload: document.getElementById("h3dLaunchAfterUpload"),
     h3dProgress: document.getElementById("h3dProgress"),
     h3dProgressLabel: document.getElementById("h3dProgressLabel"),
+    h3dUploadDiagnostic: document.getElementById("h3dUploadDiagnostic"),
     h3dUartRequirement: document.getElementById("h3dUartRequirement"),
     h3dUartRequirementTitle: document.getElementById("h3dUartRequirementTitle"),
     h3dUartRequirementDetail: document.getElementById("h3dUartRequirementDetail"),
@@ -123,11 +126,13 @@ const els = {
     wadLaunchAfterUpload: document.getElementById("wadLaunchAfterUpload"),
     wadProgress: document.getElementById("wadProgress"),
     wadProgressLabel: document.getElementById("wadProgressLabel"),
+    wadUploadDiagnostic: document.getElementById("wadUploadDiagnostic"),
     wadUartRequirement: document.getElementById("wadUartRequirement"),
     wadUartRequirementTitle: document.getElementById("wadUartRequirementTitle"),
     wadUartRequirementDetail: document.getElementById("wadUartRequirementDetail"),
     wadConnectUartButton: document.getElementById("wadConnectUartButton"),
     firmwareLoaderStatus: document.getElementById("firmwareLoaderStatus"),
+    firmwareOpenOcdStatus: document.getElementById("firmwareOpenOcdStatus"),
     firmwareLoaderRefreshButton: document.getElementById("firmwareLoaderRefreshButton"),
     firmwareLoaderAccessKey: document.getElementById("firmwareLoaderAccessKey"),
     firmwareFileInput: document.getElementById("firmwareFileInput"),
@@ -373,13 +378,67 @@ function updateConsoleFirmwareUi() {
     const blocked = state.consoleFirmwareBusy ||
         state.serialOperation !== null || state.screenSnip !== null;
     const ready = state.consoleFirmwareLoaderAvailable &&
+        state.consoleFirmwareOpenOcdReady &&
         state.consoleFirmware !== null && !blocked;
 
     els.firmwareFileInput.disabled = blocked;
     els.firmwareUploadButton.disabled = !ready;
-    els.firmwareUploadButton.textContent = state.consoleFirmwareBusy
-        ? "Loading..."
-        : "Load console firmware";
+    if (state.consoleFirmwareBusy) {
+        els.firmwareUploadButton.textContent = "Loading...";
+    } else if (state.consoleFirmwareLoaderAvailable &&
+        state.consoleFirmwareOpenOcdKnown && !state.consoleFirmwareOpenOcdReady) {
+        els.firmwareUploadButton.textContent = "Start OpenOCD first";
+    } else {
+        els.firmwareUploadButton.textContent = "Load console firmware";
+    }
+}
+
+function updateConsoleFirmwareOpenOcdStatus() {
+    els.firmwareOpenOcdStatus.classList.remove("ok", "error");
+    if (!state.consoleFirmwareLoaderAvailable) {
+        els.firmwareOpenOcdStatus.textContent = "Unknown - local helper unavailable";
+        return;
+    }
+    if (!state.consoleFirmwareOpenOcdKnown) {
+        els.firmwareOpenOcdStatus.textContent = "Unknown - refresh local helper";
+        return;
+    }
+    if (state.consoleFirmwareOpenOcdReady) {
+        els.firmwareOpenOcdStatus.textContent = "Ready - GDB server on port 3333";
+        els.firmwareOpenOcdStatus.classList.add("ok");
+    } else {
+        els.firmwareOpenOcdStatus.textContent = "Not detected on port 3333 - start OpenOCD";
+        els.firmwareOpenOcdStatus.classList.add("error");
+    }
+}
+
+function clearUploadDiagnostic(element) {
+    element.hidden = true;
+    element.textContent = "";
+}
+
+function showMonitorUploadDiagnostic(element, protocol) {
+    let message = `${protocol} did not receive READY from the resident monitor. ` +
+        "Confirm that the Hazard3 boot monitor is running and waiting at the > prompt. ";
+
+    if (state.consoleFirmwareLoaderAvailable && state.consoleFirmwareOpenOcdKnown) {
+        if (state.consoleFirmwareOpenOcdReady) {
+            message += "OpenOCD is detected on 127.0.0.1:3333. If the monitor is not running, " +
+                "use the Console firmware uploader above to load or reload hazard3-boot-monitor.elf, " +
+                "then retry from the > prompt.";
+        } else {
+            message += "OpenOCD is not detected on 127.0.0.1:3333. If the console firmware has not " +
+                "already been loaded, start OpenOCD with the matching board configuration, use the " +
+                "Console firmware uploader above to load hazard3-boot-monitor.elf, then retry. " +
+                "OpenOCD does not need to remain running after the monitor has been loaded.";
+        }
+    } else {
+        message += "If the monitor has not already been loaded, start web-server.py and OpenOCD, " +
+            "then use the Console firmware uploader above to load hazard3-boot-monitor.elf.";
+    }
+
+    element.textContent = message;
+    element.hidden = false;
 }
 
 function appendFirmwareLog(text) {
@@ -459,6 +518,9 @@ async function checkConsoleFirmwareLoader({ background = false } = {}) {
         els.firmwareLoaderStatus.textContent = "Checking...";
         els.firmwareLoaderStatus.classList.remove("ok", "error");
         state.consoleFirmwareLoaderAvailable = false;
+        state.consoleFirmwareOpenOcdKnown = false;
+        state.consoleFirmwareOpenOcdReady = false;
+        updateConsoleFirmwareOpenOcdStatus();
         updateConsoleFirmwareUi();
     }
 
@@ -490,18 +552,28 @@ async function checkConsoleFirmwareLoader({ background = false } = {}) {
             throw new Error("Stale local-loader status response");
         } else {
             state.consoleFirmwareLoaderAvailable = status.available === true;
+            state.consoleFirmwareOpenOcdKnown = typeof status.openocd_gdb_ready === "boolean";
+            state.consoleFirmwareOpenOcdReady = status.openocd_gdb_ready === true;
             els.firmwareLoaderStatus.textContent = state.consoleFirmwareLoaderAvailable
                 ? "Ready"
                 : "Helper ready - loader script unavailable";
-            els.firmwareProgressLabel.textContent = state.consoleFirmwareLoaderAvailable
-                ? "Idle"
-                : "Local helper found, but the firmware loader script is unavailable";
+            if (!state.consoleFirmwareLoaderAvailable) {
+                els.firmwareProgressLabel.textContent =
+                    "Local helper found, but the firmware loader script is unavailable";
+            } else if (state.consoleFirmwareOpenOcdKnown && !state.consoleFirmwareOpenOcdReady) {
+                els.firmwareProgressLabel.textContent =
+                    "OpenOCD not detected on 127.0.0.1:3333; start OpenOCD before loading the ELF";
+            } else {
+                els.firmwareProgressLabel.textContent = "Idle";
+            }
         }
     } catch {
         if (checkSequence !== state.consoleFirmwareCheckSequence) {
             return;
         }
         state.consoleFirmwareLoaderAvailable = false;
+        state.consoleFirmwareOpenOcdKnown = false;
+        state.consoleFirmwareOpenOcdReady = false;
         els.firmwareLoaderStatus.textContent = "Unavailable - start web-server.py";
         els.firmwareProgressLabel.textContent =
             "Local helper unavailable; start web-server.py or allow browser loopback access";
@@ -511,6 +583,7 @@ async function checkConsoleFirmwareLoader({ background = false } = {}) {
             els.firmwareLoaderStatus.classList.toggle("ok", state.consoleFirmwareLoaderAvailable);
             els.firmwareLoaderStatus.classList.toggle("error", !state.consoleFirmwareLoaderAvailable);
             els.firmwareLoaderRefreshButton.disabled = false;
+            updateConsoleFirmwareOpenOcdStatus();
             updateConsoleFirmwareUi();
             scheduleConsoleFirmwareHealthCheck();
         }
@@ -522,10 +595,13 @@ function updateConsoleFirmwareAccessKey() {
     state.consoleFirmwareCheckSequence += 1;
     state.consoleFirmwareAccessKey = els.firmwareLoaderAccessKey.value;
     state.consoleFirmwareLoaderAvailable = false;
+    state.consoleFirmwareOpenOcdKnown = false;
+    state.consoleFirmwareOpenOcdReady = false;
     els.firmwareLoaderStatus.textContent = "Key changed - refresh";
     els.firmwareLoaderStatus.classList.remove("ok");
     els.firmwareLoaderStatus.classList.add("error");
     els.firmwareProgressLabel.textContent = "Refresh the local-loader check";
+    updateConsoleFirmwareOpenOcdStatus();
     updateConsoleFirmwareUi();
 }
 
@@ -562,7 +638,7 @@ async function selectConsoleFirmwareFile() {
 
 async function loadConsoleFirmware() {
     const firmware = state.consoleFirmware;
-    if (!state.consoleFirmwareLoaderAvailable || !firmware ||
+    if (!state.consoleFirmwareLoaderAvailable || !state.consoleFirmwareOpenOcdReady || !firmware ||
         state.consoleFirmwareBusy || state.serialOperation !== null || state.screenSnip !== null) {
         return;
     }
@@ -790,6 +866,7 @@ async function selectH3dFile() {
     els.h3dFileDetails.textContent = "";
     els.h3dProgress.value = 0;
     els.h3dProgressLabel.textContent = "Idle";
+    clearUploadDiagnostic(els.h3dUploadDiagnostic);
 
     const file = els.h3dFileInput.files?.[0];
     if (!file) {
@@ -840,6 +917,7 @@ async function uploadH3dImage() {
     setSerialOperation("h3d-upload");
     els.h3dProgress.value = 0;
     els.h3dProgressLabel.textContent = "Starting monitor loader...";
+    clearUploadDiagnostic(els.h3dUploadDiagnostic);
     appendSystem(
         `H3D upload: ${image.fileName}, payload=${image.imageBytes.toLocaleString()} bytes, ` +
         `CRC32=${formatHex32(image.payloadCrc32)}.`);
@@ -911,6 +989,9 @@ async function uploadH3dImage() {
         }
     } catch (error) {
         els.h3dProgressLabel.textContent = `Failed: ${error.message}`;
+        if (error.message === "timed out waiting for H3L READY") {
+            showMonitorUploadDiagnostic(els.h3dUploadDiagnostic, "H3L");
+        }
         appendSystem(
             `H3D upload failed: ${error.message}. ` +
             "Make sure the resident monitor prompt is active; stop Doom before retrying.");
@@ -1087,6 +1168,7 @@ async function selectWadFile() {
     els.wadFileDetails.textContent = "";
     els.wadProgress.value = 0;
     els.wadProgressLabel.textContent = "Idle";
+    clearUploadDiagnostic(els.wadUploadDiagnostic);
 
     const file = els.wadFileInput.files?.[0];
     if (!file) {
@@ -1135,6 +1217,7 @@ async function uploadWadImage() {
     setSerialOperation("wad-upload");
     els.wadProgress.value = 0;
     els.wadProgressLabel.textContent = "Starting monitor IWAD loader...";
+    clearUploadDiagnostic(els.wadUploadDiagnostic);
     appendSystem(
         `IWAD upload: ${image.visibleName}, profile=${image.profileName}, ` +
         `bytes=${image.payloadBytes.toLocaleString()}, lumps=${image.lumpCount.toLocaleString()}, ` +
@@ -1207,6 +1290,9 @@ async function uploadWadImage() {
         }
     } catch (error) {
         els.wadProgressLabel.textContent = `Failed: ${error.message}`;
+        if (error.message === "timed out waiting for H3W READY") {
+            showMonitorUploadDiagnostic(els.wadUploadDiagnostic, "H3W");
+        }
         appendSystem(
             `IWAD upload failed: ${error.message}. ` +
             "Make sure the resident monitor prompt is active and the selected memory profile matches the monitor build.");

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#171a21">
     <title>Hazard3-Doom Device Tool and Console</title>
-    <link rel="stylesheet" href="styles.css?v=20260913-r2">
+    <link rel="stylesheet" href="styles.css?v=20260913-r3">
     <link rel="icon" href="icons/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
@@ -141,7 +141,10 @@
                                 <span>Access key</span>
                                 <input id="firmwareLoaderAccessKey" class="firmware-loader-access-key" type="password" autocomplete="off" spellcheck="false" placeholder="Optional local-loader key" aria-label="Local loader access key">
                                 <span>OpenOCD</span>
-                                <strong>Must already listen on port 3333. See <a href="https://hazard3-doom.readthedocs.io/en/latest/user-guide/web-flasher.html#windows-usb-driver-compatibility" id="firmwareLoaderDocsURL">tips</a></strong>
+                                <span>
+                                    <strong id="firmwareOpenOcdStatus">Checking port 3333...</strong>
+                                    <span> See <a href="https://hazard3-doom.readthedocs.io/en/latest/user-guide/web-flasher.html#windows-usb-driver-compatibility" id="firmwareLoaderDocsURL">tips</a></span>
+                                </span>
                             </div>
                         </div>
 
@@ -229,6 +232,8 @@
                             <span id="h3dProgressLabel">Idle</span>
                         </div>
 
+                        <div id="h3dUploadDiagnostic" class="upload-diagnostic" role="alert" hidden></div>
+
                         <p class="flasher-note"><strong>The H3L loader must own the UART.</strong> If Doom is running, use Stop Doom first and wait for the resident monitor <code>&gt;</code> prompt before uploading.</p>
                     </div>
                 </details>
@@ -297,6 +302,8 @@
                             <progress id="wadProgress" max="100" value="0"></progress>
                             <span id="wadProgressLabel">Idle</span>
                         </div>
+
+                        <div id="wadUploadDiagnostic" class="upload-diagnostic" role="alert" hidden></div>
 
                         <p class="flasher-note"><strong>IWAD files are not included with Hazard3-Doom.</strong> Use a legally obtained IWAD. The selected memory profile must match the resident monitor build because the H3W header contains the SDRAM load address.</p>
                     </div>
@@ -482,7 +489,7 @@
         <span>UART and FPGA programming data stay between this browser and the selected devices; console firmware uses the local loader.</span>
     </footer>
 
-    <script src="app.js?v=20260913-r2" defer></script>
+    <script src="app.js?v=20260913-r3" defer></script>
     <script src="flasher.js?v=20260821-r1" defer></script>
 </body>
 </html>

@@ -953,6 +953,25 @@ input[type="text"] {
     white-space: nowrap;
 }
 
+.upload-diagnostic {
+    margin-top: 0.65rem;
+    border: 1px solid #8a6e3d;
+    border-radius: 8px;
+    background: #2a2418;
+    padding: 0.65rem 0.75rem;
+    color: #f3d995;
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.upload-diagnostic strong {
+    color: #ffe0a0;
+}
+
+.upload-diagnostic code {
+    color: inherit;
+}
+
 .svf-picker,
 .flasher-checklist {
     display: grid;

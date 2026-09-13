@@ -150,6 +150,9 @@ class Hazard3DoomRequestHandler(http.server.SimpleHTTPRequestHandler):
                     "available": self.firmware_loader.is_file()
                     and os.access(self.firmware_loader, os.X_OK),
                     "authentication_required": self.access_key is not None,
+                    "openocd_gdb_ready": openocd_gdb_port_is_ready(),
+                    "openocd_gdb_host": OPENOCD_GDB_HOST,
+                    "openocd_gdb_port": OPENOCD_GDB_PORT,
                     "challenge": challenge,
                 },
             )

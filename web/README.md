@@ -116,10 +116,13 @@ page may be the local page served by that helper or the public GitHub Pages site
 On the public site, use the **refresh** control next to **Local loader** after
 starting the helper. Once the helper reports **Ready**, the page rechecks it every
 five seconds and marks it unavailable if the loopback server stops responding.
-Each status request includes a one-time challenge that the helper must echo, so a
-stale cached response cannot be mistaken for a live helper. Do not keep the browser
-FPGA flasher connected to US1 while OpenOCD owns that interface. An already-running
-GDB session may also own port 3333; exit it before using the web loader.
+The same status response reports whether a GDB server is listening on
+`127.0.0.1:3333`, so the page can show a live OpenOCD status and disable the ELF
+load button until OpenOCD is available. Each status request includes a one-time
+challenge that the helper must echo, so a stale cached response cannot be mistaken
+for a live helper. Do not keep the browser FPGA flasher connected to US1 while
+OpenOCD owns that interface. An already-running GDB session may also own port 3333;
+exit it before using the web loader.
 
 
 For an additional authorization layer, start the helper with an access key:
@@ -165,13 +168,15 @@ browser -> raw H3D payload bytes
 monitor -> H3L OK ...\r\n
 ```
 
-The payload is sent in 4096-byte browser writes while the page shows transfer progress. Normal UART command controls and screen-snip capability probes are suspended during the binary transfer so no unrelated byte can be inserted into the H3D payload. The monitor still performs its own header and CRC validation before accepting the image.
+The payload is sent in 4096-byte browser writes while the page shows transfer progress. Normal UART command controls and screen-snip capability probes are suspended during the binary transfer so no unrelated byte can be inserted into the H3D payload. The monitor still performs its own header and CRC validation before accepting the image. If the initial `H3L READY` response times out, the page shows a prominent monitor diagnostic. When the local helper is available, that diagnostic also reports whether OpenOCD is listening on port 3333 and suggests loading or reloading `hazard3-boot-monitor.elf` when appropriate. OpenOCD is needed to load the monitor, but it does not need to remain running after the monitor has been loaded.
 
 **Launch with `j` after upload** is optional and disabled by default. When selected, the browser sends the monitor's raw `j` command only after `H3L OK` is received.
 
 ## Doom IWAD UART uploader
 
 The collapsible **Doom IWAD uploader** accepts a legally obtained `.wad` file and follows the same H3W protocol as `doom/upload-wad.py`. The browser validates the `IWAD` identification, directory bounds, every lump range, Doom-visible filename, reserved SDRAM size, and CRC32 before sending anything.
+
+If the initial `H3W READY` response times out, the page provides the same resident-monitor/OpenOCD diagnostic used by the H3D uploader.
 
 Select the memory profile that matches the resident monitor build:
 
