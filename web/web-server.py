@@ -457,14 +457,20 @@ def main() -> None:
             f"{OPENOCD_GDB_HOST}:{OPENOCD_GDB_PORT}"
         )
     else:
-        print(
-            "  OpenOCD: WARNING - no GDB server detected on "
-            f"{OPENOCD_GDB_HOST}:{OPENOCD_GDB_PORT}"
+        print("")
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("")
+        print("  OpenOCD: WARNING - no GDB server detected on "
+             f"{OPENOCD_GDB_HOST}:{OPENOCD_GDB_PORT}"
         )
-        print(
-            "           Console ELF loading will not work until "
-            "OpenOCD is started."
-        )
+        print("           Web Console ELF loading will not work until OpenOCD is started.")
+        print("")
+        print("           ./scripts/start-openocd.sh # uses ../openocd/ulx3s-openocd-doom.cfg")
+        print("")
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("")
 
     print("  allowed API origins:")
 
