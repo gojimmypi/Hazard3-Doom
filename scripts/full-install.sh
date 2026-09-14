@@ -189,6 +189,11 @@ git submodule update --init --recursive
 
 ./scripts/install-riscv-toolchain.sh
 
+# install-riscv-toolchain.sh updates ~/.bashrc for future shells. Add the same
+# location here so the rest of this installer can use it immediately.
+export PATH="${HOME}/.local/xPacks/riscv-none-elf-gcc/current/bin:${PATH}"
+hash -r
+
 ./scripts/install-cmake.sh
 
 ./scripts/install-yosys.sh
@@ -229,3 +234,12 @@ else
 fi
 
 ./scripts/requirements-check.sh
+
+printf '\nFull install complete.\n\n'
+printf '%s\n' \
+    'The xPack installer updated ~/.bashrc, but this script cannot change the' \
+    'environment of the shell that launched it.' \
+    'Before building from that existing shell, run:' \
+    '' \
+    '    source ~/.bashrc' \
+    '    hash -r'

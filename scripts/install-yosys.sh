@@ -104,6 +104,29 @@ printf 'Install prefix:  %s\n' "${INSTALL_PREFIX}"
 printf 'Required commit: %s\n' "${YOSYS_COMMIT}"
 printf 'Build jobs:      %s\n\n' "${JOBS}"
 
+INSTALLED_BINARY="$(command -v yosys 2>/dev/null || true)"
+INSTALLED_VERSION=""
+
+if [[ -n "${INSTALLED_BINARY}" ]]; then
+    INSTALLED_VERSION="$("${INSTALLED_BINARY}" -V 2>&1 || true)"
+fi
+
+if [[ "${INSTALLED_VERSION}" == *"${EXPECTED_VERSION_FRAGMENT}"* &&
+      "${INSTALLED_VERSION}" == *"${EXPECTED_COMMIT_FRAGMENT}"* ]]; then
+    printf 'Yosys %s (%s) is already installed; reusing it.\n' \
+        "${EXPECTED_VERSION_FRAGMENT#Yosys }" "${EXPECTED_COMMIT_FRAGMENT}"
+    printf 'Binary:  %s\n' "${INSTALLED_BINARY}"
+    printf 'Version: %s\n' "${INSTALLED_VERSION}"
+    exit 0
+fi
+
+if [[ -n "${INSTALLED_BINARY}" ]]; then
+    printf 'Installed Yosys does not match the qualified version; rebuilding.\n'
+    printf 'Found:    %s\n' "${INSTALLED_VERSION:-unknown}"
+    printf 'Required: %s (%s)\n\n' \
+        "${EXPECTED_VERSION_FRAGMENT}" "${EXPECTED_COMMIT_FRAGMENT}"
+fi
+
 if ((SKIP_PACKAGES == 0)) && command -v apt-get >/dev/null 2>&1; then
     sudo apt-get update
     sudo apt-get install -y \

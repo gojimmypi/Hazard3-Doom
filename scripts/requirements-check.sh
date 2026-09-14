@@ -25,6 +25,11 @@ WSL_INTEROP_AVAILABLE=0
 WSL_VERSION=0
 REPO_ON_WINDOWS_FS=0
 
+QUALIFIED_YOSYS_VERSION="Yosys 0.67+47"
+QUALIFIED_YOSYS_COMMIT="5f29546d8"
+QUALIFIED_NEXTPNR_VERSION="nextpnr-0.10-95-gddc6c8c8"
+QUALIFIED_TRELLIS_VERSION="Project Trellis ecppack Version 1.4-76-g73bd411"
+
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 if REPO_ROOT="$(git -C "${SCRIPT_DIR}" rev-parse --show-toplevel 2>/dev/null)"; then
     :
@@ -167,6 +172,42 @@ check_tool()
     fi
 
     return 0
+}
+
+check_qualified_tool()
+{
+    local command_name="$1"
+    local description="$2"
+    local install_hint="$3"
+    local expected_description="$4"
+    local expected_fragment_1="$5"
+    local expected_fragment_2="$6"
+    shift 6
+
+    local path=""
+    local output=""
+    local display_output=""
+
+    if ! path="$(command -v "${command_name}" 2>/dev/null)"; then
+        fail "Missing required tool: ${command_name} (${description})"
+        printf '       Install: %s\n' "${install_hint}"
+        return 0
+    fi
+
+    output="$("${path}" "$@" 2>&1 || true)"
+    display_output="$(normalize_first_line "${output}")"
+
+    if [[ "${output}" == *"${expected_fragment_1}"* ]] &&
+       { [[ -z "${expected_fragment_2}" ]] ||
+         [[ "${output}" == *"${expected_fragment_2}"* ]]; }; then
+        pass "${description}: ${display_output} (${path})"
+        return 0
+    fi
+
+    fail "${description} is not the qualified Hazard3-Doom version"
+    printf '       Found:    %s (%s)\n' "${display_output:-unknown}" "${path}"
+    printf '       Required: %s\n' "${expected_description}"
+    printf '       Install:  %s\n' "${install_hint}"
 }
 
 check_python_module()
@@ -434,8 +475,6 @@ check_tool_with_wsl_bundle()
 find_riscv_prefix()
 {
     local candidate=""
-    local gcc_path=""
-    local home_dir="${HOME:-}"
 
     if [[ -n "${TOOLCHAIN_PREFIX:-}" ]]; then
         if resolve_executable "${TOOLCHAIN_PREFIX}gcc" >/dev/null 2>&1; then
@@ -456,17 +495,6 @@ find_riscv_prefix()
             return 0
         fi
     done
-
-    if [[ -n "${home_dir}" ]]; then
-        for gcc_path in \
-            "${home_dir}"/.local/xPacks/riscv-none-elf-gcc/*/bin/riscv-none-elf-gcc
-        do
-            if [[ -x "${gcc_path}" ]]; then
-                printf '%s' "${gcc_path%gcc}"
-                return 0
-            fi
-        done
-    fi
 
     return 1
 }
@@ -834,10 +862,6 @@ section "RISC-V bare-metal toolchain"
 RISCV_PREFIX=""
 if RISCV_PREFIX="$(find_riscv_prefix)"; then
     pass "Native Linux/WSL RISC-V toolchain prefix: ${RISCV_PREFIX}"
-    if [[ -z "${TOOLCHAIN_PREFIX:-}" && "${RISCV_PREFIX}" == */.local/xPacks/* ]]; then
-        info "Linux xPack RISC-V toolchain was found outside PATH."
-        printf '       Use: TOOLCHAIN_PREFIX=%q ./scripts/build.sh\n' "${RISCV_PREFIX}"
-    fi
     for tool in gcc objcopy objdump size ar nm; do
         check_riscv_tool required "${RISCV_PREFIX}" "${tool}"
     done
@@ -855,12 +879,20 @@ else
     fail "No supported native Linux/WSL RISC-V bare-metal GCC toolchain was found"
     if [[ -n "${TOOLCHAIN_PREFIX:-}" ]]; then
         printf '       TOOLCHAIN_PREFIX was set but unusable: %s\n' "${TOOLCHAIN_PREFIX}"
+    elif [[ -x "${HOME:-}/.local/xPacks/riscv-none-elf-gcc/current/bin/riscv-none-elf-gcc" ]]; then
+        printf '%s\n' \
+            '       xPack RISC-V GCC is installed, but it is not available in this shell PATH.' \
+            '       Refresh this shell, then rerun the requirements check:' \
+            '         source ~/.bashrc' \
+            '         hash -r' \
+            '         ./scripts/requirements-check.sh'
+    else
+        printf '%s\n' \
+            '       Project reference: /opt/riscv/bin/riscv32-unknown-elf-' \
+            '       Linux xPack installations commonly use: riscv-none-elf-' \
+            '         use: ./scripts/install-riscv-toolchain.sh' \
+            '       Ubuntu alternative: sudo apt-get install gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf'
     fi
-    printf '%s\n' \
-        '       Project reference: /opt/riscv/bin/riscv32-unknown-elf-' \
-        '       Linux xPack installations commonly use: riscv-none-elf-' \
-        '         use: ./scripts/install-riscv-toolchain.sh' \
-        '       Ubuntu alternative: sudo apt-get install gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf'
 fi
 
 section "Repository Windows tool bundle"
@@ -873,13 +905,34 @@ else
 fi
 
 section "ECP5 FPGA build tools"
-check_tool required yosys        "Yosys synthesis"                  "./scripts/install-yosys.sh" --version
-check_tool required nextpnr-ecp5 "nextpnr ECP5 place-and-route"     "./scripts/install-nextpnr-ecp5.sh" --version
-check_tool required ecppack      "Project Trellis bitstream packer" "./scripts/install-nextpnr-ecp5.sh" --version
+check_qualified_tool \
+    yosys \
+    "Yosys synthesis" \
+    "./scripts/install-yosys.sh" \
+    "${QUALIFIED_YOSYS_VERSION}, commit ${QUALIFIED_YOSYS_COMMIT}" \
+    "${QUALIFIED_YOSYS_VERSION}" \
+    "${QUALIFIED_YOSYS_COMMIT}" \
+    -V
+check_qualified_tool \
+    nextpnr-ecp5 \
+    "nextpnr ECP5 place-and-route" \
+    "./scripts/install-nextpnr-ecp5.sh" \
+    "${QUALIFIED_NEXTPNR_VERSION}" \
+    "${QUALIFIED_NEXTPNR_VERSION}" \
+    "" \
+    --version
+check_qualified_tool \
+    ecppack \
+    "Project Trellis bitstream packer" \
+    "./scripts/install-nextpnr-ecp5.sh" \
+    "${QUALIFIED_TRELLIS_VERSION}" \
+    "${QUALIFIED_TRELLIS_VERSION}" \
+    "" \
+    --version
 printf '%s\n' \
-    'INFO: Record Yosys and nextpnr versions for release builds.' \
-    '      Routing seeds are tool-version-specific; package presence alone does' \
-    '      not prove equivalence with a previously qualified release toolchain.'
+    'INFO: Yosys, nextpnr, and Project Trellis must match the qualified versions above.' \
+    '      Routing seeds are tool-version-specific; a different nextpnr version may' \
+    '      produce different timing results even when the build otherwise succeeds.'
 
 section "Hardware programming and debug"
 if (( IS_WSL == 1 )); then

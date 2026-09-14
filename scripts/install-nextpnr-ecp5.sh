@@ -120,6 +120,31 @@ printf 'Required nextpnr:   %s (%s)\n' \
     "${EXPECTED_NEXTPNR_VERSION}" "${NEXTPNR_COMMIT}"
 printf 'Build jobs:         %s\n\n' "${JOBS}"
 
+INSTALLED_TRELLIS_BINARY="$(command -v ecppack 2>/dev/null || true)"
+INSTALLED_TRELLIS_OUTPUT=""
+if [[ -n "${INSTALLED_TRELLIS_BINARY}" ]]; then
+    INSTALLED_TRELLIS_OUTPUT="$(
+        "${INSTALLED_TRELLIS_BINARY}" --version 2>&1 || true
+    )"
+fi
+
+INSTALLED_NEXTPNR_BINARY="$(command -v nextpnr-ecp5 2>/dev/null || true)"
+INSTALLED_NEXTPNR_OUTPUT=""
+if [[ -n "${INSTALLED_NEXTPNR_BINARY}" ]]; then
+    INSTALLED_NEXTPNR_OUTPUT="$(
+        "${INSTALLED_NEXTPNR_BINARY}" --version 2>&1 || true
+    )"
+fi
+
+if [[ "${INSTALLED_TRELLIS_OUTPUT}" == *"Project Trellis ecppack Version ${EXPECTED_TRELLIS_VERSION}"* &&
+      "${INSTALLED_NEXTPNR_OUTPUT}" == *"${EXPECTED_NEXTPNR_VERSION}"* ]]; then
+    printf 'Project Trellis %s is already installed; reusing it.\n' \
+        "${EXPECTED_TRELLIS_VERSION}"
+    printf 'nextpnr-ecp5 %s is already installed; reusing it.\n' \
+        "${EXPECTED_NEXTPNR_VERSION}"
+    exit 0
+fi
+
 if ((SKIP_PACKAGES == 0)) && command -v apt-get >/dev/null 2>&1; then
     printf 'Installing build dependencies...\n'
     sudo apt-get update
@@ -180,9 +205,10 @@ prepare_repo() {
 }
 
 trellis_installed_version() {
-    local ecppack="${INSTALL_PREFIX}/bin/ecppack"
+    local ecppack=""
 
-    if [[ ! -x "${ecppack}" ]]; then
+    ecppack="$(command -v ecppack 2>/dev/null || true)"
+    if [[ -z "${ecppack}" || ! -x "${ecppack}" ]]; then
         return 1
     fi
 

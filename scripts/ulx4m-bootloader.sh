@@ -368,7 +368,7 @@ setup_riscv_tool_shim()
     fi
 
     if ! command -v riscv-none-elf-gcc >/dev/null 2>&1; then
-        fail "Neither riscv-none-embed-* nor riscv-none-elf-* tools were found on PATH."
+        fail "Neither riscv-none-embed-* nor riscv-none-elf-* tools were found."
     fi
 
     tool_dir="$(dirname -- "$(command -v riscv-none-elf-gcc)")"
