@@ -1053,6 +1053,21 @@ body.terminal-resizing {
     color: var(--muted);
 }
 
+.flasher-state .host-os-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-self: start;
+    min-width: 0;
+    border: 1px solid #52616d;
+    border-radius: 999px;
+    background: #1b252d;
+    padding: 0.1rem 0.45rem;
+    color: var(--text);
+    font-weight: 700;
+    line-height: 1.35;
+    white-space: nowrap;
+}
+
 .flasher-state strong {
     min-width: 0;
     overflow-wrap: anywhere;

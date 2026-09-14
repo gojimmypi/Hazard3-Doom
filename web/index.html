@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#171a21">
     <title>Hazard3-Doom Device Tool and Console</title>
-    <link rel="stylesheet" href="styles.css?v=20260914-r10">
+    <link rel="stylesheet" href="styles.css?v=20260914-r11">
     <link rel="icon" href="icons/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
@@ -61,7 +61,7 @@
                 <details id="fpgaFlasher" class="flasher-section">
                     <summary>
                         <span class="summary-title" title="Click to toggle visibility of this entire section.">FPGA web flasher</span>
-                        <span class="summary-tag" title="Uses WebUSB through the ULX3S US1 FT231X interface (Windows WinUSB) to program the FPGA over JTAG.">
+                        <span class="summary-tag" title="Uses WebUSB through the ULX3S US1 FT231X interface to program the FPGA over JTAG. Host-specific USB access requirements apply; see Docs.">
                             ULX3S US1 / JTAG
                         </span>
                         <span class="flasher-header-actions" aria-label="FPGA flasher actions">
@@ -82,7 +82,8 @@
                                 <strong id="flasherDeviceStatus">Not connected</strong>
                                 <span>FPGA</span>
                                 <strong id="flasherIdcode">Not probed</strong>
-                                <a href="https://hazard3-doom.readthedocs.io/en/latest/user-guide/web-flasher.html" id="flasherDocsURL">Docs</a>
+                                <a href="https://hazard3-doom.readthedocs.io/en/latest/user-guide/web-flasher.html" id="flasherDocsURL" target="_blank" rel="noopener noreferrer">Docs</a>
+                                <span id="flasherHostOs" class="host-os-indicator" title="Detecting the host operating system">Host: detecting...</span>
                             </div>
                         </div>
 
@@ -523,6 +524,6 @@
     </footer>
 
     <script src="app.js?v=20260914-r9" defer></script>
-    <script src="flasher.js?v=20260913-r3" defer></script>
+    <script src="flasher.js?v=20260914-r4" defer></script>
 </body>
 </html>

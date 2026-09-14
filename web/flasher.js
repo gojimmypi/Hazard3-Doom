@@ -124,7 +124,9 @@
         copyLogButton: document.getElementById("flasherCopyLogButton"),
         copyLogButtonLabel: document.getElementById("flasherCopyLogButtonLabel"),
         clearLogButton: document.getElementById("flasherClearLogButton"),
-        idcode: document.getElementById("flasherIdcode")
+        idcode: document.getElementById("flasherIdcode"),
+        docsLink: document.getElementById("flasherDocsURL"),
+        hostOs: document.getElementById("flasherHostOs")
     };
 
     if (!els.section) {
@@ -132,6 +134,7 @@
     }
 
     const webUsbSupported = "usb" in navigator;
+    const hostOperatingSystem = detectHostOperatingSystem();
     const state = {
         transport: null,
         tap: null,
@@ -244,9 +247,71 @@
         }, 1200);
     }
 
-    function isWindowsHost() {
-        const platform = navigator.userAgentData?.platform || navigator.platform || navigator.userAgent || "";
-        return /win/i.test(platform);
+    function detectHostOperatingSystem() {
+        const platform = [
+            navigator.userAgentData?.platform,
+            navigator.platform,
+            navigator.userAgent
+        ].filter(Boolean).join(" ");
+
+        if (/win/i.test(platform)) {
+            return {
+                key: "windows",
+                label: "Windows",
+                docsFragment: "web-flasher-windows-usb"
+            };
+        }
+        if (/mac|macintosh/i.test(platform)) {
+            return {
+                key: "macos",
+                label: "macOS",
+                docsFragment: "web-flasher-macos-usb"
+            };
+        }
+        if (!/android|cros/i.test(platform) && /linux|x11/i.test(platform)) {
+            return {
+                key: "linux",
+                label: "Linux",
+                docsFragment: "web-flasher-linux-usb"
+            };
+        }
+        return {
+            key: "unknown",
+            label: "Unknown",
+            docsFragment: ""
+        };
+    }
+
+    function updateHostOperatingSystemUi() {
+        if (els.hostOs) {
+            els.hostOs.textContent = `Host: ${hostOperatingSystem.label}`;
+            els.hostOs.dataset.hostOs = hostOperatingSystem.key;
+        }
+
+        const descriptions = {
+            windows: "Detected host: Windows. WebUSB access to ULX3S US1 requires the FT231X to use WinUSB; Docs opens the Windows setup section.",
+            linux: "Detected host: Linux. WebUSB may require udev permissions and releasing the ULX3S FT231X from ftdi_sio; Docs opens the Linux setup section.",
+            macos: "Detected host: macOS. Windows WinUSB/Zadig and Linux udev steps do not apply; Docs opens the macOS setup section.",
+            unknown: "The browser did not report Windows, Linux, or macOS. Open Docs for the general WebUSB requirements."
+        };
+        if (els.hostOs) {
+            els.hostOs.title = descriptions[hostOperatingSystem.key];
+        }
+
+        if (els.docsLink && hostOperatingSystem.docsFragment) {
+            const docsUrl = new URL(els.docsLink.href);
+            docsUrl.hash = hostOperatingSystem.docsFragment;
+            els.docsLink.href = docsUrl.toString();
+            els.docsLink.title = `Open ${hostOperatingSystem.label} FPGA WebUSB setup instructions`;
+        }
+
+        const connectTitles = {
+            windows: "Connect to ULX3S USB JTAG. Windows requires WinUSB on the ULX3S FT231X interface.",
+            linux: "Connect to ULX3S USB JTAG. Linux may require udev USB permissions and releasing the interface from ftdi_sio.",
+            macos: "Connect to ULX3S USB JTAG. Close other applications using the ULX3S FT231X before connecting.",
+            unknown: "Connect to ULX3S USB JTAG. See Docs for host-specific WebUSB setup."
+        };
+        els.connectButton.dataset.enabledTitle = connectTitles[hostOperatingSystem.key];
     }
 
     function isUsbAccessDenied(error) {
@@ -257,14 +322,34 @@
             message.includes("permission denied");
     }
 
-    function appendWindowsDriverHint(error) {
-        if (!isWindowsHost() || !isUsbAccessDenied(error)) {
-            return false;
+    function isUsbClaimFailure(error) {
+        const message = String(error?.message || error || "").toLowerCase();
+        return message.includes("claim") || message.includes("interface");
+    }
+
+    function appendHostUsbHint(error) {
+        if (hostOperatingSystem.key === "windows" && isUsbAccessDenied(error)) {
+            appendLog("Detected a Windows WebUSB driver access failure for ULX3S US1.", "error");
+            appendLog("Bind the ULX3S FT231X interface to the WinUSB driver (for example with Zadig), then unplug/replug US1 and reconnect.");
+            appendLog("While WinUSB is installed, the normal FTDI VCP/D2XX COM-port driver for US1 is not available. If WinUSB is already installed, close other USB/JTAG tools and reconnect the board.");
+            return true;
         }
-        appendLog("Detected a Windows WebUSB driver access failure for ULX3S US1.", "error");
-        appendLog("Bind the ULX3S FT231X interface to the WinUSB driver (for example with Zadig), then unplug/replug US1 and reconnect.");
-        appendLog("While WinUSB is installed, the normal FTDI VCP/D2XX COM-port driver for US1 is not available. If WinUSB is already installed, close other USB/JTAG tools and reconnect the board.");
-        return true;
+
+        if (hostOperatingSystem.key === "linux" && (isUsbAccessDenied(error) || isUsbClaimFailure(error))) {
+            appendLog("Detected a Linux USB access or interface-claim failure for ULX3S US1.", "error");
+            appendLog("Check the 0403:6015 device permissions/udev rule. If claimInterface fails and lsusb -t shows Driver=ftdi_sio, unbind only the ULX3S FT231X interface before reconnecting.");
+            appendLog("See the FPGA Docs link for the Linux commands and VMware guest notes.");
+            return true;
+        }
+
+        if (hostOperatingSystem.key === "macos" && (isUsbAccessDenied(error) || isUsbClaimFailure(error))) {
+            appendLog("Detected a macOS USB access or interface-claim failure for ULX3S US1.", "error");
+            appendLog("Zadig/WinUSB and Linux udev steps do not apply on macOS. Close other serial/JTAG applications using the FT231X, unplug/replug US1, and reconnect from a current Chromium-based browser.");
+            appendLog("See the FPGA Docs link for the macOS setup notes.");
+            return true;
+        }
+
+        return false;
     }
 
     function clearIdcode() {
@@ -954,8 +1039,8 @@
         } catch (error) {
             if (error.name !== "NotFoundError") {
                 appendLog(error.message, "error");
-                const driverHintShown = appendWindowsDriverHint(error);
-                setProgress(0, driverHintShown ? "Connection failed - WinUSB required" : "Connection failed");
+                const hostHintShown = appendHostUsbHint(error);
+                setProgress(0, hostHintShown ? "Connection failed - see host setup in Docs" : "Connection failed");
             } else {
                 setProgress(0, "Device selection cancelled");
             }
@@ -1127,6 +1212,7 @@
     }
 
     function initialize() {
+        updateHostOperatingSystemUi();
         clearIdcode();
         setProgress(0, "Idle");
         if (!webUsbSupported) {
