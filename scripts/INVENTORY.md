@@ -12,7 +12,7 @@ Git source: current index (`git ls-files --cached`)
 
 Files inventoried: 74
 
-Total bytes: 571334
+Total bytes: 575254
 
 ## Verification
 
@@ -52,7 +52,7 @@ should be identified before a public release.
 | `doomgeneric-version.sh` | 1386 | `5a6cf61c5c1fd11237763279ed0a1d39d2dce37f3720c752e4e0114cae71ef81` | REVIEW | Shell script |
 | `flash-ulx3s-persistent.sh` | 1599 | `55dbb3ef4ee9d6315b5f622e4e0141e20bb165a631d0b85badb38e62f2b478fd` | REVIEW | Shell script |
 | `full-clean.sh` | 5814 | `1d2732bee827bf875b529ddb05dd1874438c76ec95b90958302fb705b06e49be` | REVIEW | Shell script |
-| `full-install.sh` | 6815 | `075cd8a4fb9898375c1b0e8c628a703a4ab3ca82624df4653be998620942150b` | REVIEW | Shell script |
+| `full-install.sh` | 7346 | `129f642d27f685809c0ad6a9b23daf98f4fafef8332c0485dd73578822823ad0` | REVIEW | Shell script |
 | `gdb/load-hazard3-test-elf.gdb` | 842 | `8ff53bd3e78ae7fa3c78aa8c26c891b742bf3689095179f59edd293ade1d1120` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `gdb/sao-probe.gdb` | 2086 | `4133bf62ae717eb5d49c7dccf283a90d0fa5267d9262aefdbcb150aa10be4eac` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `gdb/sao-scan.gdb` | 2288 | `fc220edfff82d934267000aa4ead2fb7df72a6b4044c48c5010d8be5826dc6aa` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
@@ -65,9 +65,9 @@ should be identified before a public release.
 | `hazard3-doom-source-status.sh` | 22103 | `0d9e973fbdf8e911030b72378572ad45506b50b7e5ffc6b6712eb03b90ba5614` | REVIEW | Shell script |
 | `hazard3-submodule.sh` | 8529 | `21a5d01d95108a9d304fc9b2bf9606f18c5a76416259fa27525cb32a9ff6e45e` | REVIEW | Shell script |
 | `install-cmake.sh` | 1326 | `1150e96c9fc32901301cc70fb2776aa27cc83e687ff640a981a1615221d0ecd6` | REVIEW | Shell script |
-| `install-nextpnr-ecp5.sh` | 10229 | `82525f1b622dd153cc7ac0dba41765d9569bc72f18dcd013367310c08e563905` | REVIEW | Shell script |
+| `install-nextpnr-ecp5.sh` | 11194 | `bd2cb80531cb3a0397d8a504eb1d279b4c7ff4c0008d236a9ae34b3041678fdd` | REVIEW | Shell script |
 | `install-riscv-toolchain.sh` | 3006 | `662b28c35a491bb15a47e57635f8f2eaa86582683f81f71b4c1bed84e46604bd` | REVIEW | Shell script |
-| `install-yosys.sh` | 6570 | `ecc6c45b9a3218bf9faccd4908e238fc47d1d02bbd210b4b806bcdca1706c768` | REVIEW | Shell script |
+| `install-yosys.sh` | 7447 | `cedafe1a7bd32849088da73fd1814a6a7673da51d054cc561b3ab2ef7cac8f30` | REVIEW | Shell script |
 | `inventory.sh` | 11860 | `ccdf6d71ffc232d68c66085874bbc8885b7fd5ecc67a9fcb54b0d4d3264d1996` | Hazard3-Doom repository | Shell script |
 | `load-firmware-12f.sh` | 1570 | `63b70d39f092cdb590da8f8541806f67fe99556ea7f81afd8eb87a940cd1fc82` | REVIEW | Shell script |
 | `load-firmware.bat` | 2755 | `3688d3f21ee3faee4fe5212c2c2db072576e5b155b8b2ef4978e36ab03c9c2e3` | REVIEW | File |
@@ -76,7 +76,7 @@ should be identified before a public release.
 | `make-boot-hex.py` | 2794 | `bd4e1d863e021e5cb7345d5c57e0e37cf1751d3f8c333652eb52fd48d2ab05ac` | REVIEW | File |
 | `peek-elf.sh` | 24394 | `9ae200bee9f45c3ceddb53543efe362f5b79997bad4b23d147d06e625be18052` | REVIEW | Shell script |
 | `publish-check.sh` | 593 | `c6acadfd1a319ee319da3999854c98c287c8096521bf9e5a7e57b4ca35cc5363` | REVIEW | Shell script |
-| `requirements-check.sh` | 31730 | `faa45e46d039e619dd4b2e2c10eca59efbd2d4581a816bd1c67ae998e4523bf5` | REVIEW | Shell script |
+| `requirements-check.sh` | 33285 | `a65d13d9227a285f6f2ee1332174d1b4309cd10117cc8dafe13f43a98dca5d47` | REVIEW | Shell script |
 | `restart-from-monitor.py` | 2180 | `62fafcba0da53b21b5704f221c655c63eb5520f2def0fbe7312005a65c59dd2d` | REVIEW | File |
 | `return-to-monitor.py` | 2144 | `0214047d05bf37b06453388892bc8c5a13a49af1154f962e1680eaa644316ceb` | REVIEW | File |
 | `run-coremark.sh` | 5148 | `ee257f329b138a6bfcc01224c96c8f4459b171f493f437f423190cb1d811a336` | REVIEW | Shell script |
@@ -97,5 +97,5 @@ should be identified before a public release.
 | `sweep.sh` | 775 | `73dfc7d13c2d77e1ccc5e6ce72856621c639e27c01d88e13bfc4225dcb1f3895` | REVIEW | Shell script |
 | `test-readthedocs.sh` | 10923 | `9438b1c09e34df5130f19e1d9dfd2f589fb47001a3d7126266530f2a86e0f9f7` | REVIEW | Shell script |
 | `test-scripts.sh` | 19859 | `736bb7c5575e24ee1a9a4f7042855861afd88a929e0ced7e1139ce5b417972b7` | REVIEW | Shell script |
-| `ulx4m-bootloader.sh` | 28576 | `319e41e2d69b30dcba355d228cce4d9b3902b7ed0acb00f904922b7d7efde892` | REVIEW | Shell script |
+| `ulx4m-bootloader.sh` | 28568 | `418350bf15666a55be9674009c6bac0e152424a76266968eaf70c053cef69391` | REVIEW | Shell script |
 | `watch-ecp5-sweep-results.sh` | 18199 | `4d7b1bd134af275ad36d608811c64b9b2bf4ee201ee419d677bdf0b8b886536d` | REVIEW | Shell script |
