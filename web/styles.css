@@ -262,16 +262,17 @@ p {
 
 .terminal-panel {
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-rows: auto auto auto auto auto;
     min-width: 0;
-    min-height: 30rem;
-    height: clamp(30rem, 64vh, 52rem);
+    min-height: 0;
+    height: auto;
     overflow: hidden;
+    align-self: start;
 }
 
 .controls-panel {
-    min-height: 30rem;
-    height: clamp(30rem, 64vh, 52rem);
+    min-height: 0;
+    height: auto;
     overflow: auto;
     align-self: stretch;
     scrollbar-gutter: stable;
@@ -504,8 +505,8 @@ input[type="text"] {
 }
 
 .terminal {
-    min-height: 0;
-    height: auto;
+    min-height: 7rem;
+    height: clamp(14rem, 46dvh, 46rem);
     margin: 0;
     overflow: auto;
     border-block: 1px solid #173917;
@@ -538,6 +539,43 @@ input[type="text"] {
     background: var(--terminal-text);
     color: #001600;
     text-shadow: none;
+}
+
+.terminal-resize-handle {
+    position: relative;
+    height: 0.72rem;
+    cursor: ns-resize;
+    touch-action: none;
+    border-bottom: 1px solid #173917;
+    background: #030903;
+}
+
+.terminal-resize-handle::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 3.2rem;
+    height: 0.18rem;
+    border-radius: 999px;
+    background: #285c28;
+    content: "";
+    transform: translate(-50%, -50%);
+}
+
+.terminal-resize-handle:hover::after,
+.terminal-resize-handle:focus-visible::after {
+    background: var(--terminal-text);
+    box-shadow: 0 0 7px var(--terminal-glow);
+}
+
+.terminal-resize-handle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
+body.terminal-resizing {
+    cursor: ns-resize;
+    user-select: none;
 }
 
 .command-row {
@@ -735,10 +773,6 @@ input[type="text"] {
         height: auto;
     }
 
-    .terminal {
-        height: clamp(360px, 58vh, 720px);
-    }
-
     .settings-grid {
         grid-template-columns: repeat(2, minmax(120px, 1fr));
     }
@@ -810,7 +844,7 @@ input[type="text"] {
     }
 
     .terminal {
-        height: 52vh;
+        min-height: 6rem;
     }
 }
 

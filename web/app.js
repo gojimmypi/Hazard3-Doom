@@ -1,6 +1,10 @@
 "use strict";
 
 const MAX_TERMINAL_CHARS = 1_000_000;
+const TERMINAL_MIN_HEIGHT_PX = 112;
+const TERMINAL_MAX_AUTO_HEIGHT_PX = 736;
+const TERMINAL_MAX_MANUAL_HEIGHT_PX = 1200;
+const TERMINAL_VIEWPORT_MARGIN_PX = 16;
 const STORAGE_PREFIX = "hazard3-doom-webserial.";
 const SCREEN_SNIP_CAPABILITY_REQUEST_BYTE = 0x1c;
 const SCREEN_SNIP_CAPABILITY_ACK_BYTE = 0x06;
@@ -95,6 +99,9 @@ const state = {
     otherDeviceToolPages: new Map(),
     otherUartOwners: new Set(),
     textDecoder: new TextDecoder(),
+    terminalHeightOffset: 0,
+    terminalResizeFrame: null,
+    terminalLayoutObserver: null,
 };
 
 const els = {
@@ -113,7 +120,10 @@ const els = {
     lineEnding: document.getElementById("lineEnding"),
     autoScroll: document.getElementById("autoScroll"),
     localEcho: document.getElementById("localEcho"),
+    terminalPanel: document.querySelector(".terminal-panel"),
     terminal: document.getElementById("terminal"),
+    terminalResizeHandle: document.getElementById("terminalResizeHandle"),
+    controlsPanel: document.querySelector(".controls-panel"),
     commandForm: document.getElementById("commandForm"),
     commandInput: document.getElementById("commandInput"),
     sendButton: document.getElementById("sendButton"),
@@ -2548,6 +2558,144 @@ function loadSettings() {
     }
 }
 
+function clampTerminalHeight(height, maximum = TERMINAL_MAX_MANUAL_HEIGHT_PX) {
+    return Math.max(TERMINAL_MIN_HEIGHT_PX, Math.min(maximum, height));
+}
+
+function calculateAutoTerminalHeight() {
+    if (!window.matchMedia("(min-width: 921px)").matches) {
+        const stackedHeight = Math.max(240, window.innerHeight * 0.52);
+        return clampTerminalHeight(stackedHeight, TERMINAL_MAX_AUTO_HEIGHT_PX);
+    }
+
+    const panelRect = els.terminalPanel.getBoundingClientRect();
+    const nonTerminalHeight = Math.max(0, els.terminalPanel.offsetHeight - els.terminal.offsetHeight);
+    const availablePanelHeight = window.innerHeight - panelRect.top - TERMINAL_VIEWPORT_MARGIN_PX;
+    const availableTerminalHeight = availablePanelHeight - nonTerminalHeight;
+
+    return clampTerminalHeight(availableTerminalHeight, TERMINAL_MAX_AUTO_HEIGHT_PX);
+}
+
+function setTerminalHeight(height) {
+    const maximum = Math.max(TERMINAL_MIN_HEIGHT_PX,
+        Math.min(TERMINAL_MAX_MANUAL_HEIGHT_PX, window.innerHeight * 1.5));
+    const clampedHeight = clampTerminalHeight(height, maximum);
+
+    els.terminal.style.height = `${Math.round(clampedHeight)}px`;
+    if (window.matchMedia("(min-width: 921px)").matches) {
+        els.controlsPanel.style.height = `${Math.round(els.terminalPanel.getBoundingClientRect().height)}px`;
+    } else {
+        els.controlsPanel.style.removeProperty("height");
+    }
+    els.terminalResizeHandle.setAttribute("aria-valuenow", String(Math.round(clampedHeight)));
+    els.terminalResizeHandle.setAttribute("aria-valuemax", String(Math.round(maximum)));
+}
+
+function fitTerminalToViewport() {
+    const autoHeight = calculateAutoTerminalHeight();
+    setTerminalHeight(autoHeight + state.terminalHeightOffset);
+}
+
+function scheduleTerminalFit() {
+    if (state.terminalResizeFrame !== null) {
+        window.cancelAnimationFrame(state.terminalResizeFrame);
+    }
+
+    state.terminalResizeFrame = window.requestAnimationFrame(() => {
+        state.terminalResizeFrame = null;
+        fitTerminalToViewport();
+    });
+}
+
+function resetTerminalHeight() {
+    state.terminalHeightOffset = 0;
+    scheduleTerminalFit();
+}
+
+function wireTerminalResize() {
+    let dragStartY = 0;
+    let dragStartHeight = 0;
+    let dragging = false;
+
+    const finishDrag = (event) => {
+        if (!dragging) {
+            return;
+        }
+
+        dragging = false;
+        document.body.classList.remove("terminal-resizing");
+        if (els.terminalResizeHandle.hasPointerCapture?.(event.pointerId)) {
+            els.terminalResizeHandle.releasePointerCapture(event.pointerId);
+        }
+    };
+
+    els.terminalResizeHandle.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0) {
+            return;
+        }
+
+        dragging = true;
+        dragStartY = event.clientY;
+        dragStartHeight = els.terminal.getBoundingClientRect().height;
+        document.body.classList.add("terminal-resizing");
+        els.terminalResizeHandle.setPointerCapture?.(event.pointerId);
+        event.preventDefault();
+    });
+
+    els.terminalResizeHandle.addEventListener("pointermove", (event) => {
+        if (!dragging) {
+            return;
+        }
+
+        const desiredHeight = dragStartHeight + event.clientY - dragStartY;
+        const autoHeight = calculateAutoTerminalHeight();
+        const maximum = Math.max(TERMINAL_MIN_HEIGHT_PX,
+            Math.min(TERMINAL_MAX_MANUAL_HEIGHT_PX, window.innerHeight * 1.5));
+        const clampedHeight = clampTerminalHeight(desiredHeight, maximum);
+
+        state.terminalHeightOffset = clampedHeight - autoHeight;
+        setTerminalHeight(clampedHeight);
+        event.preventDefault();
+    });
+
+    els.terminalResizeHandle.addEventListener("pointerup", finishDrag);
+    els.terminalResizeHandle.addEventListener("pointercancel", finishDrag);
+    els.terminalResizeHandle.addEventListener("dblclick", resetTerminalHeight);
+    els.terminalResizeHandle.addEventListener("keydown", (event) => {
+        const step = event.shiftKey ? 80 : 24;
+
+        if (event.key === "Home") {
+            event.preventDefault();
+            resetTerminalHeight();
+            return;
+        }
+        if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+            return;
+        }
+
+        event.preventDefault();
+        state.terminalHeightOffset += event.key === "ArrowDown" ? step : -step;
+        fitTerminalToViewport();
+    });
+
+    window.addEventListener("resize", scheduleTerminalFit);
+    window.visualViewport?.addEventListener("resize", scheduleTerminalFit);
+    window.addEventListener("load", scheduleTerminalFit);
+
+    document.querySelectorAll("details").forEach((details) => {
+        details.addEventListener("toggle", scheduleTerminalFit);
+    });
+
+    if ("ResizeObserver" in window) {
+        state.terminalLayoutObserver = new ResizeObserver(scheduleTerminalFit);
+        document.querySelectorAll(".app-header, .upload-panel, .serial-panel").forEach((element) => {
+            state.terminalLayoutObserver.observe(element);
+        });
+    }
+
+    scheduleTerminalFit();
+}
+
 function commandHistoryKey(event) {
     if (event.key === "ArrowUp") {
         if (state.commandHistory.length === 0) {
@@ -2683,6 +2831,7 @@ function wireEvents() {
 async function initialize() {
     loadSettings();
     wireEvents();
+    wireTerminalResize();
     setConnectionUi(false);
     startDeviceToolCoordination();
     updateConsoleFirmwareUi();

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#171a21">
     <title>Hazard3-Doom Device Tool and Console</title>
-    <link rel="stylesheet" href="styles.css?v=20260913-r9">
+    <link rel="stylesheet" href="styles.css?v=20260914-r10">
     <link rel="icon" href="icons/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
@@ -147,7 +147,7 @@
                     <div class="flasher-body">
                         <div class="flasher-intro">
                             <div>
-                                <h3>Load the Hazard3 console firmware</h3>
+                                <h3>Load the Hazard3 console firmware</h3> (normally attached to FPGA bitstream file)
                                 <p>Select <code>hazard3-boot-monitor.elf</code>. The local web server passes the ELF to the existing GDB loader, which halts Hazard3 through OpenOCD, writes and verifies the ELF sections, sets <code>_start</code>, and resumes the core.</p>
                             </div>
                             <div class="flasher-state">
@@ -433,6 +433,15 @@
 
             <pre id="terminal" class="terminal" tabindex="0" aria-live="polite" aria-label="UART receive output"></pre>
 
+            <div id="terminalResizeHandle"
+                 class="terminal-resize-handle"
+                 role="separator"
+                 aria-orientation="horizontal"
+                 aria-label="Resize UART terminal"
+                 aria-valuemin="112"
+                 tabindex="0"
+                 title="Drag to resize the UART terminal. Double-click to return to automatic sizing."></div>
+
             <form id="commandForm" class="command-row">
                 <span class="prompt-mark" aria-hidden="true">&gt;</span>
                 <input id="commandInput" type="text" autocomplete="off" spellcheck="false" placeholder="Enter Hazard3 monitor command" disabled>
@@ -513,7 +522,7 @@
         <span>UART and FPGA programming data stay between this browser and the selected devices; console firmware uses the local loader.</span>
     </footer>
 
-    <script src="app.js?v=20260913-r8" defer></script>
+    <script src="app.js?v=20260914-r9" defer></script>
     <script src="flasher.js?v=20260913-r3" defer></script>
 </body>
 </html>
