@@ -24,6 +24,55 @@
 
 set -euo pipefail
 
+usage() {
+    cat <<'EOF'
+Usage:
+  ./scripts/start-openocd.sh [OPENOCD]
+  ./scripts/start-openocd.sh -h | --help
+
+Start the Hazard3-Doom ULX3S OpenOCD server using:
+  openocd/ulx3s-openocd-doom.cfg
+
+Arguments:
+  OPENOCD    Optional OpenOCD executable path or command name.
+
+Options:
+  -h, --help Show this help and exit.
+
+OpenOCD selection when OPENOCD is omitted:
+  - Native Linux uses "openocd" from PATH.
+  - WSL with Windows interop, a Windows-mounted repository, and
+    bin/openocd.exe uses the bundled Windows executable.
+  - Other WSL configurations use native "openocd" from PATH.
+
+Examples:
+  ./scripts/start-openocd.sh
+  ./scripts/start-openocd.sh /usr/local/bin/openocd
+  ./scripts/start-openocd.sh ./bin/openocd.exe
+
+The OpenOCD configuration feature-detects legacy and newer GDB command
+syntax, so this launcher does not select a configuration by version.
+EOF
+}
+
+case "${1:-}" in
+-h|--help)
+    usage
+    exit 0
+    ;;
+-*)
+    printf 'ERROR: Unknown option: %s\n\n' "$1" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
+
+if (( $# > 1 )); then
+    printf 'ERROR: Expected at most one OPENOCD argument.\n\n' >&2
+    usage >&2
+    exit 2
+fi
+
 # Check environment. We can run Windows .exe files from WSL, not other Linux
 kernel_release=""
 
