@@ -6,8 +6,72 @@ Cible
 
 La cible principale documentée est l'**ULX3S 85F** exécutant Hazard3 à 50 MHz avec sortie HDMI. La cible compacte ULX3S 12F et les profils ULX4M-LD/ULX4M-LS sont également documentés lorsque leur horloge, leur vidéo ou leur organisation mémoire diffère.
 
+Configuration requise
+---------------------
+
+Configuration minimale du système de développement :
+
+* RAM : 8 Gio configurés (les machines virtuelles peuvent signaler un peu moins
+  de mémoire utilisable)
+* Processeurs : 2
+* Disque : capacité du système de fichiers de 40 Gio
+* Swap : 4 Gio recommandés
+
+Recommandé pour les compilations depuis les sources :
+
+* RAM : 12 à 16 Gio
+* Processeurs : 4
+* Disque : 60 Gio ou plus
+* Swap : 4 à 8 Gio
+
+La compilation de Yosys et de nextpnr depuis les sources peut utiliser beaucoup
+de mémoire, en particulier avec les compilations parallèles. Sur les systèmes
+disposant de moins que la RAM minimale requise, des processus de compilation
+peuvent être interrompus en raison de la pression mémoire.
+
+Le script ``check-system-requirements.sh`` affiche les ressources détectées :
+
+.. code-block:: bash
+
+   ./scripts/check-system-requirements.sh
+
+
+Installation des logiciels requis
+----------------------------------
+
+Sur un système neuf, tout peut être installé avec un seul script. Ce script est
+également utile pour les mises à jour :
+
+.. code-block:: bash
+
+   mkdir -p workspace
+   cd workspace
+
+   wget \
+       https://raw.githubusercontent.com/ulx3s/Hazard3-Doom/main/scripts/full-install.sh \
+       https://raw.githubusercontent.com/ulx3s/Hazard3-Doom/main/scripts/check-system-requirements.sh
+
+   chmod +x ./full-install.sh
+   chmod +x ./check-system-requirements.sh
+
+   ./full-install.sh
+
+.. admonition:: Versions de Yosys et nextpnr
+
+   Les scripts installent des versions précises de Yosys et nextpnr connues pour
+   respecter les contraintes de timing avec les seeds par défaut. Les versions
+   déjà installées sont remplacées silencieusement. Si vous utilisez une autre
+   version de Yosys ou de nextpnr, vous devrez peut-être adapter les scripts de
+   compilation. Voir :doc:`/user-guide/build` pour plus de détails, ainsi que le
+   script
+   `build-ecp5-bitstream-common.sh <https://github.com/ulx3s/Hazard3-Doom/blob/main/scripts/build-ecp5-bitstream-common.sh>`_.
+
 1. Cloner le dépôt
 ------------------
+
+Si vous utilisez ``./full-install.sh`` ci-dessus, cette étape a été effectuée
+automatiquement.
+
 
 Utilisez un clone récursif afin que les sous-modules Hazard3 et DoomGeneric soient présents :
 

@@ -48,11 +48,12 @@ On a fresh system, everything can be installed with a single script. The script 
    mkdir -p workspace
    cd workspace
 
-   wget -L \
+   wget \
        https://raw.githubusercontent.com/ulx3s/Hazard3-Doom/main/scripts/full-install.sh \
-       -O ./full-install.sh
+       https://raw.githubusercontent.com/ulx3s/Hazard3-Doom/main/scripts/check-system-requirements.sh
 
    chmod +x ./full-install.sh
+   chmod +x ./check-system-requirements.sh
 
    ./full-install.sh
 

@@ -6,8 +6,70 @@ Cilj
 
 Primarni dokumentirani cilj je **ULX3S 85F** na kojem Hazard3 radi na 50 MHz uz HDMI izlaz. Kompaktni cilj ULX3S 12F i profili ULX4M-LD/ULX4M-LS također su dokumentirani tamo gdje se razlikuju njihov takt, video ili raspored memorije.
 
+Zahtjevi sustava
+----------------
+
+Minimalni razvojni sustav:
+
+* RAM: 8 GiB konfigurirano (virtualni strojevi mogu prijaviti nešto manje
+  iskoristive memorije)
+* Procesori: 2
+* Disk: 40 GiB kapaciteta datotečnog sustava
+* Swap: preporučeno 4 GiB
+
+Preporučeno za izgradnju iz izvornog koda:
+
+* RAM: 12-16 GiB
+* Procesori: 4
+* Disk: 60 GiB ili više
+* Swap: 4-8 GiB
+
+Izgradnja Yosysa i nextpnr-a iz izvornog koda može koristiti znatnu količinu
+memorije, osobito pri paralelnim izgradnjama. Sustavi s manje od minimalno
+potrebne količine RAM-a mogu prekinuti procese izgradnje zbog nedostatka
+memorije.
+
+Skripta ``check-system-requirements.sh`` prikazuje otkrivene resurse:
+
+.. code-block:: bash
+
+   ./scripts/check-system-requirements.sh
+
+
+Instalacija potrebnog softvera
+------------------------------
+
+Na svježem sustavu sve se može instalirati jednom skriptom. Skripta je korisna
+i za ažuriranja:
+
+.. code-block:: bash
+
+   mkdir -p workspace
+   cd workspace
+
+   wget \
+       https://raw.githubusercontent.com/ulx3s/Hazard3-Doom/main/scripts/full-install.sh \
+       https://raw.githubusercontent.com/ulx3s/Hazard3-Doom/main/scripts/check-system-requirements.sh
+
+   chmod +x ./full-install.sh
+   chmod +x ./check-system-requirements.sh
+
+   ./full-install.sh
+
+.. admonition:: Verzije Yosysa i nextpnr-a
+
+   Skripte instaliraju određene verzije Yosysa i nextpnr-a za koje je poznato
+   da prolaze vremenska ograničenja sa zadanim seedovima. Već instalirane
+   verzije tiho se prepisuju. Ako imate instaliranu drugu verziju Yosysa ili
+   nextpnr-a, možda ćete morati prilagoditi skripte za izgradnju. Za detalje
+   pogledajte :doc:`/user-guide/build` i skriptu
+   `build-ecp5-bitstream-common.sh <https://github.com/ulx3s/Hazard3-Doom/blob/main/scripts/build-ecp5-bitstream-common.sh>`_.
+
 1. Klonirajte repozitorij
 -------------------------
+
+Ako koristite gornji ``./full-install.sh``, ovaj je korak izvršen automatski.
+
 
 Upotrijebite rekurzivno kloniranje kako bi podmoduli Hazard3 i DoomGeneric bili dostupni:
 
