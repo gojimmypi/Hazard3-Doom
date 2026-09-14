@@ -12,7 +12,7 @@ Git source: current index (`git ls-files --cached`)
 
 Files inventoried: 74
 
-Total bytes: 567321
+Total bytes: 571334
 
 ## Verification
 
@@ -52,7 +52,7 @@ should be identified before a public release.
 | `doomgeneric-version.sh` | 1386 | `5a6cf61c5c1fd11237763279ed0a1d39d2dce37f3720c752e4e0114cae71ef81` | REVIEW | Shell script |
 | `flash-ulx3s-persistent.sh` | 1599 | `55dbb3ef4ee9d6315b5f622e4e0141e20bb165a631d0b85badb38e62f2b478fd` | REVIEW | Shell script |
 | `full-clean.sh` | 5814 | `1d2732bee827bf875b529ddb05dd1874438c76ec95b90958302fb705b06e49be` | REVIEW | Shell script |
-| `full-install.sh` | 4383 | `97367505943768bb4a08e89ed7e3f50d2e11233f48a5712ba989c6ec6adaef61` | REVIEW | Shell script |
+| `full-install.sh` | 6815 | `075cd8a4fb9898375c1b0e8c628a703a4ab3ca82624df4653be998620942150b` | REVIEW | Shell script |
 | `gdb/load-hazard3-test-elf.gdb` | 842 | `8ff53bd3e78ae7fa3c78aa8c26c891b742bf3689095179f59edd293ade1d1120` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `gdb/sao-probe.gdb` | 2086 | `4133bf62ae717eb5d49c7dccf283a90d0fa5267d9262aefdbcb150aa10be4eac` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `gdb/sao-scan.gdb` | 2288 | `fc220edfff82d934267000aa4ead2fb7df72a6b4044c48c5010d8be5826dc6aa` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
@@ -83,8 +83,8 @@ should be identified before a public release.
 | `setup-doomgeneric.sh` | 3758 | `c5e0db035fd7c7ca27f2a742c61e40cd76b667735d03fb70165d462e9417a53a` | REVIEW | Shell script |
 | `setup-submodules.sh` | 2492 | `50acdd84c3befd4ae3820d8f871edd2ba600975d31191cd1460b83e7095919f4` | REVIEW | Shell script |
 | `setup-xpack-riscv-gcc.cmd` | 4527 | `4ebeb6512881634e17c5d18e5424112f142bf651d35f07b8ed197c20f43f108e` | REVIEW | File |
-| `start-openocd.bat` | 1621 | `47722eea263b1857c2ed8537927e3a047f6ba53d14baf2fcaefd655b56dccacd` | REVIEW | File |
-| `start-openocd.sh` | 4014 | `fc5f94d1a8c4b9f32ed9954e6675b485f21500b4f5fa111372aa2d0a83275c09` | REVIEW | Shell script |
+| `start-openocd.bat` | 1772 | `fa12c169fcbec5b1c33c98195aa97263ecd35ebf3d382380ef6b66b80cc53895` | REVIEW | File |
+| `start-openocd.sh` | 5444 | `a5a9e1e771b7b3d8e5e0a8062d5b09e8a0fe067faa12f72d3ccc1b058bcf3c0f` | REVIEW | Shell script |
 | `summarize-ecp5-sweep.py` | 11880 | `1c9764208c376f0795c4ec68d84d19bb16fac4a2296cf5c062d1543d740edf75` | REVIEW | File |
 | `sweep-ecp5-common.sh` | 10641 | `8fcb40ac93677d355233982c20f88273b7cda9ff8349a1a5fd866daf6314fdc1` | REVIEW | Shell script |
 | `sweep-ecp5.sh` | 3497 | `7119afb34144e367fb75899a44f6e730efeb6773e3063a7dcdb3e48ba97e8452` | REVIEW | Shell script |
