@@ -49,5 +49,15 @@ if not exist "%OPENOCD_CONFIG%" (
     exit /b 1
 )
 
-echo OPENOCD_CONFIG=%OPENOCD_CONFIG%
+echo OpenOCD executable:
+echo   %OPENOCD%
+echo.
+echo OpenOCD version:
+"%OPENOCD%" --version
+echo.
+echo Using config:
+echo   %OPENOCD_CONFIG%
+echo.
+echo Starting OpenOCD...
+echo.
 "%OPENOCD%" -d2 -f "%OPENOCD_CONFIG%"

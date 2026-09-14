@@ -19,6 +19,8 @@
 # -----------------------------------------------------------------------------
 
 # Starts a listening OpenOCD server using ulx3s-openocd-doom.cfg.
+# The config feature-detects legacy/new GDB command syntax, so the launcher
+# does not select a config based on an OpenOCD version string.
 
 set -euo pipefail
 
@@ -80,7 +82,8 @@ if [[ "${OPENOCD}" == */* ]]; then
         printf 'ERROR: OpenOCD not found:\n  %s\n' "${OPENOCD}" >&2
         exit 1
     fi
-elif ! command -v "${OPENOCD}" >/dev/null 2>&1; then
+    OPENOCD_RESOLVED="${OPENOCD}"
+elif ! OPENOCD_RESOLVED="$(command -v "${OPENOCD}")"; then
     printf 'ERROR: OpenOCD not found in PATH:\n  %s\n' "${OPENOCD}" >&2
     exit 1
 fi
@@ -118,7 +121,10 @@ fi
 
 
 printf 'Repository root:\n   %s\n\n' "${ROOT_DIR}"
-printf 'Using config:\n      %s\n\n' "${OPENOCD_CONFIG_ARG}"
-printf 'Starting OpenOCD:\n  %s\n\n' "${OPENOCD}"
+printf 'OpenOCD executable:\n  %s\n\n' "${OPENOCD_RESOLVED}"
+printf 'OpenOCD version:\n'
+"${OPENOCD}" --version 2>&1 || true
+printf '\nUsing config:\n  %s\n\n' "${OPENOCD_CONFIG_ARG}"
+printf 'Starting OpenOCD...\n\n'
 
 exec "${OPENOCD}" -d2 -f "${OPENOCD_CONFIG_ARG}"

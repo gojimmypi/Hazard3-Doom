@@ -31,7 +31,7 @@ Hazard3-Doom full development environment installer
 This script will:
   - install/update required Ubuntu packages using sudo;
   - clone the Hazard3-Doom repository and initialize its submodules;
-  - install the RISC-V toolchain and CMake;
+  - install the RISC-V toolchain, CMake, and native OpenOCD;
   - build and install Yosys and nextpnr-ecp5/Project Trellis;
   - run the final requirements check.
 
@@ -144,10 +144,19 @@ hash -r
 ecppack --version
 nextpnr-ecp5 --version
 
+sudo apt-get install -y openocd
+hash -r
+
+printf '\nNative OpenOCD installed:\n'
+openocd --version
+printf '\nUse ./scripts/start-openocd.sh to select the supported OpenOCD/config path.\n'
+
 if (( IS_WSL == 1 )); then
-    echo "openocd.exe available in ./bin/"
+    if [[ -f ./bin/openocd.exe ]]; then
+        printf '%s\n' \
+            'Bundled Windows xPack OpenOCD is also available in ./bin/openocd.exe.'
+    fi
 else
-    sudo apt-get install -y openocd
     if command -v udevadm >/dev/null 2>&1; then
         if sudo udevadm control --reload-rules; then
             printf '%s\n' \
