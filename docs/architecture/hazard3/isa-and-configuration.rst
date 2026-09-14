@@ -188,6 +188,20 @@ The project also overrides implementation choices that are not ISA extensions:
      - 0
      - Do not spend reset logic clearing general-purpose registers.
 
+.. admonition:: Why ``RESET_REGFILE`` is zero on FPGA
+   :class: note
+
+   Here ``0`` means that reset of the general-purpose register file is
+   **disabled**; it does not mean that registers ``x1`` through ``x31`` are
+   cleared to zero. Register ``x0`` remains architecturally hard-wired to zero.
+
+   The upstream Hazard3 design guide recommends ``RESET_REGFILE=0`` for FPGA
+   synthesis because FPGA block RAM and LUT RAM commonly cannot implement the
+   requested register-file reset efficiently. Setting it to ``1`` can force the
+   register file into logic-fabric flip-flops, with significant area and timing
+   cost. See the `upstream Hazard3 Design Guide and Reference Manual
+   <https://wren.wtf/hazard3/doc/>`_, section **FPGA Synthesis**.
+
 Software consequence
 --------------------
 

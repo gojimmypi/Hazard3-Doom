@@ -112,6 +112,8 @@ Liens du projet
 * `Dépôt Hazard3-Doom <https://github.com/ulx3s/Hazard3-Doom>`_
 * `Fork matériel Hazard3 pour ULX3S <https://github.com/ulx3s/Hazard3>`_
 * `Projet Hazard3 amont <https://github.com/Wren6991/Hazard3>`_
+* `Guide de conception et manuel de référence Hazard3 <https://wren.wtf/hazard3/doc/>`_
+* `Source de la documentation Hazard3 <https://github.com/Wren6991/Hazard3/tree/stable/doc>`_
 * `Projet DoomGeneric amont <https://github.com/ozkl/doomgeneric>`_
 * `Sources matérielles ULX4M <https://github.com/intergalaktik/ulx4m>`_
 * `Documentation matérielle ULX4M <https://github.com/intergalaktik/ulx4m-documentation>`_

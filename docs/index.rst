@@ -116,6 +116,8 @@ Project links
 * `Hazard3-Doom repository <https://github.com/ulx3s/Hazard3-Doom>`_
 * `ULX3S Hazard3 hardware fork on ulx-doom branch <https://github.com/ulx3s/Hazard3/tree/ulx-doom>`_
 * `Hazard3 upstream <https://github.com/Wren6991/Hazard3>`_
+* `Hazard3 Design Guide and Reference Manual <https://wren.wtf/hazard3/doc/>`_
+* `Hazard3 documentation source <https://github.com/Wren6991/Hazard3/tree/stable/doc>`_
 * `Hazard3-libfpga fork on ulx-doom branch <https://github.com/ulx3s/Hazard3-libfpga/tree/ulx-doom>`_
 * `Hazard3-libfpga upstream <https://github.com/Wren6991/libfpga>`_
 * `DoomGeneric upstream <https://github.com/ozkl/doomgeneric>`_

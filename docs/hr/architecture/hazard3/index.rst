@@ -35,6 +35,25 @@ Korisne primarne reference:
 * `Raspberry Pi dokumentacija mikrokontrolera - promjena arhitekture <https://www.raspberrypi.com/documentation/microcontrollers/microcontroller-chips.html#architecture-switching>`_
 * `Upstream Hazard3 izvor i bilješke o RP2350 konfiguraciji <https://github.com/Wren6991/Hazard3>`_
 
+Upstream Hazard3 dokumentacija
+------------------------------
+
+Luke Wren održava potpuni Hazard3 vodič za dizajn i referentni priručnik uz
+izvorni kod procesora. Hazard3-Doom stranice ostaju usredotočene na
+konfiguraciju i integraciju koju koristi ovaj projekt, dok upstream priručnik
+ostaje mjerodavna referenca za generički procesor.
+
+* `Renderirani Hazard3 vodič za dizajn i referentni priručnik <https://wren.wtf/hazard3/doc/>`_
+* `Trenutačni upstream izvor dokumentacije <https://github.com/Wren6991/Hazard3/tree/stable/doc>`_
+* :hazard3-upstream-tree:`Izvor dokumentacije na upstream snimku pregledanom ovdje </doc>`
+
+.. note::
+
+   Renderirani upstream priručnik prati razvoj Hazard3 projekta i može opisivati
+   značajke novije od CPU snimka fiksiranog u Hazard3-Doomu. Za točno ponašanje
+   na razini ciklusa, zadane konfiguracijske vrijednosti ili RTL detalje ovog
+   projekta koristite poveznice na fiksirani izvor na ovim stranicama.
+
 Snimak izvornog koda koji ovaj projekt koristi
 ----------------------------------------------
 
@@ -42,6 +61,8 @@ Tehnički opisi na ovim stranicama vezani su uz Hazard3 snimak izvornog koda
 korišten za ovaj pregled dokumentacije:
 
 * commit ULX3S Hazard3 forka: |hazard3_commit|
+* upstream Hazard3 stable commit pregledan ovdje: |hazard3_upstream_commit|
+* :hazard3-upstream-tree:`Pregled tog točnog upstream snimka </>`
 * :hazard3-tree:`Pregled fiksiranog izvora </>`
 * `Pregled trenutačnog upstream Hazard3 stable <https://github.com/Wren6991/Hazard3/tree/stable>`_
 

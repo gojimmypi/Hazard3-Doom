@@ -28,11 +28,14 @@ version = release
 
 hazard3_repo = "https://github.com/ulx3s/Hazard3"
 hazard3_commit = "3c0aca063517bb7fdbe869019c984954c7dd5c97"
+hazard3_upstream_repo = "https://github.com/Wren6991/Hazard3"
+hazard3_upstream_commit = "8af992930f71a69b0e06c38734c1094f41a05ca0"
 
 extensions = ["sphinx.ext.extlinks"]
 
 rst_epilog = f"""
 .. |hazard3_commit| replace:: ``{hazard3_commit}``
+.. |hazard3_upstream_commit| replace:: ``{hazard3_upstream_commit}``
 """
 
 extlinks = {
@@ -42,6 +45,14 @@ extlinks = {
     ),
     "hazard3-tree": (
         f"{hazard3_repo}/tree/{hazard3_commit}%s",
+        "%s",
+    ),
+    "hazard3-upstream-src": (
+        f"{hazard3_upstream_repo}/blob/{hazard3_upstream_commit}/%s",
+        "%s",
+    ),
+    "hazard3-upstream-tree": (
+        f"{hazard3_upstream_repo}/tree/{hazard3_upstream_commit}%s",
         "%s",
     ),
 }

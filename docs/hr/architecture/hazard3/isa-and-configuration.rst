@@ -184,6 +184,20 @@ Projekt također mijenja implementacijske izbore koji nisu ISA ekstenzije:
      - 0
      - Ne troši reset logiku na brisanje registara opće namjene.
 
+.. admonition:: Zašto je ``RESET_REGFILE`` nula na FPGA-u
+   :class: note
+
+   Ovdje ``0`` znači da je reset registarske datoteke opće namjene
+   **onemogućen**; ne znači da se registri ``x1`` do ``x31`` brišu na nulu.
+   Registar ``x0`` arhitekturno ostaje trajno spojen na nulu.
+
+   Upstream Hazard3 vodič preporučuje ``RESET_REGFILE=0`` za FPGA sintezu jer
+   FPGA block RAM i LUT RAM često ne mogu učinkovito implementirati traženi
+   reset registarske datoteke. Vrijednost ``1`` može prisiliti implementaciju
+   registarske datoteke u flip-flopovima logičkog fabric-a, uz značajan trošak
+   površine i timinga. Pogledajte `upstream Hazard3 vodič za dizajn i referentni
+   priručnik <https://wren.wtf/hazard3/doc/>`_, odjeljak **FPGA Synthesis**.
+
 Posljedica za softver
 ---------------------
 

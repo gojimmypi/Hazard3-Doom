@@ -185,6 +185,21 @@ extensions ISA :
      - 0
      - Ne pas dépenser de logique de reset pour effacer les registres généraux.
 
+.. admonition:: Pourquoi ``RESET_REGFILE`` vaut zéro sur FPGA
+   :class: note
+
+   Ici, ``0`` signifie que le reset du fichier de registres généraux est
+   **désactivé** ; cela ne signifie pas que les registres ``x1`` à ``x31`` sont
+   remis à zéro. Le registre ``x0`` reste architecturalement câblé à zéro.
+
+   Le guide de conception Hazard3 amont recommande ``RESET_REGFILE=0`` pour la
+   synthèse FPGA, car les block RAM et LUT RAM des FPGA ne peuvent souvent pas
+   implémenter efficacement le reset demandé du fichier de registres. Une valeur
+   de ``1`` peut forcer l'utilisation de bascules de la logique générale, avec
+   un coût important en surface et en timing. Voir le `Guide de conception et
+   manuel de référence Hazard3 amont <https://wren.wtf/hazard3/doc/>`_, section
+   **FPGA Synthesis**.
+
 Conséquence logicielle
 ----------------------
 

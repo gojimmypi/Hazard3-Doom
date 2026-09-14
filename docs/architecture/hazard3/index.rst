@@ -36,6 +36,25 @@ Useful primary references:
 * `Raspberry Pi microcontroller documentation - architecture switching <https://www.raspberrypi.com/documentation/microcontrollers/microcontroller-chips.html#architecture-switching>`_
 * `Upstream Hazard3 source and RP2350 configuration notes <https://github.com/Wren6991/Hazard3>`_
 
+Upstream Hazard3 documentation
+------------------------------
+
+Luke Wren maintains the complete Hazard3 design guide and reference manual
+alongside the processor source. Hazard3-Doom keeps its own pages focused on
+the configuration and integration used by this project, while the upstream
+manual remains the authoritative reference for the generic processor.
+
+* `Rendered Hazard3 Design Guide and Reference Manual <https://wren.wtf/hazard3/doc/>`_
+* `Current upstream documentation source <https://github.com/Wren6991/Hazard3/tree/stable/doc>`_
+* :hazard3-upstream-tree:`Documentation source at the upstream snapshot reviewed here </doc>`
+
+.. note::
+
+   The rendered upstream manual follows Hazard3 development and can describe
+   features newer than the CPU snapshot pinned by Hazard3-Doom. For exact
+   cycle-level behavior, configuration defaults, or RTL details in this
+   project, use the pinned source links in these pages.
+
 Source snapshot used by this project
 ------------------------------------
 
@@ -43,7 +62,8 @@ The technical descriptions in these pages are anchored to the Hazard3 source
 snapshot used for this documentation review:
 
 * ULX3S Hazard3 fork commit: |hazard3_commit|
-* Upstream Hazard3 stable commit: at ``8af992930f71a69b0e06c38734c1094f41a05ca0`` (`here <https://github.com/Wren6991/Hazard3/commit/8af992930f71a69b0e06c38734c1094f41a05ca0>`_)
+* Upstream Hazard3 stable commit reviewed here: |hazard3_upstream_commit|
+* :hazard3-upstream-tree:`Browse that exact upstream snapshot </>`
 * :hazard3-tree:`Browse the pinned source </>`
 * `Browse current upstream Hazard3 stable <https://github.com/Wren6991/Hazard3/tree/stable>`_
 
