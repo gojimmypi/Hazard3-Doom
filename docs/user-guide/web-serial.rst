@@ -62,6 +62,33 @@ The normal Hazard3-Doom UART settings are:
 The web console exposes these serial settings in the UI and persists its user
 settings in browser ``localStorage``.
 
+UART ownership and duplicate Device Tool pages
+----------------------------------------------
+
+Only one page or application can own a serial port at a time. To make this
+failure mode easier to understand, the Device Tool coordinates same-origin
+pages with ``BroadcastChannel`` and an exclusive browser Web Lock. If another
+copy of the same Device Tool already owns the UART, the second page reports
+**UART already in use** instead of silently failing after the browser chooser.
+
+The lock is scoped to a browser origin. For example,
+``http://127.0.0.1:8000`` and ``https://ulx3s.github.io`` cannot share the
+same Web Lock even when they are open in the same browser. A competing PuTTY
+session, another application, or a Device Tool from a different origin also
+cannot be identified by name. In those cases a failed ``SerialPort.open()`` is
+reported as a likely port-ownership conflict and the H3D/IWAD panels provide a
+**Retry UART** path.
+
+While the browser serial chooser or ``open()`` operation is pending, the page
+shows a **Connecting UART** state. Both the H3D and IWAD uploader sections also
+show a prominent UART prerequisite and their own **Connect UART** control when
+no serial connection is active.
+
+Buttons and compact transport/status labels use hover text for contextual help.
+For dynamically enabled controls, the tooltip changes with state: a disabled
+button explains why it is unavailable, while the enabled form describes the
+action it will perform.
+
 Screen-snip overview
 --------------------
 
@@ -106,11 +133,16 @@ Reserved bytes are:
    * - ``0x06``
      - Capability ACK
      - Returned by the current monitor when its cached frame is valid, or by a supported Doom/I2CDriver HDMI implementation. The browser consumes this byte and does not display it in the terminal.
+   * - ``0x15``
+     - Capability NAK
+     - Returned when the screen-snip protocol is understood but no capturable HDMI frame is currently available. The browser consumes this byte, marks the protocol as known but unavailable, and does not display the byte in the terminal.
    * - ``0x1d``
      - Capture request
      - Sent only after capability has been confirmed. The active screen provider responds with an ``H3SNIP1`` frame.
 
-An individual capability probe waits up to 750 ms for an ACK. Around runtime
+An individual capability probe waits up to 750 ms for an ACK or NAK response.
+An ACK means a capture is currently available. A NAK means the protocol is
+supported, but there is currently no capturable frame. Around runtime
 transitions such as a Doom launch, the web application keeps a longer
 reacquisition window and retries while the new UART consumer initializes. This
 prevents an early probe during Doom startup from permanently leaving the button
@@ -186,6 +218,12 @@ remain unchanged; in particular, the monitor keeps ``H`` as a Help key::
        console_print_help();
        break;
 
+The Device Tool's **Help** button intentionally sends a single raw ``h`` byte
+with no configured line ending. It does not send the word ``help``. This keeps
+the browser control aligned with the monitor's one-character command parser and
+prevents later letters in a longer word from being interpreted as unrelated
+monitor commands.
+
 When ``i2c gui`` is active, ``hazard3_sao_console_feed(received)`` receives the
 UART byte before the resident-monitor switch and consumes GUI keys such as
 ``H``. The I2C GUI's private ``toggle_resolution()`` helper is ``static`` in
@@ -199,8 +237,10 @@ The I2C GUI must ACK ``0x1c`` as well as implement ``0x1d``; otherwise the
 browser correctly leaves **Screen snip** disabled even though a capture handler
 exists.
 
-Wire protocol
--------------
+.. _h3snip1-protocol:
+
+H3SNIP1 wire protocol
+---------------------
 
 After receiving ``0x1d``, the firmware writes an ASCII header terminated by
 ``CR LF`` and then immediately writes a binary payload.

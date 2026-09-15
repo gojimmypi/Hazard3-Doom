@@ -6,8 +6,70 @@ Cilj
 
 Primarni dokumentirani cilj je **ULX3S 85F** na kojem Hazard3 radi na 50 MHz uz HDMI izlaz. Kompaktni cilj ULX3S 12F i profili ULX4M-LD/ULX4M-LS također su dokumentirani tamo gdje se razlikuju njihov takt, video ili raspored memorije.
 
+Zahtjevi sustava
+----------------
+
+Minimalni razvojni sustav:
+
+* RAM: 8 GiB konfigurirano (virtualni strojevi mogu prijaviti nešto manje
+  iskoristive memorije)
+* Procesori: 2
+* Disk: 40 GiB kapaciteta datotečnog sustava
+* Swap: preporučeno 4 GiB
+
+Preporučeno za izgradnju iz izvornog koda:
+
+* RAM: 12-16 GiB
+* Procesori: 4
+* Disk: 60 GiB ili više
+* Swap: 4-8 GiB
+
+Izgradnja Yosysa i nextpnr-a iz izvornog koda može koristiti znatnu količinu
+memorije, osobito pri paralelnim izgradnjama. Sustavi s manje od minimalno
+potrebne količine RAM-a mogu prekinuti procese izgradnje zbog nedostatka
+memorije.
+
+Skripta ``check-system-requirements.sh`` prikazuje otkrivene resurse:
+
+.. code-block:: bash
+
+   ./scripts/check-system-requirements.sh
+
+
+Instalacija potrebnog softvera
+------------------------------
+
+Na svježem sustavu sve se može instalirati jednom skriptom. Skripta je korisna
+i za ažuriranja:
+
+.. code-block:: bash
+
+   mkdir -p workspace
+   cd workspace
+
+   wget \
+       https://raw.githubusercontent.com/ulx3s/Hazard3-Doom/main/scripts/full-install.sh \
+       https://raw.githubusercontent.com/ulx3s/Hazard3-Doom/main/scripts/check-system-requirements.sh
+
+   chmod +x ./full-install.sh
+   chmod +x ./check-system-requirements.sh
+
+   ./full-install.sh
+
+.. admonition:: Verzije Yosysa i nextpnr-a
+
+   Skripte instaliraju određene verzije Yosysa i nextpnr-a za koje je poznato
+   da prolaze vremenska ograničenja sa zadanim seedovima. Već instalirane
+   verzije tiho se prepisuju. Ako imate instaliranu drugu verziju Yosysa ili
+   nextpnr-a, možda ćete morati prilagoditi skripte za izgradnju. Za detalje
+   pogledajte :doc:`/user-guide/build` i skriptu
+   `build-ecp5-bitstream-common.sh <https://github.com/ulx3s/Hazard3-Doom/blob/main/scripts/build-ecp5-bitstream-common.sh>`_.
+
 1. Klonirajte repozitorij
 -------------------------
+
+Ako koristite gornji ``./full-install.sh``, ovaj je korak izvršen automatski.
+
 
 Upotrijebite rekurzivno kloniranje kako bi podmoduli Hazard3 i DoomGeneric bili dostupni:
 
@@ -61,7 +123,9 @@ Neobavezno: učitajte trenutačni monitor ELF kroz OpenOCD
 
 Softversko ažuriranje monitora može se učitati bez ponovnog place-and-routea ili
 ponovnog programiranja FPGA-a. Ovaj put koristi Hazard3 debug modul i zahtijeva
-tri procesa koji surađuju: OpenOCD, lokalni web server i preglednik.
+tri dijela koji surađuju: OpenOCD, loopback helper ``web-server.py`` i preglednik.
+Stranica preglednika može biti javni GitHub Pages; samo helper, GDB i OpenOCD
+moraju raditi lokalno.
 
 Najprije odspojite preglednikov **FPGA web flasher** s ``US1`` kako bi OpenOCD
 mogao preuzeti FT231X JTAG sučelje. U jednom terminalu, iz korijena
@@ -79,18 +143,22 @@ Ispravna ULX3S 85F sesija sadrži retke slične ovima:
    Examined RISC-V core; found 1 harts
    Listening on port 3333 for gdb connections
 
-Ostavite OpenOCD pokrenut. U drugom terminalu pokrenite projektni web server:
+Ostavite OpenOCD pokrenut. U drugom terminalu pokrenite loopback helper:
 
 .. code-block:: bash
 
    python3 web/web-server.py
 
-Otvorite ``http://127.0.0.1:8000/`` u Chromeu ili Edgeu. **Nemojte** otvarati
-``web/index.html`` s ``file://`` URL-om; statična stranica ne može pozvati
-lokalni API loadera firmwarea. Proširite **Console firmware uploader**, odaberite
-``build/ulx3s/monitor/hazard3-boot-monitor.elf`` i učitajte ga. GDB se spaja na
-već pokrenuti OpenOCD server, provjerava ELF sekcije, nastavlja Hazard3 i
-prekida vezu.
+Zatim možete nastaviti s javnom stranicom
+``https://ulx3s.github.io/Hazard3-Doom/`` ili otvoriti lokalnu kopiju
+``http://127.0.0.1:8000/``. **Console firmware uploader** treba prikazati
+**Local loader Ready** i **OpenOCD Ready**; **refresh** pokreće trenutačnu
+provjeru.
+
+Odaberite ``build/ulx3s/monitor/hazard3-boot-monitor.elf`` i učitajte ga. GDB se
+spaja na već pokrenuti OpenOCD server, provjerava ELF sekcije, nastavlja Hazard3
+i prekida vezu. OpenOCD status provjera u helperu pasivna je i ne troši GDB
+connection slot.
 
 Vanjski J1 USB-UART adapter odvojen je put od ``US1`` JTAG sučelja, pa Web Serial
 može ostati spojen dok OpenOCD radi. Pogledajte :doc:`../user-guide/web-tool` i

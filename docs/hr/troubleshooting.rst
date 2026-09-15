@@ -287,45 +287,62 @@ bio vidljiv prije pokretanja GUI-a. Pokrenite Doom ili prikažite drugi video
 frame monitora kako biste zamijenili zadnju sliku analizatora.
 
 Uploader firmwarea konzole ostaje na ``Loading...``
----------------------------------------------------
+----------------------------------------------------
 
-Preglednikov uploader firmwarea konzole ne pokreće OpenOCD. Tri dijela moraju
-raditi istodobno:
+Browser console uploader ne pokreće OpenOCD. Tri dijela surađuju:
 
 .. code-block:: text
 
-   preglednik -> web-server.py -> GDB -> OpenOCD :3333 -> Hazard3
+   browser stranica -> loopback web-server.py -> GDB -> OpenOCD :3333 -> Hazard3
 
-Pokrenite OpenOCD u jednom terminalu i ostavite ga pokrenutog:
+Stranica može biti javni GitHub Pages Device Tool ili lokalna stranica koju
+poslužuje ``web-server.py``. GDB i OpenOCD uvijek ostaju lokalni.
+
+Pokrenite OpenOCD u jednom terminalu:
 
 .. code-block:: bash
 
    ./scripts/start-openocd.sh
 
-Upotrebljiva sesija mora doći do poruka ``Examined RISC-V core`` i ``Listening
-on port 3333 for gdb connections``. U drugom terminalu pokrenite:
+Upotrebljiva sesija dosegne ``Examined RISC-V core`` i ``Listening on port
+3333 for gdb connections``. U drugom terminalu pokrenite:
 
 .. code-block:: bash
 
    python3 web/web-server.py
 
-Otvorite ``http://127.0.0.1:8000/``. Nemojte koristiti ``file://`` URL za
-``web/index.html``. Stanje **Local loader Ready** na web-stranici znači da je
-lokalni HTTP pomoćni proces dostupan; OpenOCD i dalje mora zasebno raditi.
-Tijekom normalnog batch učitavanja OpenOCD može zabilježiti prihvaćenu GDB vezu,
-a zatim ``dropped 'gdb' connection`` kada se loader odspoji nakon nastavka rada
-jezgre.
+Helper pri pokretanju upozorava ako listener nije pronađen na
+``127.0.0.1:3333``. To je samo upozorenje jer se OpenOCD može pokrenuti kasnije.
 
-Korisne provjere su:
+Nastavite s ``https://ulx3s.github.io/Hazard3-Doom/`` ili otvorite
+``http://127.0.0.1:8000/``. Nemojte koristiti ``file://`` za potpuni Device
+Tool. Panel odvojeno prikazuje **Local loader** i **OpenOCD**; **refresh** odmah
+ponavlja provjeru.
+
+Status zahtjev nosi promjenjivu ``challenge`` vrijednost kako cacheirani
+``Ready`` odgovor ne bi preživio zaustavljanje helpera. OpenOCD provjera je
+pasivna: pregledava lokalne listenere umjesto otvaranja TCP veze na ``3333``.
+
+Ako OpenOCD svakih nekoliko sekundi prikazuje prihvaćene ili odbijene GDB veze
+dok se ELF ne učitava, vjerojatno još radi stari ``web-server.py`` s aktivnim
+TCP probeom. Zaustavite ga i pokrenite trenutačni helper.
+
+Tijekom stvarnog učitavanja jedna prihvaćena GDB veza koja se na kraju zatvori
+je očekivana.
+
+Korisne provjere:
 
 .. code-block:: bash
 
    ss -ltnp | grep ':3333'
    curl http://127.0.0.1:8000/api/console-firmware/status
 
-Također odspojite preglednikov FPGA web flasher s ``US1`` prije pokretanja
-OpenOCD-a jer oba koriste isto FT231X JTAG sučelje. Vanjski J1 USB-UART adapter
-je odvojen i može ostati spojen.
+Prije OpenOCD-a odspojite i browser FPGA WebUSB flasher s ``US1`` jer oba
+koriste isti FT231X JTAG. Vanjski J1 USB-UART neovisan je i može ostati spojen.
+
+Ako H3D/H3W kasnije istekne čekajući ``READY``, prvo provjerite radi li
+rezidentni monitor na ``>`` promptu. Ako helper odgovara, ali OpenOCD nije
+prisutan, Device Tool dodatno podsjeća da monitor možda još treba učitati.
 
 OpenOCD prijavljuje USB timeout ili potpuno nulti JTAG scan u VM-u
 ------------------------------------------------------------------

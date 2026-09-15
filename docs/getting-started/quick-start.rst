@@ -48,11 +48,12 @@ On a fresh system, everything can be installed with a single script. The script 
    mkdir -p workspace
    cd workspace
 
-   wget -L \
+   wget \
        https://raw.githubusercontent.com/ulx3s/Hazard3-Doom/main/scripts/full-install.sh \
-       -O ./full-install.sh
+       https://raw.githubusercontent.com/ulx3s/Hazard3-Doom/main/scripts/check-system-requirements.sh
 
    chmod +x ./full-install.sh
+   chmod +x ./check-system-requirements.sh
 
    ./full-install.sh
 
@@ -129,7 +130,9 @@ Optional: load the current monitor ELF through OpenOCD
 
 A software-only monitor update can be loaded without rerouting or reprogramming
 the FPGA. This path uses the Hazard3 debug module and requires three cooperating
-processes: OpenOCD, the local web server, and the browser.
+pieces: OpenOCD, the loopback ``web-server.py`` helper, and the browser Device
+Tool. The browser page may be the public GitHub Pages copy; only the helper,
+GDB, and OpenOCD must run locally.
 
 First disconnect the browser **FPGA web flasher** from ``US1`` so OpenOCD can
 own the FT231X JTAG interface. In one terminal, from the repository root, start
@@ -147,18 +150,26 @@ A healthy ULX3S 85F session includes lines similar to:
    Examined RISC-V core; found 1 harts
    Listening on port 3333 for gdb connections
 
-Leave OpenOCD running. In a second terminal start the project web server:
+Leave OpenOCD running. In a second terminal start the loopback helper web server:
 
 .. code-block:: bash
 
    python3 web/web-server.py
 
-Open ``http://127.0.0.1:8000/`` in Chrome or Edge. Do **not** open
-``web/index.html`` with a ``file://`` URL; the static page cannot call the local
-firmware-loader API. Expand **Console firmware uploader**, select
-``build/ulx3s/monitor/hazard3-boot-monitor.elf``, and load it. GDB connects to
-the already-running OpenOCD server, verifies the ELF sections, resumes Hazard3,
-and disconnects.
+For an optional prompted access key use ``--access-key``. The helper binds only
+to ``127.0.0.1`` and reports whether a listener is present on OpenOCD's normal
+GDB port ``3333``.
+
+Now either continue with the public Device Tool at
+``https://ulx3s.github.io/Hazard3-Doom/`` or open the local copy at
+``http://127.0.0.1:8000/``. The **Console firmware uploader** should report both
+**Local loader Ready** and **OpenOCD Ready**. Use **refresh** if an immediate
+recheck is desired.
+
+Select ``build/ulx3s/monitor/hazard3-boot-monitor.elf`` and load it. GDB connects
+to the already-running OpenOCD server, verifies the ELF sections, resumes
+Hazard3, and disconnects. The helper's OpenOCD status check is passive and does
+not consume a GDB connection slot.
 
 The external J1 USB-UART adapter is a separate path from the ``US1`` JTAG
 interface, so Web Serial may remain connected while OpenOCD is running. See

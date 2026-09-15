@@ -90,6 +90,30 @@ l'utilisateur courant l'accès au nœud de périphérique existant. Voir
 :doc:`troubleshooting` pour la propriété du port, ModemManager et les
 vérifications du câblage UART.
 
+La page GitHub Pages publique peut-elle charger l'ELF console ?
+---------------------------------------------------------------
+
+Oui, si le helper loopback local est en cours d'exécution. La page peut rester
+sur ``https://ulx3s.github.io/Hazard3-Doom/`` pendant que
+``web-server.py``, GDB et OpenOCD tournent sur la machine locale. Le navigateur
+appelle le helper sur ``127.0.0.1:8000`` ; le helper utilise ensuite le chemin
+GDB/OpenOCD local.
+
+Le panneau Console firmware affiche séparément l'état du helper et celui
+d'OpenOCD. Le mode optionnel ``web-server.py --access-key`` ajoute une clé
+partagée saisie dans la page mais non stockée dans ``localStorage``. Voir
+:doc:`user-guide/web-tool`.
+
+Pourquoi un second onglet Device Tool ne peut-il pas se connecter à l'UART ?
+----------------------------------------------------------------------------
+
+Un port série ne peut avoir qu'un propriétaire. Les onglets de même origine se
+coordonnent avec un Web Lock et ``BroadcastChannel`` afin que le second puisse
+signaler que l'UART est déjà utilisé. Des origines différentes, comme
+``http://127.0.0.1:8000`` et ``https://ulx3s.github.io``, ne partagent pas ce
+verrou, mais le navigateur/système refuse tout de même la seconde ouverture.
+Fermez ou déconnectez le premier propriétaire puis utilisez **Retry UART**.
+
 OpenOCD peut-il utiliser WinUSB sur l'ULX3S ?
 ---------------------------------------------
 

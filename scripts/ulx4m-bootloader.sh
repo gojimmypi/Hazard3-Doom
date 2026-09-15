@@ -1,10 +1,28 @@
 #!/usr/bin/env bash
+# -----------------------------------------------------------------------------
+# File:        ulx4m-bootloader.sh
+# Path:        scripts/ulx4m-bootloader.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Build bootloader
+#
 # Guided ULX4M-LD DFU bootloader build, SRAM validation, installation,
 # recovery, cold-boot verification, and user-bitstream programming.
 #
 # This script is intentionally interactive around every hardware transition
 # and destructive flash operation. It never uses fixed sleeps to guess when
 # the user has completed a physical action.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
 
 set -euo pipefail
 
@@ -67,6 +85,7 @@ BOOTLOADER_DEP_ROOT=""
 BOOTLOADER_RULES_DIR=""
 SESSION_DIR=""
 SESSION_LOG=""
+PROJECT_VERSION_DISPLAY="unknown"
 RUN_ID="$(date '+%Y%m%d-%H%M%S')"
 UPGRADE_SESSION_READY=0
 
@@ -135,6 +154,24 @@ vendored had2019 make rules and cores directly. A full upstream layout under
 third_party/had2019-playground/projects/bootloader remains supported as a
 development fallback.
 USAGE
+}
+
+load_project_version()
+{
+    local version_file="${REPO_ROOT}/VERSION"
+    local value=""
+
+    if [[ ! -r "${version_file}" ]]; then
+        printf 'WARNING: Hazard3-Doom VERSION file not found: %s\n' "${version_file}" >&2
+        return 0
+    fi
+
+    value="$(tr -d '\r\n' < "${version_file}")"
+    if [[ "${value}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+        PROJECT_VERSION_DISPLAY="v${value}"
+    else
+        printf 'WARNING: Invalid Hazard3-Doom VERSION value: %s\n' "${value}" >&2
+    fi
 }
 
 fail()
@@ -368,7 +405,7 @@ setup_riscv_tool_shim()
     fi
 
     if ! command -v riscv-none-elf-gcc >/dev/null 2>&1; then
-        fail "Neither riscv-none-embed-* nor riscv-none-elf-* tools were found on PATH."
+        fail "Neither riscv-none-embed-* nor riscv-none-elf-* tools were found."
     fi
 
     tool_dir="$(dirname -- "$(command -v riscv-none-elf-gcc)")"
@@ -412,9 +449,11 @@ preflight()
     require_tool "${DFU_UTIL}" "dfu-util"
 
     setup_riscv_tool_shim
+    load_project_version
 
     printf '\nPreflight PASS\n'
     printf '  Repository root:       %s\n' "${REPO_ROOT}"
+    printf '  Project version:        %s\n' "${PROJECT_VERSION_DISPLAY}"
     printf '  Bootloader dep root:   %s\n' "${BOOTLOADER_DEP_ROOT}"
     printf '  Bootloader rules dir:  %s\n' "${BOOTLOADER_RULES_DIR}"
     printf '  Bootloader project:    %s\n' "${BOOTLOADER_PROJECT_DIR}"
@@ -437,6 +476,7 @@ start_session_log()
     : > "${SESSION_LOG}"
     exec > >(tee -a "${SESSION_LOG}") 2>&1
 
+    printf 'Hazard3-Doom project version: %s\n' "${PROJECT_VERSION_DISPLAY}"
     printf 'Session artifacts: %s\n' "${SESSION_DIR}"
 }
 

@@ -66,9 +66,9 @@ Instantané du code source Hazard3
 
 La documentation du processeur est rattachée à l'instantané Hazard3 du projet :
 
-``736a74459b3f740c47803f20a62d820fcacbe5c3``
+|hazard3_commit|
 
-* `Source Hazard3 ULX3S épinglée <https://github.com/ulx3s/Hazard3/tree/736a74459b3f740c47803f20a62d820fcacbe5c3>`_
+* :hazard3-tree:`Source Hazard3 ULX3S épinglée </>`
 * `Hazard3 stable amont actuel <https://github.com/Wren6991/Hazard3/tree/stable>`_
 * :doc:`hazard3/project-integration` - comparaison détaillée entre amont et projet.
 

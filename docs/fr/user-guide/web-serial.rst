@@ -65,6 +65,28 @@ Les réglages UART normaux de Hazard3-Doom sont :
 La console web expose ces réglages série dans l'interface et conserve les
 préférences utilisateur dans le ``localStorage`` du navigateur.
 
+Propriété UART et pages Device Tool en double
+---------------------------------------------
+
+Un port série ne peut avoir qu'un propriétaire. L'outil coordonne les pages de
+même origine avec ``BroadcastChannel`` et un Web Lock exclusif. Si une autre
+copie du même Device Tool possède déjà l'UART, la seconde affiche **UART already
+in use** au lieu d'échouer silencieusement après le sélecteur du navigateur.
+
+Le verrou est limité à une origine. Ainsi ``http://127.0.0.1:8000`` et
+``https://ulx3s.github.io`` ne partagent pas le même Web Lock. Un PuTTY,
+une autre application ou une page d'une autre origine ne peut pas être identifié
+par nom ; un échec de ``SerialPort.open()`` est alors présenté comme un conflit
+probable de propriété et les panneaux H3D/IWAD proposent **Retry UART**.
+
+Pendant le sélecteur ou l'ouverture du port, la page affiche **Connecting
+UART**. Les sections H3D et IWAD affichent aussi clairement le prérequis UART et
+leur propre bouton **Connect UART** lorsqu'aucune connexion n'est active.
+
+Les boutons et badges compacts utilisent des infobulles contextuelles. Pour un
+contrôle dynamique, l'état désactivé explique le prérequis manquant et l'état
+actif décrit l'action.
+
 Vue d'ensemble de la capture d'écran
 ------------------------------------
 
@@ -105,12 +127,18 @@ Les octets réservés sont :
    * - ``0x06``
      - ACK de capacité
      - Renvoyé par le moniteur actuel lorsque son image mise en cache est valide, ou par une implémentation Doom/I2CDriver HDMI prise en charge. Le navigateur consomme cet octet et ne l'affiche pas dans le terminal.
+   * - ``0x15``
+     - NAK de capacité
+     - Renvoyé lorsque le protocole de capture d'écran est compris mais qu'aucune image HDMI capturable n'est actuellement disponible. Le navigateur consomme cet octet, considère le protocole comme connu mais indisponible et n'affiche pas l'octet dans le terminal.
    * - ``0x1d``
      - Requête de capture
      - Envoyée uniquement après confirmation de la capacité. Le fournisseur d'écran actif répond avec une image ``H3SNIP1``.
 
-Une sonde de capacité individuelle attend jusqu'à 750 ms un ACK. Autour des
-transitions d'exécution, comme le lancement de Doom, l'application web conserve
+Une sonde de capacité individuelle attend jusqu'à 750 ms une réponse ACK ou NAK.
+Un ACK signifie qu'une capture est actuellement disponible. Un NAK signifie que
+le protocole est pris en charge, mais qu'aucune image capturable n'est
+actuellement disponible. Autour des transitions d'exécution, comme le lancement
+de Doom, l'application web conserve
 une fenêtre de réacquisition plus longue et réessaie pendant l'initialisation du
 nouveau consommateur UART. Une sonde trop précoce pendant le démarrage de Doom
 ne laisse donc pas définitivement le bouton désactivé. Une requête de capture
@@ -192,6 +220,11 @@ moniteur conserve ``H`` comme touche d'aide::
        console_print_help();
        break;
 
+Le bouton **Help** du Device Tool envoie intentionnellement un seul octet brut
+``h`` sans terminaison de ligne. Il n'envoie pas le mot ``help``. Le contrôle
+reste ainsi conforme au parseur de commandes à un caractère du moniteur et les
+lettres suivantes d'un mot plus long ne peuvent pas devenir d'autres commandes.
+
 Lorsque ``i2c gui`` est actif, ``hazard3_sao_console_feed(received)`` reçoit
 l'octet UART avant le switch du moniteur résident et consomme les touches de
 l'interface telles que ``H``. Le helper privé ``toggle_resolution()`` de
@@ -206,8 +239,10 @@ actuellement l'entrée UART. L'interface I2C doit répondre par ACK à ``0x1c`` 
 plus d'implémenter ``0x1d`` ; sinon le navigateur laisse correctement **Screen
 snip** désactivé même si un handler de capture existe.
 
-Protocole sur le fil
---------------------
+.. _h3snip1-protocol:
+
+Protocole H3SNIP1 sur le fil
+----------------------------
 
 Après réception de ``0x1d``, le firmware écrit un en-tête ASCII terminé par
 ``CR LF`` puis écrit immédiatement une charge utile binaire.

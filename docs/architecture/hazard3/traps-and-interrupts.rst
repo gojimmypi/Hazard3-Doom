@@ -4,7 +4,7 @@ Traps, Interrupts, and CSRs
 RISC-V uses the term **trap** for a transfer of control caused by either a
 synchronous exception or an asynchronous interrupt. Hazard3 implements the
 machine-mode trap state used by this project in
-`hazard3_csr.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_csr.v>`_.
+:hazard3-src:`hazard3_csr.v <hdl/hazard3_csr.v>`.
 
 Project privilege model
 -----------------------
@@ -100,7 +100,7 @@ External interrupt wiring in this project
 -----------------------------------------
 
 The pinned
-`example_soc.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/example_soc.v>`_ connects the processor's
+:hazard3-src:`example_soc.v <example_soc/soc/example_soc.v>` connects the processor's
 interrupt ports as follows:
 
 .. code-block:: text
@@ -147,9 +147,9 @@ Source study
 
 Use these pinned files together:
 
-* `hazard3_csr.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_csr.v>`_ - CSR decode, ``mstatus``,
+* :hazard3-src:`hazard3_csr.v <hdl/hazard3_csr.v>` - CSR decode, ``mstatus``,
   ``mepc``, ``mcause``, interrupt state, and trap-state updates.
-* `hazard3_core.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_core.v>`_ - exception detection, trap
+* :hazard3-src:`hazard3_core.v <hdl/hazard3_core.v>` - exception detection, trap
   sequencing, fetch redirects, and M-stage completion.
-* `example_soc.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/example_soc.v>`_ - actual UART/timer
+* :hazard3-src:`example_soc.v <example_soc/soc/example_soc.v>` - actual UART/timer
   interrupt wiring in the project.

@@ -110,6 +110,29 @@ before changing hardware or USB serial drivers.
    If the Web Serial chooser is empty while Chrome shows a pending update,
    complete the update and relaunch before changing serial drivers.
 
+Web Serial chooser succeeds but the UART still does not connect
+---------------------------------------------------------------
+
+If a serial device is selected and the browser chooser closes but the Device
+Tool remains disconnected, first check for another owner of the port.
+
+The current Device Tool coordinates same-origin tabs with a browser Web Lock and
+``BroadcastChannel``. If another copy of the same page already owns the UART,
+the second page reports **UART already in use**. A page from another origin,
+PuTTY, an IDE terminal, or another application cannot be identified by name, so
+a failed ``SerialPort.open()`` is reported as a likely ownership conflict.
+
+Typical recovery is:
+
+#. Close or disconnect the other Device Tool tab or serial application.
+#. Return to the H3D/IWAD or Serial connection section.
+#. Use **Retry UART** or **Connect UART** and select the port again.
+
+Remember that ``http://127.0.0.1:8000`` and the public
+``https://ulx3s.github.io`` page are different browser origins. Their Web
+Locks do not coordinate, even though the operating system still prevents both
+pages from owning the same serial port simultaneously.
+
 Web Serial selects a Linux TTY but fails to open it
 ---------------------------------------------------
 
@@ -363,11 +386,14 @@ Console firmware uploader remains on ``Loading...``
 ---------------------------------------------------
 
 The browser console firmware uploader does not start OpenOCD. Three pieces must
-be running at the same time:
+cooperate:
 
 .. code-block:: text
 
-   browser -> web-server.py -> GDB -> OpenOCD :3333 -> Hazard3
+   browser page -> loopback web-server.py -> GDB -> OpenOCD :3333 -> Hazard3
+
+The browser page may be the public GitHub Pages Device Tool or the local page
+served by ``web-server.py``. GDB and OpenOCD always remain local.
 
 Start OpenOCD in one terminal and leave it running:
 
@@ -382,12 +408,40 @@ A usable session reaches both ``Examined RISC-V core`` and ``Listening on port
 
    python3 web/web-server.py
 
-Open ``http://127.0.0.1:8000/``. Do not use a ``file://`` URL for
-``web/index.html``. The web page's **Local loader Ready** state means the local
-HTTP helper is reachable; OpenOCD must still be running separately. During a
-normal batch load, OpenOCD may log an accepted GDB connection followed by a
-``dropped 'gdb' connection`` when the loader disconnects after resuming the
-core.
+The helper prints an OpenOCD warning if no listener is detected on
+``127.0.0.1:3333``. This is only a warning because OpenOCD may be started after
+the helper.
+
+Now either continue with:
+
+.. code-block:: text
+
+   https://ulx3s.github.io/Hazard3-Doom/
+
+or open the local copy at ``http://127.0.0.1:8000/``. Do not use a ``file://``
+URL for the complete Device Tool.
+
+The Console firmware panel reports **Local loader** and **OpenOCD** separately.
+Use its **refresh** control for an immediate check. The helper status request
+contains a changing ``challenge`` query value so a cached response cannot leave
+an old **Ready** state visible after the helper stops.
+
+The OpenOCD readiness check is passive: the helper inspects the local listener
+table rather than opening a connection to port ``3333``. A correct health check
+therefore does **not** create repeated OpenOCD messages such as:
+
+.. code-block:: text
+
+   accepting 'gdb' connection on tcp/3333
+   attempted 'gdb' connection rejected
+
+If those messages appear every few seconds while no ELF is being loaded, an
+older ``web-server.py`` with an active TCP probe is probably still running.
+Stop it and start the current helper.
+
+During a real batch load, OpenOCD may log one accepted GDB connection followed
+by a dropped/closed GDB connection when the loader resumes the core and exits.
+That is expected.
 
 Useful checks are:
 
@@ -396,9 +450,18 @@ Useful checks are:
    ss -ltnp | grep ':3333'
    curl http://127.0.0.1:8000/api/console-firmware/status
 
+If the helper was started with ``--access-key``, the browser must be given the
+same key before the status or load request can succeed.
+
 Also disconnect the browser FPGA web flasher from ``US1`` before OpenOCD starts,
 because both use the same FT231X JTAG interface. The external J1 USB-UART adapter
 is separate and may remain connected.
+
+If H3D/H3W upload later times out waiting for ``READY``, first confirm that the
+resident monitor is actually running at the ``>`` prompt. When the helper is
+reachable but OpenOCD is not detected, the Device Tool additionally points out
+that the monitor may still need to be loaded. OpenOCD does not have to remain
+running after the monitor is already loaded.
 
 OpenOCD reports USB timeout or an all-zero JTAG scan in a VM
 ------------------------------------------------------------

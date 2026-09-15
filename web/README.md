@@ -16,6 +16,7 @@ Click "Update" and allow Windows to search for default drivers. Be sure to disco
 ## Features
 
 - Program ULX3S ECP5 FPGA SRAM from a `.bit` or `.svf` file through the board's US1 FT231X JTAG interface using WebUSB.
+- Detect Windows, Linux, or macOS in the browser and link the FPGA **Docs** control directly to the matching host USB setup section.
 - Probe and verify ECP5 12F/25F/45F/85F JTAG IDCODEs before programming.
 - Validate and load a 32-bit RISC-V console firmware ELF through the existing OpenOCD/GDB loader.
 - Connect/disconnect using the browser's serial-port picker.
@@ -68,7 +69,7 @@ python3 -m http.server 8000
 
 ## GitHub Pages
 
-The files can be served unchanged by GitHub Pages. HTTPS satisfies the secure-context requirement for Web Serial and WebUSB. The console firmware control is disabled on GitHub Pages because a public static site cannot invoke the user's local GDB/OpenOCD tools.
+The files can be served unchanged by GitHub Pages. HTTPS satisfies the secure-context requirement for Web Serial and WebUSB. The console firmware control can also be used from GitHub Pages when `web-server.py` is running locally as a loopback-only helper. The public page calls `http://127.0.0.1:8000/api/console-firmware/...`; Chromium may ask the user to grant loopback/local-network access.
 
 A convenient repository layout is:
 
@@ -80,7 +81,7 @@ docs/
         styles.css
 ```
 
-The app does not send UART or FPGA programming data to a server. JavaScript communicates directly with the devices selected in the browser permission dialogs. When served by `web-server.py`, a selected console firmware ELF is sent only to the loopback server, written to a temporary file, loaded by the repository's `scripts/load-firmware.sh`, and then deleted.
+The app does not send UART or FPGA programming data to a server. JavaScript communicates directly with the devices selected in the browser permission dialogs. A selected console firmware ELF is sent only to the loopback `web-server.py` helper, written to a temporary file, loaded by the repository's `scripts/load-firmware.sh`, and then deleted. The helper binds only to `127.0.0.1` and accepts cross-origin API requests only from the configured exact origins.
 
 ## Console firmware uploader
 
@@ -88,8 +89,17 @@ The collapsible **Console firmware uploader** sits between the FPGA flasher and
 the Doom H3D uploader. It accepts `hazard3-boot-monitor.elf`, validates that the
 file is a 32-bit little-endian RISC-V executable, and passes it to the existing
 GDB loader. The local server listens only on `127.0.0.1`, limits the ELF to
-16 MiB, requires a same-origin custom request header, and deletes the temporary
+16 MiB, requires a custom local-request header, applies an exact CORS origin
+allowlist, supports browser private-network preflights, and deletes the temporary
 copy after the loader exits.
+
+By default the loopback API allows the public origins
+`https://gojimmypi.github.io` and `https://ulx3s.github.io`, plus the helper's
+own exact loopback origins on its configured port (`http://127.0.0.1:<port>`
+and `http://localhost:<port>`). This permits the same helper to serve the local
+page and accept its ELF upload without broadening access to arbitrary localhost
+ports. Additional exact origins can be added with repeated `--allow-origin`
+options. Wildcard CORS is intentionally rejected.
 
 The firmware does not need to listen for its own replacement. OpenOCD talks to
 the Hazard3 debug module; GDB halts the processor, writes the ELF loadable
@@ -102,10 +112,41 @@ the ULX3S 12F flow from the repository root:
     -f ./third_party/Hazard3/example_soc/ulx3s-12f-openocd.cfg
 ```
 
-Then run `web/web-server.py`, select the matching ELF, and load it. Do not keep
-the browser FPGA flasher connected to US1 while OpenOCD owns that interface.
-An already-running GDB session may also own port 3333; exit it before using the
-web loader.
+Then run `web/web-server.py`, select the matching ELF, and load it. The browser
+page may be the local page served by that helper or the public GitHub Pages site.
+On the public site, use the **refresh** control next to **Local loader** after
+starting the helper. Once the helper reports **Ready**, the page rechecks it every
+five seconds and marks it unavailable if the loopback server stops responding.
+The same status response reports whether a GDB server is listening on
+`127.0.0.1:3333`, so the page can show a live OpenOCD status and disable the ELF
+load button until OpenOCD is available. The helper checks the operating system TCP
+listener tables rather than opening a connection to the GDB port; health checks must
+not consume or disturb OpenOCD GDB connections. Each status request includes a
+one-time challenge that the helper must echo, so a stale cached response cannot be
+mistaken for a live helper. Do not keep the browser FPGA flasher connected to US1 while
+OpenOCD owns that interface. An already-running GDB session may also own port 3333;
+exit it before using the web loader.
+
+
+For an additional authorization layer, start the helper with an access key:
+
+```bash
+./web-server.py --access-key
+```
+
+With no value after `--access-key`, the helper prompts for the key without echoing
+it or placing it in the command line. Enter the same key in the web UI and press
+**refresh**. The browser keeps the key only in page memory; it is not written to
+local storage. An explicit value is also supported for automation, although it is
+less private because it can be retained in shell history or visible in the
+process command line:
+
+```bash
+./web-server.py --access-key 'example-change-me'
+```
+
+The key is defense in depth. The helper still binds only to loopback, checks the
+request `Origin`, and requires the custom local-loader request header.
 
 By default the local server invokes `../scripts/load-firmware.sh`. Override the
 loader only when testing another checkout:
@@ -130,13 +171,15 @@ browser -> raw H3D payload bytes
 monitor -> H3L OK ...\r\n
 ```
 
-The payload is sent in 4096-byte browser writes while the page shows transfer progress. Normal UART command controls and screen-snip capability probes are suspended during the binary transfer so no unrelated byte can be inserted into the H3D payload. The monitor still performs its own header and CRC validation before accepting the image.
+The payload is sent in 4096-byte browser writes while the page shows transfer progress. Normal UART command controls and screen-snip capability probes are suspended during the binary transfer so no unrelated byte can be inserted into the H3D payload. The monitor still performs its own header and CRC validation before accepting the image. If the initial `H3L READY` response times out, the page shows a prominent monitor diagnostic. When the local helper is available, that diagnostic also reports whether OpenOCD is listening on port 3333 and suggests loading or reloading `hazard3-boot-monitor.elf` when appropriate. OpenOCD is needed to load the monitor, but it does not need to remain running after the monitor has been loaded.
 
 **Launch with `j` after upload** is optional and disabled by default. When selected, the browser sends the monitor's raw `j` command only after `H3L OK` is received.
 
 ## Doom IWAD UART uploader
 
 The collapsible **Doom IWAD uploader** accepts a legally obtained `.wad` file and follows the same H3W protocol as `doom/upload-wad.py`. The browser validates the `IWAD` identification, directory bounds, every lump range, Doom-visible filename, reserved SDRAM size, and CRC32 before sending anything.
+
+If the initial `H3W READY` response times out, the page provides the same resident-monitor/OpenOCD diagnostic used by the H3D uploader.
 
 Select the memory profile that matches the resident monitor build:
 
@@ -188,6 +231,8 @@ If the Hazard3-Doom monitor expects a different line ending, select LF, CR, or N
 Web Serial is not implemented in every browser. The app checks for `navigator.serial` and displays an error if the API is unavailable.
 
 `navigator.serial.getPorts()` returns ports for which this site already has permission; it is not an unrestricted enumeration of every Windows COM port. Use **Connect** to open the browser picker and grant/select another serial port. The Web Serial API exposes USB VID/PID information to the page but does not provide the Windows `COMx` name, so the authorized-port selector labels ports by position and VID/PID. Only one port is opened by this UART terminal at a time.
+
+Device Tool pages from the same browser origin coordinate UART ownership with `BroadcastChannel` and an exclusive Web Lock. A second same-origin page is warned when another page owns the UART and is prevented from opening it concurrently. If the port is instead owned by another origin or application, such as another Device Tool URL, PuTTY, or another serial terminal, the browser does not expose the owner; the page reports the `port.open()` failure and suggests checking for another tab or application.
 
 Useful references:
 
@@ -264,9 +309,11 @@ Use the exact bitstream that was built for the board being programmed. The brows
 
 WebUSB and Web Serial are separate browser APIs. The existing UART console can remain connected to the external USB-to-UART adapter while the flasher uses ULX3S `US1`.
 
-Close `fujprog`, OpenOCD, `openFPGALoader`, or any other program that owns the ULX3S FTDI interface before connecting the browser. On Windows, direct WebUSB access requires the ULX3S FT231X interface to use the WinUSB driver rather than the normal FTDI VCP/D2XX driver. Changing that binding makes tools that expect the normal FTDI/D2XX driver unavailable until the driver is changed back.
+Close `fujprog`, OpenOCD, `openFPGALoader`, or any other program that owns the ULX3S FTDI interface before connecting the browser. The FPGA status box detects Windows, Linux, or macOS and shows the host next to **Docs**. The Docs link is adjusted to the matching host setup section when the operating system is recognized.
 
-If Windows returns `Access denied` while opening the selected FT231X, the flasher log detects that condition and tells the user to bind the ULX3S FT231X interface to WinUSB (for example with Zadig), unplug/replug `US1`, and reconnect. If WinUSB is already installed, close other USB/JTAG tools and reconnect the board.
+The required USB setup differs by host. Windows direct WebUSB access requires the ULX3S FT231X interface to use the WinUSB driver rather than the normal FTDI VCP/D2XX driver. Linux may require a udev permission rule and, when the interface is owned by `ftdi_sio`, unbinding only the ULX3S FT231X interface. macOS does not use Zadig/WinUSB or Linux udev rules; close other serial/JTAG applications that own the FT231X and reconnect the board in a current Chromium-based browser.
+
+The flasher log also uses the detected host to provide targeted guidance for common access and interface-claim failures.
 
 The flasher log has its own vertical scrollbar, can be resized vertically, and normally follows new messages. Uncheck **Auto-scroll** to inspect earlier output without being pulled back to the newest line. **Copy log** copies the complete current flasher log to the clipboard, and **Clear log** removes the displayed flasher history without interrupting an active programming operation.
 

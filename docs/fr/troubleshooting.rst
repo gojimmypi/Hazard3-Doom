@@ -297,33 +297,49 @@ autre image vidéo du moniteur pour remplacer la dernière image de l'analyseur.
 Le chargeur du firmware console reste sur ``Loading...``
 --------------------------------------------------------
 
-Le chargeur de firmware console du navigateur ne démarre pas OpenOCD. Trois
-éléments doivent fonctionner simultanément :
+Le chargeur console ne démarre pas OpenOCD. Trois éléments coopèrent :
 
 .. code-block:: text
 
-   navigateur -> web-server.py -> GDB -> OpenOCD :3333 -> Hazard3
+   page navigateur -> web-server.py loopback -> GDB -> OpenOCD :3333 -> Hazard3
 
-Démarrez OpenOCD dans un terminal et laissez-le en cours d'exécution :
+La page peut être la copie publique GitHub Pages ou la page locale servie par
+``web-server.py``. GDB et OpenOCD restent toujours locaux.
+
+Démarrez OpenOCD dans un terminal :
 
 .. code-block:: bash
 
    ./scripts/start-openocd.sh
 
-Une session utilisable atteint à la fois ``Examined RISC-V core`` et
-``Listening on port 3333 for gdb connections``. Dans un autre terminal,
-démarrez :
+Une session utilisable atteint ``Examined RISC-V core`` et ``Listening on port
+3333 for gdb connections``. Dans un autre terminal :
 
 .. code-block:: bash
 
    python3 web/web-server.py
 
-Ouvrez ``http://127.0.0.1:8000/``. N'utilisez pas une URL ``file://`` pour
-``web/index.html``. L'état **Local loader Ready** de la page web signifie que
-l'assistant HTTP local est joignable ; OpenOCD doit tout de même fonctionner
-séparément. Pendant un chargement batch normal, OpenOCD peut journaliser une
-connexion GDB acceptée puis ``dropped 'gdb' connection`` lorsque le chargeur se
-déconnecte après avoir repris le cœur.
+Le helper avertit au démarrage si aucun listener n'est détecté sur
+``127.0.0.1:3333``. Ce n'est qu'un avertissement, car OpenOCD peut être lancé
+plus tard.
+
+Continuez ensuite avec ``https://ulx3s.github.io/Hazard3-Doom/`` ou ouvrez
+``http://127.0.0.1:8000/``. N'utilisez pas ``file://`` pour l'outil complet.
+Le panneau affiche séparément **Local loader** et **OpenOCD** ; **refresh** force
+une vérification immédiate.
+
+Les requêtes d'état contiennent une valeur ``challenge`` changeante pour éviter
+qu'une réponse ``Ready`` mise en cache survive à l'arrêt du helper. La détection
+OpenOCD est passive : elle inspecte les ports locaux en écoute au lieu d'ouvrir
+une connexion TCP sur ``3333``.
+
+Si OpenOCD affiche toutes les quelques secondes des connexions GDB acceptées ou
+rejetées alors qu'aucun ELF n'est chargé, un ancien ``web-server.py`` utilisant
+une sonde TCP active est probablement encore lancé. Arrêtez-le et lancez le
+helper actuel.
+
+Pendant un vrai chargement, une connexion GDB acceptée puis fermée à la fin est
+normale.
 
 Vérifications utiles :
 
@@ -332,9 +348,14 @@ Vérifications utiles :
    ss -ltnp | grep ':3333'
    curl http://127.0.0.1:8000/api/console-firmware/status
 
-Déconnectez également le flasher FPGA web de ``US1`` avant de démarrer OpenOCD,
-car les deux utilisent la même interface JTAG FT231X. L'adaptateur USB-UART J1
-externe est distinct et peut rester connecté.
+Déconnectez aussi le flasher FPGA WebUSB de ``US1`` avant OpenOCD, car ils
+utilisent le même FT231X JTAG. L'adaptateur J1 USB-UART externe est indépendant
+et peut rester connecté.
+
+Si H3D/H3W expire ensuite en attendant ``READY``, vérifiez d'abord que le
+moniteur résident est réellement à l'invite ``>``. Lorsque le helper répond
+mais qu'OpenOCD est absent, le Device Tool rappelle également que le moniteur
+doit peut-être encore être chargé.
 
 OpenOCD signale un délai USB ou un scan JTAG entièrement nul dans une VM
 ------------------------------------------------------------------------

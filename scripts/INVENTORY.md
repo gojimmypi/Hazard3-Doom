@@ -8,11 +8,13 @@ It is intended to support integrity verification, reproducibility, release
 auditing, and exact identification of tracked artifacts. A hash identifies
 the bytes in a file; it does not by itself establish provenance or intent.
 
+Project version: v0.2.0
+
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 74
+Files inventoried: 75
 
-Total bytes: 567321
+Total bytes: 586914
 
 ## Verification
 
@@ -25,7 +27,7 @@ should be identified before a public release.
 
 | Path | Bytes | SHA-256 | Component | Kind |
 |---|---:|---|---|---|
-| `README.md` | 19569 | `4f2538d65260a55835f7233f2bbaebda5256694c3af16c81485e763dd2b19fd4` | REVIEW | Markdown documentation |
+| `README.md` | 20048 | `212b0e7121456ebd056edb35bccbbf8f29491db2abc8d32cf534f0385f62e6f0` | REVIEW | Markdown documentation |
 | `apply-doom-noncombat.py` | 6775 | `3a8062684727b572d903c3a53ef729d64438b6f3c2bdfdd5c426bfe5bec08658` | REVIEW | File |
 | `build-coremark.sh` | 7033 | `0845978f2cf4dc4f497a20930f206b68b2a0d727110843e300ca3e04da85cce4` | REVIEW | Shell script |
 | `build-doom-noncombat.sh` | 4652 | `38005c07badc4f63e5e939ab0dd55cca6d2b84663c267b3dc61af7aa1527783c` | REVIEW | Shell script |
@@ -40,8 +42,8 @@ should be identified before a public release.
 | `build-ulx4m-ld-bitstream.sh` | 1339 | `61e431dee6e42b9d2b53f8dfdc77330d0f8040057625ab6cb89a65f9b3d3ebaf` | REVIEW | Shell script |
 | `build-ulx4m-ld-doom.sh` | 5949 | `8bc123f2d9ebf9a9ed9274736a257ca909c4b908690da745db88ef027d618e11` | REVIEW | Shell script |
 | `build-ulx4m-ld-sweep_summary.md` | 8517 | `f92171f9f40d55d815d39a85336320089a93bd6b8f1ef1a4aab620a220d68ac2` | REVIEW | Markdown documentation |
-| `build-xpack.cmd` | 8665 | `75a1ff13f5d7c1e4107c4319c5e815ea0c10b5bc5ffe1013c5500d8a4839c808` | REVIEW | File |
-| `build.sh` | 5279 | `eba417ab915b9d894585d50f867cdc82f053ddb574c24a1253c56696e73d5d4a` | REVIEW | Shell script |
+| `build-xpack.cmd` | 9704 | `8672fbf2aab466a9478fdc2cc93f01604659d1ad302243d82307204db43a66b3` | REVIEW | File |
+| `build.sh` | 5386 | `460b1c95ff1cccac75a258da2618b91816930487c6fef1bbd7c2b79ecd808cf3` | REVIEW | Shell script |
 | `check-executable.sh` | 2649 | `911d291ea02cb0f3b0e1bdd999cfc70b57ef3753448f1fa5a5525d6921a4c5e5` | REVIEW | Shell script |
 | `check-nettype.sh` | 4335 | `d03f4bc32c3cce2f421eef456ddd3929ef0f9dc1e959dcbbc39f35c1232332f9` | REVIEW | Shell script |
 | `check-system-requirements.sh` | 5897 | `3091a8eea35c51600ba7e7ed8323f0d7d8e8ece9fe582a0ba613dad9cd80c786` | REVIEW | Shell script |
@@ -52,39 +54,40 @@ should be identified before a public release.
 | `doomgeneric-version.sh` | 1386 | `5a6cf61c5c1fd11237763279ed0a1d39d2dce37f3720c752e4e0114cae71ef81` | REVIEW | Shell script |
 | `flash-ulx3s-persistent.sh` | 1599 | `55dbb3ef4ee9d6315b5f622e4e0141e20bb165a631d0b85badb38e62f2b478fd` | REVIEW | Shell script |
 | `full-clean.sh` | 5814 | `1d2732bee827bf875b529ddb05dd1874438c76ec95b90958302fb705b06e49be` | REVIEW | Shell script |
-| `full-install.sh` | 4383 | `97367505943768bb4a08e89ed7e3f50d2e11233f48a5712ba989c6ec6adaef61` | REVIEW | Shell script |
+| `full-install.sh` | 7574 | `5fff0ac5a350417be7b1ffdea6c0c70603f4a50df8dd224398ee3722a6246232` | REVIEW | Shell script |
 | `gdb/load-hazard3-test-elf.gdb` | 842 | `8ff53bd3e78ae7fa3c78aa8c26c891b742bf3689095179f59edd293ade1d1120` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `gdb/sao-probe.gdb` | 2086 | `4133bf62ae717eb5d49c7dccf283a90d0fa5267d9262aefdbcb150aa10be4eac` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `gdb/sao-scan.gdb` | 2288 | `fc220edfff82d934267000aa4ead2fb7df72a6b4044c48c5010d8be5826dc6aa` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `gdb/sao-touchwheel-led-off.gdb` | 1506 | `cc4b5f9124b2c935f35a1bfc72c393c00fad7110055150e3447bd9404b651a4a` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `gdb/sao-touchwheel-test.gdb` | 4547 | `13097de76e5acccbab3439a62ab2cd808d9b6b4b01b7288b2f8eb3db0ac07ff4` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `generate-ecp5-seed-matrix.py` | 2032 | `99bbc34c941180bff96a88a332ab8739a54d3984e424c54b3d29e43febd3a9e3` | REVIEW | File |
-| `generate-sbom.py` | 35213 | `4fe8c9e37eed0343e89efda848f8cb9429cb69898ee67eed0b49f541a23e47a8` | REVIEW | File |
+| `generate-sbom.py` | 36084 | `babceb7df2a94bcaa3c96866ebe49e5b6db62d9c648b33a1fa848c2a5a900f81` | REVIEW | File |
 | `git-exe.sh` | 1849 | `fd3a9ebccf709c8a45817d9ec67738b765d7074454309db41834af4a13dced66` | REVIEW | Shell script |
 | `hazard3-debug.gdb` | 1181 | `38a49cf5e41db070c8c21402e7b797c0d0e56f7d50d15de0dfdfbef39a4ac4a3` | REVIEW | File |
 | `hazard3-doom-source-status.sh` | 22103 | `0d9e973fbdf8e911030b72378572ad45506b50b7e5ffc6b6712eb03b90ba5614` | REVIEW | Shell script |
 | `hazard3-submodule.sh` | 8529 | `21a5d01d95108a9d304fc9b2bf9606f18c5a76416259fa27525cb32a9ff6e45e` | REVIEW | Shell script |
 | `install-cmake.sh` | 1326 | `1150e96c9fc32901301cc70fb2776aa27cc83e687ff640a981a1615221d0ecd6` | REVIEW | Shell script |
-| `install-nextpnr-ecp5.sh` | 10229 | `82525f1b622dd153cc7ac0dba41765d9569bc72f18dcd013367310c08e563905` | REVIEW | Shell script |
+| `install-nextpnr-ecp5.sh` | 11194 | `bd2cb80531cb3a0397d8a504eb1d279b4c7ff4c0008d236a9ae34b3041678fdd` | REVIEW | Shell script |
 | `install-riscv-toolchain.sh` | 3006 | `662b28c35a491bb15a47e57635f8f2eaa86582683f81f71b4c1bed84e46604bd` | REVIEW | Shell script |
-| `install-yosys.sh` | 6570 | `ecc6c45b9a3218bf9faccd4908e238fc47d1d02bbd210b4b806bcdca1706c768` | REVIEW | Shell script |
-| `inventory.sh` | 11860 | `ccdf6d71ffc232d68c66085874bbc8885b7fd5ecc67a9fcb54b0d4d3264d1996` | Hazard3-Doom repository | Shell script |
+| `install-yosys.sh` | 7447 | `cedafe1a7bd32849088da73fd1814a6a7673da51d054cc561b3ab2ef7cac8f30` | REVIEW | Shell script |
+| `inventory.sh` | 12313 | `5c3238e5aafa5e264a952c225b19cb172171a10b081016e2371af6c90fef3e6a` | Hazard3-Doom repository | Shell script |
 | `load-firmware-12f.sh` | 1570 | `63b70d39f092cdb590da8f8541806f67fe99556ea7f81afd8eb87a940cd1fc82` | REVIEW | Shell script |
 | `load-firmware.bat` | 2755 | `3688d3f21ee3faee4fe5212c2c2db072576e5b155b8b2ef4978e36ab03c9c2e3` | REVIEW | File |
 | `load-firmware.sh` | 3554 | `9b61c550d0d6fe499cbefc160d173763277360d4923a488059e6138b225d2e07` | REVIEW | Shell script |
 | `load-fpga-bitstream.bat` | 2700 | `3c18dc6a74ff2e4b665b5d4634ff2dd537d03bf8dac963dd451ab45e42612206` | REVIEW | File |
 | `make-boot-hex.py` | 2794 | `bd4e1d863e021e5cb7345d5c57e0e37cf1751d3f8c333652eb52fd48d2ab05ac` | REVIEW | File |
 | `peek-elf.sh` | 24394 | `9ae200bee9f45c3ceddb53543efe362f5b79997bad4b23d147d06e625be18052` | REVIEW | Shell script |
-| `publish-check.sh` | 593 | `c6acadfd1a319ee319da3999854c98c287c8096521bf9e5a7e57b4ca35cc5363` | REVIEW | Shell script |
-| `requirements-check.sh` | 31730 | `faa45e46d039e619dd4b2e2c10eca59efbd2d4581a816bd1c67ae998e4523bf5` | REVIEW | Shell script |
+| `publish-check.sh` | 1962 | `9398421f152cfae3ae06e8d855d0c314e7ee1ce7b0fcd09836b0c64bb4d36e01` | REVIEW | Shell script |
+| `refresh-version.sh` | 4275 | `b90ebfc5f4954a88109370935c9233e59ef27bcf3bf4c6a239fab30434e109f4` | REVIEW | Shell script |
+| `requirements-check.sh` | 34394 | `12ed763e288632212f52c1531759dcea2361c6d7b62ddb31cc9d57c0d525d8d7` | REVIEW | Shell script |
 | `restart-from-monitor.py` | 2180 | `62fafcba0da53b21b5704f221c655c63eb5520f2def0fbe7312005a65c59dd2d` | REVIEW | File |
 | `return-to-monitor.py` | 2144 | `0214047d05bf37b06453388892bc8c5a13a49af1154f962e1680eaa644316ceb` | REVIEW | File |
 | `run-coremark.sh` | 5148 | `ee257f329b138a6bfcc01224c96c8f4459b171f493f437f423190cb1d811a336` | REVIEW | Shell script |
 | `setup-doomgeneric.sh` | 3758 | `c5e0db035fd7c7ca27f2a742c61e40cd76b667735d03fb70165d462e9417a53a` | REVIEW | Shell script |
 | `setup-submodules.sh` | 2492 | `50acdd84c3befd4ae3820d8f871edd2ba600975d31191cd1460b83e7095919f4` | REVIEW | Shell script |
 | `setup-xpack-riscv-gcc.cmd` | 4527 | `4ebeb6512881634e17c5d18e5424112f142bf651d35f07b8ed197c20f43f108e` | REVIEW | File |
-| `start-openocd.bat` | 1621 | `47722eea263b1857c2ed8537927e3a047f6ba53d14baf2fcaefd655b56dccacd` | REVIEW | File |
-| `start-openocd.sh` | 4014 | `fc5f94d1a8c4b9f32ed9954e6675b485f21500b4f5fa111372aa2d0a83275c09` | REVIEW | Shell script |
+| `start-openocd.bat` | 1772 | `fa12c169fcbec5b1c33c98195aa97263ecd35ebf3d382380ef6b66b80cc53895` | REVIEW | File |
+| `start-openocd.sh` | 5444 | `a5a9e1e771b7b3d8e5e0a8062d5b09e8a0fe067faa12f72d3ccc1b058bcf3c0f` | REVIEW | Shell script |
 | `summarize-ecp5-sweep.py` | 11880 | `1c9764208c376f0795c4ec68d84d19bb16fac4a2296cf5c062d1543d740edf75` | REVIEW | File |
 | `sweep-ecp5-common.sh` | 10641 | `8fcb40ac93677d355233982c20f88273b7cda9ff8349a1a5fd866daf6314fdc1` | REVIEW | Shell script |
 | `sweep-ecp5.sh` | 3497 | `7119afb34144e367fb75899a44f6e730efeb6773e3063a7dcdb3e48ba97e8452` | REVIEW | Shell script |
@@ -96,6 +99,6 @@ should be identified before a public release.
 | `sweep-ulx4m-ld.sh` | 16562 | `a1dccb5925b207479f06cc9fa2bd43c29d2a0ca03f4cfe45d758203014b194bf` | REVIEW | Shell script |
 | `sweep.sh` | 775 | `73dfc7d13c2d77e1ccc5e6ce72856621c639e27c01d88e13bfc4225dcb1f3895` | REVIEW | Shell script |
 | `test-readthedocs.sh` | 10923 | `9438b1c09e34df5130f19e1d9dfd2f589fb47001a3d7126266530f2a86e0f9f7` | REVIEW | Shell script |
-| `test-scripts.sh` | 19859 | `736bb7c5575e24ee1a9a4f7042855861afd88a929e0ced7e1139ce5b417972b7` | REVIEW | Shell script |
-| `ulx4m-bootloader.sh` | 28576 | `319e41e2d69b30dcba355d228cce4d9b3902b7ed0acb00f904922b7d7efde892` | REVIEW | Shell script |
+| `test-scripts.sh` | 20223 | `7f650e124c8974ef9853378146115c62e8cc1a13375c62fd582b8ad4bd55f5ee` | REVIEW | Shell script |
+| `ulx4m-bootloader.sh` | 29934 | `414abaebdfe5c9c74756c24f3c6a4a896006092ebc0ce2306ecdb44768e1b889` | REVIEW | Shell script |
 | `watch-ecp5-sweep-results.sh` | 18199 | `4d7b1bd134af275ad36d608811c64b9b2bf4ee201ee419d677bdf0b8b886536d` | REVIEW | Shell script |

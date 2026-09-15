@@ -3,7 +3,7 @@ Visite guidée du code source
 
 Cette page est une carte de lecture destinée aux étudiants qui veulent passer
 du schéma-blocs au RTL réel. Tous les liens du projet ci-dessous sont épinglés
-au commit ``736a74459b3f740c47803f20a62d820fcacbe5c3`` ; le contenu des lignes ne
+au commit |hazard3_commit| ; le contenu des lignes ne
 changera donc pas silencieusement lorsqu'une branche avance.
 
 Ordre de lecture recommandé
@@ -13,8 +13,8 @@ Ordre de lecture recommandé
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Commencez avec
-`hazard3_config.vh <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config.vh>`_ et
-`hazard3_config_inst.vh <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config_inst.vh>`_.
+:hazard3-src:`hazard3_config.vh <hdl/hazard3_config.vh>` et
+:hazard3-src:`hazard3_config_inst.vh <hdl/hazard3_config_inst.vh>`.
 
 Questions auxquelles répondre avant de lire le datapath :
 
@@ -24,16 +24,16 @@ Questions auxquelles répondre avant de lire le datapath :
 * Comment les paramètres sont-ils propagés à travers les instances de modules imbriquées ?
 
 Ouvrez ensuite
-`fpga_ulx3s.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/fpga/fpga_ulx3s.v>`_ et comparez les valeurs du projet à ces valeurs génériques par défaut.
+:hazard3-src:`fpga_ulx3s.v <example_soc/fpga/fpga_ulx3s.v>` et comparez les valeurs du projet à ces valeurs génériques par défaut.
 
 2. Trouver le CPU dans le SoC
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Ouvrez
-`example_soc.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/example_soc.v>`_ et localisez ``hazard3_cpu_1port``. Notez les choix système fixes autour de l'instance : vecteur de reset, support CSR de trap, activation du debug, nombre d'IRQ, interruption UART et interruption timer.
+:hazard3-src:`example_soc.v <example_soc/soc/example_soc.v>` et localisez ``hazard3_cpu_1port``. Notez les choix système fixes autour de l'instance : vecteur de reset, support CSR de trap, activation du debug, nombre d'IRQ, interruption UART et interruption timer.
 
 Ouvrez ensuite
-`hazard3_cpu_1port.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_cpu_1port.v>`_. Identifiez trois groupes de signaux :
+:hazard3-src:`hazard3_cpu_1port.v <hdl/hazard3_cpu_1port.v>`. Identifiez trois groupes de signaux :
 
 * le maître AHB5 unique côté SoC ;
 * le trafic interne instructions/données connecté à ``hazard3_core`` ; et
@@ -46,7 +46,7 @@ externe unique.
 3. Parcourir le pipeline
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Ouvrez `hazard3_core.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_core.v>`_ et recherchez les titres des étages. Suivez :
+Ouvrez :hazard3-src:`hazard3_core.v <hdl/hazard3_core.v>` et recherchez les titres des étages. Suivez :
 
 * les entrées de l'étage F venant du front-end ;
 * les signaux de décodage/exécution de l'étage X ;
@@ -61,8 +61,8 @@ instruction simple comme ``addi``, puis un load, puis une branche.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Ouvrez
-`hazard3_frontend.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_frontend.v>`_ et
-`hazard3_instr_decompress.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_instr_decompress.v>`_.
+:hazard3-src:`hazard3_frontend.v <hdl/hazard3_frontend.v>` et
+:hazard3-src:`hazard3_instr_decompress.v <hdl/hazard3_instr_decompress.v>`.
 
 Recherchez :
 
@@ -79,7 +79,7 @@ commence à une adresse se terminant par ``...2`` avec ``C`` activé.
 5. Décoder quelques instructions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Ouvrez `hazard3_decode.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_decode.v>`_. Choisissez une instruction de chaque classe :
+Ouvrez :hazard3-src:`hazard3_decode.v <hdl/hazard3_decode.v>`. Choisissez une instruction de chaque classe :
 
 * ``add`` - ALU entière de base ;
 * ``lw`` - chemin load/store ;
@@ -97,9 +97,9 @@ synthèse devient visible au logiciel via les traps d'instruction illégale.
 
 Les sources arithmétiques pertinentes comprennent :
 
-* `hazard3_alu.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/arith/hazard3_alu.v>`_
-* `hazard3_mul_fast.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/arith/hazard3_mul_fast.v>`_
-* `hazard3_muldiv_seq.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/arith/hazard3_muldiv_seq.v>`_
+* :hazard3-src:`hazard3_alu.v <hdl/arith/hazard3_alu.v>`
+* :hazard3-src:`hazard3_mul_fast.v <hdl/arith/hazard3_mul_fast.v>`
+* :hazard3-src:`hazard3_muldiv_seq.v <hdl/arith/hazard3_muldiv_seq.v>`
 
 Comparez le multiplicateur rapide à l'unité itérative et reliez-les à
 ``MUL_FAST``, ``MUL_FASTER``, ``MULH_FAST`` et ``MULDIV_UNROLL``. C'est un
@@ -109,7 +109,7 @@ latence.
 7. Lire l'état CSR et trap
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Ouvrez `hazard3_csr.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_csr.v>`_. Recherchez ces noms dans l'ordre :
+Ouvrez :hazard3-src:`hazard3_csr.v <hdl/hazard3_csr.v>`. Recherchez ces noms dans l'ordre :
 
 .. code-block:: text
 
@@ -132,8 +132,8 @@ redirection du pipeline.
 
 Utilisez cet ordre :
 
-* `hazard3_dm.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/debug/dm/hazard3_dm.v>`_ - état du Debug Module, commandes abstraites, program buffer et accès au bus système.
-* `hazard3_ecp5_jtag_dtm.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/debug/dtm/hazard3_ecp5_jtag_dtm.v>`_ - transport DMI via ECP5 JTAGG.
+* :hazard3-src:`hazard3_dm.v <hdl/debug/dm/hazard3_dm.v>` - état du Debug Module, commandes abstraites, program buffer et accès au bus système.
+* :hazard3-src:`hazard3_ecp5_jtag_dtm.v <hdl/debug/dtm/hazard3_ecp5_jtag_dtm.v>` - transport DMI via ECP5 JTAGG.
 * ``hazard3_frontend.v`` et ``hazard3_core.v`` - arrêt/mode debug côté cœur et comportement des instructions injectées.
 
 Comparez ensuite le flux matériel aux commandes de
@@ -151,17 +151,17 @@ propres au projet :
 
    * - Source épinglée
      - Ce qu'il faut apprendre
-   * - `ahb_sdram.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/ahb_sdram.v>`_
+   * - :hazard3-src:`ahb_sdram.v <example_soc/soc/ahb_sdram.v>`
      - Comment le trafic CPU AHB normal est adapté au comportement de la SDRAM externe.
-   * - `ulx3s_sdram_controller.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/ulx3s_sdram_controller.v>`_
+   * - :hazard3-src:`ulx3s_sdram_controller.v <example_soc/soc/ulx3s_sdram_controller.v>`
      - Timing commandes/données de la SDR SDRAM orienté carte.
-   * - `apb_sd_spi.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/apb_sd_spi.v>`_
+   * - :hazard3-src:`apb_sd_spi.v <example_soc/soc/apb_sd_spi.v>`
      - Un périphérique APB compact et sa machine d'états SPI.
-   * - `apb_sao_bridge.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/apb_sao_bridge.v>`_
+   * - :hazard3-src:`apb_sao_bridge.v <example_soc/soc/apb_sao_bridge.v>`
      - Contrôle memory-mapped du projet autour du sous-système SAO.
-   * - `sao_shared_controller.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/sao_shared_controller.v>`_
+   * - :hazard3-src:`sao_shared_controller.v <example_soc/soc/sao_shared_controller.v>`
      - Politique de propriété/arbitrage des ressources partagées de la carte.
-   * - `sao_esp32_uart_bridge.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/sao_esp32_uart_bridge.v>`_
+   * - :hazard3-src:`sao_esp32_uart_bridge.v <example_soc/soc/sao_esp32_uart_bridge.v>`
      - Communication latérale du projet avec l'ESP32.
 
 Cet ordre évite une erreur courante de lecture du code : supposer que chaque

@@ -38,14 +38,37 @@ Références primaires utiles :
 * `Documentation microcontrôleurs Raspberry Pi - changement d'architecture <https://www.raspberrypi.com/documentation/microcontrollers/microcontroller-chips.html#architecture-switching>`_
 * `Source Hazard3 amont et notes de configuration RP2350 <https://github.com/Wren6991/Hazard3>`_
 
+Documentation Hazard3 amont
+---------------------------
+
+Luke Wren maintient le guide de conception et le manuel de référence Hazard3
+complets avec le code source du processeur. Les pages Hazard3-Doom restent
+centrées sur la configuration et l'intégration utilisées par ce projet, tandis
+que le manuel amont reste la référence faisant autorité pour le processeur
+générique.
+
+* `Guide de conception et manuel de référence Hazard3 rendu <https://wren.wtf/hazard3/doc/>`_
+* `Source actuelle de la documentation amont <https://github.com/Wren6991/Hazard3/tree/stable/doc>`_
+* :hazard3-upstream-tree:`Source de la documentation à l'instantané amont examiné ici </doc>`
+
+.. note::
+
+   Le manuel amont rendu suit le développement de Hazard3 et peut décrire des
+   fonctionnalités plus récentes que l'instantané CPU épinglé par Hazard3-Doom.
+   Pour le comportement exact au niveau des cycles, les valeurs de configuration
+   ou les détails RTL de ce projet, utilisez les liens vers la source épinglée
+   dans ces pages.
+
 Instantané source utilisé par ce projet
 ---------------------------------------
 
 Les descriptions techniques de ces pages sont rattachées à l'instantané du
 code source Hazard3 utilisé pour cette revue de documentation :
 
-* Commit du fork Hazard3 ULX3S : ``736a74459b3f740c47803f20a62d820fcacbe5c3``
-* `Parcourir la source épinglée <https://github.com/ulx3s/Hazard3/tree/736a74459b3f740c47803f20a62d820fcacbe5c3>`_
+* Commit du fork Hazard3 ULX3S : |hazard3_commit|
+* Commit stable Hazard3 amont examiné ici : |hazard3_upstream_commit|
+* :hazard3-upstream-tree:`Parcourir cet instantané amont exact </>`
+* :hazard3-tree:`Parcourir la source épinglée </>`
 * `Parcourir la branche stable Hazard3 amont actuelle <https://github.com/Wren6991/Hazard3/tree/stable>`_
 
 .. important::
@@ -151,9 +174,9 @@ performances. Les principaux réglages effectifs sont :
      - Activé
      - Le petit prédicteur de branche arrière de Hazard3 est synthétisé.
 
-Le wrapper exact est `fpga_ulx3s.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/fpga/fpga_ulx3s.v>`_.
+Le wrapper exact est :hazard3-src:`fpga_ulx3s.v <example_soc/fpga/fpga_ulx3s.v>`.
 Les définitions génériques des paramètres se trouvent dans
-`hazard3_config.vh <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config.vh>`_.
+:hazard3-src:`hazard3_config.vh <hdl/hazard3_config.vh>`.
 
 Parcours d'apprentissage
 ------------------------

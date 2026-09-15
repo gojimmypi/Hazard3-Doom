@@ -8,8 +8,8 @@ Hazard3 is highly parameterized. It is important to distinguish three things:
 #. what the ULX3S Hazard3-Doom wrapper actually selects.
 
 The authoritative pinned parameter list is
-`hazard3_config.vh <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config.vh>`_. The selected ULX3S values
-are in `fpga_ulx3s.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/fpga/fpga_ulx3s.v>`_.
+:hazard3-src:`hazard3_config.vh <hdl/hazard3_config.vh>`. The selected ULX3S values
+are in :hazard3-src:`fpga_ulx3s.v <example_soc/fpga/fpga_ulx3s.v>`.
 
 Project ISA profile
 -------------------
@@ -109,7 +109,7 @@ A simplified view is:
 
 The decoder then uses these parameters to make unsupported instruction
 encodings illegal. See
-`hazard3_decode.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_decode.v>`_ for extension-gated decode.
+:hazard3-src:`hazard3_decode.v <hdl/hazard3_decode.v>` for extension-gated decode.
 For example, the M-extension opcodes are routed to the multiply/divide path
 only when ``EXTENSION_M`` is enabled, and atomic encodings require
 ``EXTENSION_A``.
@@ -188,6 +188,20 @@ The project also overrides implementation choices that are not ISA extensions:
      - 0
      - Do not spend reset logic clearing general-purpose registers.
 
+.. admonition:: Why ``RESET_REGFILE`` is zero on FPGA
+   :class: note
+
+   Here ``0`` means that reset of the general-purpose register file is
+   **disabled**; it does not mean that registers ``x1`` through ``x31`` are
+   cleared to zero. Register ``x0`` remains architecturally hard-wired to zero.
+
+   The upstream Hazard3 design guide recommends ``RESET_REGFILE=0`` for FPGA
+   synthesis because FPGA block RAM and LUT RAM commonly cannot implement the
+   requested register-file reset efficiently. Setting it to ``1`` can force the
+   register file into logic-fabric flip-flops, with significant area and timing
+   cost. See the `upstream Hazard3 Design Guide and Reference Manual
+   <https://wren.wtf/hazard3/doc/>`_, section **FPGA Synthesis**.
+
 Software consequence
 --------------------
 
@@ -213,7 +227,7 @@ configuration questions about this particular FPGA image.
 
 For architectural study, use both:
 
-* `Pinned project config <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config.vh>`_ - exact options and
+* :hazard3-src:`Pinned project config <hdl/hazard3_config.vh>` - exact options and
   defaults available to this snapshot.
 * `Current upstream stable config <https://github.com/Wren6991/Hazard3/blob/stable/hdl/hazard3_config.vh>`_
   - current maintained upstream direction.

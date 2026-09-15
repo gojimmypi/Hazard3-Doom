@@ -37,7 +37,18 @@ Requirements
 ------------
 
 Use a current Chromium-based browser such as Chrome or Edge. WebUSB requires a
-secure context, so serve the page through HTTPS or from ``localhost``.
+secure context, so use the hosted HTTPS Device Tool or serve the page from
+``localhost``.
+
+The hosted page can program the FPGA directly from the browser:
+
+.. code-block:: text
+
+   https://ulx3s.github.io/Hazard3-Doom/
+
+The selected ``.bit``/``.svf`` data stays in the browser and is sent directly
+to the locally attached FT231X through WebUSB. No local web server is required
+for FPGA SRAM programming.
 
 For local development, start a simple server from the repository ``web/``
 directory:
@@ -55,6 +66,56 @@ Then open:
 
 The browser communicates directly with the selected USB device. FPGA image and
 JTAG data are not uploaded to a web server.
+
+The FPGA status box detects a browser-reported Windows, Linux, or macOS host and
+shows a **Host** indicator beside **Docs**. For a recognized host, the **Docs**
+link opens the matching USB setup section below. Host detection is only a
+convenience for selecting instructions; it is not used as a security decision.
+
+Host-specific USB setup
+-----------------------
+
+The WebUSB programming flow is the same after the browser can open and claim the
+ULX3S FT231X interface, but the operating-system setup is different:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Host
+     - WebUSB setup
+   * - Windows
+     - Bind the ULX3S FT231X used by ``US1`` to WinUSB. Zadig is one convenient
+       way to do this. The normal FTDI VCP/D2XX binding is not compatible with
+       this browser WebUSB path.
+   * - Linux
+     - Ensure the user can open the raw USB device, normally with a udev rule.
+       If ``ftdi_sio`` owns the ULX3S FT231X interface, release only that
+       interface while WebUSB is using it.
+   * - macOS
+     - Do not install the Windows WinUSB/Zadig setup or Linux udev rules. Use a
+       current Chromium-based browser, close applications that may already own
+       the FT231X, and reconnect ``US1`` if the interface is busy.
+
+WebUSB and OpenOCD ownership
+----------------------------
+
+The browser FPGA flasher and OpenOCD both use the same ULX3S ``US1`` FT231X
+JTAG path, so they cannot own the interface concurrently. On Windows, the
+project's current OpenOCD ``ft232r`` path and the browser flasher can both use
+the WinUSB binding; Linux and macOS use their native USB access paths instead.
+
+After a successful browser SRAM program, press **Disconnect** in the FPGA
+flasher before starting OpenOCD. If OpenOCD is already running, stop it before
+connecting the browser flasher. The external USB-UART adapter used by Web Serial
+is independent and may remain connected throughout this handoff.
+
+The Device Tool exposes hover text on disabled JTAG controls. For example,
+**Probe JTAG** explains that ULX3S USB must first be connected, and programming
+controls explain whether a device connection or FPGA image selection is still
+missing.
+
+.. _web-flasher-windows-usb:
 
 Windows USB driver compatibility
 --------------------------------
@@ -148,6 +209,8 @@ reinstall the appropriate FTDI VCP/D2XX package.
 
    Device Manager can be used to restore the normal FTDI driver when an FTDI
    VCP/D2XX application such as Windows ``fujprog`` is required.
+
+.. _web-flasher-linux-usb:
 
 Linux and Ubuntu USB access
 ---------------------------
@@ -330,6 +393,31 @@ If ``lsusb`` does not show ``0403:6015``, fix the virtual-machine USB
 connection first. Browser or udev changes will not help until the device is
 visible inside the guest.
 
+
+.. _web-flasher-macos-usb:
+
+macOS USB access
+----------------
+
+macOS does not use the Windows Zadig/WinUSB driver-binding procedure or Linux
+udev rules. Start with the normal WebUSB requirements: a current Chromium-based
+browser and the hosted HTTPS Device Tool or ``localhost``.
+
+Before selecting **Connect ULX3S USB**, close ``fujprog``, OpenOCD,
+``openFPGALoader``, serial-terminal applications, or other software that may
+already own the ULX3S FT231X interface. If the browser reports an access or
+interface-claim failure, disconnect and reconnect ``US1`` and try the browser
+again before changing system software.
+
+The external USB-to-UART adapter used by the Hazard3-Doom Web Serial console is
+separate from the ULX3S ``US1`` JTAG interface and may remain connected.
+
+.. note::
+
+   The Device Tool's host indicator is based on browser-reported platform
+   information. If it displays **Unknown**, use the operating-system section
+   that matches the actual host.
+
 Programming a ``.bit`` file
 ---------------------------
 
@@ -476,10 +564,17 @@ Troubleshooting
 ``USBDevice.open(): Access denied``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-On Windows, this normally means the FT231X is still using the FTDI VCP/D2XX
-driver instead of WinUSB, or another process already owns the USB interface.
-Install/select WinUSB for the intended ULX3S FT231X, unplug/replug ``US1``, and
-retry. If WinUSB is already installed, close other USB/JTAG programs first.
+Use the host indicator beside **Docs** to select the matching setup procedure:
+
+* **Windows:** the FT231X normally needs WinUSB instead of the FTDI VCP/D2XX
+  driver for this WebUSB path. If WinUSB is already installed, close other
+  USB/JTAG programs and reconnect ``US1``.
+* **Linux:** check the raw USB device permissions and udev rule. If opening
+  succeeds but claiming the interface fails, also check whether ``ftdi_sio``
+  owns the ULX3S interface.
+* **macOS:** do not apply Zadig/WinUSB or udev instructions. Close other
+  applications using the FT231X, reconnect ``US1``, and retry in a current
+  Chromium-based browser.
 
 See :ref:`webusb-access-denied` for the condensed troubleshooting procedure.
 

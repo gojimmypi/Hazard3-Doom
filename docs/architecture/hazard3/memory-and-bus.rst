@@ -9,7 +9,7 @@ the CPU core.
 Core-side transaction interfaces
 --------------------------------
 
-`hazard3_core.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_core.v>`_ has logically separate channels
+:hazard3-src:`hazard3_core.v <hdl/hazard3_core.v>` has logically separate channels
 for:
 
 * instruction fetch; and
@@ -25,7 +25,7 @@ The standard Hazard3 wrappers demonstrate two common choices:
    Arbitrates instruction and data requests onto one AHB5 master port.
 
 Hazard3-Doom instantiates
-`hazard3_cpu_1port.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_cpu_1port.v>`_. This is the first place
+:hazard3-src:`hazard3_cpu_1port.v <hdl/hazard3_cpu_1port.v>`. This is the first place
 where a student should distinguish **pipeline parallelism** from **memory-bus
 parallelism**: F and M may both have reasons to access memory, but the one-port
 wrapper must serialize access to the shared external master interface.
@@ -83,11 +83,11 @@ the debugger.
 
 The relevant source locations are:
 
-* `example_soc.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/example_soc.v>`_ - CPU reset vector and
+* :hazard3-src:`example_soc.v <example_soc/soc/example_soc.v>` - CPU reset vector and
   SoC memory/peripheral integration.
-* `fpga_ulx3s.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/fpga/fpga_ulx3s.v>`_ - 128 KiB SRAM depth,
+* :hazard3-src:`fpga_ulx3s.v <example_soc/fpga/fpga_ulx3s.v>` - 128 KiB SRAM depth,
   preload filename, board options, and selected CPU parameters.
-* `hazard3_boot.hex <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/soc/hazard3_boot.hex>`_ - generated
+* :hazard3-src:`hazard3_boot.hex <example_soc/soc/hazard3_boot.hex>` - generated
   resident-monitor initialization image in this fork snapshot.
 
 See :doc:`../memory-map` for the Hazard3-Doom software-visible memory layout.

@@ -110,6 +110,8 @@ Poveznice projekta
 * `Hazard3-Doom repozitorij <https://github.com/ulx3s/Hazard3-Doom>`_
 * `ULX3S Hazard3 hardverski fork <https://github.com/ulx3s/Hazard3>`_
 * `Izvorni Hazard3 projekt <https://github.com/Wren6991/Hazard3>`_
+* `Hazard3 vodič za dizajn i referentni priručnik <https://wren.wtf/hazard3/doc/>`_
+* `Izvor Hazard3 dokumentacije <https://github.com/Wren6991/Hazard3/tree/stable/doc>`_
 * `Izvorni DoomGeneric projekt <https://github.com/ozkl/doomgeneric>`_
 * `ULX4M hardverski izvori <https://github.com/intergalaktik/ulx4m>`_
 * `ULX4M hardverska dokumentacija <https://github.com/intergalaktik/ulx4m-documentation>`_

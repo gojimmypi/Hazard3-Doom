@@ -1,6 +1,10 @@
 "use strict";
 
 const MAX_TERMINAL_CHARS = 1_000_000;
+const TERMINAL_MIN_HEIGHT_PX = 112;
+const TERMINAL_MAX_AUTO_HEIGHT_PX = 736;
+const TERMINAL_MAX_MANUAL_HEIGHT_PX = 1200;
+const TERMINAL_VIEWPORT_MARGIN_PX = 16;
 const STORAGE_PREFIX = "hazard3-doom-webserial.";
 const SCREEN_SNIP_CAPABILITY_REQUEST_BYTE = 0x1c;
 const SCREEN_SNIP_CAPABILITY_ACK_BYTE = 0x06;
@@ -40,6 +44,17 @@ const WAD_MEMORY_PROFILES = {
     "32m": { base: 0x21000000, limit: 0x21c00000 },
 };
 const CONSOLE_FIRMWARE_MAX_BYTES = 16 * 1024 * 1024;
+const CONSOLE_FIRMWARE_LOOPBACK_ORIGIN = "http://127.0.0.1:8000";
+const CONSOLE_FIRMWARE_STATUS_TIMEOUT_MS = 8000;
+const CONSOLE_FIRMWARE_HEALTH_TIMEOUT_MS = 2000;
+const CONSOLE_FIRMWARE_HEALTH_INTERVAL_MS = 5000;
+const DEVICE_TOOL_CHANNEL_NAME = "hazard3-doom-device-tool";
+const DEVICE_TOOL_HEARTBEAT_INTERVAL_MS = 10_000;
+const DEVICE_TOOL_STALE_AFTER_MS = 30_000;
+const UART_LOCK_NAME = "hazard3-doom-uart";
+const PAGE_INSTANCE_ID = typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 const state = {
     port: null,
@@ -67,18 +82,37 @@ const state = {
     serialResponseWaiter: null,
     consoleFirmware: null,
     consoleFirmwareLoaderAvailable: false,
+    consoleFirmwareOpenOcdKnown: false,
+    consoleFirmwareOpenOcdReady: false,
+    consoleFirmwareAccessKey: "",
     consoleFirmwareBusy: false,
+    consoleFirmwareCheckSequence: 0,
+    consoleFirmwareHealthTimer: null,
     serialOperation: null,
+    uartConnecting: false,
+    uartConnectionIssue: null,
+    uartLockHeld: false,
+    uartLockRelease: null,
+    uartLockRequest: null,
+    deviceToolChannel: null,
+    deviceToolHeartbeatTimer: null,
+    otherDeviceToolPages: new Map(),
+    otherUartOwners: new Set(),
     textDecoder: new TextDecoder(),
+    terminalHeightOffset: 0,
+    terminalResizeFrame: null,
+    terminalLayoutObserver: null,
 };
 
 const els = {
+    appVersion: document.getElementById("appVersion"),
     statusDot: document.getElementById("statusDot"),
     connectionStatus: document.getElementById("connectionStatus"),
     portDetails: document.getElementById("portDetails"),
     unsupportedNotice: document.getElementById("unsupportedNotice"),
     connectButton: document.getElementById("connectButton"),
     reconnectButton: document.getElementById("reconnectButton"),
+    serialPanelStatus: document.getElementById("serialPanelStatus"),
     authorizedPort: document.getElementById("authorizedPort"),
     baudRate: document.getElementById("baudRate"),
     dataBits: document.getElementById("dataBits"),
@@ -87,7 +121,10 @@ const els = {
     lineEnding: document.getElementById("lineEnding"),
     autoScroll: document.getElementById("autoScroll"),
     localEcho: document.getElementById("localEcho"),
+    terminalPanel: document.querySelector(".terminal-panel"),
     terminal: document.getElementById("terminal"),
+    terminalResizeHandle: document.getElementById("terminalResizeHandle"),
+    controlsPanel: document.querySelector(".controls-panel"),
     commandForm: document.getElementById("commandForm"),
     commandInput: document.getElementById("commandInput"),
     sendButton: document.getElementById("sendButton"),
@@ -103,6 +140,11 @@ const els = {
     h3dLaunchAfterUpload: document.getElementById("h3dLaunchAfterUpload"),
     h3dProgress: document.getElementById("h3dProgress"),
     h3dProgressLabel: document.getElementById("h3dProgressLabel"),
+    h3dUploadDiagnostic: document.getElementById("h3dUploadDiagnostic"),
+    h3dUartRequirement: document.getElementById("h3dUartRequirement"),
+    h3dUartRequirementTitle: document.getElementById("h3dUartRequirementTitle"),
+    h3dUartRequirementDetail: document.getElementById("h3dUartRequirementDetail"),
+    h3dConnectUartButton: document.getElementById("h3dConnectUartButton"),
     wadFileInput: document.getElementById("wadFileInput"),
     wadFileName: document.getElementById("wadFileName"),
     wadFileDetails: document.getElementById("wadFileDetails"),
@@ -112,7 +154,15 @@ const els = {
     wadLaunchAfterUpload: document.getElementById("wadLaunchAfterUpload"),
     wadProgress: document.getElementById("wadProgress"),
     wadProgressLabel: document.getElementById("wadProgressLabel"),
+    wadUploadDiagnostic: document.getElementById("wadUploadDiagnostic"),
+    wadUartRequirement: document.getElementById("wadUartRequirement"),
+    wadUartRequirementTitle: document.getElementById("wadUartRequirementTitle"),
+    wadUartRequirementDetail: document.getElementById("wadUartRequirementDetail"),
+    wadConnectUartButton: document.getElementById("wadConnectUartButton"),
     firmwareLoaderStatus: document.getElementById("firmwareLoaderStatus"),
+    firmwareOpenOcdStatus: document.getElementById("firmwareOpenOcdStatus"),
+    firmwareLoaderRefreshButton: document.getElementById("firmwareLoaderRefreshButton"),
+    firmwareLoaderAccessKey: document.getElementById("firmwareLoaderAccessKey"),
     firmwareFileInput: document.getElementById("firmwareFileInput"),
     firmwareFileName: document.getElementById("firmwareFileName"),
     firmwareFileDetails: document.getElementById("firmwareFileDetails"),
@@ -129,6 +179,271 @@ const els = {
 };
 
 const serialSupported = "serial" in navigator;
+
+function updateAppVersion() {
+    const versionInfo = window.HAZARD3_DOOM_VERSION;
+
+    if (!els.appVersion || !versionInfo || !versionInfo.display) {
+        return;
+    }
+
+    els.appVersion.textContent = versionInfo.display;
+    els.appVersion.title = `Hazard3-Doom project version ${versionInfo.display}`;
+}
+
+function setButtonDisabledReason(button, reason = "") {
+    if (!button) {
+        return;
+    }
+    if (button.disabled && reason) {
+        button.title = reason;
+    } else if (button.dataset.enabledTitle) {
+        button.title = button.dataset.enabledTitle;
+    } else {
+        button.removeAttribute("title");
+    }
+}
+
+function serialOperationDisabledReason() {
+    if (state.consoleFirmwareBusy) {
+        return "Wait for console firmware loading to finish.";
+    }
+    if (state.screenSnip !== null) {
+        return "Wait for the screen capture to finish.";
+    }
+    if (state.serialOperation === "h3d-upload") {
+        return "Wait for the H3D upload to finish.";
+    }
+    if (state.serialOperation === "wad-upload") {
+        return "Wait for the IWAD upload to finish.";
+    }
+    if (state.serialOperation !== null) {
+        return "Wait for the current UART operation to finish.";
+    }
+    return "";
+}
+
+class UartOwnershipError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = "UartOwnershipError";
+    }
+}
+
+function otherDeviceToolPageCount() {
+    return state.otherDeviceToolPages.size;
+}
+
+function anotherDeviceToolOwnsUart() {
+    return state.otherUartOwners.size !== 0;
+}
+
+function updateDeviceToolPeerUi() {
+    if (!state.port) {
+        updateAuthorizedPortDetails();
+    }
+    updateH3dUploaderUi();
+    updateWadUploaderUi();
+}
+
+function broadcastDeviceToolState(type = "presence") {
+    if (!state.deviceToolChannel) {
+        return;
+    }
+
+    state.deviceToolChannel.postMessage({
+        type,
+        instanceId: PAGE_INSTANCE_ID,
+        uartOwned: Boolean(state.port),
+        timestamp: Date.now(),
+    });
+}
+
+function rememberDeviceToolPeer(message) {
+    const instanceId = message?.instanceId;
+    if (typeof instanceId !== "string" || instanceId === PAGE_INSTANCE_ID) {
+        return;
+    }
+
+    state.otherDeviceToolPages.set(instanceId, Date.now());
+    if (message.uartOwned) {
+        state.otherUartOwners.add(instanceId);
+    } else {
+        state.otherUartOwners.delete(instanceId);
+    }
+    if (!anotherDeviceToolOwnsUart() &&
+        state.uartConnectionIssue?.kind === "ownership") {
+        clearUartConnectionIssue();
+    }
+    updateDeviceToolPeerUi();
+}
+
+function forgetDeviceToolPeer(instanceId) {
+    if (typeof instanceId !== "string") {
+        return;
+    }
+
+    state.otherDeviceToolPages.delete(instanceId);
+    state.otherUartOwners.delete(instanceId);
+    if (!anotherDeviceToolOwnsUart() &&
+        state.uartConnectionIssue?.kind === "ownership") {
+        clearUartConnectionIssue();
+    }
+    updateDeviceToolPeerUi();
+}
+
+function pruneDeviceToolPeers() {
+    const staleBefore = Date.now() - DEVICE_TOOL_STALE_AFTER_MS;
+    let changed = false;
+
+    for (const [instanceId, lastSeen] of state.otherDeviceToolPages) {
+        if (lastSeen >= staleBefore) {
+            continue;
+        }
+        state.otherDeviceToolPages.delete(instanceId);
+        state.otherUartOwners.delete(instanceId);
+        changed = true;
+    }
+
+    if (changed) {
+        if (!anotherDeviceToolOwnsUart() &&
+            state.uartConnectionIssue?.kind === "ownership") {
+            clearUartConnectionIssue();
+        }
+        updateDeviceToolPeerUi();
+    }
+}
+
+function startDeviceToolCoordination() {
+    if (!("BroadcastChannel" in window)) {
+        return;
+    }
+
+    const channel = new BroadcastChannel(DEVICE_TOOL_CHANNEL_NAME);
+    state.deviceToolChannel = channel;
+    channel.addEventListener("message", (event) => {
+        const message = event.data;
+        if (!message || message.instanceId === PAGE_INSTANCE_ID) {
+            return;
+        }
+
+        if (message.type === "goodbye") {
+            forgetDeviceToolPeer(message.instanceId);
+            return;
+        }
+
+        if (message.type === "hello" || message.type === "presence" ||
+            message.type === "uart-owner") {
+            rememberDeviceToolPeer(message);
+            if (message.type === "hello") {
+                broadcastDeviceToolState("presence");
+            }
+        }
+    });
+
+    broadcastDeviceToolState("hello");
+    state.deviceToolHeartbeatTimer = window.setInterval(() => {
+        pruneDeviceToolPeers();
+        broadcastDeviceToolState("presence");
+    }, DEVICE_TOOL_HEARTBEAT_INTERVAL_MS);
+}
+
+function webLocksSupported() {
+    return "locks" in navigator && typeof navigator.locks.request === "function";
+}
+
+async function acquireUartLock() {
+    if (!webLocksSupported()) {
+        return true;
+    }
+
+    if (state.uartLockRequest !== null) {
+        try {
+            await state.uartLockRequest;
+        } catch {
+            // A failed Web Lock request falls back to the serial port's own exclusivity.
+        }
+    }
+
+    let resolveAcquired;
+    let settled = false;
+    const acquired = new Promise((resolve) => {
+        resolveAcquired = resolve;
+    });
+
+    try {
+        const request = navigator.locks.request(
+            UART_LOCK_NAME,
+            { mode: "exclusive", ifAvailable: true },
+            async (lock) => {
+                if (!lock) {
+                    settled = true;
+                    resolveAcquired(false);
+                    return;
+                }
+
+                let releaseLock;
+                const holdLock = new Promise((resolve) => {
+                    releaseLock = resolve;
+                });
+                state.uartLockHeld = true;
+                state.uartLockRelease = releaseLock;
+                settled = true;
+                resolveAcquired(true);
+                await holdLock;
+                state.uartLockHeld = false;
+                state.uartLockRelease = null;
+            },
+        );
+        state.uartLockRequest = request;
+        void request.catch((error) => {
+            if (!settled) {
+                settled = true;
+                resolveAcquired(true);
+                appendSystem(`UART tab-lock warning: ${error.message}`);
+            }
+        }).finally(() => {
+            if (state.uartLockRequest === request) {
+                state.uartLockRequest = null;
+            }
+        });
+    } catch (error) {
+        appendSystem(`UART tab-lock warning: ${error.message}`);
+        return true;
+    }
+
+    return acquired;
+}
+
+function releaseUartLock() {
+    const releaseLock = state.uartLockRelease;
+    if (releaseLock) {
+        state.uartLockRelease = null;
+        releaseLock();
+    }
+}
+
+function clearUartConnectionIssue() {
+    state.uartConnectionIssue = null;
+}
+
+function setUartConnectionIssue(error) {
+    if (error?.name === "UartOwnershipError") {
+        state.uartConnectionIssue = {
+            kind: "ownership",
+            title: "UART already in use",
+            detail: "Another Hazard3-Doom Device Tool page from this site owns the UART. Disconnect it there, then retry.",
+        };
+        return;
+    }
+
+    const browserDetail = error?.message ? ` Browser: ${error.message}` : "";
+    state.uartConnectionIssue = {
+        kind: "open",
+        title: "UART connection failed",
+        detail: "The selected serial port could not be opened. It may already be in use by another Device Tool page, PuTTY, or another serial application." + browserDetail,
+    };
+}
 
 function screenSnipStatusText() {
     if (!state.port) {
@@ -169,6 +484,7 @@ function updateScreenSnipUi() {
     els.screenSnipButton.disabled = !available;
     els.screenSnipButton.textContent = state.screenSnip !== null ? "Capturing..." : "Screen snip";
     els.screenSnipControl.title = status;
+    els.screenSnipButton.title = status;
     els.screenSnipButton.setAttribute("aria-label", status);
     updateConsoleFirmwareUi();
     updateH3dUploaderUi();
@@ -356,13 +672,82 @@ function updateConsoleFirmwareUi() {
     const blocked = state.consoleFirmwareBusy ||
         state.serialOperation !== null || state.screenSnip !== null;
     const ready = state.consoleFirmwareLoaderAvailable &&
+        state.consoleFirmwareOpenOcdReady &&
         state.consoleFirmware !== null && !blocked;
 
     els.firmwareFileInput.disabled = blocked;
     els.firmwareUploadButton.disabled = !ready;
-    els.firmwareUploadButton.textContent = state.consoleFirmwareBusy
-        ? "Loading..."
-        : "Load console firmware";
+    let disabledReason = "";
+    if (state.consoleFirmwareBusy) {
+        els.firmwareUploadButton.textContent = "Loading...";
+        disabledReason = "Console firmware loading is already in progress.";
+    } else if (!state.consoleFirmwareLoaderAvailable) {
+        els.firmwareUploadButton.textContent = "Load console firmware";
+        disabledReason = "Start the local web-server.py helper and refresh its status first.";
+    } else if (!state.consoleFirmwareOpenOcdKnown) {
+        els.firmwareUploadButton.textContent = "Load console firmware";
+        disabledReason = "Refresh the local helper status before loading console firmware.";
+    } else if (!state.consoleFirmwareOpenOcdReady) {
+        els.firmwareUploadButton.textContent = "Start OpenOCD first";
+        disabledReason = "Start OpenOCD so its GDB server is listening on port 3333.";
+    } else if (state.consoleFirmware === null) {
+        els.firmwareUploadButton.textContent = "Load console firmware";
+        disabledReason = "Select a 32-bit RISC-V ELF console firmware file first.";
+    } else if (blocked) {
+        els.firmwareUploadButton.textContent = "Load console firmware";
+        disabledReason = serialOperationDisabledReason();
+    } else {
+        els.firmwareUploadButton.textContent = "Load console firmware";
+    }
+    setButtonDisabledReason(els.firmwareUploadButton, disabledReason);
+}
+
+function updateConsoleFirmwareOpenOcdStatus() {
+    els.firmwareOpenOcdStatus.classList.remove("ok", "error");
+    if (!state.consoleFirmwareLoaderAvailable) {
+        els.firmwareOpenOcdStatus.textContent = "Unknown - local helper unavailable";
+        return;
+    }
+    if (!state.consoleFirmwareOpenOcdKnown) {
+        els.firmwareOpenOcdStatus.textContent = "Unknown - refresh local helper";
+        return;
+    }
+    if (state.consoleFirmwareOpenOcdReady) {
+        els.firmwareOpenOcdStatus.textContent = "Ready - GDB server on port 3333";
+        els.firmwareOpenOcdStatus.classList.add("ok");
+    } else {
+        els.firmwareOpenOcdStatus.textContent = "Not detected on port 3333 - start OpenOCD";
+        els.firmwareOpenOcdStatus.classList.add("error");
+    }
+}
+
+function clearUploadDiagnostic(element) {
+    element.hidden = true;
+    element.textContent = "";
+}
+
+function showMonitorUploadDiagnostic(element, protocol) {
+    let message = `${protocol} did not receive READY from the resident monitor. ` +
+        "Confirm that the Hazard3 boot monitor is running and waiting at the > prompt. ";
+
+    if (state.consoleFirmwareLoaderAvailable && state.consoleFirmwareOpenOcdKnown) {
+        if (state.consoleFirmwareOpenOcdReady) {
+            message += "OpenOCD is detected on 127.0.0.1:3333. If the monitor is not running, " +
+                "use the Console firmware uploader above to load or reload hazard3-boot-monitor.elf, " +
+                "then retry from the > prompt.";
+        } else {
+            message += "OpenOCD is not detected on 127.0.0.1:3333. If the console firmware has not " +
+                "already been loaded, start OpenOCD with the matching board configuration, use the " +
+                "Console firmware uploader above to load hazard3-boot-monitor.elf, then retry. " +
+                "OpenOCD does not need to remain running after the monitor has been loaded.";
+        }
+    } else {
+        message += "If the monitor has not already been loaded, start web-server.py and OpenOCD, " +
+            "then use the Console firmware uploader above to load hazard3-boot-monitor.elf.";
+    }
+
+    element.textContent = message;
+    element.hidden = false;
 }
 
 function appendFirmwareLog(text) {
@@ -373,26 +758,159 @@ function appendFirmwareLog(text) {
     els.firmwareLog.scrollTop = els.firmwareLog.scrollHeight;
 }
 
-async function checkConsoleFirmwareLoader() {
-    try {
-        const response = await fetch("/api/console-firmware/status", { cache: "no-store" });
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        const status = await response.json();
-        state.consoleFirmwareLoaderAvailable = status.available === true;
-    } catch {
-        state.consoleFirmwareLoaderAvailable = false;
+function isLoopbackHostname(hostname) {
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}
+
+function consoleFirmwareHelperOrigin() {
+    return isLoopbackHostname(window.location.hostname)
+        ? window.location.origin
+        : CONSOLE_FIRMWARE_LOOPBACK_ORIGIN;
+}
+
+async function fetchConsoleFirmwareHelper(path, options = {}) {
+    const headers = new Headers(options.headers || {});
+    if (state.consoleFirmwareAccessKey) {
+        headers.set("X-Hazard3-Doom-Key", state.consoleFirmwareAccessKey);
     }
 
-    els.firmwareLoaderStatus.textContent = state.consoleFirmwareLoaderAvailable
-        ? "Ready"
-        : "Unavailable - run web-server.py";
-    els.firmwareLoaderStatus.classList.toggle("ok", state.consoleFirmwareLoaderAvailable);
-    els.firmwareLoaderStatus.classList.toggle("error", !state.consoleFirmwareLoaderAvailable);
-    els.firmwareProgressLabel.textContent = state.consoleFirmwareLoaderAvailable
-        ? "Idle"
-        : "Local firmware loader unavailable";
+    const requestOptions = {
+        ...options,
+        headers,
+        cache: options.cache || "no-store",
+    };
+    if (!isLoopbackHostname(window.location.hostname)) {
+        requestOptions.targetAddressSpace = "loopback";
+    }
+
+    return fetch(`${consoleFirmwareHelperOrigin()}${path}`, requestOptions);
+}
+
+function cancelConsoleFirmwareHealthCheck() {
+    if (state.consoleFirmwareHealthTimer !== null) {
+        clearTimeout(state.consoleFirmwareHealthTimer);
+        state.consoleFirmwareHealthTimer = null;
+    }
+}
+
+function scheduleConsoleFirmwareHealthCheck() {
+    cancelConsoleFirmwareHealthCheck();
+    if (!state.consoleFirmwareLoaderAvailable) {
+        return;
+    }
+    state.consoleFirmwareHealthTimer = setTimeout(() => {
+        state.consoleFirmwareHealthTimer = null;
+        void checkConsoleFirmwareLoader({ background: true });
+    }, CONSOLE_FIRMWARE_HEALTH_INTERVAL_MS);
+}
+
+function consoleFirmwareStatusChallenge() {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+async function checkConsoleFirmwareLoader({ background = false } = {}) {
+    const checkSequence = ++state.consoleFirmwareCheckSequence;
+    const challenge = consoleFirmwareStatusChallenge();
+    const controller = new AbortController();
+    const timeoutMs = background
+        ? CONSOLE_FIRMWARE_HEALTH_TIMEOUT_MS
+        : CONSOLE_FIRMWARE_STATUS_TIMEOUT_MS;
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    state.consoleFirmwareAccessKey = els.firmwareLoaderAccessKey.value;
+    cancelConsoleFirmwareHealthCheck();
+    if (!background) {
+        els.firmwareLoaderRefreshButton.disabled = true;
+        els.firmwareLoaderStatus.textContent = "Checking...";
+        els.firmwareLoaderStatus.classList.remove("ok", "error");
+        state.consoleFirmwareLoaderAvailable = false;
+        state.consoleFirmwareOpenOcdKnown = false;
+        state.consoleFirmwareOpenOcdReady = false;
+        updateConsoleFirmwareOpenOcdStatus();
+        updateConsoleFirmwareUi();
+    }
+
+    try {
+        const response = await fetchConsoleFirmwareHelper(
+            `/api/console-firmware/status?challenge=${encodeURIComponent(challenge)}`,
+            { method: "GET", signal: controller.signal },
+        );
+        let status = {};
+        try {
+            status = await response.json();
+        } catch {
+            // Keep the HTTP status as the useful diagnostic below.
+        }
+
+        if (checkSequence !== state.consoleFirmwareCheckSequence) {
+            return;
+        }
+
+        state.consoleFirmwareLoaderAvailable = false;
+        if (response.status === 401 && status.authentication_required === true) {
+            els.firmwareLoaderStatus.textContent = state.consoleFirmwareAccessKey
+                ? "Access key rejected"
+                : "Access key required";
+            els.firmwareProgressLabel.textContent = "Enter the local-loader access key and refresh";
+        } else if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        } else if (status.challenge !== challenge) {
+            throw new Error("Stale local-loader status response");
+        } else {
+            state.consoleFirmwareLoaderAvailable = status.available === true;
+            state.consoleFirmwareOpenOcdKnown = typeof status.openocd_gdb_ready === "boolean";
+            state.consoleFirmwareOpenOcdReady = status.openocd_gdb_ready === true;
+            els.firmwareLoaderStatus.textContent = state.consoleFirmwareLoaderAvailable
+                ? "Ready"
+                : "Helper ready - loader script unavailable";
+            if (!state.consoleFirmwareLoaderAvailable) {
+                els.firmwareProgressLabel.textContent =
+                    "Local helper found, but the firmware loader script is unavailable";
+            } else if (state.consoleFirmwareOpenOcdKnown && !state.consoleFirmwareOpenOcdReady) {
+                els.firmwareProgressLabel.textContent =
+                    "OpenOCD not detected on 127.0.0.1:3333; start OpenOCD before loading the ELF";
+            } else {
+                els.firmwareProgressLabel.textContent = "Idle";
+            }
+        }
+    } catch {
+        if (checkSequence !== state.consoleFirmwareCheckSequence) {
+            return;
+        }
+        state.consoleFirmwareLoaderAvailable = false;
+        state.consoleFirmwareOpenOcdKnown = false;
+        state.consoleFirmwareOpenOcdReady = false;
+        els.firmwareLoaderStatus.textContent = "Unavailable - start web-server.py";
+        els.firmwareProgressLabel.textContent =
+            "Local helper unavailable; start web-server.py or allow browser loopback access";
+    } finally {
+        clearTimeout(timeout);
+        if (checkSequence === state.consoleFirmwareCheckSequence) {
+            els.firmwareLoaderStatus.classList.toggle("ok", state.consoleFirmwareLoaderAvailable);
+            els.firmwareLoaderStatus.classList.toggle("error", !state.consoleFirmwareLoaderAvailable);
+            els.firmwareLoaderRefreshButton.disabled = false;
+            updateConsoleFirmwareOpenOcdStatus();
+            updateConsoleFirmwareUi();
+            scheduleConsoleFirmwareHealthCheck();
+        }
+    }
+}
+
+function updateConsoleFirmwareAccessKey() {
+    cancelConsoleFirmwareHealthCheck();
+    state.consoleFirmwareCheckSequence += 1;
+    state.consoleFirmwareAccessKey = els.firmwareLoaderAccessKey.value;
+    state.consoleFirmwareLoaderAvailable = false;
+    state.consoleFirmwareOpenOcdKnown = false;
+    state.consoleFirmwareOpenOcdReady = false;
+    els.firmwareLoaderStatus.textContent = "Key changed - refresh";
+    els.firmwareLoaderStatus.classList.remove("ok");
+    els.firmwareLoaderStatus.classList.add("error");
+    els.firmwareProgressLabel.textContent = "Refresh the local-loader check";
+    updateConsoleFirmwareOpenOcdStatus();
     updateConsoleFirmwareUi();
 }
 
@@ -429,7 +947,7 @@ async function selectConsoleFirmwareFile() {
 
 async function loadConsoleFirmware() {
     const firmware = state.consoleFirmware;
-    if (!state.consoleFirmwareLoaderAvailable || !firmware ||
+    if (!state.consoleFirmwareLoaderAvailable || !state.consoleFirmwareOpenOcdReady || !firmware ||
         state.consoleFirmwareBusy || state.serialOperation !== null || state.screenSnip !== null) {
         return;
     }
@@ -442,14 +960,17 @@ async function loadConsoleFirmware() {
     setConnectionUi(Boolean(state.port), state.port ? describePort(state.port) : "");
 
     try {
-        const response = await fetch("/api/console-firmware/load", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/octet-stream",
-                "X-Hazard3-Doom-Local": "1",
+        const response = await fetchConsoleFirmwareHelper(
+            "/api/console-firmware/load",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/octet-stream",
+                    "X-Hazard3-Doom-Local": "1",
+                },
+                body: firmware.bytes,
             },
-            body: firmware.bytes,
-        });
+        );
         const result = await response.json();
         appendFirmwareLog(result.output || "");
         if (!response.ok || result.ok !== true) {
@@ -523,16 +1044,111 @@ function validateH3dPackage(bytes) {
     };
 }
 
+function updateUploaderUartRequirement(container, title, detail, button, protocol) {
+    const connected = Boolean(state.port);
+    const busy = state.serialOperation !== null || state.consoleFirmwareBusy;
+    const anotherOwner = anotherDeviceToolOwnsUart();
+    const issue = state.uartConnectionIssue;
+
+    container.classList.toggle("connected", connected);
+    container.classList.toggle("unavailable", !serialSupported);
+    container.classList.toggle("connecting", !connected && state.uartConnecting);
+    container.classList.toggle("error", !connected && !state.uartConnecting &&
+        (Boolean(issue) || anotherOwner));
+
+    if (!serialSupported) {
+        title.textContent = "Web Serial unavailable";
+        detail.textContent = "Use a current Chromium-based browser to connect the UART.";
+        button.textContent = "UART unavailable";
+        button.disabled = true;
+        setButtonDisabledReason(button, "Web Serial is not available in this browser.");
+        return;
+    }
+
+    if (connected) {
+        title.textContent = "UART connected";
+        detail.textContent = `${protocol} can use the active Web Serial connection.`;
+        button.textContent = "Connected";
+        button.disabled = true;
+        setButtonDisabledReason(button, "UART is already connected.");
+        return;
+    }
+
+    if (state.uartConnecting) {
+        title.textContent = "Connecting UART";
+        detail.textContent = "Complete the browser serial-port chooser and wait for the port to open.";
+        button.textContent = "Connecting...";
+        button.disabled = true;
+        setButtonDisabledReason(button, "A UART connection is already in progress.");
+        return;
+    }
+
+    if (issue) {
+        title.textContent = issue.title;
+        detail.textContent = issue.detail;
+        button.textContent = "Retry UART";
+        button.disabled = busy;
+        setButtonDisabledReason(button, serialOperationDisabledReason());
+        return;
+    }
+
+    if (anotherOwner) {
+        title.textContent = "UART already in use";
+        detail.textContent = "Another Device Tool page from this site reports that it owns the UART. Disconnect it there, then retry.";
+        button.textContent = "Retry UART";
+        button.disabled = busy;
+        setButtonDisabledReason(button, serialOperationDisabledReason());
+        return;
+    }
+
+    title.textContent = "UART connection required";
+    detail.textContent = `Connect Web Serial before starting the ${protocol} upload.`;
+    if (otherDeviceToolPageCount() !== 0) {
+        detail.textContent += " Another Device Tool page is also open; only one page can own the UART.";
+    }
+    button.textContent = "Connect UART";
+    button.disabled = busy;
+    setButtonDisabledReason(button, serialOperationDisabledReason());
+}
+
 function updateH3dUploaderUi() {
     const uploading = state.serialOperation === "h3d-upload";
     const ready = Boolean(state.port && state.h3dImage &&
         state.serialOperation === null && state.screenSnip === null &&
         !state.consoleFirmwareBusy);
 
+    updateUploaderUartRequirement(
+        els.h3dUartRequirement,
+        els.h3dUartRequirementTitle,
+        els.h3dUartRequirementDetail,
+        els.h3dConnectUartButton,
+        "H3L",
+    );
+
     els.h3dFileInput.disabled = uploading || state.consoleFirmwareBusy;
     els.h3dLaunchAfterUpload.disabled = uploading || state.consoleFirmwareBusy;
     els.h3dUploadButton.disabled = !ready;
-    els.h3dUploadButton.textContent = uploading ? "Uploading..." : "Upload H3D";
+
+    let disabledReason = "";
+    if (uploading) {
+        els.h3dUploadButton.textContent = "Uploading...";
+        disabledReason = "H3D upload is already in progress.";
+    } else if (!serialSupported) {
+        els.h3dUploadButton.textContent = "Web Serial unavailable";
+        disabledReason = "Web Serial is not available in this browser.";
+    } else if (!state.port) {
+        els.h3dUploadButton.textContent = "Connect UART first";
+        disabledReason = "Connect the UART before uploading an H3D image.";
+    } else if (!state.h3dImage) {
+        els.h3dUploadButton.textContent = "Select H3D image";
+        disabledReason = "Select a packaged .h3d image first.";
+    } else if (!ready) {
+        els.h3dUploadButton.textContent = "UART busy";
+        disabledReason = serialOperationDisabledReason();
+    } else {
+        els.h3dUploadButton.textContent = "Upload H3D";
+    }
+    setButtonDisabledReason(els.h3dUploadButton, disabledReason);
 }
 
 function setSerialOperation(operation) {
@@ -604,6 +1220,7 @@ async function selectH3dFile() {
     els.h3dFileDetails.textContent = "";
     els.h3dProgress.value = 0;
     els.h3dProgressLabel.textContent = "Idle";
+    clearUploadDiagnostic(els.h3dUploadDiagnostic);
 
     const file = els.h3dFileInput.files?.[0];
     if (!file) {
@@ -654,6 +1271,7 @@ async function uploadH3dImage() {
     setSerialOperation("h3d-upload");
     els.h3dProgress.value = 0;
     els.h3dProgressLabel.textContent = "Starting monitor loader...";
+    clearUploadDiagnostic(els.h3dUploadDiagnostic);
     appendSystem(
         `H3D upload: ${image.fileName}, payload=${image.imageBytes.toLocaleString()} bytes, ` +
         `CRC32=${formatHex32(image.payloadCrc32)}.`);
@@ -725,6 +1343,9 @@ async function uploadH3dImage() {
         }
     } catch (error) {
         els.h3dProgressLabel.textContent = `Failed: ${error.message}`;
+        if (error.message === "timed out waiting for H3L READY") {
+            showMonitorUploadDiagnostic(els.h3dUploadDiagnostic, "H3L");
+        }
         appendSystem(
             `H3D upload failed: ${error.message}. ` +
             "Make sure the resident monitor prompt is active; stop Doom before retrying.");
@@ -839,12 +1460,40 @@ function updateWadUploaderUi() {
         state.serialOperation === null && state.screenSnip === null &&
         !state.consoleFirmwareBusy);
 
+    updateUploaderUartRequirement(
+        els.wadUartRequirement,
+        els.wadUartRequirementTitle,
+        els.wadUartRequirementDetail,
+        els.wadConnectUartButton,
+        "H3W",
+    );
+
     els.wadFileInput.disabled = uploading || state.consoleFirmwareBusy;
     els.wadVisibleName.disabled = uploading || state.consoleFirmwareBusy;
     els.wadMemoryProfile.disabled = uploading || state.consoleFirmwareBusy;
     els.wadLaunchAfterUpload.disabled = uploading || state.consoleFirmwareBusy;
     els.wadUploadButton.disabled = !ready;
-    els.wadUploadButton.textContent = uploading ? "Uploading..." : "Upload IWAD";
+
+    let disabledReason = "";
+    if (uploading) {
+        els.wadUploadButton.textContent = "Uploading...";
+        disabledReason = "IWAD upload is already in progress.";
+    } else if (!serialSupported) {
+        els.wadUploadButton.textContent = "Web Serial unavailable";
+        disabledReason = "Web Serial is not available in this browser.";
+    } else if (!state.port) {
+        els.wadUploadButton.textContent = "Connect UART first";
+        disabledReason = "Connect the UART before uploading an IWAD.";
+    } else if (!state.wadImage) {
+        els.wadUploadButton.textContent = "Select IWAD";
+        disabledReason = "Select a valid .wad file first.";
+    } else if (!ready) {
+        els.wadUploadButton.textContent = "UART busy";
+        disabledReason = serialOperationDisabledReason();
+    } else {
+        els.wadUploadButton.textContent = "Upload IWAD";
+    }
+    setButtonDisabledReason(els.wadUploadButton, disabledReason);
 }
 
 function refreshWadImage() {
@@ -880,6 +1529,7 @@ async function selectWadFile() {
     els.wadFileDetails.textContent = "";
     els.wadProgress.value = 0;
     els.wadProgressLabel.textContent = "Idle";
+    clearUploadDiagnostic(els.wadUploadDiagnostic);
 
     const file = els.wadFileInput.files?.[0];
     if (!file) {
@@ -928,6 +1578,7 @@ async function uploadWadImage() {
     setSerialOperation("wad-upload");
     els.wadProgress.value = 0;
     els.wadProgressLabel.textContent = "Starting monitor IWAD loader...";
+    clearUploadDiagnostic(els.wadUploadDiagnostic);
     appendSystem(
         `IWAD upload: ${image.visibleName}, profile=${image.profileName}, ` +
         `bytes=${image.payloadBytes.toLocaleString()}, lumps=${image.lumpCount.toLocaleString()}, ` +
@@ -1000,6 +1651,9 @@ async function uploadWadImage() {
         }
     } catch (error) {
         els.wadProgressLabel.textContent = `Failed: ${error.message}`;
+        if (error.message === "timed out waiting for H3W READY") {
+            showMonitorUploadDiagnostic(els.wadUploadDiagnostic, "H3W");
+        }
         appendSystem(
             `IWAD upload failed: ${error.message}. ` +
             "Make sure the resident monitor prompt is active and the selected memory profile matches the monitor build.");
@@ -1022,9 +1676,28 @@ function setConnectionUi(connected, detail = "") {
 
     els.statusDot.classList.toggle("connected", connected);
     els.connectionStatus.textContent = connected ? "Connected" : "Not connected";
-    els.connectButton.textContent = connected ? "Disconnect" : "Connect";
+    els.serialPanelStatus.classList.toggle("connected", connected);
+    els.serialPanelStatus.classList.toggle("error", !connected && Boolean(state.uartConnectionIssue));
+    if (connected) {
+        els.serialPanelStatus.textContent = "UART connected";
+    } else if (state.uartConnecting) {
+        els.serialPanelStatus.textContent = "Connecting UART";
+    } else if (state.uartConnectionIssue) {
+        els.serialPanelStatus.textContent = "UART unavailable";
+    } else {
+        els.serialPanelStatus.textContent = "UART disconnected";
+    }
+    if (connected) {
+        els.connectButton.textContent = "Disconnect";
+    } else if (state.uartConnecting) {
+        els.connectButton.textContent = "Connecting...";
+    } else if (state.uartConnectionIssue) {
+        els.connectButton.textContent = "Retry";
+    } else {
+        els.connectButton.textContent = "Connect";
+    }
     els.connectButton.disabled = state.serialOperation !== null ||
-        state.consoleFirmwareBusy;
+        state.consoleFirmwareBusy || state.uartConnecting;
     els.commandInput.disabled = !interactive;
     els.sendButton.disabled = !interactive;
     els.macroSendButton.disabled = !interactive;
@@ -1037,12 +1710,54 @@ function setConnectionUi(connected, detail = "") {
         control.disabled = connected;
     });
     els.authorizedPort.disabled = connected || state.authorizedPorts.length === 0;
-    els.reconnectButton.disabled = connected || state.authorizedPorts.length === 0;
+    els.reconnectButton.disabled = connected || state.authorizedPorts.length === 0 ||
+        state.uartConnecting || state.serialOperation !== null || state.consoleFirmwareBusy;
+
+    let connectDisabledReason = "";
+    if (state.uartConnecting) {
+        connectDisabledReason = "A UART connection is already in progress.";
+    } else if (state.consoleFirmwareBusy) {
+        connectDisabledReason = "Wait for console firmware loading to finish.";
+    } else if (state.serialOperation !== null) {
+        connectDisabledReason = serialOperationDisabledReason();
+    }
+    setButtonDisabledReason(els.connectButton, connectDisabledReason);
+
+    let reconnectDisabledReason = "";
+    if (connected) {
+        reconnectDisabledReason = "UART is already connected. Disconnect it before reconnecting an authorized port.";
+    } else if (state.uartConnecting) {
+        reconnectDisabledReason = "A UART connection is already in progress.";
+    } else if (state.serialOperation !== null || state.consoleFirmwareBusy) {
+        reconnectDisabledReason = serialOperationDisabledReason();
+    } else if (state.authorizedPorts.length === 0) {
+        reconnectDisabledReason = "No previously authorized serial ports are available. Use Connect to choose a port.";
+    }
+    setButtonDisabledReason(els.reconnectButton, reconnectDisabledReason);
+
+    const interactiveDisabledReason = connected
+        ? serialOperationDisabledReason()
+        : "Connect the UART first.";
+    setButtonDisabledReason(els.sendButton, interactiveDisabledReason);
+    setButtonDisabledReason(els.macroSendButton, interactiveDisabledReason);
+    document.querySelectorAll(".command-button").forEach((button) => {
+        if (!button.dataset.enabledTitleCaptured) {
+            button.dataset.enabledTitle = button.getAttribute("title") || "";
+            button.dataset.enabledTitleCaptured = "1";
+        }
+        if (button.disabled) {
+            button.title = interactiveDisabledReason;
+        } else if (button.dataset.enabledTitle) {
+            button.title = button.dataset.enabledTitle;
+        } else {
+            button.removeAttribute("title");
+        }
+    });
 
     if (detail) {
         els.portDetails.textContent = detail;
     } else if (!connected) {
-        els.portDetails.textContent = "No serial port selected.";
+        updateAuthorizedPortDetails();
     }
 }
 
@@ -1128,22 +1843,41 @@ function updateAuthorizedPortDetails() {
         return;
     }
 
+    if (state.uartConnecting) {
+        els.portDetails.textContent = "Connecting to the selected serial port...";
+        return;
+    }
+
+    if (state.uartConnectionIssue) {
+        els.portDetails.textContent = `${state.uartConnectionIssue.title}: ${state.uartConnectionIssue.detail}`;
+        return;
+    }
+
+    if (anotherDeviceToolOwnsUart()) {
+        els.portDetails.textContent = "Another Device Tool page from this site currently owns the UART. Disconnect it there before connecting here.";
+        return;
+    }
+
+    const duplicateNote = otherDeviceToolPageCount() !== 0
+        ? " Another Device Tool page is also open; only one page can own the UART."
+        : "";
+
     if (state.authorizedPorts.length === 0) {
-        els.portDetails.textContent = "No authorized serial ports. Click Connect to choose one.";
+        els.portDetails.textContent = "No authorized serial ports. Click Connect to choose one." + duplicateNote;
         return;
     }
 
     const selectedIndex = Number(els.authorizedPort.value);
     const selectedPort = state.authorizedPorts[selectedIndex];
     if (!selectedPort) {
-        els.portDetails.textContent = `${state.authorizedPorts.length} authorized serial ports are available.`;
+        els.portDetails.textContent = `${state.authorizedPorts.length} authorized serial ports are available.` + duplicateNote;
         return;
     }
 
     const suffix = state.authorizedPorts.length === 1
         ? "Click Connect to grant/select another port."
         : "Choose a port above, then click Reconnect.";
-    els.portDetails.textContent = `${portIdentity(selectedPort, selectedIndex)}. ${suffix}`;
+    els.portDetails.textContent = `${portIdentity(selectedPort, selectedIndex)}. ${suffix}` + duplicateNote;
 }
 
 async function refreshAuthorizedPorts(preferredPort = null) {
@@ -1172,8 +1906,21 @@ async function refreshAuthorizedPorts(preferredPort = null) {
         els.authorizedPort.value = String(selectedIndex >= 0 ? selectedIndex : 0);
     }
 
-    els.authorizedPort.disabled = Boolean(state.port) || ports.length === 0;
-    els.reconnectButton.disabled = Boolean(state.port) || ports.length === 0;
+    els.authorizedPort.disabled = Boolean(state.port) || ports.length === 0 ||
+        state.uartConnecting;
+    els.reconnectButton.disabled = Boolean(state.port) || ports.length === 0 ||
+        state.uartConnecting || state.serialOperation !== null || state.consoleFirmwareBusy;
+    let reconnectDisabledReason = "";
+    if (state.port) {
+        reconnectDisabledReason = "UART is already connected. Disconnect it before reconnecting an authorized port.";
+    } else if (state.uartConnecting) {
+        reconnectDisabledReason = "A UART connection is already in progress.";
+    } else if (state.serialOperation !== null || state.consoleFirmwareBusy) {
+        reconnectDisabledReason = serialOperationDisabledReason();
+    } else if (ports.length === 0) {
+        reconnectDisabledReason = "No previously authorized serial ports are available. Use Connect to choose a port.";
+    }
+    setButtonDisabledReason(els.reconnectButton, reconnectDisabledReason);
     updateAuthorizedPortDetails();
     return ports;
 }
@@ -1458,7 +2205,18 @@ async function openPort(port) {
         await disconnect();
     }
 
-    await port.open(serialOptions());
+    const lockAcquired = await acquireUartLock();
+    if (!lockAcquired) {
+        throw new UartOwnershipError(
+            "Another Hazard3-Doom Device Tool page already owns the UART.");
+    }
+
+    try {
+        await port.open(serialOptions());
+    } catch (error) {
+        releaseUartLock();
+        throw error;
+    }
     state.port = port;
     state.keepReading = true;
     state.rxBytes = 0;
@@ -1474,6 +2232,8 @@ async function openPort(port) {
     setConnectionUi(true, describePort(port));
     startSessionTimer();
     saveSettings();
+    clearUartConnectionIssue();
+    broadcastDeviceToolState("uart-owner");
     appendSystem(`Connected: ${describePort(port)}`);
     state.readLoopPromise = readLoop();
     void probeScreenSnipCapability();
@@ -1490,14 +2250,22 @@ async function connect() {
         return;
     }
 
+    clearUartConnectionIssue();
+    state.uartConnecting = true;
+    setConnectionUi(false);
+
     try {
         const port = await navigator.serial.requestPort();
         await refreshAuthorizedPorts(port);
         await openPort(port);
     } catch (error) {
         if (error.name !== "NotFoundError") {
+            setUartConnectionIssue(error);
             appendSystem(`Connect failed: ${error.message}`);
         }
+    } finally {
+        state.uartConnecting = false;
+        setConnectionUi(Boolean(state.port), state.port ? describePort(state.port) : "");
     }
 }
 
@@ -1505,6 +2273,10 @@ async function reconnect() {
     if (!serialSupported || state.port) {
         return;
     }
+
+    clearUartConnectionIssue();
+    state.uartConnecting = true;
+    setConnectionUi(false);
 
     try {
         const ports = await refreshAuthorizedPorts();
@@ -1521,7 +2293,11 @@ async function reconnect() {
         }
         await openPort(port);
     } catch (error) {
+        setUartConnectionIssue(error);
         appendSystem(`Reconnect failed: ${error.message}`);
+    } finally {
+        state.uartConnecting = false;
+        setConnectionUi(Boolean(state.port), state.port ? describePort(state.port) : "");
     }
 }
 
@@ -1558,6 +2334,8 @@ async function disconnect() {
         state.readLoopPromise = null;
         state.port = null;
         state.connectedAt = null;
+        releaseUartLock();
+        broadcastDeviceToolState("uart-owner");
         stopSessionTimer();
         setConnectionUi(false);
         appendSystem("Disconnected.");
@@ -1792,6 +2570,144 @@ function loadSettings() {
     }
 }
 
+function clampTerminalHeight(height, maximum = TERMINAL_MAX_MANUAL_HEIGHT_PX) {
+    return Math.max(TERMINAL_MIN_HEIGHT_PX, Math.min(maximum, height));
+}
+
+function calculateAutoTerminalHeight() {
+    if (!window.matchMedia("(min-width: 921px)").matches) {
+        const stackedHeight = Math.max(240, window.innerHeight * 0.52);
+        return clampTerminalHeight(stackedHeight, TERMINAL_MAX_AUTO_HEIGHT_PX);
+    }
+
+    const panelRect = els.terminalPanel.getBoundingClientRect();
+    const nonTerminalHeight = Math.max(0, els.terminalPanel.offsetHeight - els.terminal.offsetHeight);
+    const availablePanelHeight = window.innerHeight - panelRect.top - TERMINAL_VIEWPORT_MARGIN_PX;
+    const availableTerminalHeight = availablePanelHeight - nonTerminalHeight;
+
+    return clampTerminalHeight(availableTerminalHeight, TERMINAL_MAX_AUTO_HEIGHT_PX);
+}
+
+function setTerminalHeight(height) {
+    const maximum = Math.max(TERMINAL_MIN_HEIGHT_PX,
+        Math.min(TERMINAL_MAX_MANUAL_HEIGHT_PX, window.innerHeight * 1.5));
+    const clampedHeight = clampTerminalHeight(height, maximum);
+
+    els.terminal.style.height = `${Math.round(clampedHeight)}px`;
+    if (window.matchMedia("(min-width: 921px)").matches) {
+        els.controlsPanel.style.height = `${Math.round(els.terminalPanel.getBoundingClientRect().height)}px`;
+    } else {
+        els.controlsPanel.style.removeProperty("height");
+    }
+    els.terminalResizeHandle.setAttribute("aria-valuenow", String(Math.round(clampedHeight)));
+    els.terminalResizeHandle.setAttribute("aria-valuemax", String(Math.round(maximum)));
+}
+
+function fitTerminalToViewport() {
+    const autoHeight = calculateAutoTerminalHeight();
+    setTerminalHeight(autoHeight + state.terminalHeightOffset);
+}
+
+function scheduleTerminalFit() {
+    if (state.terminalResizeFrame !== null) {
+        window.cancelAnimationFrame(state.terminalResizeFrame);
+    }
+
+    state.terminalResizeFrame = window.requestAnimationFrame(() => {
+        state.terminalResizeFrame = null;
+        fitTerminalToViewport();
+    });
+}
+
+function resetTerminalHeight() {
+    state.terminalHeightOffset = 0;
+    scheduleTerminalFit();
+}
+
+function wireTerminalResize() {
+    let dragStartY = 0;
+    let dragStartHeight = 0;
+    let dragging = false;
+
+    const finishDrag = (event) => {
+        if (!dragging) {
+            return;
+        }
+
+        dragging = false;
+        document.body.classList.remove("terminal-resizing");
+        if (els.terminalResizeHandle.hasPointerCapture?.(event.pointerId)) {
+            els.terminalResizeHandle.releasePointerCapture(event.pointerId);
+        }
+    };
+
+    els.terminalResizeHandle.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0) {
+            return;
+        }
+
+        dragging = true;
+        dragStartY = event.clientY;
+        dragStartHeight = els.terminal.getBoundingClientRect().height;
+        document.body.classList.add("terminal-resizing");
+        els.terminalResizeHandle.setPointerCapture?.(event.pointerId);
+        event.preventDefault();
+    });
+
+    els.terminalResizeHandle.addEventListener("pointermove", (event) => {
+        if (!dragging) {
+            return;
+        }
+
+        const desiredHeight = dragStartHeight + event.clientY - dragStartY;
+        const autoHeight = calculateAutoTerminalHeight();
+        const maximum = Math.max(TERMINAL_MIN_HEIGHT_PX,
+            Math.min(TERMINAL_MAX_MANUAL_HEIGHT_PX, window.innerHeight * 1.5));
+        const clampedHeight = clampTerminalHeight(desiredHeight, maximum);
+
+        state.terminalHeightOffset = clampedHeight - autoHeight;
+        setTerminalHeight(clampedHeight);
+        event.preventDefault();
+    });
+
+    els.terminalResizeHandle.addEventListener("pointerup", finishDrag);
+    els.terminalResizeHandle.addEventListener("pointercancel", finishDrag);
+    els.terminalResizeHandle.addEventListener("dblclick", resetTerminalHeight);
+    els.terminalResizeHandle.addEventListener("keydown", (event) => {
+        const step = event.shiftKey ? 80 : 24;
+
+        if (event.key === "Home") {
+            event.preventDefault();
+            resetTerminalHeight();
+            return;
+        }
+        if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+            return;
+        }
+
+        event.preventDefault();
+        state.terminalHeightOffset += event.key === "ArrowDown" ? step : -step;
+        fitTerminalToViewport();
+    });
+
+    window.addEventListener("resize", scheduleTerminalFit);
+    window.visualViewport?.addEventListener("resize", scheduleTerminalFit);
+    window.addEventListener("load", scheduleTerminalFit);
+
+    document.querySelectorAll("details").forEach((details) => {
+        details.addEventListener("toggle", scheduleTerminalFit);
+    });
+
+    if ("ResizeObserver" in window) {
+        state.terminalLayoutObserver = new ResizeObserver(scheduleTerminalFit);
+        document.querySelectorAll(".app-header, .upload-panel, .serial-panel").forEach((element) => {
+            state.terminalLayoutObserver.observe(element);
+        });
+    }
+
+    scheduleTerminalFit();
+}
+
 function commandHistoryKey(event) {
     if (event.key === "ArrowUp") {
         if (state.commandHistory.length === 0) {
@@ -1813,6 +2729,12 @@ function commandHistoryKey(event) {
 }
 
 function wireEvents() {
+    document.querySelectorAll(".serial-header-actions, .flasher-header-actions").forEach((actions) => {
+        actions.addEventListener("click", (event) => {
+            event.stopPropagation();
+        });
+    });
+
     els.connectButton.addEventListener("click", connect);
     els.reconnectButton.addEventListener("click", reconnect);
     els.authorizedPort.addEventListener("change", updateAuthorizedPortDetails);
@@ -1822,12 +2744,24 @@ function wireEvents() {
     els.screenSnipButton.addEventListener("click", requestScreenSnip);
     els.firmwareFileInput.addEventListener("change", selectConsoleFirmwareFile);
     els.firmwareUploadButton.addEventListener("click", loadConsoleFirmware);
+    els.firmwareLoaderRefreshButton.addEventListener("click", () => {
+        void checkConsoleFirmwareLoader();
+    });
+    els.firmwareLoaderAccessKey.addEventListener("input", updateConsoleFirmwareAccessKey);
+    els.firmwareLoaderAccessKey.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            void checkConsoleFirmwareLoader();
+        }
+    });
     els.h3dFileInput.addEventListener("change", selectH3dFile);
     els.h3dUploadButton.addEventListener("click", uploadH3dImage);
+    els.h3dConnectUartButton.addEventListener("click", connect);
     els.wadFileInput.addEventListener("change", selectWadFile);
     els.wadVisibleName.addEventListener("input", refreshWadImage);
     els.wadMemoryProfile.addEventListener("change", refreshWadImage);
     els.wadUploadButton.addEventListener("click", uploadWadImage);
+    els.wadConnectUartButton.addEventListener("click", connect);
 
     els.commandForm.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -1898,13 +2832,21 @@ function wireEvents() {
 
     window.addEventListener("beforeunload", () => {
         saveSettings();
+        broadcastDeviceToolState("goodbye");
+        releaseUartLock();
+        if (state.deviceToolHeartbeatTimer !== null) {
+            window.clearInterval(state.deviceToolHeartbeatTimer);
+        }
     });
 }
 
 async function initialize() {
+    updateAppVersion();
     loadSettings();
     wireEvents();
+    wireTerminalResize();
     setConnectionUi(false);
+    startDeviceToolCoordination();
     updateConsoleFirmwareUi();
     void checkConsoleFirmwareLoader();
 

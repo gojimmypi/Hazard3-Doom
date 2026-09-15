@@ -11,7 +11,7 @@ Osnova usporedbe
 
 Ova je stranica pregledana **2026-08-19** u odnosu na:
 
-* snimku projekta: `ulx3s/Hazard3 na 736a74459b3f740c47803f20a62d820fcacbe5c3 <https://github.com/ulx3s/Hazard3/tree/736a74459b3f740c47803f20a62d820fcacbe5c3>`_;
+* snimku projekta: :hazard3-tree:`ulx3s/Hazard3 </>` na |hazard3_commit|;
 * trenutačno održavanu upstream granu: `Wren6991/Hazard3 stable <https://github.com/Wren6991/Hazard3/tree/stable>`_.
 
 Trenutačni upstream može se promijeniti nakon tog datuma. Prikvačeni SHA ostaje

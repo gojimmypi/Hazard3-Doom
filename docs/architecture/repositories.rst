@@ -65,9 +65,9 @@ Hazard3 source snapshot
 
 The processor documentation is anchored to the project Hazard3 snapshot:
 
-``736a74459b3f740c47803f20a62d820fcacbe5c3``
+|hazard3_commit|
 
-* `Pinned ULX3S Hazard3 source <https://github.com/ulx3s/Hazard3/tree/736a74459b3f740c47803f20a62d820fcacbe5c3>`_
+* :hazard3-tree:`Pinned ULX3S Hazard3 source </>`
 * `Current upstream Hazard3 stable <https://github.com/Wren6991/Hazard3/tree/stable>`_
 * :doc:`hazard3/project-integration` - detailed upstream-versus-project comparison.
 

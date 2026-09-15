@@ -89,6 +89,29 @@ session. For a temporary no-reboot diagnostic, an ACL such as
 to the existing device node. See :doc:`troubleshooting` for port ownership,
 ModemManager, and UART wiring checks.
 
+Can the public GitHub Pages Device Tool load the console ELF?
+-------------------------------------------------------------
+
+Yes, as long as the local loopback helper is running. The page itself may remain
+at ``https://ulx3s.github.io/Hazard3-Doom/`` while ``web-server.py``, GDB,
+and OpenOCD run on the local computer. The browser calls the helper on
+``127.0.0.1:8000``; the helper then invokes the local GDB/OpenOCD path.
+
+The Console firmware panel reports the local-helper and OpenOCD states
+separately. The optional ``web-server.py --access-key`` mode adds a shared key
+that is entered in the page but not stored in browser ``localStorage``. See
+:doc:`user-guide/web-tool` for the complete flow.
+
+Why does a second Device Tool tab fail to connect to the UART?
+--------------------------------------------------------------
+
+A serial port can have only one owner. Same-origin Device Tool tabs coordinate
+with a browser Web Lock and ``BroadcastChannel`` so the second tab can report
+that the UART is already in use. Tabs from different origins, such as
+``http://127.0.0.1:8000`` and ``https://ulx3s.github.io``, cannot share that
+browser lock, but the operating system/browser still rejects the second serial
+open. Close or disconnect the first owner and use **Retry UART**.
+
 Can OpenOCD use WinUSB on the ULX3S?
 ------------------------------------
 

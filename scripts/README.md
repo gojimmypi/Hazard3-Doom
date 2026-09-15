@@ -74,7 +74,7 @@ placement-sensitive RTL, memory, video, clock, or toolchain changes.
 - `build-ulx3s-12f-doom.sh` - Complete ULX3S 12F build. Uses a 40 MHz Hazard3 clock, defaults to the 32 MiB map, and intentionally accepts only `HAZARD3_DOOM_HDMI_RESOLUTION=320x200`.
 - `build-ulx4m-ld-bitstream.sh` - ULX4M-LD 85F entry point for the shared ECP5 flow. Supports `SKIP_SYNTH=1` for routing an existing frozen JSON without invoking Make/Yosys.
 - `build-ulx4m-ld-doom.sh` - Complete ULX4M-LD 85F build using the 64 MiB map at 40 MHz, including LiteDRAM inputs and the embedded resident monitor under `build/ulx4m-ld/`. The default route settings come from `build-ecp5-bitstream-common.sh`.
-- `build-xpack.cmd` - Native Windows monitor build using the repository xPack RISC-V GCC installation. Supports `build`, `clean`, and `rebuild` plus memory-profile and clock arguments.
+- `build-xpack.cmd` - Native Windows monitor build using the repository xPack RISC-V GCC installation. Supports `build`, `clean`, and `rebuild` plus memory-profile and clock arguments, and refuses to build if `src/generated/version.h` is stale relative to the root `VERSION` file.
 - `make-boot-hex.py` - Converts the monitor binary into the hexadecimal initialization format consumed by FPGA boot memory.
 
 ### ULX3S 12F compact target
@@ -272,6 +272,7 @@ The `gdb/` directory contains focused command scripts for monitor and SAO tests:
 
 ## Validation, Repository Hygiene, and VisualGDB
 
+- `refresh-version.sh` - Reads the repository-root `VERSION` file and regenerates the C and web version files. Use `--check` to verify that generated version files are current without changing them. Firmware builds refresh them automatically, and publish checks require them to match `VERSION`.
 - `check-executable.sh` - Checks recently changed tracked shell scripts for the Git executable bit; defaults to the most recent five commits.
 - `git-exe.sh` - Sets the Git executable bit for one tracked file and prints the resulting index entry.
 - `check-nettype.sh` - Checks Git-tracked project RTL in `src/` and `tests/` for consistent `default_nettype` handling; vendored bootloader and submodule sources are excluded.
@@ -306,7 +307,7 @@ PASS. Set `SCRIPT_TEST_REQUIRE_TIMING_PASS=1` to make that condition fail the
 test run.
 - `check-windows-visualgdb.ps1` - Validates the native-Windows VisualGDB/NMake configuration and expected xPack monitor build commands.
 - `check-wsl-visualgdb.ps1` - Validates the WSL VisualGDB bridge, expected build/debug paths, and LF-only tracked shell scripts.
-- `inventory.sh` - Inventories Git-tracked files in the selected path and writes deterministic Markdown, TSV, and SHA-256 reports. It intentionally uses Git's index instead of walking ignored/untracked toolchains.
+- `inventory.sh` - Inventories Git-tracked files in the selected path and writes deterministic Markdown, TSV, and SHA-256 reports. It intentionally uses Git's index instead of walking ignored/untracked toolchains. The human-readable inventory records the project release from the root `VERSION` file.
 - `INVENTORY.md` - Human-readable generated inventory for the scripts directory.
 - `INVENTORY.tsv` - Machine-readable generated inventory.
 - `INVENTORY.sha256` - SHA-256 list for the generated inventory set.

@@ -20,6 +20,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "generated/version.h"
 #include "doom/doom_image_format.h"
 #include "doom/doom_image_loader.h"
 #include "doom/doom_port_smoke.h"
@@ -413,6 +414,8 @@ static void console_print_version(void)
     uint32_t ddr_core_build_id = HAZARD3_VIDEO_DDR_CORE_BUILD_ID;
     uint32_t ddr_adapter_build_id = HAZARD3_VIDEO_DDR_ADAPTER_BUILD_ID;
 
+    uart_puts("\r\nproject_version=");
+    uart_puts(HAZARD3_DOOM_VERSION_DISPLAY);
     uart_puts("\r\nfirmware_build=");
     uart_puts(HAZARD3_FIRMWARE_BUILD_NAME);
     uart_puts(" firmware_id=");
@@ -1739,7 +1742,9 @@ static void console_print_status(void)
     uart_put_hex32(HAZARD3_VIDEO_DMA_CYCLES);
     uart_puts(" presents=");
     uart_put_hex32(HAZARD3_VIDEO_PRESENT_COUNT);
-    uart_puts("\r\nfirmware_build=");
+    uart_puts("\r\nproject_version=");
+    uart_puts(HAZARD3_DOOM_VERSION_DISPLAY);
+    uart_puts(" firmware_build=");
     uart_puts(HAZARD3_FIRMWARE_BUILD_NAME);
     uart_puts(" firmware_id=");
     uart_put_hex32(HAZARD3_FIRMWARE_BUILD_ID);
@@ -2079,7 +2084,9 @@ static void uart_init(void)
 static void console_init(void)
 {
     uart_puts("\r\nHazard3 ECP5 board boot\r\n");
-    uart_puts("firmware_build=");
+    uart_puts("project_version=");
+    uart_puts(HAZARD3_DOOM_VERSION_DISPLAY);
+    uart_puts(" firmware_build=");
     uart_puts(HAZARD3_FIRMWARE_BUILD_NAME);
     uart_puts(" firmware_build_id=");
     uart_put_hex32(HAZARD3_FIRMWARE_BUILD_ID);

@@ -45,6 +45,8 @@ for %%I in ("%~dp0..") do set "ROOT_DIR=%%~fI"
 set "SRC_DIR=%ROOT_DIR%\src"
 set "DOOM_DIR=%ROOT_DIR%\doom"
 set "BUILD_DIR=%ROOT_DIR%\build"
+set "VERSION_FILE=%ROOT_DIR%\VERSION"
+set "VERSION_HEADER=%SRC_DIR%\generated\version.h"
 set "TOOLCHAIN_ROOT=%ROOT_DIR%\bin\riscv-gcc"
 set "TOOLCHAIN_BIN=%TOOLCHAIN_ROOT%\bin"
 
@@ -86,6 +88,8 @@ exit /b 2
 
 :clock_ok
 call :require_toolchain
+if errorlevel 1 exit /b 1
+call :check_project_version
 if errorlevel 1 exit /b 1
 call :require_file "%SRC_DIR%\start.S"
 if errorlevel 1 exit /b 1
@@ -151,10 +155,11 @@ if not exist "%BUILD_DIR%" (
 )
 
 echo Hazard3 native Windows build
-echo   compiler:       %CC%
-echo   SDRAM profile:  %MEMORY_PROFILE%
-echo   system clock:   %SYSTEM_CLOCK_HZ% Hz
-echo   monitor output: %OUTPUT_ELF%
+echo   project version: v%PROJECT_VERSION%
+echo   compiler:        %CC%
+echo   SDRAM profile:   %MEMORY_PROFILE%
+echo   system clock:    %SYSTEM_CLOCK_HZ% Hz
+echo   monitor output:  %OUTPUT_ELF%
 echo.
 
 pushd "%ROOT_DIR%"
@@ -266,6 +271,35 @@ if exist "%OUTPUT_BIN%" (
 )
 
 echo Clean complete.
+exit /b 0
+
+:check_project_version
+call :require_file "%VERSION_FILE%"
+if errorlevel 1 exit /b 1
+call :require_file "%VERSION_HEADER%"
+if errorlevel 1 exit /b 1
+
+set "PROJECT_VERSION="
+set /p PROJECT_VERSION=<"%VERSION_FILE%"
+if not defined PROJECT_VERSION (
+    echo ERROR: VERSION file is empty:
+    echo   %VERSION_FILE%
+    exit /b 1
+)
+
+set "HEADER_VERSION="
+for /f "tokens=3" %%V in ('findstr /b /c:"#define HAZARD3_DOOM_VERSION " "%VERSION_HEADER%"') do set "HEADER_VERSION=%%~V"
+
+if not "%HEADER_VERSION%"=="%PROJECT_VERSION%" (
+    echo ERROR: Generated C version header does not match VERSION.
+    echo   VERSION: %PROJECT_VERSION%
+    echo   Header:  %HEADER_VERSION%
+    echo.
+    echo Refresh generated version files from a Bash environment with:
+    echo   ./scripts/refresh-version.sh
+    exit /b 1
+)
+
 exit /b 0
 
 :require_toolchain

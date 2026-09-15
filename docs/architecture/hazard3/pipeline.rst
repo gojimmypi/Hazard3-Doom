@@ -3,8 +3,8 @@ Three-Stage Pipeline
 
 The best way to understand Hazard3 is to follow an instruction through the
 ``F``, ``X``, and ``M`` stages in
-`hazard3_core.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_core.v>`_ and
-`hazard3_frontend.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_frontend.v>`_.
+:hazard3-src:`hazard3_core.v <hdl/hazard3_core.v>` and
+:hazard3-src:`hazard3_frontend.v <hdl/hazard3_frontend.v>`.
 
 Stage F: fetch and prepare
 --------------------------

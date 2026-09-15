@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#171a21">
     <title>Hazard3-Doom Device Tool and Console</title>
-    <link rel="stylesheet" href="styles.css?v=20260906-r4">
+    <link rel="stylesheet" href="styles.css?v=20260914-r12">
     <link rel="icon" href="icons/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
@@ -16,29 +16,33 @@
     <header class="app-header">
         <div>
             <div class="eyebrow">ULX3S / Hazard3-Doom</div>
-            <h1>Device Tool</h1>
+            <div class="title-row">
+                <h1>Device Tool</h1>
+                <span id="appVersion" class="app-version" title="Hazard3-Doom project version">version unavailable</span>
+            </div>
         </div>
         <div class="header-actions">
             <nav class="project-links" aria-label="Hazard3-Doom project links">
                 <button class="project-link"
                         type="button"
+                        title="Click to copy the device log URL 'chrome://device-log/' to the clipboard"
                         onclick="navigator.clipboard.writeText('chrome://device-log/'); alert('Copied chrome://device-log/ - paste it into a new Chrome tab.')">
                     Device Log
                 </button>
-                <a class="project-link" href="https://github.com/ulx3s/Hazard3-Doom" target="_blank" rel="noopener noreferrer">
+                <a class="project-link" href="https://github.com/ulx3s/Hazard3-Doom" target="_blank" rel="noopener noreferrer" title="Visit the GitHub repository">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M8.7 16.8 3.9 12l4.8-4.8 1.4 1.4L6.7 12l3.4 3.4-1.4 1.4Zm6.6 0-1.4-1.4 3.4-3.4-3.4-3.4 1.4-1.4 4.8 4.8-4.8 4.8ZM10.8 19l2.8-14 2 .4-2.8 14-2-.4Z" />
                     </svg>
                     <span>GitHub Source</span>
                 </a>
-                <a class="project-link docs-link" href="https://hazard3-doom.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer">
+                <a class="project-link docs-link" href="https://hazard3-doom.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer" title="Read the documentation">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M5 3h11a3 3 0 0 1 3 3v15H7a4 4 0 0 1-4-4V5a2 2 0 0 1 2-2Zm0 2v9.5A4 4 0 0 1 7 14h10V6a1 1 0 0 0-1-1H5Zm2 11a2 2 0 1 0 0 4h10v-4H7Z" />
                     </svg>
                     <span>Read the Docs</span>
                 </a>
             </nav>
-            <div class="connection-summary">
+            <div class="connection-summary" title="Connection status of serial UART">
                 <span id="statusDot" class="status-dot" aria-hidden="true"></span>
                 <span id="connectionStatus">Not connected</span>
             </div>
@@ -49,14 +53,27 @@
         <details class="panel upload-panel" aria-labelledby="upload-title">
             <summary class="upload-panel-summary">
                 <div>
-                    <h2 id="upload-title">Device uploading</h2>
+                    <h2 id="upload-title" title="Click to toggle visibility of this entire section.">Device uploading</h2>
                     <p>FPGA, console firmware, Doom application, and IWAD loading tools.</p>
                 </div>
-                <span class="summary-tag">FPGA / Firmware / Doom</span>
+                <span class="summary-tag" title="Load the FPGA, console firmware, Doom application, and IWAD">
+                    FPGA / Firmware / Doom
+                </span>
             </summary>
             <div class="upload-panel-body">
                 <details id="fpgaFlasher" class="flasher-section">
-                    <summary>FPGA web flasher <span class="summary-tag">ULX3S US1 / JTAG</span></summary>
+                    <summary>
+                        <span class="summary-title" title="Click to toggle visibility of this entire section.">FPGA web flasher</span>
+                        <span class="summary-tag" title="Uses WebUSB through the ULX3S US1 FT231X interface to program the FPGA over JTAG. Host-specific USB access requirements apply; see Docs.">
+                            ULX3S US1 / JTAG
+                        </span>
+                        <span class="flasher-header-actions" aria-label="FPGA flasher actions">
+                            <button id="flasherConnectButton" type="button" class="secondary compact-action-button" data-enabled-title="Connect to ULX3S USB JTAG (requires WinUSB on Windows)." title="Connect to ULX3S USB JTAG (requires WinUSB on Windows).">Connect ULX3S USB</button>
+                            <button id="flasherProbeButton" type="button" class="secondary compact-action-button" data-enabled-title="Probe the FPGA JTAG chain and identify the connected ECP5 device." disabled title="Connect ULX3S USB before probing JTAG.">Probe JTAG</button>
+                            <button id="flasherProgramButton" type="button" class="primary compact-action-button" data-enabled-title="Program the selected FPGA image into volatile ECP5 SRAM." disabled title="Connect ULX3S USB and select an FPGA image before programming.">Program FPGA SRAM</button>
+                            <button id="flasherDisconnectButton" type="button" class="secondary compact-action-button" data-enabled-title="Release the ULX3S WebUSB/JTAG connection." disabled title="ULX3S USB is not connected.">Disconnect USB</button>
+                        </span>
+                    </summary>
                     <div class="flasher-body">
                         <div class="flasher-intro">
                             <div>
@@ -68,7 +85,8 @@
                                 <strong id="flasherDeviceStatus">Not connected</strong>
                                 <span>FPGA</span>
                                 <strong id="flasherIdcode">Not probed</strong>
-                                <a href="https://hazard3-doom.readthedocs.io/en/latest/user-guide/web-flasher.html" id="firmwareLoaderDocsURL">Docs</a>
+                                <a href="https://hazard3-doom.readthedocs.io/en/latest/user-guide/web-flasher.html" id="flasherDocsURL" target="_blank" rel="noopener noreferrer">Docs</a>
+                                <span id="flasherHostOs" class="host-os-indicator" title="Detecting the host operating system">Host: detecting...</span>
                             </div>
                         </div>
 
@@ -80,7 +98,11 @@
                             <label class="svf-picker">
                                 <span>Hazard3-Doom FPGA image (.bit or .svf)</span>
                                 <input id="svfFileInput" type="file" accept=".bit,.svf,application/octet-stream,text/plain">
-                                <strong id="svfFileName">No FPGA image selected</strong>
+                                <strong id="svfFileName">No FPGA image selected. 
+                                                         Select from <font face="Courier New">./build/</font> for fresh builds, 
+                                                                     <font face="Courier New">./bin/</font> for pre-built images, 
+                                                         or your local directory.
+                                </strong>
                                 <small id="svfFileDetails"></small>
                             </label>
 
@@ -90,13 +112,6 @@
                                 <span>Close fujprog, OpenOCD, and other programs using US1.</span>
                                 <span>The browser derives or verifies the ECP5 target ID before programming.</span>
                             </div>
-                        </div>
-
-                        <div class="flasher-actions">
-                            <button id="flasherConnectButton" type="button" class="secondary">Connect ULX3S USB</button>
-                            <button id="flasherProbeButton" type="button" class="secondary" disabled>Probe JTAG</button>
-                            <button id="flasherProgramButton" type="button" class="primary" disabled>Program FPGA SRAM</button>
-                            <button id="flasherDisconnectButton" type="button" class="secondary" disabled>Disconnect USB</button>
                         </div>
 
                         <div class="flasher-progress-row">
@@ -114,7 +129,7 @@
                                     </svg>
                                     <span id="flasherCopyLogButtonLabel">Copy log</span>
                                 </button>
-                                <button id="flasherClearLogButton" type="button" class="secondary">Clear log</button>
+                                <button id="flasherClearLogButton" type="button" class="secondary" title="Clear the FPGA flasher log.">Clear log</button>
                             </div>
                         </div>
                         <pre id="flasherLog" class="flasher-log" tabindex="0" aria-live="polite" aria-label="FPGA flasher status log"></pre>
@@ -124,21 +139,35 @@
                 </details>
 
                 <details id="consoleFirmwareUploader" class="flasher-section">
-                    <summary>Console firmware uploader <span class="summary-tag">Local GDB / OpenOCD</span></summary>
+                    <summary>
+                        <span class="summary-title" title="Click to toggle visibility of this entire section.">Console firmware uploader</span>
+                        <span class="summary-tag" title="Uses the local GDB client through OpenOCD to load and debug Hazard3 firmware.">
+                            Local GDB / OpenOCD
+                        </span>
+                        <span class="flasher-header-actions" aria-label="Console firmware actions">
+                            <button id="firmwareUploadButton" type="button" class="primary compact-action-button" data-enabled-title="Load the selected console ELF through the local GDB/OpenOCD helper." disabled>Load console firmware</button>
+                        </span>
+                    </summary>
                     <div class="flasher-body">
                         <div class="flasher-intro">
                             <div>
-                                <h3>Load the Hazard3 console firmware</h3>
+                                <h3>Load the Hazard3 console firmware</h3> (normally attached to FPGA bitstream file)
                                 <p>Select <code>hazard3-boot-monitor.elf</code>. The local web server passes the ELF to the existing GDB loader, which halts Hazard3 through OpenOCD, writes and verifies the ELF sections, sets <code>_start</code>, and resumes the core.</p>
                             </div>
                             <div class="flasher-state">
                                 <span>Local loader</span>
                                 <span>
                                     <strong id="firmwareLoaderStatus">Checking...</strong>
-                                    (<a id="firmwareLoaderSourceURL" href="https://github.com/ulx3s/Hazard3-Doom/blob/main/web/web-server.py">source</a>)
+                                    (<a id="firmwareLoaderSourceURL" href="https://github.com/ulx3s/Hazard3-Doom/blob/main/web/web-server.py">source</a>
+                                    | <button id="firmwareLoaderRefreshButton" class="inline-link-button" type="button" title="Refresh local loader and OpenOCD status.">refresh</button>)
                                 </span>
+                                <span>Access key</span>
+                                <input id="firmwareLoaderAccessKey" class="firmware-loader-access-key" type="password" autocomplete="off" spellcheck="false" placeholder="Optional local-loader key" aria-label="Local loader access key">
                                 <span>OpenOCD</span>
-                                <strong>Must already listen on port 3333. See <a href="https://hazard3-doom.readthedocs.io/en/latest/user-guide/web-flasher.html#windows-usb-driver-compatibility" id="firmwareLoaderDocsURL">tips</a></strong>
+                                <span>
+                                    <strong id="firmwareOpenOcdStatus">Checking port 3333...</strong>
+                                    <span> See <a href="https://hazard3-doom.readthedocs.io/en/latest/user-guide/web-flasher.html#windows-usb-driver-compatibility" id="firmwareLoaderDocsURL">tips</a></span>
+                                </span>
                             </div>
                         </div>
 
@@ -159,10 +188,6 @@
                             </div>
                         </div>
 
-                        <div class="flasher-actions">
-                            <button id="firmwareUploadButton" type="button" class="primary" disabled>Load console firmware</button>
-                        </div>
-
                         <div class="flasher-progress-row">
                             <progress id="firmwareProgress" max="100" value="0"></progress>
                             <span id="firmwareProgressLabel">Checking local loader...</span>
@@ -170,12 +195,19 @@
 
                         <pre id="firmwareLog" class="flasher-log" tabindex="0" aria-live="polite" aria-label="Console firmware loader log"></pre>
 
-                        <p class="flasher-note"><strong>The firmware does not need a self-replacement listener for this path.</strong> OpenOCD and GDB load it through the Hazard3 debug module. This control is available only when the page is served by <code>web/web-server.py</code>, not from GitHub Pages or a generic static HTTP server.</p>
+                        <p class="flasher-note"><strong>The firmware does not need a self-replacement listener for this path.</strong> OpenOCD and GDB load it through the Hazard3 debug module. The public GitHub Pages UI can use <code>web/web-server.py</code> as a loopback-only helper at <code>127.0.0.1:8000</code>. A browser may ask for loopback/local-network permission. If the helper was started with <code>--access-key</code>, enter the same key above; the page keeps it only in memory and does not save it.</p>
                     </div>
                 </details>
 
                 <details id="h3dUploader" class="flasher-section">
-                    <summary>Doom H3D uploader <span class="summary-tag">UART / H3L</span></summary>
+                    <summary>
+                        <span class="summary-title" title="Click to toggle visibility of this entire section.">Doom H3D uploader</span>
+                        <span class="summary-tag" title="Uses Web Serial and the Hazard3 H3L protocol to upload a packaged Doom image over UART.">UART / H3L</span>
+                        <span class="flasher-header-actions" aria-label="H3D uploader actions">
+                            <button id="h3dConnectUartButton" type="button" class="primary compact-action-button" data-enabled-title="Connect the Web Serial UART used for H3L uploads.">Connect UART</button>
+                            <button id="h3dUploadButton" type="button" class="primary compact-action-button" data-enabled-title="Upload the selected packaged H3D image over UART using the H3L protocol." disabled>Upload H3D</button>
+                        </span>
+                    </summary>
                     <div class="flasher-body">
                         <div class="flasher-intro">
                             <div>
@@ -184,9 +216,17 @@
                             </div>
                             <div class="flasher-state">
                                 <span>Protocol</span>
-                                <strong>H3L over Web Serial</strong>
+                                <strong  title="Custom Hazard3 L (load) protocol over Web Serial">H3L over Web Serial</strong>
                                 <span>Monitor</span>
                                 <strong>Use from the &gt; prompt</strong>
+                            </div>
+                        </div>
+
+                        <div id="h3dUartRequirement" class="uart-requirement" role="status" aria-live="polite">
+                            <span class="uart-requirement-indicator" aria-hidden="true"></span>
+                            <div class="uart-requirement-copy">
+                                <strong id="h3dUartRequirementTitle">UART connection required</strong>
+                                <span id="h3dUartRequirementDetail">Connect Web Serial before uploading an H3D image.</span>
                             </div>
                         </div>
 
@@ -208,21 +248,28 @@
                             </div>
                         </div>
 
-                        <div class="flasher-actions">
-                            <button id="h3dUploadButton" type="button" class="primary" disabled>Upload H3D</button>
-                        </div>
-
                         <div class="flasher-progress-row">
                             <progress id="h3dProgress" max="100" value="0"></progress>
                             <span id="h3dProgressLabel">Idle</span>
                         </div>
+
+                        <div id="h3dUploadDiagnostic" class="upload-diagnostic" role="alert" hidden></div>
 
                         <p class="flasher-note"><strong>The H3L loader must own the UART.</strong> If Doom is running, use Stop Doom first and wait for the resident monitor <code>&gt;</code> prompt before uploading.</p>
                     </div>
                 </details>
 
                 <details id="wadUploader" class="flasher-section">
-                    <summary>Doom IWAD uploader <span class="summary-tag">UART / H3W</span></summary>
+                    <summary>
+                        <span class="summary-title" title="Click to toggle visibility of this entire section.">Doom IWAD uploader</span>
+                        <span class="summary-tag" title="Uses Web Serial and the Hazard3 H3W protocol to upload a Doom IWAD over UART.">
+                            UART / H3W
+                        </span>
+                        <span class="flasher-header-actions" aria-label="IWAD uploader actions">
+                            <button id="wadConnectUartButton" type="button" class="primary compact-action-button" data-enabled-title="Connect the Web Serial UART used for H3W uploads.">Connect UART</button>
+                            <button id="wadUploadButton" type="button" class="primary compact-action-button" data-enabled-title="Upload the selected Doom IWAD over UART using the H3W protocol." disabled>Upload IWAD</button>
+                        </span>
+                    </summary>
                     <div class="flasher-body">
                         <div class="flasher-intro">
                             <div>
@@ -231,9 +278,17 @@
                             </div>
                             <div class="flasher-state">
                                 <span>Protocol</span>
-                                <strong>H3W over Web Serial</strong>
+                                <strong title="Custom Hazard3 W (write) protocol over Web Serial">H3W over Web Serial</strong>
                                 <span>Monitor</span>
                                 <strong>Use from the &gt; prompt</strong>
+                            </div>
+                        </div>
+
+                        <div id="wadUartRequirement" class="uart-requirement" role="status" aria-live="polite">
+                            <span class="uart-requirement-indicator" aria-hidden="true"></span>
+                            <div class="uart-requirement-copy">
+                                <strong id="wadUartRequirementTitle">UART connection required</strong>
+                                <span id="wadUartRequirementDetail">Connect Web Serial before uploading an IWAD.</span>
                             </div>
                         </div>
 
@@ -268,14 +323,12 @@
                             </div>
                         </div>
 
-                        <div class="flasher-actions">
-                            <button id="wadUploadButton" type="button" class="primary" disabled>Upload IWAD</button>
-                        </div>
-
                         <div class="flasher-progress-row">
                             <progress id="wadProgress" max="100" value="0"></progress>
                             <span id="wadProgressLabel">Idle</span>
                         </div>
+
+                        <div id="wadUploadDiagnostic" class="upload-diagnostic" role="alert" hidden></div>
 
                         <p class="flasher-note"><strong>IWAD files are not included with Hazard3-Doom.</strong> Use a legally obtained IWAD. The selected memory profile must match the resident monitor build because the H3W header contains the SDRAM load address.</p>
                     </div>
@@ -289,7 +342,12 @@
                     <h2 id="serial-title">Serial connection</h2>
                     <p>Direct browser connection using the Web Serial API.</p>
                 </div>
-                <span class="summary-tag">Web Serial</span>
+                <span class="serial-header-actions" aria-label="Serial connection actions">
+                    <span id="serialPanelStatus" class="section-status">UART disconnected</span>
+                    <button id="reconnectButton" type="button" class="secondary compact-action-button" data-enabled-title="Reconnect a previously authorized Web Serial UART port.">Reconnect</button>
+                    <button id="connectButton" type="button" class="primary compact-action-button" data-enabled-title="Connect to or disconnect from the UART using Web Serial.">Connect</button>
+                </span>
+                <span class="summary-tag serial-summary-tag" title="Direct browser connection using the Web Serial API">Web Serial</span>
             </summary>
             <div class="serial-panel-body">
                 <div class="settings-grid">
@@ -345,11 +403,6 @@
                     </label>
                 </div>
 
-                <div class="connection-actions serial-connection-actions">
-                    <button id="reconnectButton" type="button" class="secondary">Reconnect</button>
-                    <button id="connectButton" type="button" class="primary">Connect</button>
-                </div>
-
                 <div id="unsupportedNotice" class="notice error hidden" role="alert">
                     Web Serial is not available in this browser. Use a Chromium-based browser with Web Serial support and serve this page from HTTPS or localhost.
                 </div>
@@ -365,26 +418,38 @@
                 <div class="terminal-actions">
                     <label class="check-control"><input id="autoScroll" type="checkbox" checked> Auto-scroll</label>
                     <label class="check-control"><input id="localEcho" type="checkbox"> Local echo</label>
-                    <button id="downloadButton" type="button" class="secondary">Save log</button>
+                    <button id="downloadButton" type="button" class="secondary" title="Save UART contents to file via download">
+                        Save log
+                    </button>
                     <button id="copyButton" type="button" class="secondary icon-button" title="Copy all UART terminal contents to the clipboard" aria-label="Copy all UART terminal contents to the clipboard">
+                        <!-- the copy icon in an SVG -->
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <path d="M8 7V4h10a2 2 0 0 1 2 2v11h-3v3H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2Zm2 0h5a2 2 0 0 1 2 2v6h1V6H10v1Zm-4 2v9h9V9H6Z" />
                         </svg>
-                        <span id="copyButtonLabel">Copy UART</span>
+                        <span id="copyButtonLabel" title="Copy all UART terminal contents to the clipboard">Copy UART</span>
                     </button>
                     <span id="screenSnipControl" class="screen-snip-control" title="Screen snip unavailable: connect to the board first.">
                         <button id="screenSnipButton" type="button" class="secondary" disabled>Screen snip</button>
                     </span>
-                    <button id="clearButton" type="button" class="secondary">Clear</button>
+                    <button id="clearButton" type="button" class="secondary" title="Clear the UART terminal display.">Clear</button>
                 </div>
             </div>
 
             <pre id="terminal" class="terminal" tabindex="0" aria-live="polite" aria-label="UART receive output"></pre>
 
+            <div id="terminalResizeHandle"
+                 class="terminal-resize-handle"
+                 role="separator"
+                 aria-orientation="horizontal"
+                 aria-label="Resize UART terminal"
+                 aria-valuemin="112"
+                 tabindex="0"
+                 title="Drag to resize the UART terminal. Double-click to return to automatic sizing."></div>
+
             <form id="commandForm" class="command-row">
                 <span class="prompt-mark" aria-hidden="true">&gt;</span>
                 <input id="commandInput" type="text" autocomplete="off" spellcheck="false" placeholder="Enter Hazard3 monitor command" disabled>
-                <button id="sendButton" type="submit" class="primary" disabled>Send</button>
+                <button id="sendButton" type="submit" class="primary" data-enabled-title="Send the command using the selected line ending." disabled>Send</button>
             </form>
 
             <div class="terminal-footer">
@@ -406,23 +471,23 @@
                 <details class="command-group" open>
                     <summary>Monitor</summary>
                     <div class="button-grid">
-                        <button type="button" class="command-button" data-command="help">Help <code>h</code></button>
-                        <button type="button" class="command-button" data-control="enter">Enter <code>CR/LF</code></button>
-                        <button type="button" class="command-button danger-soft" data-control="ctrl-c">Ctrl-C <code>0x03</code></button>
-                        <button type="button" class="command-button danger-soft" data-control="ctrl-x">Stop Doom <code>Ctrl-X</code></button>
+                        <button type="button" class="command-button" data-raw="h" title="Send the resident monitor help key (h) as one byte.">Help <code>h</code></button>
+                        <button type="button" class="command-button" data-control="enter" title="Send Enter using CR/LF.">Enter <code>CR/LF</code></button>
+                        <button type="button" class="command-button danger-soft" data-control="ctrl-c" title="Send Ctrl-C (0x03) to the UART.">Ctrl-C <code>0x03</code></button>
+                        <button type="button" class="command-button danger-soft" data-control="ctrl-x" title="Send Ctrl-X to stop Doom and return to the resident monitor.">Stop Doom <code>Ctrl-X</code></button>
                         <button type="button" class="command-button" data-raw="c" title="Use from the resident monitor after stopping Doom">SD status / files <code>c</code></button>
-                        <button type="button" class="command-button" data-control="break">Break <code>150 ms</code></button>
+                        <button type="button" class="command-button" data-control="break" title="Send a 150 ms serial break condition.">Break <code>150 ms</code></button>
                     </div>
                 </details>
 
                 <details class="command-group" open>
                     <summary>SAO / I2C</summary>
                     <div class="button-grid">
-                        <button type="button" class="command-button" data-command="sao info">SAO info <code>sao info</code></button>
-                        <button type="button" class="command-button" data-command="sao scan">SAO scan <code>sao scan</code></button>
-                        <button type="button" class="command-button" data-command="sao recover">SAO recover <code>sao recover</code></button>
-                        <button type="button" class="command-button" data-command="sao gui">SAO GUI <code>sao gui</code></button>
-                        <button type="button" class="command-button" data-command="i2c gui">I2C GUI <code>i2c gui</code></button>
+                        <button type="button" class="command-button" data-command="sao info" title="Show information about the connected SAO.">SAO info <code>sao info</code></button>
+                        <button type="button" class="command-button" data-command="sao scan" title="Scan for SAO devices.">SAO scan <code>sao scan</code></button>
+                        <button type="button" class="command-button" data-command="sao recover" title="Run the SAO recovery command.">SAO recover <code>sao recover</code></button>
+                        <button type="button" class="command-button" data-command="sao gui" title="Open the resident monitor SAO GUI.">SAO GUI <code>sao gui</code></button>
+                        <button type="button" class="command-button" data-command="i2c gui" title="Open the resident monitor I2CDriver-style GUI.">I2C GUI <code>i2c gui</code></button>
                     </div>
                 </details>
 
@@ -430,16 +495,16 @@
                     <summary>I2CDriver GUI keys</summary>
                     <p class="group-hint">Single-byte controls for the interactive <code>i2c gui</code> screen; no CR/LF is appended.</p>
                     <div class="button-grid raw-key-grid">
-                        <button type="button" class="command-button" data-raw="S">Scan <code>S</code></button>
-                        <button type="button" class="command-button" data-raw="P">Probe <code>P</code></button>
-                        <button type="button" class="command-button" data-raw="R">Read <code>R</code></button>
-                        <button type="button" class="command-button" data-raw="W">Write <code>W</code></button>
-                        <button type="button" class="command-button" data-raw="X">Recover <code>X</code></button>
-                        <button type="button" class="command-button" data-raw="1">100 kHz <code>1</code></button>
-                        <button type="button" class="command-button" data-raw="4">400 kHz <code>4</code></button>
-                        <button type="button" class="command-button" data-raw="H">Resolution <code>H</code></button>
-                        <button type="button" class="command-button" data-raw="C">Clear <code>C</code></button>
-                        <button type="button" class="command-button danger-soft" data-raw="Q">Exit GUI <code>Q</code></button>
+                        <button type="button" class="command-button" data-raw="S" title="Send the I2C GUI Scan key (S).">Scan <code>S</code></button>
+                        <button type="button" class="command-button" data-raw="P" title="Send the I2C GUI Probe key (P).">Probe <code>P</code></button>
+                        <button type="button" class="command-button" data-raw="R" title="Send the I2C GUI Read key (R).">Read <code>R</code></button>
+                        <button type="button" class="command-button" data-raw="W" title="Send the I2C GUI Write key (W).">Write <code>W</code></button>
+                        <button type="button" class="command-button" data-raw="X" title="Send the I2C GUI Recover key (X).">Recover <code>X</code></button>
+                        <button type="button" class="command-button" data-raw="1" title="Set the I2C GUI bus rate to 100 kHz.">100 kHz <code>1</code></button>
+                        <button type="button" class="command-button" data-raw="4" title="Set the I2C GUI bus rate to 400 kHz.">400 kHz <code>4</code></button>
+                        <button type="button" class="command-button" data-raw="H" title="Show or change the I2C GUI display resolution.">Resolution <code>H</code></button>
+                        <button type="button" class="command-button" data-raw="C" title="Clear the I2C GUI display.">Clear <code>C</code></button>
+                        <button type="button" class="command-button danger-soft" data-raw="Q" title="Exit the I2C GUI and return to the monitor.">Exit GUI <code>Q</code></button>
                     </div>
                 </details>
 
@@ -449,7 +514,7 @@
                 <label for="macroInput">One-click custom command</label>
                 <div class="macro-controls">
                     <input id="macroInput" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. sao probe 0x50">
-                    <button id="macroSendButton" type="button" class="secondary" disabled>Send custom</button>
+                    <button id="macroSendButton" type="button" class="secondary" data-enabled-title="Send the saved custom monitor command using the selected line ending." disabled>Send custom</button>
                 </div>
                 <p class="hint">The custom command is saved only in this browser.</p>
             </div>
@@ -461,7 +526,8 @@
         <span>UART and FPGA programming data stay between this browser and the selected devices; console firmware uses the local loader.</span>
     </footer>
 
-    <script src="app.js?v=20260906-r9" defer></script>
-    <script src="flasher.js?v=20260821-r1" defer></script>
+    <script src="generated/version.js" defer></script>
+    <script src="app.js?v=20260914-r10" defer></script>
+    <script src="flasher.js?v=20260914-r4" defer></script>
 </body>
 </html>

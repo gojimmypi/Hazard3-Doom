@@ -42,13 +42,13 @@ La chaîne conceptuelle est :
     `--> system-bus access
 
 Le transport spécifique à l'ECP5 est implémenté dans
-`hazard3_ecp5_jtag_dtm.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/debug/dtm/hazard3_ecp5_jtag_dtm.v>`_. Il utilise la primitive ECP5 ``JTAGG`` pour relier les registres de données DTMCS et DMI au TAP existant de la puce FPGA. Le design peut ainsi utiliser la connexion USB/JTAG normale de la carte au lieu de nécessiter un second TAP JTAG logiciel dans la logique FPGA.
+:hazard3-src:`hazard3_ecp5_jtag_dtm.v <hdl/debug/dtm/hazard3_ecp5_jtag_dtm.v>`. Il utilise la primitive ECP5 ``JTAGG`` pour relier les registres de données DTMCS et DMI au TAP existant de la puce FPGA. Le design peut ainsi utiliser la connexion USB/JTAG normale de la carte au lieu de nécessiter un second TAP JTAG logiciel dans la logique FPGA.
 
 Debug Module
 ------------
 
 Le Debug Module Hazard3 standard se trouve dans
-`hazard3_dm.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/debug/dm/hazard3_dm.v>`_. Il implémente le plan de contrôle entre un débogueur et un ou plusieurs harts Hazard3. Les mécanismes importants comprennent :
+:hazard3-src:`hazard3_dm.v <hdl/debug/dm/hazard3_dm.v>`. Il implémente le plan de contrôle entre un débogueur et un ou plusieurs harts Hazard3. Les mécanismes importants comprennent :
 
 * les requêtes d'arrêt et de reprise ;
 * les commandes abstraites d'accès aux registres ;

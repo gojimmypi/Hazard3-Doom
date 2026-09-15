@@ -8,6 +8,8 @@ It is intended to support integrity verification, reproducibility, release
 auditing, and exact identification of tracked artifacts. A hash identifies
 the bytes in a file; it does not by itself establish provenance or intent.
 
+Project version: v0.2.0
+
 Git source: current index (`git ls-files --cached`)
 
 Files inventoried: 26

@@ -6,13 +6,13 @@ pipelineom. Nije mikrokodirani nastavni CPU, ali njegova je struktura dovoljno
 jednostavna da se u RTL-u može pratiti od dohvata instrukcije do umirovljenja.
 
 Arhitekturno središte je
-`hazard3_core.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_core.v>`_. Jezgra izlaže odvojena
+:hazard3-src:`hazard3_core.v <hdl/hazard3_core.v>`. Jezgra izlaže odvojena
 sučelja transakcija za dohvat instrukcija i load/store. Wrapper moduli zatim
 prilagođavaju ta interna sučelja AHB5 sabirnicama:
 
-* `hazard3_cpu_1port.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_cpu_1port.v>`_ arbitriranjem spaja instrukcijski
+* :hazard3-src:`hazard3_cpu_1port.v <hdl/hazard3_cpu_1port.v>` arbitriranjem spaja instrukcijski
   i podatkovni promet na jedan AHB5 master port.
-* `hazard3_cpu_2port.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_cpu_2port.v>`_ izlaže neovisne
+* :hazard3-src:`hazard3_cpu_2port.v <hdl/hazard3_cpu_2port.v>` izlaže neovisne
   instrukcijske i podatkovne AHB5 master portove.
 
 Hazard3-Doom koristi **jednoportni** wrapper, pa dohvat instrukcija i podatkovni

@@ -63,6 +63,28 @@ Uobičajene Hazard3-Doom UART postavke su:
 Web konzola izlaže te serijske postavke u korisničkom sučelju i sprema
 korisničke postavke u preglednikov ``localStorage``.
 
+Vlasništvo UART-a i dvostruke Device Tool stranice
+--------------------------------------------------
+
+Serijski port može imati samo jednog vlasnika. Device Tool koordinira stranice
+iste origine preko ``BroadcastChannel`` i ekskluzivnog Web Locka. Ako druga
+kopija istog Device Toola već posjeduje UART, drugi tab prikazuje **UART already
+in use** umjesto tihog neuspjeha nakon browser pickera.
+
+Lock vrijedi samo unutar iste origine. Zato ``http://127.0.0.1:8000`` i
+``https://ulx3s.github.io`` ne dijele isti Web Lock. PuTTY, druga aplikacija
+ili stranica druge origine ne mogu se imenovati; neuspjeli ``SerialPort.open()``
+tada se prikazuje kao vjerojatan konflikt vlasništva, a H3D/IWAD paneli nude
+**Retry UART**.
+
+Dok traje picker ili otvaranje porta, stranica prikazuje **Connecting UART**.
+H3D i IWAD odjeljci također jasno prikazuju UART preduvjet i vlastiti **Connect
+UART** kada veza nije aktivna.
+
+Gumbi i kratke transport/status oznake koriste kontekstualni hover tekst. Za
+dinamičke kontrole onemogućeno stanje objašnjava preduvjet, a omogućeno opisuje
+radnju.
+
 Pregled snimke zaslona
 ----------------------
 
@@ -107,12 +129,17 @@ Rezervirani bajtovi su:
    * - ``0x06``
      - ACK sposobnosti
      - Vraća ga trenutačni monitor kada je njegova predmemorirana slika valjana ili podržana Doom/I2CDriver HDMI implementacija. Preglednik troši ovaj bajt i ne prikazuje ga u terminalu.
+   * - ``0x15``
+     - NAK sposobnosti
+     - Vraća se kada je protokol snimke zaslona prepoznat, ali trenutačno nije dostupan HDMI okvir koji se može snimiti. Preglednik troši ovaj bajt, označava protokol kao poznat ali nedostupan i ne prikazuje bajt u terminalu.
    * - ``0x1d``
      - Zahtjev za snimanje
      - Šalje se tek nakon potvrde sposobnosti. Aktivni pružatelj zaslona odgovara okvirom ``H3SNIP1``.
 
-Pojedinačni upit sposobnosti čeka ACK najviše 750 ms. Oko prijelaza u radu,
-primjerice pri pokretanju Dooma, web-aplikacija zadržava dulji prozor ponovnog
+Pojedinačni upit sposobnosti čeka odgovor ACK ili NAK najviše 750 ms. ACK znači
+da je snimka trenutačno dostupna. NAK znači da je protokol podržan, ali trenutačno
+nema okvira koji se može snimiti. Oko prijelaza u radu, primjerice pri pokretanju
+Dooma, web-aplikacija zadržava dulji prozor ponovnog
 stjecanja i ponavlja upite dok se novi korisnik UART-a inicijalizira. Time se
 sprječava da prerani upit tijekom pokretanja Dooma trajno ostavi gumb isključenim.
 Zahtjev za snimanje šalje se tek nakon potvrde sposobnosti.
@@ -188,6 +215,11 @@ ostaju nepromijenjene; posebno, monitor zadržava ``H`` kao tipku Help::
        console_print_help();
        break;
 
+Gumb **Help** u Device Toolu namjerno šalje jedan sirovi bajt ``h`` bez
+odabranog završetka retka. Ne šalje riječ ``help``. Time se web kontrola podudara
+s monitorovim parserom jednobajtnih naredbi i kasnija slova dulje riječi ne mogu
+postati druge monitor naredbe.
+
 Kada je ``i2c gui`` aktivan, ``hazard3_sao_console_feed(received)`` prima UART
 bajt prije switcha rezidentnog monitora i troši GUI tipke poput ``H``. Privatna
 pomoćna funkcija I2C GUI-ja ``toggle_resolution()`` označena je ``static`` u
@@ -201,8 +233,10 @@ ulaz. I2C GUI mora vratiti ACK na ``0x1c`` i implementirati ``0x1d``; u suprotno
 preglednik ispravno ostavlja **Screen snip** onemogućenim iako rukovatelj snimke
 postoji.
 
-Protokol na vezi
-----------------
+.. _h3snip1-protocol:
+
+H3SNIP1 protokol na vezi
+------------------------
 
 Nakon primitka ``0x1d`` firmware zapisuje ASCII zaglavlje završeno s ``CR LF`` i
 odmah zatim zapisuje binarni payload.

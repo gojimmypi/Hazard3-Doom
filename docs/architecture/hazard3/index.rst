@@ -36,14 +36,35 @@ Useful primary references:
 * `Raspberry Pi microcontroller documentation - architecture switching <https://www.raspberrypi.com/documentation/microcontrollers/microcontroller-chips.html#architecture-switching>`_
 * `Upstream Hazard3 source and RP2350 configuration notes <https://github.com/Wren6991/Hazard3>`_
 
+Upstream Hazard3 documentation
+------------------------------
+
+Luke Wren maintains the complete Hazard3 design guide and reference manual
+alongside the processor source. Hazard3-Doom keeps its own pages focused on
+the configuration and integration used by this project, while the upstream
+manual remains the authoritative reference for the generic processor.
+
+* `Rendered Hazard3 Design Guide and Reference Manual <https://wren.wtf/hazard3/doc/>`_
+* `Current upstream documentation source <https://github.com/Wren6991/Hazard3/tree/stable/doc>`_
+* :hazard3-upstream-tree:`Documentation source at the upstream snapshot reviewed here </doc>`
+
+.. note::
+
+   The rendered upstream manual follows Hazard3 development and can describe
+   features newer than the CPU snapshot pinned by Hazard3-Doom. For exact
+   cycle-level behavior, configuration defaults, or RTL details in this
+   project, use the pinned source links in these pages.
+
 Source snapshot used by this project
 ------------------------------------
 
 The technical descriptions in these pages are anchored to the Hazard3 source
 snapshot used for this documentation review:
 
-* ULX3S Hazard3 fork commit: ``736a74459b3f740c47803f20a62d820fcacbe5c3``
-* `Browse the pinned source <https://github.com/ulx3s/Hazard3/tree/736a74459b3f740c47803f20a62d820fcacbe5c3>`_
+* ULX3S Hazard3 fork commit: |hazard3_commit|
+* Upstream Hazard3 stable commit reviewed here: |hazard3_upstream_commit|
+* :hazard3-upstream-tree:`Browse that exact upstream snapshot </>`
+* :hazard3-tree:`Browse the pinned source </>`
 * `Browse current upstream Hazard3 stable <https://github.com/Wren6991/Hazard3/tree/stable>`_
 
 .. important::
@@ -145,9 +166,9 @@ configuration. The important effective settings are:
      - Enabled
      - Hazard3's small backward-branch predictor is synthesized.
 
-The exact wrapper is `fpga_ulx3s.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/fpga/fpga_ulx3s.v>`_.
+The exact wrapper is :hazard3-src:`fpga_ulx3s.v <example_soc/fpga/fpga_ulx3s.v>`.
 The generic parameter definitions are in
-`hazard3_config.vh <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config.vh>`_.
+:hazard3-src:`hazard3_config.vh <hdl/hazard3_config.vh>`.
 
 Learning path
 -------------

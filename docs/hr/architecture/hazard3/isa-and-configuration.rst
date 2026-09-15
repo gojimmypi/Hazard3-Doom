@@ -8,8 +8,8 @@ Hazard3 je snažno parametriziran. Važno je razlikovati tri stvari:
 #. što ULX3S Hazard3-Doom wrapper zapravo odabire.
 
 Mjerodavan fiksirani popis parametara je
-`hazard3_config.vh <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config.vh>`_. Odabrane ULX3S vrijednosti
-nalaze se u `fpga_ulx3s.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/example_soc/fpga/fpga_ulx3s.v>`_.
+:hazard3-src:`hazard3_config.vh <hdl/hazard3_config.vh>`. Odabrane ULX3S vrijednosti
+nalaze se u :hazard3-src:`fpga_ulx3s.v <example_soc/fpga/fpga_ulx3s.v>`.
 
 Projektni ISA profil
 --------------------
@@ -107,7 +107,7 @@ Pojednostavljeni prikaz je:
 
 Dekoder zatim koristi te parametre kako bi nepodržana kodiranja instrukcija
 učinio nedopuštenima. Pogledajte
-`hazard3_decode.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_decode.v>`_ za decode kontroliran ekstenzijama.
+:hazard3-src:`hazard3_decode.v <hdl/hazard3_decode.v>` za decode kontroliran ekstenzijama.
 Primjerice, opcodeovi M ekstenzije usmjeravaju se na multiply/divide put samo
 kada je ``EXTENSION_M`` omogućen, a atomska kodiranja zahtijevaju ``EXTENSION_A``.
 
@@ -184,6 +184,20 @@ Projekt također mijenja implementacijske izbore koji nisu ISA ekstenzije:
      - 0
      - Ne troši reset logiku na brisanje registara opće namjene.
 
+.. admonition:: Zašto je ``RESET_REGFILE`` nula na FPGA-u
+   :class: note
+
+   Ovdje ``0`` znači da je reset registarske datoteke opće namjene
+   **onemogućen**; ne znači da se registri ``x1`` do ``x31`` brišu na nulu.
+   Registar ``x0`` arhitekturno ostaje trajno spojen na nulu.
+
+   Upstream Hazard3 vodič preporučuje ``RESET_REGFILE=0`` za FPGA sintezu jer
+   FPGA block RAM i LUT RAM često ne mogu učinkovito implementirati traženi
+   reset registarske datoteke. Vrijednost ``1`` može prisiliti implementaciju
+   registarske datoteke u flip-flopovima logičkog fabric-a, uz značajan trošak
+   površine i timinga. Pogledajte `upstream Hazard3 vodič za dizajn i referentni
+   priručnik <https://wren.wtf/hazard3/doc/>`_, odjeljak **FPGA Synthesis**.
+
 Posljedica za softver
 ---------------------
 
@@ -209,7 +223,7 @@ konkretne FPGA slike.
 
 Za arhitekturno proučavanje koristite oba:
 
-* `Fiksirana projektna konfiguracija <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/hazard3_config.vh>`_ - točne opcije i
+* :hazard3-src:`Fiksirana projektna konfiguracija <hdl/hazard3_config.vh>` - točne opcije i
   zadane vrijednosti dostupne ovom snimku.
 * `Trenutačna upstream stable konfiguracija <https://github.com/Wren6991/Hazard3/blob/stable/hdl/hazard3_config.vh>`_
   - trenutačni održavani smjer upstreama.

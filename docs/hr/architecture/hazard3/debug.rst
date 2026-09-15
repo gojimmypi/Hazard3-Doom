@@ -41,7 +41,7 @@ Konceptualni lanac je:
     `--> system-bus access
 
 Transport specifičan za ECP5 implementiran je u
-`hazard3_ecp5_jtag_dtm.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/debug/dtm/hazard3_ecp5_jtag_dtm.v>`_. Koristi
+:hazard3-src:`hazard3_ecp5_jtag_dtm.v <hdl/debug/dtm/hazard3_ecp5_jtag_dtm.v>`. Koristi
 ECP5 primitiv ``JTAGG`` kako bi registre DTMCS i DMI podataka priključio na
 postojeći TAP čipa FPGA. Dizajn zato može koristiti uobičajenu USB/JTAG vezu
 pločice umjesto dodatnog soft JTAG TAP-a u logici FPGA-a.
@@ -50,7 +50,7 @@ Debug Module
 ------------
 
 Standardni Hazard3 Debug Module nalazi se u
-`hazard3_dm.v <https://github.com/ulx3s/Hazard3/blob/736a74459b3f740c47803f20a62d820fcacbe5c3/hdl/debug/dm/hazard3_dm.v>`_. Implementira upravljačku
+:hazard3-src:`hazard3_dm.v <hdl/debug/dm/hazard3_dm.v>`. Implementira upravljačku
 ravninu između debuggera i jednog ili više Hazard3 hartova. Važni mehanizmi
 uključuju:
 
