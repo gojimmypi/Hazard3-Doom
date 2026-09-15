@@ -7,6 +7,16 @@ Hazard3-Doom est bien plus que Doom porté sur une carte FPGA supplémentaire.
 C'est un écosystème matériel et logiciel pédagogique construit autour du
 processeur RISC-V open source Hazard3 et des familles FPGA ECP5 ULX3S et ULX4M.
 
+.. important:: État de la traduction
+
+   La documentation anglaise est la référence pour les changements les plus
+   récents de cette version. Les pages françaises suivent la même structure
+   générale, mais certaines pages techniques - notamment JTAG, bootloader,
+   WebUSB, sweeps de timing et ULX4M - peuvent être en retard sur l'anglais.
+   Lorsqu'un détail de câblage, de commande ou de qualification matérielle est
+   critique, vérifiez aussi la page anglaise correspondante.
+
+
 
 .. admonition:: Le même CPU Hazard3 que dans le Raspberry Pi RP2350
    :class: important
@@ -63,6 +73,7 @@ Commencer ici
 * :doc:`user-guide/web-flasher` - guide détaillé de programmation de la SRAM FPGA ULX3S avec WebUSB.
 * :doc:`user-guide/sd-card` - configurer un démarrage autonome à froid depuis une carte micro-SD.
 * :doc:`user-guide/i2cdriver` - analyser et inspecter le bus I2C SAO sur HDMI.
+* :doc:`user-guide/pinouts` - consulter les brochages ULX3S/ULX4M-LD, le câblage UART/JTAG et le générateur de brochage.
 * :doc:`user-guide/jtag-debugging` - déboguer Hazard3 avec OpenOCD/GDB ou VisualGDB.
 * :doc:`architecture/hazard3/index` - découvrir le processeur RISC-V Hazard3, son pipeline, sa configuration ISA, ses CSR, ses bus et son architecture de débogage.
 * :doc:`architecture/system` - comprendre comment le FPGA, le moniteur, la SDRAM, HDMI, la SD, le SAO et l'ESP32 s'assemblent.

@@ -7,6 +7,15 @@ Hazard3-Doom je mnogo više od Dooma pokrenutog na još jednoj FPGA pločici. To
 je obrazovni hardversko-softverski ekosustav izgrađen oko open-source Hazard3
 RISC-V procesora te ULX3S i ULX4M ECP5 FPGA obitelji.
 
+.. important:: Stanje prijevoda
+
+   Engleska dokumentacija je mjerodavna za najnovije promjene u ovom izdanju.
+   Hrvatske stranice prate istu opću strukturu, ali neke tehničke stranice -
+   osobito JTAG, bootloader, WebUSB, timing sweepovi i ULX4M - mogu zaostajati
+   za engleskom verzijom. Kada su detalji o ožičenju, naredbama ili hardverskoj
+   kvalifikaciji kritični, provjerite i odgovarajuću englesku stranicu.
+
+
 
 .. admonition:: Isti Hazard3 CPU koji se koristi u Raspberry Pi RP2350
    :class: important
@@ -61,6 +70,7 @@ Počnite ovdje
 * :doc:`user-guide/web-flasher` - detaljni vodič za ULX3S FPGA SRAM programiranje putem WebUSB-a.
 * :doc:`user-guide/sd-card` - podesite samostalno hladno pokretanje s micro-SD kartice.
 * :doc:`user-guide/i2cdriver` - skenirajte i pregledajte SAO I2C sabirnicu preko HDMI-ja.
+* :doc:`user-guide/pinouts` - pogledajte ULX3S/ULX4M-LD pinove, UART/JTAG ožičenje i generator pinout dijagrama.
 * :doc:`user-guide/jtag-debugging` - otklanjajte pogreške u Hazard3 putem OpenOCD/GDB-a ili VisualGDB-a.
 * :doc:`architecture/hazard3/index` - upoznajte Hazard3 RISC-V procesor, cjevovod, konfiguraciju ISA-e, CSR-ove, sabirnice i arhitekturu za otklanjanje pogrešaka.
 * :doc:`architecture/system` - razumijte kako su povezani FPGA, monitor, SDRAM, HDMI, SD, SAO i ESP32.

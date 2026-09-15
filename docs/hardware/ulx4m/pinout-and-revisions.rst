@@ -31,6 +31,12 @@ named ``sd_clk``. It becomes the correct SD clock only when the matching LPF
 maps that port to the package ball that the selected PCB revision routes to the
 socket/carrier signal.
 
+.. figure:: ../../images/ulx4m_ld-pinout.png
+   :alt: ULX4M-LD pinout
+
+   **ULX4M-LD Pinout** - FPGA pin assignments on the
+   `Waveshare CM4 Carrier <https://www.waveshare.com/wiki/CM4-IO-BASE-A#Dimension>`_.
+
 Hazard3-Doom constraint files
 -----------------------------
 

@@ -12,6 +12,7 @@ Guide utilisateur
    bootloader
    doom
    sd-card
+   pinouts
    sao
    i2cdriver
    jtag-debugging

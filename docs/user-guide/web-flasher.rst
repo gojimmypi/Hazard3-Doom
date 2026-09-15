@@ -615,8 +615,8 @@ should remain a separate, explicitly confirmed workflow.
 See :doc:`../getting-started/programming` for the distinction between temporary
 FPGA loading and persistent boot configuration.
 
-Implementation references
--------------------------
+External References
+-------------------
 
 * `ULX3S manual <https://github.com/emard/ulx3s/blob/master/doc/MANUAL.md>`_
 * `fujprog <https://github.com/kost/fujprog>`_

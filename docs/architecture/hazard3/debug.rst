@@ -138,3 +138,7 @@ A useful lab exercise is to halt the resident monitor at a known function,
 inspect integer registers, read a RAM word through the debugger, single-step
 one instruction, and then identify which of those operations used CPU debug
 state versus system-bus access.
+
+Implementation references
+-------------------------
+* `yosys nextpnr supported primitives <https://github.com/YosysHQ/nextpnr/blob/main/ecp5/docs/primitives.md>`_

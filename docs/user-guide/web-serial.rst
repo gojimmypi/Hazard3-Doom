@@ -38,7 +38,15 @@ Browser and serving requirements
 --------------------------------
 
 Web Serial requires a browser that exposes ``navigator.serial`` and a secure
-context. ``localhost`` is accepted for local development, and HTTPS is suitable
+context.
+
+.. figure:: ../images/webserial-connect.png
+   :alt: Browser Web Serial device selection dialog
+
+   **Web Serial connection** - select the board's UART adapter from the browser
+   permission dialog.
+
+``localhost`` is accepted for local development, and HTTPS is suitable
 for hosted use such as GitHub Pages.
 
 A simple local server can be started from the ``web/`` directory with:

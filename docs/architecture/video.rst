@@ -51,6 +51,18 @@ This keeps the wire payload compact relative to a full RGB framebuffer and lets
 the same browser parser accept Doom sources and I2C GUI sources with different
 geometries. See :doc:`../user-guide/web-serial` for the complete protocol.
 
+Video test pattern
+------------------
+
+The monitor can generate a deterministic color-bar pattern when validating the
+HDMI path independently of Doom rendering:
+
+.. figure:: ../images/hdmi-colorbar-test-pattern.png
+   :alt: Hazard3-Doom HDMI color bar test pattern
+
+   **HDMI color-bar test pattern** - a simple visual check that timing, scaling,
+   palette conversion, and the physical display path are alive.
+
 Non-Doom users of the video path
 --------------------------------
 

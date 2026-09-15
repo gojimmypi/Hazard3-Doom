@@ -22,6 +22,11 @@ A ULX3S signal becomes real hardware through several independent artifacts:
 A correct Verilog signal name is not enough. The active LPF must map that port
 to the package ball actually routed by the selected PCB revision.
 
+.. figure:: ../../images/ulx3s-pinout.png
+   :alt: ULX3S pinout
+
+   **ULX3S Pinout** - FPGA GPIO and connector pin assignments.
+
 Project constraint sources
 --------------------------
 

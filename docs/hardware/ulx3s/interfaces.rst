@@ -56,7 +56,8 @@ external UART wiring uses the ULX3S J1 header as follows:
      - Connect to adapter ground.
 
 This is project-tested lab wiring, not a replacement for checking the active
-LPF/top-level design. Always verify the build if UART pins are changed.
+LPF/top-level design. Always verify the build if UART pins are changed. See
+:doc:`pinout-and-revisions` for the full ULX3S pinout and revision notes.
 
 J1/J2 GPIO
 ----------

@@ -73,7 +73,8 @@ UART
 UART remains the simplest software-facing debug path. The project uses it for
 resident-monitor interaction, diagnostics, image transfer, and Web Serial. The
 ULX4M LPFs map the selected UART pins to the module/carrier FTDI path used by the
-supported setup.
+supported setup. See :doc:`pinout-and-revisions` for the ULX4M-LD carrier pinout
+and board-revision notes.
 
 JTAG is complementary rather than a replacement: UART is excellent for logs and
 monitor commands; JTAG/OpenOCD/GDB is appropriate for halt/step/register/memory
