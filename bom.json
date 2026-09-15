@@ -9,6 +9,7 @@
       "bom-ref": "hazard3-doom",
       "group": "ulx3s",
       "name": "Hazard3-Doom",
+      "version": "0.2.0",
       "description": "Doom running on the Hazard3 RISC-V CPU in an ECP5 FPGA, including monitor firmware, a DoomGeneric application, FPGA board integrations, host-side upload/flashing tools, and supporting project assets.",
       "externalReferences": [
         {

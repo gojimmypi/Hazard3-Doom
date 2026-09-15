@@ -1,6 +1,10 @@
 #!/bin/bash
-
-# Check a machine for the Hazard3-Doom development requirements.
+# -----------------------------------------------------------------------------
+# File:        requirements-check.sh
+# Path:        scripts/requirements-check.sh
+#
+# Project:     Hazard3-Doom
+# Purpose:     Check a machine for the Hazard3-Doom development requirements.
 #
 # This script is non-destructive: it does not install packages or change
 # configuration. Required items affect the exit status; optional items do not.
@@ -12,6 +16,18 @@
 #     but they do not replace the native Linux/WSL build toolchain.
 #   * bin/riscv-gcc is an optional, ignored xPack installation for native
 #     Windows builds. It does not satisfy the normal Bash build requirement.
+#
+# Copyright (c) 2026 gojimmypi
+#
+# Licensed under the Apache License, Version 2.0.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This software is provided under the terms of the applicable license.
+# See LICENSES/Apache-2.0.txt for the complete license terms.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
 
 set -u
 set -o pipefail
@@ -620,6 +636,7 @@ check_repository_state()
     local submodules_initialized=1
     local submodules_match=1
     local line=""
+    local project_version=""
 
     section "Repository"
     printf 'Repository: %s\n' "${REPO_ROOT:-not detected}"
@@ -633,6 +650,17 @@ check_repository_state()
         ! git -C "${REPO_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         fail "Hazard3-Doom Git worktree was not detected"
         return 0
+    fi
+
+    if [[ -r "${REPO_ROOT}/VERSION" ]]; then
+        project_version="$(tr -d '\r\n' < "${REPO_ROOT}/VERSION")"
+        if [[ "${project_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            pass "Hazard3-Doom project version: v${project_version}"
+        else
+            fail "Invalid Hazard3-Doom VERSION value: ${project_version}"
+        fi
+    else
+        fail "Missing Hazard3-Doom VERSION file: ${REPO_ROOT}/VERSION"
     fi
 
     if branch="$(git -C "${REPO_ROOT}" symbolic-ref --quiet --short HEAD 2>/dev/null)"; then

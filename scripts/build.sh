@@ -34,6 +34,7 @@ export TOOLCHAIN_PREFIX
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+VERSION_REFRESH="${SCRIPT_DIR}/refresh-version.sh"
 SRC_DIR="${ROOT_DIR}/src"
 DOOM_DIR="${ROOT_DIR}/doom"
 BUILD_DIR="${HAZARD3_BUILD_DIR:-${ROOT_DIR}/build}"
@@ -124,6 +125,9 @@ require_file "${SRC_DIR}/sd_boot.h"
 require_file "${LINKER_SCRIPT}"
 require_file "${DOOM_DIR}/hazard3_sao.c"
 require_file "${DOOM_DIR}/hazard3_sao.h"
+require_tool "${VERSION_REFRESH}"
+
+"${VERSION_REFRESH}"
 
 mkdir -p "${BUILD_DIR}"
 

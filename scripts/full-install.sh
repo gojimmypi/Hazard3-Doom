@@ -180,6 +180,13 @@ fi
 
 cd "${REPO_DIR}"
 
+if [[ -r ./VERSION ]]; then
+    project_version="$(tr -d '\r\n' < ./VERSION)"
+    printf '\nHazard3-Doom project version: v%s\n' "${project_version}"
+else
+    printf '\nWARNING: Repository VERSION file was not found.\n' >&2
+fi
+
 # Change branch here as desired
 # git checkout develop
 

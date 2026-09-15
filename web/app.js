@@ -105,6 +105,7 @@ const state = {
 };
 
 const els = {
+    appVersion: document.getElementById("appVersion"),
     statusDot: document.getElementById("statusDot"),
     connectionStatus: document.getElementById("connectionStatus"),
     portDetails: document.getElementById("portDetails"),
@@ -178,6 +179,17 @@ const els = {
 };
 
 const serialSupported = "serial" in navigator;
+
+function updateAppVersion() {
+    const versionInfo = window.HAZARD3_DOOM_VERSION;
+
+    if (!els.appVersion || !versionInfo || !versionInfo.display) {
+        return;
+    }
+
+    els.appVersion.textContent = versionInfo.display;
+    els.appVersion.title = `Hazard3-Doom project version ${versionInfo.display}`;
+}
 
 function setButtonDisabledReason(button, reason = "") {
     if (!button) {
@@ -2829,6 +2841,7 @@ function wireEvents() {
 }
 
 async function initialize() {
+    updateAppVersion();
     loadSettings();
     wireEvents();
     wireTerminalResize();

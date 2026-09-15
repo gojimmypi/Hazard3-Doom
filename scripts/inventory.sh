@@ -142,6 +142,17 @@ if ! REPO_ROOT="$(git -C "${TARGET_DIR}" rev-parse --show-toplevel 2>/dev/null)"
     exit 1
 fi
 
+VERSION_FILE="${REPO_ROOT}/VERSION"
+if [[ ! -r "${VERSION_FILE}" ]]; then
+    echo "Missing Hazard3-Doom VERSION file: ${VERSION_FILE}" >&2
+    exit 1
+fi
+PROJECT_VERSION="$(tr -d '\r\n' < "${VERSION_FILE}")"
+if [[ ! "${PROJECT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+    echo "Invalid Hazard3-Doom VERSION value: ${PROJECT_VERSION}" >&2
+    exit 1
+fi
+
 TARGET_PREFIX="$(git -C "${TARGET_DIR}" rev-parse --show-prefix)"
 
 OUTPUT_PREFIX="${TARGET_DIR}/INVENTORY"
@@ -383,6 +394,8 @@ done < "${LIST_TMP}"
     echo "It is intended to support integrity verification, reproducibility, release"
     echo "auditing, and exact identification of tracked artifacts. A hash identifies"
     echo "the bytes in a file; it does not by itself establish provenance or intent."
+    echo
+    echo "Project version: v${PROJECT_VERSION}"
     echo
     echo "Git source: current index (\`git ls-files --cached\`)"
     echo

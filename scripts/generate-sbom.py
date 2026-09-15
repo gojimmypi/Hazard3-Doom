@@ -52,6 +52,9 @@ PROJECT_URL = "https://github.com/ulx3s/Hazard3-Doom"
 DOCS_URL = "https://hazard3-doom.readthedocs.io/"
 CYCLONEDX_SCHEMA = "https://cyclonedx.org/schema/bom-1.7.schema.json"
 CYCLONEDX_SPEC_VERSION = "1.7"
+SEMVER_RE = re.compile(
+    r"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$"
+)
 
 REQUIRED_SUBMODULES = (
     {
@@ -194,6 +197,17 @@ def find_repo_root(start: Path) -> Path:
             return candidate
 
     raise RuntimeError("Could not locate the Hazard3-Doom repository root.")
+
+
+def project_version(repo: Path) -> str:
+    version_file = repo / "VERSION"
+    if not version_file.is_file():
+        raise RuntimeError(f"Missing Hazard3-Doom VERSION file: {version_file}")
+
+    value = version_file.read_text(encoding="utf-8").strip()
+    if not SEMVER_RE.fullmatch(value):
+        raise RuntimeError(f"Invalid Hazard3-Doom VERSION value: {value}")
+    return value
 
 
 def git_head(repo: Path) -> str:
@@ -585,6 +599,7 @@ def build_bom(
     release: bool,
     allow_incomplete: bool,
 ) -> dict[str, Any]:
+    version = project_version(repo)
     source_revision = git_head(repo) if release else None
     epoch = sbom_epoch(repo) if release else None
     tag = git_exact_tag(repo) if release else None
@@ -597,6 +612,7 @@ def build_bom(
         "bom-ref": "hazard3-doom",
         "group": PROJECT_GROUP,
         "name": PROJECT_NAME,
+        "version": version,
         "description": (
             "Doom running on the Hazard3 RISC-V CPU in an ECP5 FPGA, "
             "including monitor firmware, a DoomGeneric application, FPGA "
@@ -664,7 +680,15 @@ def build_bom(
         )
 
     if tag:
-        root_component["version"] = tag
+        expected_tag = f"v{version}"
+        if tag != expected_tag and not allow_incomplete:
+            raise RuntimeError(
+                f"Release tag {tag} does not match VERSION {version}; "
+                f"expected {expected_tag}."
+            )
+        root_component["properties"].append(
+            prop("hazard3-doom:release-tag", tag)
+        )
 
     components: list[dict[str, Any]] = [
         make_submodule_component(repo, item, release, allow_incomplete)

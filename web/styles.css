@@ -187,6 +187,20 @@ h1 {
     line-height: 1;
 }
 
+.title-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.65rem;
+}
+
+.app-version {
+    color: var(--muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 h2 {
     margin-bottom: 0.25rem;
     font-size: 1rem;

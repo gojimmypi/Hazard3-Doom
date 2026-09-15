@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#171a21">
     <title>Hazard3-Doom Device Tool and Console</title>
-    <link rel="stylesheet" href="styles.css?v=20260914-r11">
+    <link rel="stylesheet" href="styles.css?v=20260914-r12">
     <link rel="icon" href="icons/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
@@ -16,7 +16,10 @@
     <header class="app-header">
         <div>
             <div class="eyebrow">ULX3S / Hazard3-Doom</div>
-            <h1>Device Tool</h1>
+            <div class="title-row">
+                <h1>Device Tool</h1>
+                <span id="appVersion" class="app-version" title="Hazard3-Doom project version">version unavailable</span>
+            </div>
         </div>
         <div class="header-actions">
             <nav class="project-links" aria-label="Hazard3-Doom project links">
@@ -523,7 +526,8 @@
         <span>UART and FPGA programming data stay between this browser and the selected devices; console firmware uses the local loader.</span>
     </footer>
 
-    <script src="app.js?v=20260914-r9" defer></script>
+    <script src="generated/version.js" defer></script>
+    <script src="app.js?v=20260914-r10" defer></script>
     <script src="flasher.js?v=20260914-r4" defer></script>
 </body>
 </html>

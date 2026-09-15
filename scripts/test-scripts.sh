@@ -606,11 +606,17 @@ main()
     check_sweep_dispatcher
 
     if git -C "${REPO_ROOT}" rev-parse --show-toplevel >/dev/null 2>&1; then
+        run_quiet 'check-executable.sh: tracked script permissions' \
+            "${SCRIPT_DIR}/check-executable.sh" 1
+        run_quiet 'refresh-version.sh: generated version files' \
+            "${SCRIPT_DIR}/refresh-version.sh" --check
         run_quiet 'check-nettype.sh: project RTL policy' \
             "${SCRIPT_DIR}/check-nettype.sh"
         run_quiet 'inventory.sh: scripts inventory' \
             "${SCRIPT_DIR}/inventory.sh" --check scripts
     else
+        skip 'check-executable.sh: not inside a Git checkout'
+        skip 'refresh-version.sh: not inside a Git checkout'
         skip 'check-nettype.sh: not inside a Git checkout'
         skip 'inventory.sh: not inside a Git checkout'
     fi
