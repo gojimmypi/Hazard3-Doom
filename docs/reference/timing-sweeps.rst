@@ -192,7 +192,7 @@ WSL/host scheduling becomes the bottleneck.
 
 .. figure:: ../images/concurrent-nextpnr-ecp5.png
    :alt: Multiple concurrent nextpnr-ecp5 processes during a local sweep
-   :width: 90%
+   :class: screenshot
 
    Multiple local nextpnr-ecp5 routes can run concurrently. Size
    ``SWEEP_JOBS`` for the machine rather than simply choosing the largest value.

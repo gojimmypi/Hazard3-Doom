@@ -89,7 +89,7 @@ podnijeti dodatno opterećenje.
 
 .. figure:: ../images/concurrent-nextpnr-ecp5.png
    :alt: Više paralelnih nextpnr-ecp5 procesa tijekom lokalnog sweepa
-   :width: 90%
+   :class: screenshot
 
    Lokalno je moguće paralelno routati više seedova. ``SWEEP_JOBS`` prilagodite
    stvarnim resursima računala.

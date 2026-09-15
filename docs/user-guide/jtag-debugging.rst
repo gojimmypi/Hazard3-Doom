@@ -304,7 +304,7 @@ Interface 0 to the FTDI USB Serial/VCP driver and leave Interface 1 on libusbK.
 
 .. figure:: ../images/Zadig-Tigard-set-interface-1-libusbk.png
    :alt: Zadig selecting libusbK for Tigard Interface 1
-   :width: 85%
+   :class: screenshot
 
    Apply libusbK to Tigard Interface 1 for JTAG. Keep Interface 0 on the FTDI
    VCP driver for the UART COM port.

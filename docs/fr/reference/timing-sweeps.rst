@@ -94,7 +94,7 @@ système hôte peuvent suivre.
 
 .. figure:: ../images/concurrent-nextpnr-ecp5.png
    :alt: Plusieurs processus nextpnr-ecp5 concurrents pendant un sweep local
-   :width: 90%
+   :class: screenshot
 
    Plusieurs routages nextpnr-ecp5 peuvent être exécutés en parallèle en local.
    Dimensionnez ``SWEEP_JOBS`` selon la machine.

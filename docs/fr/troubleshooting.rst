@@ -40,7 +40,7 @@ que le pilote FTDI VCP/D2XX normal.
 
 .. figure:: images/Zadig-FTDI-to-WinUSB.png
    :alt: Zadig remplaçant le pilote FTDI ULX3S par WinUSB.
-   :width: 580px
+   :class: screenshot
 
    Exemple de sélection WinUSB pour le FT231X ULX3S.
 
@@ -111,7 +111,7 @@ avant de modifier le matériel ou les pilotes série USB.
 
 .. figure:: images/chrome-pending-update.png
    :alt: Chrome affichant un bouton Finish update alors que la console UART Hazard3-Doom est déconnectée.
-   :width: 520px
+   :class: screenshot
 
    Si le sélecteur Web Serial est vide alors que Chrome affiche une mise à jour
    en attente, terminez la mise à jour et relancez le navigateur avant de

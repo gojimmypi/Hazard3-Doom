@@ -17,6 +17,7 @@ Place these files in the root directory of a FAT-formatted micro-SD card:
 
 .. figure:: ../images/HAZARD3-SD-Contents.png
    :alt: Hazard3-Doom files on the HAZARD3-SD volume
+   :class: screenshot
 
    **HAZARD3-SD contents** - the Doom application image and IWAD at the root of
    the card.
@@ -25,6 +26,7 @@ On Windows, the prepared card may appear as a volume such as ``HAZARD3-SD``:
 
 .. figure:: ../images/Windows-HAZARD3-SD-volume.png
    :alt: HAZARD3-SD volume in Windows File Explorer
+   :class: screenshot
 
    **Windows HAZARD3-SD volume** - verify the expected card before copying or
    replacing files.

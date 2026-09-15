@@ -39,7 +39,7 @@ normalnog FTDI VCP/D2XX drivera.
 
 .. figure:: images/Zadig-FTDI-to-WinUSB.png
    :alt: Zadig zamjenjuje ULX3S FTDI driver WinUSB driverom.
-   :width: 580px
+   :class: screenshot
 
    Primjer odabira WinUSB-a za ULX3S FT231X.
 
@@ -106,7 +106,7 @@ serijskih drivera provjerite preglednik.
 
 .. figure:: images/chrome-pending-update.png
    :alt: Chrome prikazuje gumb Finish update dok je Hazard3-Doom UART Console odspojen.
-   :width: 520px
+   :class: screenshot
 
    Ako je Web Serial izbornik prazan dok Chrome prikazuje čekajuće ažuriranje,
    dovršite ažuriranje i ponovno pokrenite preglednik prije promjene serijskih

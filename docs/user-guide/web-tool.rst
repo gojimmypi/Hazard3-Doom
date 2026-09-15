@@ -8,6 +8,7 @@ upload tools.
 
 .. figure:: ../images/Hazard3-Doom-Web-Console.png
    :alt: Hazard3-Doom browser Device Tool and UART console
+   :class: screenshot
 
    **Hazard3-Doom Device Tool** - Web Serial console, monitor controls, and
    device actions in one browser interface.
@@ -165,6 +166,7 @@ Expand **Serial connection** and choose the UART device.
 
 .. figure:: ../images/webserial-connect.png
    :alt: Hazard3-Doom Web Serial device selection
+   :class: screenshot
 
    **Web Serial connection** - select the board UART before using the terminal
    or the H3D/IWAD uploaders.

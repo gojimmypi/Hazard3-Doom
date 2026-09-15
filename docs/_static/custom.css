@@ -31,6 +31,14 @@
     font-weight: 700;
 }
 
+/* Responsive screenshots should shrink on small displays without being enlarged on wide displays. */
+.rst-content img.screenshot,
+.rst-content .screenshot img {
+    width: auto;
+    max-width: min(100%, 900px);
+    height: auto;
+}
+
 /* Driver compatibility indicators used by the ULX3S USB matrix. */
 .compat-table {
     border-collapse: collapse;

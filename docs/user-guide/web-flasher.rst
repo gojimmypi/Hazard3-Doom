@@ -28,7 +28,7 @@ bitstream before considering a persistent flash update.
 
 .. figure:: ../images/Flash-from-WebUSB.png
    :alt: Hazard3-Doom FPGA web flasher programming an ULX3S ECP5 image through WebUSB.
-   :width: 800px
+   :class: screenshot
 
    The FPGA web flasher uses WebUSB for ULX3S JTAG while the rest of the page
    retains the existing Web Serial console.
@@ -168,7 +168,7 @@ hint rather than treating it as a JTAG failure.
 
 .. figure:: ../images/WebUSB-USBDevice-Access-Denied.png
    :alt: Hazard3-Doom WebUSB flasher showing USBDevice Access denied before WinUSB is installed.
-   :width: 780px
+   :class: screenshot
 
    ``USBDevice.open()`` access denied occurs before JTAG begins. On Windows,
    verify the FT231X driver binding before investigating FPGA or JTAG wiring.
@@ -186,7 +186,7 @@ One way to select WinUSB is with Zadig:
 
 .. figure:: ../images/Zadig-FTDI-to-WinUSB.png
    :alt: Zadig configured to replace the ULX3S FTDI driver with WinUSB.
-   :width: 580px
+   :class: screenshot
 
    Example Zadig selection for an ULX3S FT231X. Verify the selected device
    before replacing its driver.
@@ -205,7 +205,7 @@ reinstall the appropriate FTDI VCP/D2XX package.
 
 .. figure:: ../images/Windows-set-default-USB-from-WinUSB.png
    :alt: Windows Device Manager Update driver command for an ULX3S device using WinUSB.
-   :width: 620px
+   :class: screenshot
 
    Device Manager can be used to restore the normal FTDI driver when an FTDI
    VCP/D2XX application such as Windows ``fujprog`` is required.

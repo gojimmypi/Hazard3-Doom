@@ -42,6 +42,7 @@ context.
 
 .. figure:: ../images/webserial-connect.png
    :alt: Browser Web Serial device selection dialog
+   :class: screenshot
 
    **Web Serial connection** - select the board's UART adapter from the browser
    permission dialog.

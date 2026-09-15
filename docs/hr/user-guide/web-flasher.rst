@@ -28,7 +28,7 @@ prije razmatranja trajnog ažuriranja flasha.
 
 .. figure:: ../images/Flash-from-WebUSB.png
    :alt: Hazard3-Doom FPGA web flasher programira ULX3S ECP5 sliku putem WebUSB-a.
-   :width: 800px
+   :class: screenshot
 
    FPGA web flasher koristi WebUSB za ULX3S JTAG, dok ostatak stranice zadržava
    postojeću Web Serial konzolu.
@@ -132,7 +132,7 @@ WinUSB driver umjesto da ga tretira kao JTAG pogrešku.
 
 .. figure:: ../images/WebUSB-USBDevice-Access-Denied.png
    :alt: Hazard3-Doom WebUSB flasher prikazuje USBDevice Access denied prije instalacije WinUSB-a.
-   :width: 780px
+   :class: screenshot
 
    ``USBDevice.open()`` access denied nastaje prije početka JTAG-a. Na Windowsu
    provjerite binding FT231X upravljačkog programa prije istraživanja FPGA-a ili
@@ -151,7 +151,7 @@ Jedan način odabira WinUSB-a jest Zadig:
 
 .. figure:: ../images/Zadig-FTDI-to-WinUSB.png
    :alt: Zadig podešen za zamjenu ULX3S FTDI upravljačkog programa WinUSB-om.
-   :width: 580px
+   :class: screenshot
 
    Primjer Zadig odabira za ULX3S FT231X. Provjerite odabrani uređaj prije
    zamjene njegova upravljačkog programa.
@@ -169,7 +169,7 @@ ponovno instalirajte odgovarajući FTDI VCP/D2XX paket.
 
 .. figure:: ../images/Windows-set-default-USB-from-WinUSB.png
    :alt: Naredba Update driver u Windows Device Manageru za ULX3S uređaj koji koristi WinUSB.
-   :width: 620px
+   :class: screenshot
 
    Device Manager može vratiti uobičajeni FTDI driver kada je potrebna FTDI
    VCP/D2XX aplikacija poput Windows ``fujprog``.
