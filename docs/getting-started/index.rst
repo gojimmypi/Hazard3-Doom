@@ -10,5 +10,5 @@ This section covers the shortest path from a fresh checkout to a running Hazard3
    prerequisites
    vm-tips
    build
-   tiny-tapeout-ulx3s
    programming
+   tiny-tapeout-ulx3s

@@ -60,20 +60,24 @@ dna, Hazard3-Doom je napravljen za istraživanje.
 Počnite ovdje
 -------------
 
-* :doc:`about/index` - saznajte što je projekt, čemu služi u obrazovanju i zašto je ULX4M koristan za modularno prototipiranje.
+* :doc:`about/index` - saznajte što je projekt i što iz njega možete naučiti.
 * :doc:`getting-started/quick-start` - pokrenite pločicu uz najmanji broj koraka.
+* :doc:`user-guide/web-tool` - koristite Device Tool u pregledniku za uobičajeno pokretanje pločice i interaktivne zadatke.
 * :doc:`getting-started/build` - izgradite FPGA, rezidentni monitor i Doom sliku.
-* :doc:`getting-started/tiny-tapeout-ulx3s` - gradite Tiny Tapeout projekte za ULX3S ECP5 lokalno ili pomoću GitHub Actionsa.
-* :doc:`hardware/ulx4m/index` - istražite ULX4M hardver: FPGA, satove, SDR/DDR3, flash, video, SD, SerDes, pin ograničenja i revizije.
-* :doc:`reference/timing-sweeps` - pokrenite lokalne/GitHub ECP5 sweepove i tumačite live timing rezultate.
-* :doc:`user-guide/web-tool` - koristite web alat za UART, FPGA programiranje, firmware konzole, H3D/IWAD prijenos i screen snip.
-* :doc:`user-guide/web-flasher` - detaljni vodič za ULX3S FPGA SRAM programiranje putem WebUSB-a.
-* :doc:`user-guide/sd-card` - podesite samostalno hladno pokretanje s micro-SD kartice.
-* :doc:`user-guide/i2cdriver` - skenirajte i pregledajte SAO I2C sabirnicu preko HDMI-ja.
-* :doc:`user-guide/pinouts` - pogledajte ULX3S/ULX4M-LD pinove, UART/JTAG ožičenje i generator pinout dijagrama.
+
+Istražite dalje
+---------------
+
+* :doc:`hardware/index` - istražite ULX3S i ULX4M hardver koji koristi Hazard3-Doom.
+* :doc:`user-guide/pinouts` - pronađite pinout dijagrame i praktično UART/JTAG ožičenje.
 * :doc:`user-guide/jtag-debugging` - otklanjajte pogreške u Hazard3 putem OpenOCD/GDB-a ili VisualGDB-a.
-* :doc:`architecture/hazard3/index` - upoznajte Hazard3 RISC-V procesor, cjevovod, konfiguraciju ISA-e, CSR-ove, sabirnice i arhitekturu za otklanjanje pogrešaka.
-* :doc:`architecture/system` - razumijte kako su povezani FPGA, monitor, SDRAM, HDMI, SD, SAO i ESP32.
+* :doc:`user-guide/i2cdriver` - skenirajte i interaktivno koristite SAO I2C sabirnicu.
+* :doc:`user-guide/web-flasher` - programirajte ULX3S FPGA izravno putem WebUSB-a.
+* :doc:`architecture/hazard3/index` - upoznajte Hazard3 RISC-V procesor, cjevovod, ISA konfiguraciju, sabirnice i arhitekturu za otklanjanje pogrešaka.
+* :doc:`architecture/system` - razumijte kako su povezani FPGA, monitor, memorija, HDMI, SD, SAO i ESP32.
+* :doc:`reference/timing-sweeps` - pokrenite ECP5 sweepove i protumačite timing rezultate.
+* :doc:`user-guide/sd-card` - podesite samostalno hladno pokretanje s micro-SD kartice.
+* :doc:`getting-started/tiny-tapeout-ulx3s` - gradite Tiny Tapeout projekte za ULX3S ECP5.
 
 .. toctree::
    :maxdepth: 2

@@ -131,7 +131,7 @@ External ULX4M resources
 * `ULX4M hardware repository <https://github.com/intergalaktik/ulx4m>`_
 * `ULX4M project and carrier compatibility notes <https://www.crowdsupply.com/intergalaktik/ulx4m/updates/pre-launch-progress>`_
 * `Raspberry Pi Compute Module documentation <https://www.raspberrypi.com/documentation/computers/compute-module.html>`_
+* `Waveshare CM4-IO-BASE-A Schematic <https://files.waveshare.com/upload/a/aa/CM4-IO-BASE-A_V4_SchDoc.pdf>`_
 * `ULX4M Open Source Hardware certification <https://certification.oshwa.org/hr000013.html>`_
 * `yosys <https://github.com/YosysHQ/yosys>`_
 * `nextpnr-ecp5 <https://github.com/YosysHQ/nextpnr>`_
-

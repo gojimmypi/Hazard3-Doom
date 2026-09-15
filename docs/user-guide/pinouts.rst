@@ -252,4 +252,5 @@ External References
 * `Tigard hardware/debug adapter <https://github.com/tigard-tools/tigard>`_
 * `ESP32 JTAG pin mapping <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/jtag-debugging/configure-other-jtag.html>`_
 * `ULX4M hardware sources <https://github.com/intergalaktik/ulx4m>`_
+* `Waveshare CM4-IO-BASE-A Schematic <https://files.waveshare.com/upload/a/aa/CM4-IO-BASE-A_V4_SchDoc.pdf>`_
 * `Waveshare CM4-IO-BASE-A carrier <https://www.waveshare.com/wiki/CM4-IO-BASE-A>`_

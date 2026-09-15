@@ -187,10 +187,27 @@ than probing the socket contacts directly. Remove the SD card.
    impedance. The normal Hazard3-Doom design uses SD, so this needs deliberate
    isolation before connecting Tigard.
 
+Holding the ESP32 in reset with J3
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If SD card problems are encountered on the FPGA side, the ULX3S ``J3`` jumper
+can be used to hold the ESP32 in reset. ``J3`` is a 2-pin header that grounds
+the ESP32 ``EN`` signal when shorted. This disables the ESP32 and can help
+isolate it from the shared SD bus while troubleshooting or while giving the
+FPGA exclusive SD-card ownership.
+
+.. figure:: ../images/ulx3s-j3-schematic-zoom.png
+   :alt: ULX3S J3 jumper schematic detail showing ESP32 EN pulled low
+   :align: center
+
+   **ULX3S J3 (WIFI_OFF) jumper** -- shorting ``J3`` pulls the ESP32 ``EN``
+   signal low, holding the ESP32 in reset/disabled state.
+
 Tigard ``SRST`` may optionally be connected to the ``WIFI_OFF``/EN side of the
-ULX3S J3 jumper for hardware reset. ESP32 ``EN`` is active low. Do not connect
-the reset wire to the J3 ground side, and do not connect Tigard ``VTGT`` when
-the ULX3S is self-powered.
+ULX3S J3 jumper for hardware reset. ESP32 ``EN`` is an active-high enable
+signal; pulling it low resets/disables the chip. Do not connect the reset wire
+to the J3 ground side, and do not connect Tigard ``VTGT`` when the ULX3S is
+self-powered.
 
 With Espressif OpenOCD installed, the configuration is equivalent to:
 
