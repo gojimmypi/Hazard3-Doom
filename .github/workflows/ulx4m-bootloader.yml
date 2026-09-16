@@ -26,6 +26,8 @@ permissions:
   contents: read
 
 env:
+  # TODO: Fix RTL that is more robustly checked in 2026-09-15 daily. See /TODO.md
+  OSS_CAD_SUITE_VERSION: "2026-09-14"
   XPACK_RISCV_GCC_VERSION: "15.2.0-1"
   XPACK_RISCV_GCC_LINUX_SHA256: "aaaa8060c914851a3e5ee1ba82cc3d6f80972f90638a05c6e823a37557a33758"
 
@@ -88,6 +90,7 @@ jobs:
       - name: Set up OSS CAD Suite
         uses: YosysHQ/setup-oss-cad-suite@v4
         with:
+          version: ${{ env.OSS_CAD_SUITE_VERSION }}
           # Authenticate release lookup so shared-runner IP rate limits do not
           # make the workflow flaky.
           github-token: ${{ github.token }}

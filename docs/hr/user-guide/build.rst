@@ -39,6 +39,14 @@ računalu. Zadane nextpnr postavke specifične za pločicu definirane su u
 ``scripts/build-ecp5-bitstream-common.sh`` i sažete izravno iz te datoteke u
 :doc:`../reference/board-profiles`.
 
+Za izdanje 0.2.0 ``.github/workflows/ulx4m-bootloader.yml`` namjerno fiksira OSS
+CAD Suite na ``2026-09-14`` umjesto praćenja najnovijeg nightly izdanja. Taj je
+paket poznato dobra CAD okolina za ULX4M bootloader CI ovog izdanja. Kasniji
+nightly otkrio je problem višestrukih drivera u postojećoj uporabi ECP5
+``TRELLIS_IO`` primitiva samo za ulaz. RTL čišćenje i namjerno ažuriranje
+fiksirane CAD verzije odgođeni su za 0.3.0, pa nemojte uklanjati ni pomicati taj
+pin bez ponovne provjere izgradnje bootloadera.
+
 Seed koji je prošao vremensko zatvaranje s jednom netlistom ili verzijom alata
 nije jamstvo vremena za drugu. Ako se promijene rezultat sinteze, verzija CAD
 alata, taktovi ili konfiguracija usmjeravanja, ponovno provedite odgovarajuću

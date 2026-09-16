@@ -215,6 +215,12 @@ rerun timing and DDR qualification for a release artifact rather than assuming
 that a seed remains valid. `ALLOW_TIMING_FAILURE=1` is reserved for explicit
 ULX4M-LD sweep experiments and must not be used for a release build.
 
+For the 0.2.0 release, the ``ULX4M Bootloader`` GitHub Actions workflow pins
+OSS CAD Suite to ``2026-09-14`` rather than following the latest nightly. A
+later nightly exposed an existing input-only ECP5 ``TRELLIS_IO`` issue, so the
+RTL cleanup and deliberate toolchain update are deferred to 0.3.0. Keep the
+0.2.0 pin when reproducing that release.
+
 The wrappers build the FPGA in the pinned Hazard3 submodule, then copy the final
 bitstream into this repository:
 

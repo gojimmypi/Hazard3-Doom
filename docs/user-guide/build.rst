@@ -39,6 +39,14 @@ board-specific nextpnr defaults are owned by
 ``scripts/build-ecp5-bitstream-common.sh`` and summarized directly from that
 file in :doc:`../reference/board-profiles`.
 
+For the 0.2.0 release, ``.github/workflows/ulx4m-bootloader.yml`` intentionally
+pins OSS CAD Suite to ``2026-09-14`` instead of following the latest nightly.
+That bundle is the known-good CAD toolchain for the ULX4M bootloader CI used by
+this release. A later nightly exposed a multiple-driver issue in the existing
+input-only ECP5 ``TRELLIS_IO`` usage. The RTL cleanup and deliberate CAD-suite
+update are deferred to 0.3.0, so do not remove or advance this pin without
+revalidating the bootloader build.
+
 A seed that passed timing with one netlist or tool version is not a timing
 guarantee for another. If the synthesis result, CAD-tool version, clocking, or
 routing configuration changes, rerun the appropriate timing validation before

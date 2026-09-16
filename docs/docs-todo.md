@@ -93,3 +93,37 @@ https://trabucayre.github.io/openFPGALoader/guide/install.html
 new system setup:
 
 needs git and shellcheck
+
+## Translation sync before release
+
+French and Croatian now include the new `user-guide/pinouts.rst` page, but they
+are not fully synchronized with the latest English documentation. Prioritize
+these high-drift pages before claiming full translation parity:
+
+- `user-guide/jtag-debugging.rst`
+- `user-guide/web-flasher.rst`
+- `user-guide/bootloader.rst`
+- `reference/timing-sweeps.rst`
+- `troubleshooting.rst`
+- `hardware/ulx4m/memory.rst`
+- `hardware/ulx4m/pinout-and-revisions.rst`
+
+Keep the localized landing-page translation-status notice until those pages are
+reviewed against the English source.
+
+## 0.3.0 ULX4M bootloader CAD / CI follow-up
+
+The 0.2.0 ULX4M bootloader workflow intentionally pins OSS CAD Suite
+`2026-09-14`. For 0.3.0:
+
+- clean up input-only ECP5 `TRELLIS_IO` instances so unused output-side `.I`
+  and `.T` connections are not present;
+- verify the cleanup with the 0.2.0 pinned suite and with a newer OSS CAD Suite;
+- deliberately advance the pinned OSS CAD Suite version only after the newer
+  build passes;
+- keep the CAD payload version pinned rather than returning to `latest`;
+- pin release-critical GitHub Actions, including `setup-oss-cad-suite`, to full
+  commit SHAs instead of movable major-version tags, while keeping the readable
+  release/version in a comment;
+- continue recording the actual Yosys, nextpnr, and related tool versions in CI
+  logs.

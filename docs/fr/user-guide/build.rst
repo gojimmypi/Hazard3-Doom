@@ -40,6 +40,15 @@ machine hôte. Les valeurs nextpnr propres à chaque carte sont définies dans
 ``scripts/build-ecp5-bitstream-common.sh`` et résumées directement à partir de ce
 fichier dans :doc:`../reference/board-profiles`.
 
+Pour la version 0.2.0, ``.github/workflows/ulx4m-bootloader.yml`` épingle
+volontairement OSS CAD Suite sur ``2026-09-14`` au lieu de suivre la nightly la
+plus récente. Cet ensemble constitue la chaîne d'outils CAO connue comme bonne
+pour la CI du bootloader ULX4M de cette version. Une nightly ultérieure a révélé
+un problème de pilotes multiples dans l'utilisation existante de ``TRELLIS_IO``
+ECP5 configuré uniquement en entrée. Le nettoyage RTL et la mise à jour
+délibérée de la version CAD sont reportés à 0.3.0 ; ne retirez ni n'avancez cet
+épinglage sans revalider la construction du bootloader.
+
 Une seed qui a satisfait le timing avec une netlist ou une version d'outil ne
 garantit pas le timing avec une autre. Si le résultat de synthèse, la version des
 outils CAO, l'horloge ou la configuration de routage change, relancez la

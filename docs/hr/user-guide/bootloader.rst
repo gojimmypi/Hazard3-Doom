@@ -165,6 +165,20 @@ Rijetka zamjena i oporavak bootloadera
 Za ULX4M-LD ključno je pravilo provjeriti novi bootloader u FPGA SRAM-u **prije**
 zapisa trajnog alt-5 područja.
 
+0.2.0 CI pin alata
+~~~~~~~~~~~~~~~~~~
+
+GitHub Actions workflow ``ULX4M Bootloader`` za izdanje 0.2.0 namjerno fiksira
+OSS CAD Suite na ``2026-09-14``. Time se zadržava poznato dobra okolina za
+sintezu i place-and-route koja je korištena za provjeru izdanja, umjesto tihog
+praćenja novijih nightly verzija alata.
+
+Kasniji OSS CAD Suite nightly otkrio je problem višestrukih drivera u postojećoj
+uporabi ECP5 ``TRELLIS_IO`` primitiva samo za ulaz. RTL čišćenje, testiranje s
+novijom verzijom suitea i svako namjerno ažuriranje fiksirane CAD verzije posao
+su za 0.3.0. Do tada je 0.2.0 pin dio reproducibilnog okruženja za izgradnju
+bootloadera.
+
 Konzervativni slijed:
 
 #. Izgradite bootloader za točnu pločicu i FPGA.
