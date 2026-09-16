@@ -1,4 +1,5 @@
 name: ECP5 seed sweep
+run-name: ECP5 seed sweep - ${{ inputs.target }} - seeds ${{ inputs.seed_first }}-${{ inputs.seed_last }}
 
 on:
   workflow_dispatch:
