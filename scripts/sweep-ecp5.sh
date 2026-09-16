@@ -30,6 +30,7 @@ Usage: $0 TARGET SEED [SEED ...]
        $0 --prepare TARGET
        $0 --print-sweep-dir TARGET
        $0 --print-netlist TARGET
+       $0 --print-constraint TARGET
        $0 --list-targets
 
 Targets:
@@ -124,6 +125,19 @@ case "$1" in
         ;;
     ulx4m-ld-85f)
         printf 'build/fpga_ulx4m_ld.json\n'
+        ;;
+    esac
+    exit 0
+    ;;
+--print-constraint)
+    (( $# == 2 )) || { usage; exit 1; }
+    target="$(canonical_target "$2")"
+    case "${target}" in
+    ulx3s-85f|ulx3s-12f)
+        printf 'third_party/Hazard3/example_soc/synth/fpga_ulx3s.lpf\n'
+        ;;
+    ulx4m-ld-85f)
+        printf 'third_party/Hazard3/example_soc/synth/fpga_ulx4m_ld.lpf\n'
         ;;
     esac
     exit 0
