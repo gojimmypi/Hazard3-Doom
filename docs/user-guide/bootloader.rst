@@ -220,6 +220,20 @@ The ULX4M-LD recovery procedure documented in
 an LFE5UM-85F FPGA and JTAG IDCODE ``0x01113043``. Do not use an image built for
 a different FPGA density or an unverified board mapping.
 
+0.2.0 CI toolchain pin
+~~~~~~~~~~~~~~~~~~~~~~
+
+The 0.2.0 ``ULX4M Bootloader`` GitHub Actions workflow intentionally pins OSS
+CAD Suite to ``2026-09-14``. This preserves the known-good synthesis and
+place-and-route environment used to validate the release instead of silently
+following newer nightly tool builds.
+
+A later OSS CAD Suite nightly exposed a multiple-driver issue in the existing
+input-only ECP5 ``TRELLIS_IO`` usage. That RTL cleanup, testing with a newer
+suite, and any deliberate update of the pinned CAD version are 0.3.0 work.
+Until then, the 0.2.0 pin is part of the reproducible bootloader build
+environment and should not be advanced casually.
+
 Safe replacement sequence
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 

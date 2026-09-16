@@ -170,6 +170,21 @@ Remplacement et récupération rares
 Pour ULX4M-LD, la règle essentielle est de valider le nouveau bootloader en SRAM
 FPGA **avant** d'écrire la zone persistante alt 5.
 
+Pin de la chaîne d'outils CI pour 0.2.0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Le workflow GitHub Actions ``ULX4M Bootloader`` de la version 0.2.0 épingle
+volontairement OSS CAD Suite sur ``2026-09-14``. Cela conserve l'environnement
+de synthèse et de placement-routage connu comme bon pour la validation de cette
+version au lieu de suivre silencieusement de nouvelles nightly.
+
+Une nightly ultérieure a révélé un problème de pilotes multiples dans
+l'utilisation existante de ``TRELLIS_IO`` ECP5 configuré uniquement en entrée.
+Le nettoyage RTL, les essais avec une suite plus récente et toute mise à jour
+délibérée de la version CAD épinglée sont prévus pour 0.3.0. D'ici là,
+l'épinglage 0.2.0 fait partie de l'environnement de build reproductible du
+bootloader.
+
 Séquence conservatrice :
 
 #. Construire le bootloader pour la carte et le FPGA exacts.
