@@ -39,6 +39,19 @@
     height: auto;
 }
 
+/*
+ * Sphinx emits explicit labels placed before figures as empty inline spans.
+ * An inline anchor shares the image line box, which can make fragment links
+ * land partway down a tall figure. Make figure-reference anchors block-level
+ * zero-height targets so List of Figures links land at the image top.
+ */
+.rst-content figure > span[id^="fig-"],
+.rst-content .figure > span[id^="fig-"] {
+    display: block;
+    height: 0;
+    scroll-margin-top: 1rem;
+}
+
 /* Driver compatibility indicators used by the ULX3S USB matrix. */
 .compat-table {
     border-collapse: collapse;
