@@ -14,10 +14,13 @@ The files are intended to support the Windows quick-start workflow without requi
 | `dfu-suffix.exe` | DFU image utility for adding, checking, or removing the standard USB DFU suffix from a DFU file. Distributed with dfu-util. |
 | `dfu-util-static.exe` | Statically linked Windows build of `dfu-util`. It provides the same USB Device Firmware Upgrade command-line functions with fewer external runtime dependencies. |
 | `dfu-util.exe` | USB Device Firmware Upgrade command-line utility for downloading firmware to, and where supported uploading firmware from, devices that implement USB DFU. Source: https://dfu-util.sourceforge.net |
-| `fpga_ulx3s_hdmi_doom.bit` | Prebuilt ULX3S FPGA bitstream containing the Hazard3 SoC and HDMI Doom hardware design. Load this file with `fujprog-v48-win64.exe` or `openFPGALoader.exe`. |
+| `fpga_ulx3s_hdmi_doom.bit` | Prebuilt ULX3S-85F FPGA bitstream containing the Hazard3 SoC and HDMI Doom hardware design. Load this file with `fujprog-v48-win64.exe` or `openFPGALoader.exe`. |
+| `fpga_ulx3s_12f_hdmi_doom.bit` | Prebuilt ULX3S-12F FPGA bitstream containing the Hazard3 SoC and HDMI Doom hardware design. Load this file with `fujprog-v48-win64.exe` or `openFPGALoader.exe`. |
 | `fpga_ulx4m_ld_hdmi_doom.bit` | Prebuilt ULX4M-LD FPGA bitstream from the seed-2 routing build. This image is for ULX4M-LD hardware. |
 | `fujprog-v48-win64.exe` | Windows FPGA programming utility commonly used with ULX3S boards. Source: https://github.com/kost/fujprog |
-| `hazard3-doom.h3d` | Prebuilt Hazard3-Doom application image in the project-specific H3D format. |
+| `hazard3-doom-ulx3s-12F.h3d` | Prebuilt Hazard3-Doom application image in the project-specific H3D format for ULX3S-12F. |
+| `hazard3-doom-ulx4m-ld.h3d` | Prebuilt Hazard3-Doom application image in the project-specific H3D format for ULX4M-LD-85F. |
+| `hazard3-doom.h3d` | Prebuilt Hazard3-Doom application image in the project-specific H3D format for ULX3S-85F. |
 | `hazard3-test.elf` | Hazard3 monitor and firmware ELF image. GDB uses this file for symbols, loading, and debugging. |
 | `hazard3-test.map` | Linker map generated with `hazard3-test.elf`. It lists linked sections, symbols, and addresses and is useful when diagnosing memory-layout or size problems. |
 | `INVENTORY.md` | Human-readable package inventory describing the files included in this `bin` directory. |

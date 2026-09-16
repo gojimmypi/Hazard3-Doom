@@ -162,7 +162,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "e11dc493b18f40be062bdae1c0478d97ae3e05d8980cc5b2f6eb6f8d43711a34"
+          "content": "6c07e0f4fb6b0fe7cd487614cf094958397d15baea16c0bc18625780822a017e"
         }
       ],
       "properties": [
@@ -180,7 +180,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "8f9cf130ca7e57fd769dfc290c9786358088594a0a5340d19ad8a903abf82b4e"
+          "content": "64fc8d641e2f34e9e42f919f85762766f2059b61ed4a4746eb9893af900dad4c"
         }
       ],
       "properties": [
@@ -198,7 +198,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "31669d5fde3d415065a10b932c0a952c9949caa837128ae564653c1703d39942"
+          "content": "02a491ee2f04f108f2d784fbdc2e07afc1092c9dfee23397d14bb399babd826c"
         }
       ],
       "properties": [
@@ -216,7 +216,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "73957ac95a5b0a51f9edd0fd1efcd709f51ab4556c00ca26acc5691eeade09de"
+          "content": "3236d4695474ce883b6ebb3df084c03ef677e5d88539f5ea4da974939fb32738"
         }
       ],
       "properties": [
@@ -300,8 +300,44 @@
     },
     {
       "type": "file",
+      "bom-ref": "file:bin/fpga_ulx3s_12f_hdmi_doom.bit",
+      "name": "fpga_ulx3s_12f_hdmi_doom.bit",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "624af4eecb823b66281fce84f851d2e88d9ed90f1df176fe640c970308898550"
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:bundle-location",
+          "value": "bin/fpga_ulx3s_12f_hdmi_doom.bit"
+        }
+      ]
+    },
+    {
+      "type": "file",
       "bom-ref": "file:bin/fpga_ulx3s_hdmi_doom.bit",
       "name": "fpga_ulx3s_hdmi_doom.bit",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "bff230edfccf43fbab7be1987cc0028893f4db92f67e4dd65b96fd4b3ecd1411"
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:bundle-location",
+          "value": "bin/fpga_ulx3s_hdmi_doom.bit"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:bin/fpga_ulx3s_hdmi_doom.bit.bak",
+      "name": "fpga_ulx3s_hdmi_doom.bit.bak",
       "scope": "optional",
       "hashes": [
         {
@@ -312,7 +348,25 @@
       "properties": [
         {
           "name": "hazard3-doom:bundle-location",
-          "value": "bin/fpga_ulx3s_hdmi_doom.bit"
+          "value": "bin/fpga_ulx3s_hdmi_doom.bit.bak"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:bin/fpga_ulx4m_ld.bit",
+      "name": "fpga_ulx4m_ld.bit",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4c279f3e0a960e88e33337647d2345fefd8ddabb041065bc5ff90c3286821547"
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:bundle-location",
+          "value": "bin/fpga_ulx4m_ld.bit"
         }
       ]
     },
@@ -516,13 +570,49 @@
     },
     {
       "type": "file",
+      "bom-ref": "file:bin/hazard3-doom-ulx3s-12F.h3d",
+      "name": "hazard3-doom-ulx3s-12F.h3d",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "bd68939b3e57918d2e65a66ad04b58cd3b5fd5f1e86c3bee8166dea8ca68fb8a"
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:bundle-location",
+          "value": "bin/hazard3-doom-ulx3s-12F.h3d"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "bom-ref": "file:bin/hazard3-doom-ulx4m-ld.h3d",
+      "name": "hazard3-doom-ulx4m-ld.h3d",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "61abd398cc7c1f1fe8c487f17b2adfa4d12f30096a3f16e8c083e1e9b52b5180"
+        }
+      ],
+      "properties": [
+        {
+          "name": "hazard3-doom:bundle-location",
+          "value": "bin/hazard3-doom-ulx4m-ld.h3d"
+        }
+      ]
+    },
+    {
+      "type": "file",
       "bom-ref": "file:bin/hazard3-doom.h3d",
       "name": "hazard3-doom.h3d",
       "scope": "optional",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "b7cf400621cad22b3fb3c06cafbcb5f9354744559ee296bffd9e73c38442b1db"
+          "content": "04f3b77056d776bf786c02d74de8833b5b51079098ee159d13018c935a0e6d8f"
         }
       ],
       "properties": [
@@ -81675,8 +81765,13 @@
         "file:bin/INVENTORY.sha256",
         "file:bin/INVENTORY.tsv",
         "file:bin/README.md",
+        "file:bin/fpga_ulx3s_12f_hdmi_doom.bit",
         "file:bin/fpga_ulx3s_hdmi_doom.bit",
+        "file:bin/fpga_ulx3s_hdmi_doom.bit.bak",
+        "file:bin/fpga_ulx4m_ld.bit",
         "file:bin/fpga_ulx4m_ld_hdmi_doom.bit",
+        "file:bin/hazard3-doom-ulx3s-12F.h3d",
+        "file:bin/hazard3-doom-ulx4m-ld.h3d",
         "file:bin/hazard3-doom.h3d",
         "file:bin/hazard3-test.elf",
         "file:bin/hazard3-test.map",

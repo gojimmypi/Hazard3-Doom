@@ -42,6 +42,12 @@ There may be other, similar problems as noted with bootleader, above.
 
 - Implement OLED peripherals to display the button states.
 
+## One universal .h3d 
+
+The .h3d is application software is current board specific; ideally the FPGA/monitor layer should 
+hide the board differences behind the monitor service ABI. Doom shouldn't need to know whether it is 
+running on ULX3S 12F, ULX3S 85F, or ULX4M-LD.
+
 ## wolfBoot example
 
 - Get doom to boot from a secure bootloader, see [wolfssl/wolfboot](https://github.com/wolfssl/wolfboot)
