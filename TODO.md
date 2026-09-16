@@ -12,7 +12,7 @@ Integrate `esp32_prog_ctrl.v` and SD bus arbitration so Hazard3 can safely take 
 
 ## Fix RTL causing pinned ULX4M bootloader build failure
 
-See [commit](TBD) and prior failure in [workflow](https://github.com/ulx3s/Hazard3-Doom/actions/runs/35130997354/workflow)
+See [commit f12d091b](https://github.com/gojimmypi/Hazard3-Doom/commit/f12d091bd57ec38729d86c47697abf27889f28cb#diff-e526455223a9dc08040f54ac4a5a2206ad28f44724240db3847bc14bb6c66c63) and prior failure in [workflow](https://github.com/ulx3s/Hazard3-Doom/actions/runs/35130997354/workflow)
 that needs to have related RTL tightened.
 
 Clean up input-only TRELLIS_IO RTL and then test and advance the pinned OSS CAD Suite version:
