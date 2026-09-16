@@ -6,6 +6,8 @@ directory. It brings the most common board bring-up and interactive tasks into
 one page instead of requiring a separate terminal and several command-line
 upload tools.
 
+.. _fig-hazard3-doom-web-console:
+
 .. figure:: ../images/Hazard3-Doom-Web-Console.png
    :alt: Hazard3-Doom browser Device Tool and UART console
    :class: screenshot

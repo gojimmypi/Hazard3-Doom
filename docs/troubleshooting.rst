@@ -103,6 +103,8 @@ before changing hardware or USB serial drivers.
    inventory. It returns only ports already authorized for the current browser
    origin. Use **Connect** to grant access to another port.
 
+.. _fig-chrome-pending-update:
+
 .. figure:: images/chrome-pending-update.png
    :alt: Chrome showing a Finish update button while the Hazard3-Doom UART Console is disconnected.
    :class: screenshot

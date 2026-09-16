@@ -109,6 +109,8 @@ avant de modifier le matériel ou les pilotes série USB.
    actuelle du navigateur. Utilisez **Connect** pour accorder l'accès à un autre
    port.
 
+.. _fig-chrome-pending-update:
+
 .. figure:: images/chrome-pending-update.png
    :alt: Chrome affichant un bouton Finish update alors que la console UART Hazard3-Doom est déconnectée.
    :class: screenshot

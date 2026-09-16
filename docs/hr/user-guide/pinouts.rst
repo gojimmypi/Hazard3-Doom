@@ -9,6 +9,8 @@ pinove.
 ULX3S
 -----
 
+.. _fig-ulx3s-pinout:
+
 .. figure:: ../images/ulx3s-pinout.png
    :alt: ULX3S pinout
 
@@ -119,6 +121,8 @@ projektno kvalificirano na ULX3S pločici.
 
 ULX4M-LD na Waveshare CM4 carrieru
 ----------------------------------
+
+.. _fig-ulx4m-ld-pinout:
 
 .. figure:: ../images/ulx4m_ld-pinout.png
    :alt: ULX4M-LD pinout

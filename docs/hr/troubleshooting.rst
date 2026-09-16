@@ -104,6 +104,8 @@ serijskih drivera provjerite preglednik.
    trenutačni browser origin. Za dodjelu pristupa drugom portu koristite
    **Connect**.
 
+.. _fig-chrome-pending-update:
+
 .. figure:: images/chrome-pending-update.png
    :alt: Chrome prikazuje gumb Finish update dok je Hazard3-Doom UART Console odspojen.
    :class: screenshot

@@ -57,6 +57,8 @@ Video test pattern
 The monitor can generate a deterministic color-bar pattern when validating the
 HDMI path independently of Doom rendering:
 
+.. _fig-hdmi-colorbar-test-pattern:
+
 .. figure:: ../images/hdmi-colorbar-test-pattern.png
    :alt: Hazard3-Doom HDMI color bar test pattern
 

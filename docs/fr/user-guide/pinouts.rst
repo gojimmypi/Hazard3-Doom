@@ -9,6 +9,8 @@ les schémas, les contraintes LPF et les broches du boîtier FPGA.
 ULX3S
 -----
 
+.. _fig-ulx3s-pinout:
+
 .. figure:: ../images/ulx3s-pinout.png
    :alt: Brochage ULX3S
 
@@ -119,6 +121,8 @@ il n'est pas encore qualifié par le projet sur ULX3S.
 
 ULX4M-LD sur le carrier Waveshare CM4
 -------------------------------------
+
+.. _fig-ulx4m-ld-pinout:
 
 .. figure:: ../images/ulx4m_ld-pinout.png
    :alt: Brochage ULX4M-LD

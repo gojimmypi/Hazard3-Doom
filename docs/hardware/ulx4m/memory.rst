@@ -82,6 +82,8 @@ Current checked-in generation sources support two part-number selections:
      - 512 MiB
      - ``AS4C256M16D3A``
 
+.. _fig-alliance-ddr3-variants:
+
 .. figure:: ../../images/as4c256m16d3-flavors.png
    :alt: Alliance Memory AS4C256M16D3 ordering-code variants
 

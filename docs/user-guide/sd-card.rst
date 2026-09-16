@@ -15,6 +15,8 @@ Place these files in the root directory of a FAT-formatted micro-SD card:
 
 ``DOOM.WAD`` is the canonical IWAD filename used by the current cold-boot flow.
 
+.. _fig-hazard3-sd-contents:
+
 .. figure:: ../images/HAZARD3-SD-Contents.png
    :alt: Hazard3-Doom files on the HAZARD3-SD volume
    :class: screenshot
@@ -23,6 +25,8 @@ Place these files in the root directory of a FAT-formatted micro-SD card:
    the card.
 
 On Windows, the prepared card may appear as a volume such as ``HAZARD3-SD``:
+
+.. _fig-windows-hazard3-sd-volume:
 
 .. figure:: ../images/Windows-HAZARD3-SD-volume.png
    :alt: HAZARD3-SD volume in Windows File Explorer
@@ -65,6 +69,8 @@ A healthy status report includes information such as:
 
 micro-SD connector reference
 ----------------------------
+
+.. _fig-microsd-pinout:
 
 .. figure:: ../images/sd-card-pinout.png
    :alt: micro-SD card contact pinout

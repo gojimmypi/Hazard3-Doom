@@ -92,6 +92,8 @@ Chaque processus nextpnr peut consommer plusieurs centaines de Mio. Une valeur
 élevée de ``SWEEP_JOBS`` n'est utile que si le CPU, la RAM, le stockage et le
 système hôte peuvent suivre.
 
+.. _fig-concurrent-nextpnr-ecp5:
+
 .. figure:: ../images/concurrent-nextpnr-ecp5.png
    :alt: Plusieurs processus nextpnr-ecp5 concurrents pendant un sweep local
    :class: screenshot

@@ -196,6 +196,8 @@ the ESP32 ``EN`` signal when shorted. This disables the ESP32 and can help
 isolate it from the shared SD bus while troubleshooting or while giving the
 FPGA exclusive SD-card ownership.
 
+.. _fig-ulx3s-j3-wifi-off:
+
 .. figure:: ../images/ulx3s-j3-schematic-zoom.png
    :alt: ULX3S J3 jumper schematic detail showing ESP32 EN pulled low
    :align: center
@@ -301,6 +303,8 @@ This allows PuTTY/Web Serial on the UART and OpenOCD JTAG at the same time;
 there is no reason to keep changing drivers between them. If libusbK is
 accidentally installed on Interface 0, the UART COM port disappears. Restore
 Interface 0 to the FTDI USB Serial/VCP driver and leave Interface 1 on libusbK.
+
+.. _fig-zadig-tigard-libusbk:
 
 .. figure:: ../images/Zadig-Tigard-set-interface-1-libusbk.png
    :alt: Zadig selecting libusbK for Tigard Interface 1

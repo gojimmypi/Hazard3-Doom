@@ -10,6 +10,8 @@ and FPGA package-ball assignments.
 ULX3S
 -----
 
+.. _fig-ulx3s-pinout:
+
 .. figure:: ../images/ulx3s-pinout.png
    :alt: ULX3S pinout
 
@@ -150,6 +152,8 @@ an external adapter to force an incorrect TDI level during reset.
 
 ULX4M-LD on the Waveshare CM4 carrier
 --------------------------------------
+
+.. _fig-ulx4m-ld-pinout:
 
 .. figure:: ../images/ulx4m_ld-pinout.png
    :alt: ULX4M-LD pinout

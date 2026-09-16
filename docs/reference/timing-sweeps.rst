@@ -190,6 +190,8 @@ Each local nextpnr process can consume hundreds of MiB of memory. Increasing
 ``SWEEP_JOBS`` can shorten wall-clock time, but only until CPU, RAM, storage, or
 WSL/host scheduling becomes the bottleneck.
 
+.. _fig-concurrent-nextpnr-ecp5:
+
 .. figure:: ../images/concurrent-nextpnr-ecp5.png
    :alt: Multiple concurrent nextpnr-ecp5 processes during a local sweep
    :class: screenshot

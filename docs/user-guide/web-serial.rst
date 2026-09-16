@@ -40,6 +40,8 @@ Browser and serving requirements
 Web Serial requires a browser that exposes ``navigator.serial`` and a secure
 context.
 
+.. _fig-webserial-connect:
+
 .. figure:: ../images/webserial-connect.png
    :alt: Browser Web Serial device selection dialog
    :class: screenshot
