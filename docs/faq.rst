@@ -55,6 +55,7 @@ See the browser update indicator below:
 .. image:: images/chrome-pending-update.png
    :alt: Chrome pending update indicator
    :align: center
+   :class: screenshot
 
 During Hazard3-Doom testing on Windows, Chrome's internal device log still
 reported the CH340 adapter as ``COM7``, but the Web Serial chooser displayed

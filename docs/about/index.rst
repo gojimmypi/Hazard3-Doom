@@ -92,6 +92,11 @@ hardware project describes it as compatible with the Raspberry Pi Compute
 Module 4 (CM4) carrier-board pinout, allowing the FPGA module to be used with
 CM4-style base boards or with a purpose-built carrier.
 
+.. figure:: ../images/ulx4m_ld-pinout.png
+   :alt: ULX4M-LD pinout
+
+   **ULX4M-LD Pinout** - FPGA pin assignments on the `Waveshare CM4 Carrier <https://www.waveshare.com/wiki/CM4-IO-BASE-A#Dimension>`_.
+
 That modular split is useful in both teaching and product exploration: the FPGA
 and memory remain on the ULX4M while the carrier can provide the connectors,
 power, cameras, displays, networking, storage, or other application-specific
@@ -126,6 +131,7 @@ External ULX4M resources
 * `ULX4M hardware repository <https://github.com/intergalaktik/ulx4m>`_
 * `ULX4M project and carrier compatibility notes <https://www.crowdsupply.com/intergalaktik/ulx4m/updates/pre-launch-progress>`_
 * `Raspberry Pi Compute Module documentation <https://www.raspberrypi.com/documentation/computers/compute-module.html>`_
+* `Waveshare CM4-IO-BASE-A Schematic <https://files.waveshare.com/upload/a/aa/CM4-IO-BASE-A_V4_SchDoc.pdf>`_
 * `ULX4M Open Source Hardware certification <https://certification.oshwa.org/hr000013.html>`_
 * `yosys <https://github.com/YosysHQ/yosys>`_
 * `nextpnr-ecp5 <https://github.com/YosysHQ/nextpnr>`_

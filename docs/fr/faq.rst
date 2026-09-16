@@ -52,6 +52,7 @@ Voir l'indicateur de mise à jour du navigateur ci-dessous :
 .. image:: images/chrome-pending-update.png
    :alt: Indicateur de mise à jour Chrome en attente
    :align: center
+   :class: screenshot
 
 Pendant les tests de Hazard3-Doom sous Windows, le journal interne des
 périphériques de Chrome signalait toujours l'adaptateur CH340 comme ``COM7``,

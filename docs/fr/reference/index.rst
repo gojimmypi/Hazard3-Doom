@@ -8,3 +8,4 @@ Référence
    scripts
    timing-sweeps
    board-profiles
+   figures

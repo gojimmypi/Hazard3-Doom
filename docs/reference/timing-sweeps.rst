@@ -190,9 +190,11 @@ Each local nextpnr process can consume hundreds of MiB of memory. Increasing
 ``SWEEP_JOBS`` can shorten wall-clock time, but only until CPU, RAM, storage, or
 WSL/host scheduling becomes the bottleneck.
 
+.. _fig-concurrent-nextpnr-ecp5:
+
 .. figure:: ../images/concurrent-nextpnr-ecp5.png
    :alt: Multiple concurrent nextpnr-ecp5 processes during a local sweep
-   :width: 90%
+   :class: screenshot
 
    Multiple local nextpnr-ecp5 routes can run concurrently. Size
    ``SWEEP_JOBS`` for the machine rather than simply choosing the largest value.
@@ -623,8 +625,8 @@ The main sweep implementation is spread across these files:
 See :doc:`scripts` for the broader script catalog and
 :doc:`board-profiles` for target clocks and current routed checkpoints.
 
-Related links
--------------
+External References
+-------------------
 
 * `RISC-V GCC XPACK <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_
 * `nextpnr-ecp5 <https://github.com/YosysHQ/nextpnr>`_

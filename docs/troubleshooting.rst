@@ -39,7 +39,7 @@ the normal FTDI VCP/D2XX driver.
 
 .. figure:: images/Zadig-FTDI-to-WinUSB.png
    :alt: Zadig replacing the ULX3S FTDI driver with WinUSB.
-   :width: 580px
+   :class: screenshot
 
    Example ULX3S FT231X WinUSB selection.
 
@@ -103,9 +103,11 @@ before changing hardware or USB serial drivers.
    inventory. It returns only ports already authorized for the current browser
    origin. Use **Connect** to grant access to another port.
 
+.. _fig-chrome-pending-update:
+
 .. figure:: images/chrome-pending-update.png
    :alt: Chrome showing a Finish update button while the Hazard3-Doom UART Console is disconnected.
-   :width: 520px
+   :class: screenshot
 
    If the Web Serial chooser is empty while Chrome shows a pending update,
    complete the update and relaunch before changing serial drivers.

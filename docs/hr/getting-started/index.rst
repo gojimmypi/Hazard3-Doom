@@ -10,5 +10,5 @@ Ovaj odjeljak opisuje najkraći put od svježe kopije repozitorija do pokrenutog
    prerequisites
    vm-tips
    build
-   tiny-tapeout-ulx3s
    programming
+   tiny-tapeout-ulx3s

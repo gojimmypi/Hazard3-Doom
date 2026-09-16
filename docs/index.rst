@@ -57,19 +57,24 @@ you plenty to explore.
 Start here
 ----------
 
-* :doc:`about/index` - understand what the project is, what it teaches, and why ULX4M is useful for modular prototyping.
+* :doc:`about/index` - understand what the project is and what you can learn from it.
 * :doc:`getting-started/quick-start` - get a board running with the minimum number of steps.
+* :doc:`user-guide/web-tool` - use the browser Device Tool for common board bring-up and interactive tasks.
 * :doc:`getting-started/build` - build the FPGA, resident monitor, and Doom image.
-* :doc:`getting-started/tiny-tapeout-ulx3s` - build Tiny Tapeout projects for ULX3S ECP5 locally or in GitHub Actions.
-* :doc:`hardware/ulx4m/index` - explore the ULX4M board itself: FPGA, clocks, SDR/DDR3, flash, video, SD, SerDes, pin constraints, and revisions.
-* :doc:`reference/timing-sweeps` - run local/GitHub ECP5 seed sweeps and interpret live timing results.
-* :doc:`user-guide/web-tool` - use the browser device tool for UART, FPGA programming, console firmware loading, H3D/IWAD upload, and screen snip.
-* :doc:`user-guide/web-flasher` - detailed ULX3S FPGA SRAM programming with WebUSB.
-* :doc:`user-guide/sd-card` - configure standalone cold boot from micro-SD.
-* :doc:`user-guide/i2cdriver` - scan and inspect the SAO I2C bus on HDMI.
+
+Explore further
+---------------
+
+* :doc:`hardware/index` - explore the ULX3S and ULX4M hardware used by Hazard3-Doom.
+* :doc:`user-guide/pinouts` - find board pinouts and practical UART/JTAG wiring.
 * :doc:`user-guide/jtag-debugging` - debug Hazard3 through OpenOCD/GDB or VisualGDB.
-* :doc:`architecture/hazard3/index` - learn the Hazard3 RISC-V processor, pipeline, ISA configuration, CSRs, buses, and debug architecture.
-* :doc:`architecture/system` - understand how the FPGA, monitor, SDRAM, HDMI, SD, SAO, and ESP32 pieces fit together.
+* :doc:`user-guide/i2cdriver` - scan and interact with the SAO I2C bus.
+* :doc:`user-guide/web-flasher` - program the ULX3S FPGA directly with WebUSB.
+* :doc:`architecture/hazard3/index` - learn the Hazard3 RISC-V processor, pipeline, ISA configuration, buses, and debug architecture.
+* :doc:`architecture/system` - understand how the FPGA, monitor, memory, HDMI, SD, SAO, and ESP32 pieces fit together.
+* :doc:`reference/timing-sweeps` - run ECP5 seed sweeps and interpret timing results.
+* :doc:`user-guide/sd-card` - configure standalone cold boot from micro-SD.
+* :doc:`getting-started/tiny-tapeout-ulx3s` - build Tiny Tapeout projects for ULX3S ECP5.
 
 .. toctree::
    :maxdepth: 2

@@ -26,9 +26,11 @@ navigateur n'efface ni ne réécrit la flash SPI de configuration de l'ULX3S.
 Le flasher web convient donc pour tester un bitstream Hazard3-Doom nouvellement
 construit avant d'envisager une mise à jour persistante de la flash.
 
+.. _fig-webusb-flasher:
+
 .. figure:: ../images/Flash-from-WebUSB.png
    :alt: Flasher web FPGA Hazard3-Doom programmant une image ECP5 ULX3S via WebUSB.
-   :width: 800px
+   :class: screenshot
 
    Le flasher web FPGA utilise WebUSB pour le JTAG ULX3S tandis que le reste de
    la page conserve la console Web Serial existante.
@@ -134,9 +136,11 @@ Le flasher reconnaît le cas d'accès refusé sous Windows et journalise une
 indication concernant le pilote WinUSB plutôt que de le traiter comme une panne
 JTAG.
 
+.. _fig-webusb-access-denied:
+
 .. figure:: ../images/WebUSB-USBDevice-Access-Denied.png
    :alt: Flasher WebUSB Hazard3-Doom affichant USBDevice Access denied avant installation de WinUSB.
-   :width: 780px
+   :class: screenshot
 
    L'accès refusé par ``USBDevice.open()`` survient avant le début du JTAG. Sous
    Windows, vérifiez l'association de pilote du FT231X avant d'étudier le FPGA
@@ -151,9 +155,11 @@ Une façon de sélectionner WinUSB consiste à utiliser Zadig :
 #. Sélectionnez **WinUSB** comme pilote de remplacement et installez-le.
 #. Débranchez puis rebranchez ``US1`` avant de revenir au navigateur.
 
+.. _fig-zadig-ftdi-winusb:
+
 .. figure:: ../images/Zadig-FTDI-to-WinUSB.png
    :alt: Zadig configuré pour remplacer le pilote FTDI ULX3S par WinUSB.
-   :width: 580px
+   :class: screenshot
 
    Exemple de sélection Zadig pour un FT231X ULX3S. Vérifiez le périphérique
    sélectionné avant de remplacer son pilote.
@@ -170,9 +176,11 @@ Pour restaurer le pilote FTDI normal de ``US1``, utilisez le Gestionnaire de
 périphériques Windows pour remettre le pilote du périphérique USB ULX3S sur le
 pilote FTDI installé, ou réinstallez le paquet FTDI VCP/D2XX approprié.
 
+.. _fig-windows-restore-ftdi-driver:
+
 .. figure:: ../images/Windows-set-default-USB-from-WinUSB.png
    :alt: Commande Mettre à jour le pilote du Gestionnaire de périphériques Windows pour un périphérique ULX3S utilisant WinUSB.
-   :width: 620px
+   :class: screenshot
 
    Le Gestionnaire de périphériques peut restaurer le pilote FTDI normal
    lorsqu'une application FTDI VCP/D2XX telle que ``fujprog`` sous Windows est

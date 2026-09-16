@@ -50,8 +50,11 @@ The documented ULX3S SAO signals are:
      - 3
      - 11
 
-.. image:: ../images/ulx3s-pinout.png
+.. figure:: ../images/ulx3s-pinout.png
    :alt: ULX3S pinout
+
+   **ULX3S Pinout** - The SAO signals use J1 GPIO locations shown above. See
+   :doc:`pinouts` for the general board-wiring reference.
 
 Hazard3 APB base
 ----------------

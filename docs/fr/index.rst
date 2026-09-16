@@ -7,6 +7,16 @@ Hazard3-Doom est bien plus que Doom porté sur une carte FPGA supplémentaire.
 C'est un écosystème matériel et logiciel pédagogique construit autour du
 processeur RISC-V open source Hazard3 et des familles FPGA ECP5 ULX3S et ULX4M.
 
+.. important:: État de la traduction
+
+   La documentation anglaise est la référence pour les changements les plus
+   récents de cette version. Les pages françaises suivent la même structure
+   générale, mais certaines pages techniques - notamment JTAG, bootloader,
+   WebUSB, sweeps de timing et ULX4M - peuvent être en retard sur l'anglais.
+   Lorsqu'un détail de câblage, de commande ou de qualification matérielle est
+   critique, vérifiez aussi la page anglaise correspondante.
+
+
 
 .. admonition:: Le même CPU Hazard3 que dans le Raspberry Pi RP2350
    :class: important
@@ -53,19 +63,24 @@ inspecter et modifier de bout en bout, Hazard3-Doom est conçu pour être explor
 Commencer ici
 -------------
 
-* :doc:`about/index` - comprendre le projet, ses usages pédagogiques et l'intérêt de l'ULX4M pour le prototypage modulaire.
+* :doc:`about/index` - comprendre le projet et ce que vous pouvez y apprendre.
 * :doc:`getting-started/quick-start` - mettre une carte en fonctionnement avec un minimum d'étapes.
+* :doc:`user-guide/web-tool` - utiliser l'outil Device Tool du navigateur pour les tâches courantes de mise en route et d'interaction.
 * :doc:`getting-started/build` - construire le FPGA, le moniteur résident et l'image Doom.
-* :doc:`getting-started/tiny-tapeout-ulx3s` - construire des projets Tiny Tapeout pour le FPGA ECP5 ULX3S localement ou avec GitHub Actions.
-* :doc:`hardware/ulx4m/index` - explorer le matériel ULX4M : FPGA, horloges, SDR/DDR3, flash, vidéo, SD, SerDes, contraintes de broches et révisions.
-* :doc:`reference/timing-sweeps` - exécuter les sweeps ECP5 localement/GitHub et interpréter le timing en direct.
-* :doc:`user-guide/web-tool` - utiliser l'outil web pour l'UART, la programmation FPGA, le firmware console, H3D/IWAD et la capture d'écran.
-* :doc:`user-guide/web-flasher` - guide détaillé de programmation de la SRAM FPGA ULX3S avec WebUSB.
-* :doc:`user-guide/sd-card` - configurer un démarrage autonome à froid depuis une carte micro-SD.
-* :doc:`user-guide/i2cdriver` - analyser et inspecter le bus I2C SAO sur HDMI.
+
+Pour aller plus loin
+--------------------
+
+* :doc:`hardware/index` - explorer le matériel ULX3S et ULX4M utilisé par Hazard3-Doom.
+* :doc:`user-guide/pinouts` - consulter les brochages et le câblage pratique UART/JTAG.
 * :doc:`user-guide/jtag-debugging` - déboguer Hazard3 avec OpenOCD/GDB ou VisualGDB.
-* :doc:`architecture/hazard3/index` - découvrir le processeur RISC-V Hazard3, son pipeline, sa configuration ISA, ses CSR, ses bus et son architecture de débogage.
-* :doc:`architecture/system` - comprendre comment le FPGA, le moniteur, la SDRAM, HDMI, la SD, le SAO et l'ESP32 s'assemblent.
+* :doc:`user-guide/i2cdriver` - scanner et utiliser le bus I2C SAO de manière interactive.
+* :doc:`user-guide/web-flasher` - programmer directement le FPGA ULX3S avec WebUSB.
+* :doc:`architecture/hazard3/index` - découvrir le processeur RISC-V Hazard3, son pipeline, sa configuration ISA, ses bus et son architecture de débogage.
+* :doc:`architecture/system` - comprendre comment s'assemblent le FPGA, le moniteur, la mémoire, HDMI, la SD, le SAO et l'ESP32.
+* :doc:`reference/timing-sweeps` - exécuter les sweeps ECP5 et interpréter les résultats de timing.
+* :doc:`user-guide/sd-card` - configurer un démarrage autonome à froid depuis une carte micro-SD.
+* :doc:`getting-started/tiny-tapeout-ulx3s` - construire des projets Tiny Tapeout pour le FPGA ECP5 ULX3S.
 
 .. toctree::
    :maxdepth: 2

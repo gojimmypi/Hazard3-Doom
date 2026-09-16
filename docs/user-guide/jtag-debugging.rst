@@ -81,6 +81,161 @@ is a useful confirmation. If the TAP/core is never found, verify that the
 FT231X is attached to the guest, the browser FPGA flasher is disconnected, and
 no other process owns the JTAG interface.
 
+ULX3S with external Tigard
+---------------------------
+
+Tigard can be used instead of the onboard FT231X. This is particularly useful
+for comparing debug adapters, avoiding FT231X driver changes, or using a faster
+FT2232H MPSSE JTAG path. The wiring follows the published Tigard and ULX3S JTAG
+pinouts; qualify this external-adapter path on the target board before treating
+it as a project-tested configuration.
+
+Wire Tigard's JTAG header directly to ULX3S J4:
+
+.. code-block:: text
+
+   Tigard GND (pin 2, black)    -> ULX3S J4 GND
+   Tigard TCK (pin 3, white)    -> ULX3S J4 TCK
+   Tigard TDI (pin 4, grey)     -> ULX3S J4 TDI
+   Tigard TDO (pin 5, purple)   <- ULX3S J4 TDO
+   Tigard TMS (pin 6, blue)     -> ULX3S J4 TMS
+   Tigard VTGT                  -> not connected
+   Tigard TRST / SRST           -> not connected
+
+Set Tigard to ``SPI/JTAG`` mode and 3.3 V logic. Power ULX3S normally from
+US1. See :doc:`pinouts` for the J4 physical layout and wiring cautions.
+
+The Tigard adapter portion of an OpenOCD configuration is:
+
+.. code-block:: text
+
+   adapter driver ftdi
+   transport select jtag
+   ftdi vid_pid 0x0403 0x6010
+   ftdi channel 1
+   ftdi layout_init 0x0038 0x003b
+   ftdi layout_signal nTRST -data 0x0010
+   ftdi layout_signal nSRST -data 0x0020
+   adapter speed 1000
+
+The Hazard3 target portion is the same as ``openocd/ulx3s-openocd.cfg``: the
+ECP5 TAP has an 8-bit instruction register, and Hazard3 DTMCS/DMI are reached
+through ECP5 private instructions ``0x32`` and ``0x38``. For an 85F ULX3S, the
+ECP5 IDCODE is ``0x41113043``. A 12F board uses ``0x21111043`` instead.
+
+After OpenOCD reports the ECP5 TAP, examines one 32-bit RISC-V hart, and opens
+port 3333, connect the project's RISC-V GDB to the ELF. With the exact GDB
+executable supplied by the installed RISC-V toolchain, the interactive flow is
+conceptually:
+
+.. code-block:: text
+
+   $ riscv-none-elf-gdb path/to/hazard3-boot-monitor.elf
+   (gdb) target extended-remote localhost:3333
+   (gdb) monitor halt
+   (gdb) break main
+   (gdb) continue
+   (gdb) next
+   (gdb) stepi
+   (gdb) info registers
+   (gdb) continue
+
+``next`` and ``step`` operate at source level when debug information is
+available; ``nexti`` and ``stepi`` operate one machine instruction at a time.
+This is true single-step debugging of the Hazard3 RISC-V core running inside
+the FPGA. The external Tigard still enters through the ECP5 JTAG TAP; it does
+not connect directly to RISC-V pins.
+
+Debugging the onboard ULX3S ESP32 with Tigard
+----------------------------------------------
+
+The onboard ESP32 is a completely separate JTAG target from Hazard3. It is a
+classic dual-core Xtensa ESP32, so use Espressif's ESP32 OpenOCD support and an
+Xtensa GDB, not the RISC-V GDB used for Hazard3. This connection is derived
+from the ULX3S schematic/LPF and Espressif's documented JTAG pins; it has not
+yet been project-qualified on ULX3S.
+
+ESP32 native JTAG uses:
+
+.. code-block:: text
+
+   TDI -> GPIO12 / MTDI
+   TCK -> GPIO13 / MTCK
+   TMS -> GPIO14 / MTMS
+   TDO <- GPIO15 / MTDO
+
+On ULX3S these four ESP32 signals are shared with the microSD interface. The
+practical Tigard connection therefore reaches them through the SD signals:
+
+.. code-block:: text
+
+   Tigard TDI (pin 4, grey)    -> SD DAT2 -> ESP32 GPIO12
+   Tigard TCK (pin 3, white)   -> SD DAT3 -> ESP32 GPIO13
+   Tigard TMS (pin 6, blue)    -> SD CLK  -> ESP32 GPIO14
+   Tigard TDO (pin 5, purple)  <- SD CMD  <- ESP32 GPIO15
+   Tigard GND (pin 2, black)   -> board GND
+
+The corresponding microSD contacts are DAT2 pin 1, DAT3 pin 2, CMD pin 3,
+CLK pin 5, and VSS/GND pin 6. A breakout or extension is much easier and safer
+than probing the socket contacts directly. Remove the SD card.
+
+.. warning::
+
+   The ECP5 is connected to the same SD signals. Do not debug the ESP32 over
+   these wires while the FPGA may be driving the SD bus. Use or verify an FPGA
+   image that leaves ``SD_D2``, ``SD_D3``, ``SD_CLK``, and ``SD_CMD`` high
+   impedance. The normal Hazard3-Doom design uses SD, so this needs deliberate
+   isolation before connecting Tigard.
+
+Holding the ESP32 in reset with J3
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If SD card problems are encountered on the FPGA side, the ULX3S ``J3`` jumper
+can be used to hold the ESP32 in reset. ``J3`` is a 2-pin header that grounds
+the ESP32 ``EN`` signal when shorted. This disables the ESP32 and can help
+isolate it from the shared SD bus while troubleshooting or while giving the
+FPGA exclusive SD-card ownership.
+
+.. _fig-ulx3s-j3-wifi-off:
+
+.. figure:: ../images/ulx3s-j3-schematic-zoom.png
+   :alt: ULX3S J3 jumper schematic detail showing ESP32 EN pulled low
+   :align: center
+
+   **ULX3S J3 (WIFI_OFF) jumper** -- shorting ``J3`` pulls the ESP32 ``EN``
+   signal low, holding the ESP32 in reset/disabled state.
+
+Tigard ``SRST`` may optionally be connected to the ``WIFI_OFF``/EN side of the
+ULX3S J3 jumper for hardware reset. ESP32 ``EN`` is an active-high enable
+signal; pulling it low resets/disables the chip. Do not connect the reset wire
+to the J3 ground side, and do not connect Tigard ``VTGT`` when the ULX3S is
+self-powered.
+
+With Espressif OpenOCD installed, the configuration is equivalent to:
+
+.. code-block:: bash
+
+   openocd \
+       -f interface/ftdi/tigard.cfg \
+       -c "set ESP32_FLASH_VOLTAGE 3.3" \
+       -f target/esp32.cfg
+
+Then use the ELF produced by the ESP32 build:
+
+.. code-block:: text
+
+   $ xtensa-esp32-elf-gdb path/to/esp32-app.elf
+   (gdb) target remote localhost:3333
+   (gdb) monitor halt
+   (gdb) break app_main
+   (gdb) continue
+   (gdb) next
+   (gdb) stepi
+
+The ``ESP32_FLASH_VOLTAGE`` setting matters because GPIO12/TDI is also an ESP32
+boot-strapping input. Espressif's OpenOCD configuration uses the flash-voltage
+setting to keep the JTAG TDI idle state appropriate for a 3.3 V flash device.
+
 ULX4M-LD with Tigard
 --------------------
 
@@ -149,9 +304,11 @@ there is no reason to keep changing drivers between them. If libusbK is
 accidentally installed on Interface 0, the UART COM port disappears. Restore
 Interface 0 to the FTDI USB Serial/VCP driver and leave Interface 1 on libusbK.
 
+.. _fig-zadig-tigard-libusbk:
+
 .. figure:: ../images/Zadig-Tigard-set-interface-1-libusbk.png
    :alt: Zadig selecting libusbK for Tigard Interface 1
-   :width: 85%
+   :class: screenshot
 
    Apply libusbK to Tigard Interface 1 for JTAG. Keep Interface 0 on the FTDI
    VCP driver for the UART COM port.
@@ -170,7 +327,8 @@ confirmed wiring is:
    Tigard GND               -> physical pin 20
    Tigard VCC               -> not connected
 
-TX and RX must be crossed exactly as shown.
+TX and RX must be crossed exactly as shown. See :doc:`pinouts` for the annotated
+ULX4M-LD carrier pinout.
 
 ULX4M-LD OpenOCD configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -304,3 +462,12 @@ Reduce the JTAG clock only after checking the active FPGA image, Tigard driver
 split, and target power/reference settings.
 
 See :doc:`../troubleshooting` for common OpenOCD and ownership problems.
+
+External References
+-------------------
+
+* `ULX3S manual <https://github.com/emard/ulx3s/blob/master/doc/MANUAL.md>`_
+* `ULX3S v2.x/v3.0 constraints <https://github.com/emard/ulx3s/blob/master/doc/constraints/ulx3s_v20.lpf>`_
+* `Tigard pinout and usage <https://github.com/tigard-tools/tigard>`_
+* `Espressif ESP32 JTAG pin mapping <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/jtag-debugging/configure-other-jtag.html>`_
+* `yosys nextpnr supported primitives <https://github.com/YosysHQ/nextpnr/blob/main/ecp5/docs/primitives.md>`_

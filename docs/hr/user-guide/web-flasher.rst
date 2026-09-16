@@ -26,9 +26,11 @@ konfiguracijski flash.
 Zbog toga je web flasher prikladan za ispitivanje novog Hazard3-Doom bitstreama
 prije razmatranja trajnog ažuriranja flasha.
 
+.. _fig-webusb-flasher:
+
 .. figure:: ../images/Flash-from-WebUSB.png
    :alt: Hazard3-Doom FPGA web flasher programira ULX3S ECP5 sliku putem WebUSB-a.
-   :width: 800px
+   :class: screenshot
 
    FPGA web flasher koristi WebUSB za ULX3S JTAG, dok ostatak stranice zadržava
    postojeću Web Serial konzolu.
@@ -130,9 +132,11 @@ Tipična pogreška WebUSB upravljačkog programa je:
 Flasher prepoznaje slučaj odbijenog pristupa na Windowsu i bilježi savjet za
 WinUSB driver umjesto da ga tretira kao JTAG pogrešku.
 
+.. _fig-webusb-access-denied:
+
 .. figure:: ../images/WebUSB-USBDevice-Access-Denied.png
    :alt: Hazard3-Doom WebUSB flasher prikazuje USBDevice Access denied prije instalacije WinUSB-a.
-   :width: 780px
+   :class: screenshot
 
    ``USBDevice.open()`` access denied nastaje prije početka JTAG-a. Na Windowsu
    provjerite binding FT231X upravljačkog programa prije istraživanja FPGA-a ili
@@ -149,9 +153,11 @@ Jedan način odabira WinUSB-a jest Zadig:
 #. Odaberite **WinUSB** kao zamjenski driver i instalirajte ga.
 #. Odspojite i ponovno spojite ``US1`` prije povratka u preglednik.
 
+.. _fig-zadig-ftdi-winusb:
+
 .. figure:: ../images/Zadig-FTDI-to-WinUSB.png
    :alt: Zadig podešen za zamjenu ULX3S FTDI upravljačkog programa WinUSB-om.
-   :width: 580px
+   :class: screenshot
 
    Primjer Zadig odabira za ULX3S FT231X. Provjerite odabrani uređaj prije
    zamjene njegova upravljačkog programa.
@@ -167,9 +173,11 @@ Da biste ``US1`` vratili na uobičajeni FTDI driver, u Windows Device Manageru
 vratite upravljački program ULX3S USB uređaja na instalirani FTDI driver ili
 ponovno instalirajte odgovarajući FTDI VCP/D2XX paket.
 
+.. _fig-windows-restore-ftdi-driver:
+
 .. figure:: ../images/Windows-set-default-USB-from-WinUSB.png
    :alt: Naredba Update driver u Windows Device Manageru za ULX3S uređaj koji koristi WinUSB.
-   :width: 620px
+   :class: screenshot
 
    Device Manager može vratiti uobičajeni FTDI driver kada je potrebna FTDI
    VCP/D2XX aplikacija poput Windows ``fujprog``.

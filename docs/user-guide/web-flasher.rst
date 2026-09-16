@@ -26,9 +26,11 @@ configuration flash.
 This makes the web flasher suitable for testing a newly built Hazard3-Doom
 bitstream before considering a persistent flash update.
 
+.. _fig-webusb-flasher:
+
 .. figure:: ../images/Flash-from-WebUSB.png
    :alt: Hazard3-Doom FPGA web flasher programming an ULX3S ECP5 image through WebUSB.
-   :width: 800px
+   :class: screenshot
 
    The FPGA web flasher uses WebUSB for ULX3S JTAG while the rest of the page
    retains the existing Web Serial console.
@@ -166,9 +168,11 @@ A typical WebUSB driver mismatch is:
 The flasher recognizes the Windows access-denied case and logs a WinUSB driver
 hint rather than treating it as a JTAG failure.
 
+.. _fig-webusb-access-denied:
+
 .. figure:: ../images/WebUSB-USBDevice-Access-Denied.png
    :alt: Hazard3-Doom WebUSB flasher showing USBDevice Access denied before WinUSB is installed.
-   :width: 780px
+   :class: screenshot
 
    ``USBDevice.open()`` access denied occurs before JTAG begins. On Windows,
    verify the FT231X driver binding before investigating FPGA or JTAG wiring.
@@ -184,9 +188,11 @@ One way to select WinUSB is with Zadig:
 #. Select **WinUSB** as the replacement driver and install it.
 #. Unplug and reconnect ``US1`` before returning to the browser.
 
+.. _fig-zadig-ftdi-winusb:
+
 .. figure:: ../images/Zadig-FTDI-to-WinUSB.png
    :alt: Zadig configured to replace the ULX3S FTDI driver with WinUSB.
-   :width: 580px
+   :class: screenshot
 
    Example Zadig selection for an ULX3S FT231X. Verify the selected device
    before replacing its driver.
@@ -203,9 +209,11 @@ To return ``US1`` to the normal FTDI driver, use Windows Device Manager to
 update the ULX3S USB device driver back to the installed FTDI driver, or
 reinstall the appropriate FTDI VCP/D2XX package.
 
+.. _fig-windows-restore-ftdi-driver:
+
 .. figure:: ../images/Windows-set-default-USB-from-WinUSB.png
    :alt: Windows Device Manager Update driver command for an ULX3S device using WinUSB.
-   :width: 620px
+   :class: screenshot
 
    Device Manager can be used to restore the normal FTDI driver when an FTDI
    VCP/D2XX application such as Windows ``fujprog`` is required.
@@ -615,8 +623,8 @@ should remain a separate, explicitly confirmed workflow.
 See :doc:`../getting-started/programming` for the distinction between temporary
 FPGA loading and persistent boot configuration.
 
-Implementation references
--------------------------
+External References
+-------------------
 
 * `ULX3S manual <https://github.com/emard/ulx3s/blob/master/doc/MANUAL.md>`_
 * `fujprog <https://github.com/kost/fujprog>`_

@@ -58,6 +58,7 @@ Pogledajte indikator ažuriranja preglednika ispod:
 .. image:: images/chrome-pending-update.png
    :alt: Chrome indikator čekajućeg ažuriranja
    :align: center
+   :class: screenshot
 
 Tijekom testiranja Hazard3-Dooma na Windowsu, Chromeov interni zapis uređaja i
 dalje je prijavljivao CH340 adapter kao ``COM7``, ali je izbornik Web Serial

@@ -1,10 +1,34 @@
 Web Device Tool
 ===============
 
-Hazard3-Doom includes a browser-based device tool in the repository ``web/``
-directory. It combines the most common board bring-up and interactive tasks in
+Hazard3-Doom includes a browser-based Device Tool in the repository ``web/``
+directory. It brings the most common board bring-up and interactive tasks into
 one page instead of requiring a separate terminal and several command-line
 upload tools.
+
+.. _fig-hazard3-doom-web-console:
+
+.. figure:: ../images/Hazard3-Doom-Web-Console.png
+   :alt: Hazard3-Doom browser Device Tool and UART console
+   :class: screenshot
+
+   **Hazard3-Doom Device Tool** - Web Serial console, monitor controls, and
+   device actions in one browser interface.
+
+A public HTTPS build is hosted on GitHub Pages:
+
+`Open the Hazard3-Doom Device Tool <https://ulx3s.github.io/Hazard3-Doom/>`_
+
+The hosted page can be used directly for FPGA SRAM programming, Doom H3D/IWAD
+upload, and UART terminal access. Console firmware loading is the one workflow
+that also needs the local ``web-server.py`` loopback helper, because the browser
+cannot start or control local GDB/OpenOCD processes directly.
+
+The helper binds only to loopback and listens on ``127.0.0.1:8000`` by default.
+It accepts only explicitly allowed browser origins; the defaults include the
+Hazard3-Doom GitHub Pages origins and its own exact loopback origin. An optional
+access key can provide additional protection. See `Optional local-loader access
+key`_ below.
 
 The current page provides four main areas:
 
@@ -60,17 +84,11 @@ Browser and serving requirements
 --------------------------------
 
 Use a current Chromium-based browser such as Chrome or Edge. Web Serial and
-WebUSB require a secure context. ``localhost`` is accepted for local use, and
-HTTPS is suitable for the hosted tool.
+WebUSB require a secure context. HTTPS satisfies that requirement for the hosted
+tool, and ``localhost``/loopback is accepted for local development.
 
-The hosted Device Tool is available at:
-
-.. code-block:: text
-
-   https://ulx3s.github.io/Hazard3-Doom/
-
-For UART, H3D/IWAD upload, screen snip, and FPGA WebUSB programming, no local web
-server is required. The browser performs those operations directly.
+UART access, H3D/IWAD upload, screen snip, and FPGA WebUSB programming do not
+need a local web server. The browser performs those operations directly.
 
 Console firmware loading additionally requires the local helper. From the
 repository root, start:
@@ -79,19 +97,14 @@ repository root, start:
 
    python3 web/web-server.py
 
-The helper binds only to loopback and listens on ``127.0.0.1:8000`` by default.
-After it starts, either:
-
-* continue using the public GitHub Pages Device Tool; or
-* open the same page from ``http://127.0.0.1:8000/``.
+After it starts, either continue using the public GitHub Pages Device Tool or
+open the same page locally at ``http://127.0.0.1:8000/``.
 
 A browser using the public HTTPS page may ask for permission to access a local
 network or loopback service. Grant that permission if the console firmware
 loader is needed.
 
-The helper accepts only explicitly allowed browser origins. Its defaults include
-the Hazard3-Doom GitHub Pages origins plus its own exact loopback origin. A
-different development origin can be added explicitly, for example:
+To allow a different development origin explicitly, for example:
 
 .. code-block:: bash
 
@@ -119,9 +132,9 @@ desirable because shell history or process listings may expose it:
 
    python3 web/web-server.py --access-key 'example-key'
 
-The access key is defense in depth. The helper also binds only to loopback,
-checks the browser ``Origin`` against an exact allow-list, and requires the
-expected local-loader request headers.
+Independently of the key, the helper binds only to loopback, checks the
+browser ``Origin`` against an exact allow-list, and requires the expected
+local-loader request headers.
 
 .. warning::
 
@@ -151,8 +164,16 @@ page reload.
 Serial connection
 -----------------
 
-Expand **Serial connection** and choose the UART device. The normal
-Hazard3-Doom settings are:
+Expand **Serial connection** and choose the UART device.
+
+.. figure:: ../images/webserial-connect.png
+   :alt: Hazard3-Doom Web Serial device selection
+   :class: screenshot
+
+   **Web Serial connection** - select the board UART before using the terminal
+   or the H3D/IWAD uploaders.
+
+The normal Hazard3-Doom settings are:
 
 .. code-block:: text
 
@@ -196,7 +217,7 @@ different persistence rules.
 FPGA web flasher
 ~~~~~~~~~~~~~~~~
 
-The **FPGA web flasher** accepts an ULX3S ECP5 ``.bit`` or compatible ``.svf``
+The **FPGA web flasher** accepts a ULX3S ECP5 ``.bit`` or compatible ``.svf``
 file and programs FPGA **SRAM** through the board's ``US1`` FT231X JTAG
 interface using WebUSB.
 
@@ -259,9 +280,9 @@ The external J1 USB-UART adapter used by Web Serial is independent of the
 ``US1`` FT231X JTAG interface, so the UART console can remain connected while
 OpenOCD is running.
 
-The console uploader can be driven from either the local Device Tool page or
-the public HTTPS page. In both cases, GDB and OpenOCD remain local to the user's
-computer.
+The console uploader works from either the local Device Tool page or the public
+HTTPS page. In both cases, the helper, GDB, and OpenOCD remain local to the
+user's computer.
 
 Doom H3D uploader
 ~~~~~~~~~~~~~~~~~
@@ -362,13 +383,19 @@ Hover text is also state-aware. For example, a disabled **Probe JTAG** button
 explains that ULX3S USB must be connected first, while the enabled button
 explains what the probe will do.
 
-The **Screen snip** control can capture supported HDMI application state over
+The **Screen snip** control can capture supported HDMI framebuffer state over
 UART and reconstruct the current ``1024x600`` display as a PNG in the browser.
 See :doc:`web-serial` for the complete capability negotiation, wire protocol,
 frame reconstruction, and firmware implementation details.
 
 Suggested browser bring-up flow
 -------------------------------
+
+.. note::
+
+   The local helper and OpenOCD are needed only when loading the console
+   firmware. They are not prerequisites for normal UART use, H3D/IWAD upload,
+   screen snip, or FPGA SRAM programming with the WebUSB flasher.
 
 For a normal ULX3S development session, a convenient order is:
 
@@ -421,7 +448,7 @@ The browser tool deliberately keeps the persistence boundaries visible:
      - No; FPGA SRAM only
    * - Console firmware uploader
      - Loopback HTTP + GDB/OpenOCD
-     - No; loaded into the running FPGA system
+     - No; volatile system memory only
    * - H3D uploader
      - Web Serial / H3L
      - No; SDRAM only
@@ -441,3 +468,14 @@ Related documentation
 * :doc:`doom` - Doom image and runtime operation.
 * :doc:`sd-card` - standalone H3D/IWAD loading from micro-SD.
 * :doc:`jtag-debugging` - OpenOCD/GDB debug setup.
+
+External references
+-------------------
+
+* `Hazard3-Doom Device Tool <https://ulx3s.github.io/Hazard3-Doom/>`_ - hosted
+  HTTPS version of the browser tool.
+* `Web Serial API <https://developer.mozilla.org/en-US/docs/Web/API/Web_Serial_API>`_
+  - browser API used for UART access.
+* `WebUSB API <https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API>`_ -
+  browser API used by the ULX3S FPGA SRAM flasher.
+

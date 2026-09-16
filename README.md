@@ -1,6 +1,9 @@
-[![CI](https://github.com/ulx3s/Hazard3-Doom/actions/workflows/ci.yml/badge.svg)](https://github.com/ulx3s/Hazard3-Doom/actions/workflows/ci.yml)
-[![Check Verilog default_nettype](https://github.com/ulx3s/Hazard3-Doom/actions/workflows/check-nettype.yaml/badge.svg)](https://github.com/ulx3s/Hazard3-Doom/actions/workflows/check-nettype.yaml)
-[![fpga-gojimmypi](https://github.com/ulx3s/Hazard3-Doom/actions/workflows/tt-fpga-ulx.yaml/badge.svg)](https://github.com/ulx3s/Hazard3-Doom/actions/workflows/tt-fpga-ulx.yaml)
+[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
+[![FPGA Build](../../actions/workflows/fpga-builds.yml/badge.svg)](../../actions/workflows/fpga-builds.yml)
+[![Verilog nettype](../../actions/workflows/check-nettype.yaml/badge.svg)](../../actions/workflows/check-nettype.yaml)
+[![Tiny Tapeout](../../actions/workflows/tt-fpga-ulx.yaml/badge.svg)](../../actions/workflows/tt-fpga-ulx.yaml)
+[![Documentation](../../actions/workflows/docs.yml/badge.svg)](../../actions/workflows/docs.yml)
+[![Deploy Web UI](../../actions/workflows/pages.yml/badge.svg)](../../actions/workflows/pages.yml)
 
 # Hazard3-Doom for ULX3S and ULX4M
 
@@ -12,7 +15,10 @@ This `Hazard3-Doom` is intentionally separate from upstream [Wren6991/Hazard3](h
 The compatible hardware is maintained on the [ulx-doom branch of the ulx3s/Hazard3 fork](https://github.com/ulx3s/Hazard3/tree/ulx-doom) 
 and consumed as a pinned submodule under `third_party/Hazard3`. The Doom application and monitor remain owned by this repository.
 
-See the Quick Start and overview: https://ulx3s.github.io/ulx-doom/
+Local `/web/` [Device Tool](https://hazard3-doom.readthedocs.io/en/latest/user-guide/web-tool.html) is automatically 
+deployed to GitHub Pages at [ulx3s.github.io/Hazard3-Doom/](https://ulx3s.github.io/Hazard3-Doom/).
+
+Quick Start walk-through: https://ulx3s.github.io/ulx-doom/
 
 Full details: https://hazard3-doom.readthedocs.io/
 

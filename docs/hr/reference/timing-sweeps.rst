@@ -87,9 +87,11 @@ Jedan nextpnr proces može trošiti nekoliko stotina MiB memorije. Veći
 ``SWEEP_JOBS`` skraćuje vrijeme samo dok CPU, RAM, disk i host sustav mogu
 podnijeti dodatno opterećenje.
 
+.. _fig-concurrent-nextpnr-ecp5:
+
 .. figure:: ../images/concurrent-nextpnr-ecp5.png
    :alt: Više paralelnih nextpnr-ecp5 procesa tijekom lokalnog sweepa
-   :width: 90%
+   :class: screenshot
 
    Lokalno je moguće paralelno routati više seedova. ``SWEEP_JOBS`` prilagodite
    stvarnim resursima računala.

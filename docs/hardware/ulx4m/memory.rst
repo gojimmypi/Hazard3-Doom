@@ -82,6 +82,15 @@ Current checked-in generation sources support two part-number selections:
      - 512 MiB
      - ``AS4C256M16D3A``
 
+.. _fig-alliance-ddr3-variants:
+
+.. figure:: ../../images/as4c256m16d3-flavors.png
+   :alt: Alliance Memory AS4C256M16D3 ordering-code variants
+
+   **Alliance AS4C256M16D3 family variants** - ordering-code details matter
+   when identifying the fitted DDR3 device; record the complete package marking
+   rather than only the base family name.
+
 The physical memory can be much larger than the memory map exposed to
 Hazard3-Doom. The current Doom software profile intentionally uses a 64 MiB
 external-memory window; unused physical capacity does not need to be mapped for
@@ -183,3 +192,15 @@ constraints.
 
 Those constraints are part of the memory controller. A correct LiteDRAM YAML
 with an incorrect LPF is not a valid DDR3 design.
+
+
+External References
+-------------------
+
+* `LiteDRAM <https://github.com/enjoy-digital/litedram>`_ - configurable DRAM
+  controller/PHY generator used by the ULX4M-LD path.
+* `Alliance Memory AS4C256M16D3 product page <https://www.alliancememory.com/as4c256m16d3/>`_ -
+  current manufacturer part-family and datasheet links.
+* `Lattice ECP5 / ECP5-5G resources <https://www.latticesemi.com/ecp5>`_ - FPGA
+  family data sheets and DDR-related device documentation.
+* :doc:`sources` - ULX4M schematics, board repositories, and project source hierarchy.
