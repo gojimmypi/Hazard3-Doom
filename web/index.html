@@ -97,8 +97,8 @@
                         <div class="flasher-grid">
                             <label class="svf-picker">
                                 <span>Hazard3-Doom FPGA image (.bit or .svf)</span>
-                                <input id="svfFileInput" type="file" accept=".bit,.svf,application/octet-stream,text/plain">
-                                <strong id="svfFileName">No FPGA image selected. 
+                                <input id="svfFileInput" type="file" accept=".bit,.svf">
+                                <strong id="svfFileName">No FPGA image selected.
                                                          Select from <font face="Courier New">./build/</font> for fresh builds, 
                                                                      <font face="Courier New">./bin/</font> for pre-built images, 
                                                          or your local directory.
@@ -174,7 +174,7 @@
                         <div class="flasher-grid">
                             <label class="svf-picker">
                                 <span>Hazard3 console firmware (.elf)</span>
-                                <input id="firmwareFileInput" type="file" accept=".elf,application/x-elf,application/octet-stream">
+                                <input id="firmwareFileInput" type="file" accept=".elf">
                                 <strong id="firmwareFileName">No console firmware selected</strong>
                                 <small id="firmwareFileDetails"></small>
                             </label>
@@ -233,7 +233,7 @@
                         <div class="flasher-grid">
                             <label class="svf-picker">
                                 <span>Hazard3-Doom image (.h3d)</span>
-                                <input id="h3dFileInput" type="file" accept=".h3d,application/octet-stream">
+                                <input id="h3dFileInput" type="file" accept=".h3d">
                                 <strong id="h3dFileName">No H3D image selected</strong>
                                 <small id="h3dFileDetails"></small>
                             </label>
@@ -295,7 +295,7 @@
                         <div class="flasher-grid">
                             <div class="svf-picker">
                                 <span>Doom IWAD (.wad)</span>
-                                <input id="wadFileInput" type="file" accept=".wad,application/octet-stream">
+                                <input id="wadFileInput" type="file" accept=".wad">
                                 <strong id="wadFileName">No IWAD selected</strong>
                                 <small id="wadFileDetails"></small>
                                 <div class="wad-options">
@@ -527,7 +527,7 @@
     </footer>
 
     <script src="generated/version.js" defer></script>
-    <script src="app.js?v=20260914-r10" defer></script>
+    <script src="app.js?v=20260916-r11" defer></script>
     <script src="flasher.js?v=20260914-r4" defer></script>
 </body>
 </html>

@@ -1,4 +1,5 @@
 name: ECP5 seed sweep
+run-name: ECP5 seed sweep - ${{ inputs.target }} - seeds ${{ inputs.seed_first }}-${{ inputs.seed_last }}
 
 on:
   workflow_dispatch:
@@ -374,10 +375,15 @@ jobs:
               ./scripts/sweep-ecp5.sh --print-netlist "${SWEEP_TARGET}" |
                   tail -n 1
           )"
+          route_constraint="$(
+              ./scripts/sweep-ecp5.sh --print-constraint "${SWEEP_TARGET}" |
+                  tail -n 1
+          )"
           metadata="${sweep_dir}/metadata.txt"
 
           printf 'Resolved sweep directory: %s\n' "${sweep_dir}"
           printf 'Resolved netlist: %s\n' "${netlist}"
+          printf 'Resolved route constraint: %s\n' "${route_constraint}"
           printf 'Resolved metadata: %s\n' "${metadata}"
 
           if [[ -z "${sweep_dir}" ]]; then
@@ -392,6 +398,14 @@ jobs:
               printf '::error::Frozen netlist is missing or empty: %s\n' "${netlist}" >&2
               exit 1
           fi
+          if [[ -z "${route_constraint}" ]]; then
+              echo '::error::Route constraint query returned an empty value.' >&2
+              exit 1
+          fi
+          if [[ ! -s "${route_constraint}" ]]; then
+              printf '::error::Route constraint is missing or empty: %s\n' "${route_constraint}" >&2
+              exit 1
+          fi
           if [[ ! -s "${metadata}" ]]; then
               printf '::error::Sweep metadata is missing or empty: %s\n' "${metadata}" >&2
               find build -maxdepth 3 -name metadata.txt -print >&2 || true
@@ -401,6 +415,8 @@ jobs:
           mkdir -p reference
           cp "${metadata}" reference/sweep-metadata.txt
           sha256sum "${netlist}" > reference/netlist.sha256
+          printf '%s\n' "${route_constraint}" > reference/route-constraint.txt
+          sha256sum "${route_constraint}" > reference/route-constraint.sha256
 
           git rev-parse HEAD > reference/hazard3-doom-head.txt
           git ls-tree HEAD third_party/Hazard3 > reference/hazard3-doom-hazard3-gitlink.txt
@@ -442,6 +458,7 @@ jobs:
               printf 'seed_kill_after_seconds=%s\n' "${SWEEP_SEED_KILL_AFTER_SECONDS}"
               printf 'sweep_dir=%s\n' "${sweep_dir}"
               printf 'netlist=%s\n' "${netlist}"
+              printf 'route_constraint=%s\n' "${route_constraint}"
           } > reference/workflow.txt
 
       - name: Generate seed matrix
@@ -493,10 +510,17 @@ jobs:
       - name: Package frozen route inputs
         shell: bash
         run: |
+          set -euo pipefail
+
+          route_constraint="$(cat reference/route-constraint.txt)"
+          test -s "${route_constraint}"
+          sha256sum --check reference/route-constraint.sha256
+
           tar \
               -czf "${RUNNER_TEMP}/ecp5-sweep-inputs.tar.gz" \
               reference \
-              build
+              build \
+              "${route_constraint}"
 
       - name: Upload frozen route inputs
         uses: actions/upload-artifact@v7
@@ -605,8 +629,14 @@ jobs:
       - name: Extract and verify frozen route inputs
         shell: bash
         run: |
+          set -euo pipefail
+
           tar -xzf "${RUNNER_TEMP}/sweep-inputs/ecp5-sweep-inputs.tar.gz" \
               -C "${GITHUB_WORKSPACE}"
+
+          route_constraint="$(cat reference/route-constraint.txt)"
+          test -s "${route_constraint}"
+          sha256sum --check reference/route-constraint.sha256
 
           chmod +x \
               scripts/sweep-ecp5.sh \

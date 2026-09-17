@@ -398,6 +398,7 @@ check_sweep_dispatcher()
 {
     local target
     local netlist
+    local route_constraint
     local sweep_dir
 
     run_quiet 'sweep-ecp5.sh: list targets' \
@@ -410,6 +411,14 @@ check_sweep_dispatcher()
             pass "sweep-ecp5.sh: ${target} netlist path"
         else
             fail "sweep-ecp5.sh: ${target} netlist path"
+        fi
+
+        if route_constraint="$(
+            "${SCRIPT_DIR}/sweep-ecp5.sh" --print-constraint "${target}"
+        )" && [[ "${route_constraint}" == third_party/Hazard3/example_soc/synth/*.lpf ]]; then
+            pass "sweep-ecp5.sh: ${target} constraint path"
+        else
+            fail "sweep-ecp5.sh: ${target} constraint path"
         fi
 
         if sweep_dir="$(

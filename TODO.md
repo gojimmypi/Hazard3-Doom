@@ -42,9 +42,19 @@ There may be other, similar problems as noted with bootleader, above.
 
 - Implement OLED peripherals to display the button states.
 
+## One universal .h3d 
+
+The .h3d is application software is current board specific; ideally the FPGA/monitor layer should 
+hide the board differences behind the monitor service ABI. Doom shouldn't need to know whether it is 
+running on ULX3S 12F, ULX3S 85F, or ULX4M-LD.
+
 ## wolfBoot example
 
 - Get doom to boot from a secure bootloader, see [wolfssl/wolfboot](https://github.com/wolfssl/wolfboot)
+
+## ULX5M
+
+- Add support for [intergalaktik/ulx5m-gs](https://github.com/intergalaktik/ulx5m-gs), using [GateMate](https://colognechip.com/programmable-logic/gatemate/) chip. See [OLIMEX/GateMateA1-EVB](https://github.com/OLIMEX/GateMateA1-EVB)
 
 ## Implement UART or OTG device on ULX3S `US2`
 
