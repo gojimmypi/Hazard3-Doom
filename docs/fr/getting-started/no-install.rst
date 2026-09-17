@@ -138,10 +138,29 @@ configuration persistante normale de la carte.
    fichier ``.bit`` ULX3S approprié.
 
 4. Connecter l'UART
--------------------
+--------------------
 
-Connectez l'adaptateur USB-vers-UART externe, développez **Serial connection** et
-utilisez les paramètres Hazard3-Doom habituels :
+Hazard3-Doom utilise le connecteur GPIO ``J1`` de l ULX3S pour son UART
+externe. Utilisez un adaptateur USB-vers-UART 3,3 V et croisez TX/RX :
+
+.. code-block:: text
+
+   USB-UART TXD  ->  J1 pin 6  / GP0 / B11 -> Hazard3 uart_rx
+   USB-UART RXD  <-  J1 pin 8  / GP1 / A10 <- Hazard3 uart_tx
+   USB-UART GND  ->  ULX3S GND
+   USB-UART VCC  ->  non connecté
+
+.. _fig-ulx3s-uart-pinout:
+
+.. figure:: ../images/ulx3s-uart-pinout.png
+   :alt: Brochage ULX3S mettant en évidence l UART Hazard3-Doom sur GP0 et GP1 de J1.
+   :width: 85%
+
+   **UART Hazard3-Doom sur ULX3S** -- GP0 est l entrée de réception du FPGA et
+   GP1 est la sortie de transmission du FPGA.
+
+Développez **Serial connection** et connectez-vous avec les paramètres
+Hazard3-Doom habituels :
 
 .. code-block:: text
 
@@ -151,12 +170,12 @@ utilisez les paramètres Hazard3-Doom habituels :
    1 stop bit
    no flow control
 
-Le moniteur résident est déjà intégré à l'image FPGA Hazard3-Doom normale. Un
-démarrage réussi affiche la bannière du moniteur puis l'invite ``>``. Il n'est
+Le moniteur résident est déjà intégré à l image FPGA Hazard3-Doom normale. Un
+démarrage réussi affiche la bannière du moniteur puis l invite ``>``. Il n est
 pas nécessaire de charger ``hazard3-boot-monitor.elf`` pour cette procédure.
 
-Si aucune invite n'apparaît, voir :doc:`../troubleshooting` et
-:doc:`../user-guide/web-serial`.
+Si aucune invite n apparaît, voir :doc:`../troubleshooting` et
+:doc:`../user-guide/web-serial` avant de continuer.
 
 5. Charger l'image Doom H3D
 ---------------------------

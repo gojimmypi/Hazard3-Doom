@@ -20,7 +20,7 @@ when power is removed.
 What you need
 -------------
 
-* an ULX3S 85F or ULX3S 12F board;
+* a ULX3S 85F or ULX3S 12F board;
 * an HDMI display;
 * the ULX3S ``US1`` USB connection for FPGA WebUSB programming;
 * an external USB-to-UART adapter connected to the Hazard3-Doom UART;
@@ -139,8 +139,26 @@ normal persistent configuration.
 4. Connect the UART
 -------------------
 
-Connect the external USB-to-UART adapter, expand **Serial connection**, and
-connect at the normal Hazard3-Doom settings:
+Hazard3-Doom uses the ULX3S ``J1`` GPIO header for its external UART. Use a
+3.3 V USB-to-UART adapter and cross the TX/RX signals:
+
+.. code-block:: text
+
+   USB-UART TXD  ->  J1 pin 6  / GP0 / B11 -> Hazard3 uart_rx
+   USB-UART RXD  <-  J1 pin 8  / GP1 / A10 <- Hazard3 uart_tx
+   USB-UART GND  ->  ULX3S GND
+   USB-UART VCC  ->  not connected
+
+.. _fig-ulx3s-uart-pinout:
+
+.. figure:: ../images/ulx3s-uart-pinout.png
+   :alt: ULX3S pinout highlighting the Hazard3-Doom UART on GP0 and GP1 of J1.
+   :width: 85%
+
+   **ULX3S Hazard3-Doom UART** -- GP0 is the FPGA receive input and GP1 is the
+   FPGA transmit output.
+
+Expand **Serial connection** and connect at the normal Hazard3-Doom settings:
 
 .. code-block:: text
 

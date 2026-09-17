@@ -90,6 +90,50 @@ FT2232H MPSSE JTAG path. The wiring follows the published Tigard and ULX3S JTAG
 pinouts; qualify this external-adapter path on the target board before treating
 it as a project-tested configuration.
 
+J4 is the physical external JTAG header, not a separate JTAG controller. Its
+``TCK``, ``TMS``, ``TDI``, and ``TDO`` signals connect to the ECP5 chip's hard
+JTAG TAP. They are dedicated JTAG pins rather than ordinary user GPIO, so the
+Hazard3 ECP5 debug path does not route them through normal LPF ``LOCATE``
+constraints. The ULX3S reference LPF likewise leaves those dedicated sites
+commented out as user GPIO.
+
+With Hazard3 configured for the ECP5 debug transport, the path is:
+
+.. code-block:: text
+
+   Tigard / FT2232H
+          |
+          v
+      ULX3S J4
+          |
+          v
+   ECP5 hard JTAG TAP
+          |
+          v
+       JTAGG
+          |
+          v
+   Hazard3 ECP5 JTAG DTM
+          |
+          v
+   RISC-V Debug Module
+          |
+          v
+      Hazard3 CPU
+
+``JTAGG`` is the FPGA-fabric connection to the existing ECP5 TAP; Hazard3 does
+not create a second external TAP. Hazard3 maps the RISC-V ``DTMCS`` and ``DMI``
+data registers onto the ECP5 ``ER1`` and ``ER2`` user data-register hooks,
+selected by instructions ``0x32`` and ``0x38``. Standard TAP functions such as
+IDCODE and BYPASS remain provided by the ECP5 TAP. This is also why OpenOCD
+first identifies the ECP5 and then uses the private instructions to reach the
+RISC-V debugger.
+
+This differs from Hazard3's generic ``DTM_TYPE="JTAG"`` mode, where a normal
+RISC-V JTAG DTM is connected to four user I/O ports. For ULX3S the ECP5 mode
+instantiates ``hazard3_ecp5_jtag_dtm`` and ``JTAGG`` internally, so J4 connects
+to the ECP5 TAP rather than directly to RISC-V JTAG pins.
+
 Wire Tigard's JTAG header directly to ULX3S J4:
 
 .. code-block:: text
@@ -101,6 +145,16 @@ Wire Tigard's JTAG header directly to ULX3S J4:
    Tigard TMS (pin 6, blue)     -> ULX3S J4 TMS
    Tigard VTGT                  -> not connected
    Tigard TRST / SRST           -> not connected
+
+.. _fig-ulx3s-jtag-pinout:
+
+.. figure:: ../images/ulx3s-jtag-pinout.png
+   :alt: ULX3S pinout highlighting the dedicated J4 JTAG TCK, TDI, TDO, and TMS pins.
+   :width: 85%
+
+   **ULX3S external JTAG** -- ``J4`` is the physical header for the ECP5 hard
+   JTAG TAP. Use its dedicated TCK, TDI, TDO, and TMS pins for the Tigard
+   connection; these are not ordinary FPGA GPIO.
 
 Set Tigard to ``SPI/JTAG`` mode and 3.3 V logic. Power ULX3S normally from
 US1. See :doc:`pinouts` for the J4 physical layout and wiring cautions.
@@ -468,6 +522,8 @@ External References
 
 * `ULX3S manual <https://github.com/emard/ulx3s/blob/master/doc/MANUAL.md>`_
 * `ULX3S v2.x/v3.0 constraints <https://github.com/emard/ulx3s/blob/master/doc/constraints/ulx3s_v20.lpf>`_
+* `Hazard3 ECP5 JTAG DTM <https://github.com/Wren6991/Hazard3/blob/stable/hdl/debug/dtm/hazard3_ecp5_jtag_dtm.v>`_
+* `Hazard3 example SoC DTM selection <https://github.com/Wren6991/Hazard3/blob/stable/example_soc/soc/example_soc.v>`_
 * `Tigard pinout and usage <https://github.com/tigard-tools/tigard>`_
 * `Espressif ESP32 JTAG pin mapping <https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/jtag-debugging/configure-other-jtag.html>`_
 * `yosys nextpnr supported primitives <https://github.com/YosysHQ/nextpnr/blob/main/ecp5/docs/primitives.md>`_

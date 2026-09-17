@@ -138,8 +138,27 @@ vraća uobičajenu trajnu konfiguraciju.
 4. Spojite UART
 ---------------
 
-Spojite vanjski USB-UART adapter, otvorite **Serial connection** i spojite se sa
-standardnim Hazard3-Doom postavkama:
+Hazard3-Doom koristi ULX3S ``J1`` GPIO konektor za vanjski UART. Koristite 3,3 V
+USB-UART adapter i ukrstite TX/RX signale:
+
+.. code-block:: text
+
+   USB-UART TXD  ->  J1 pin 6  / GP0 / B11 -> Hazard3 uart_rx
+   USB-UART RXD  <-  J1 pin 8  / GP1 / A10 <- Hazard3 uart_tx
+   USB-UART GND  ->  ULX3S GND
+   USB-UART VCC  ->  nije spojeno
+
+.. _fig-ulx3s-uart-pinout:
+
+.. figure:: ../images/ulx3s-uart-pinout.png
+   :alt: ULX3S pinout s istaknutim Hazard3-Doom UART-om na GP0 i GP1 konektora J1.
+   :width: 85%
+
+   **ULX3S Hazard3-Doom UART** -- GP0 je FPGA ulaz za prijam, a GP1 FPGA izlaz
+   za slanje.
+
+Otvorite **Serial connection** i spojite se sa standardnim Hazard3-Doom
+postavkama:
 
 .. code-block:: text
 
@@ -153,7 +172,7 @@ Rezidentni monitor već je ugrađen u uobičajenu Hazard3-Doom FPGA sliku.
 Uspješno pokretanje prikazuje banner monitora i odzivnik ``>``. Za ovaj postupak
 nije potrebno učitati ``hazard3-boot-monitor.elf``.
 
-Ako se odzivnik ne pojavi, pogledajte :doc:`../troubleshooting` i
+Ako se odzivnik ne pojavi, prije nastavka pogledajte :doc:`../troubleshooting` i
 :doc:`../user-guide/web-serial`.
 
 5. Prenesite Doom H3D sliku

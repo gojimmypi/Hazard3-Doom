@@ -9,12 +9,18 @@ Cartes et matériel
 ------------------
 
 * :ref:`Brochage ULX3S <fig-ulx3s-pinout>`
+* :ref:`Brochage UART Hazard3-Doom sur ULX3S <fig-ulx3s-uart-pinout>`
 * :ref:`Brochage ULX4M-LD <fig-ulx4m-ld-pinout>`
 
 Construction FPGA
 -----------------
 
 * :ref:`Processus nextpnr-ecp5 exécutés en parallèle <fig-concurrent-nextpnr-ecp5>`
+
+JTAG
+----
+
+* :ref:`Brochage JTAG externe J4 sur ULX3S <fig-ulx3s-jtag-pinout>`
 
 Outils WebUSB et pilotes USB
 ----------------------------

@@ -100,8 +100,13 @@ Za dodatnu zaštitu:
 
 Helper traži ključ bez prikaza. Isti ključ unesite u **Console firmware
 uploader**. Preglednik ga drži samo u memoriji stranice, ne u ``localStorage``.
-Ključ na naredbenom retku je podržan, ali je manje poželjan jer ga mogu otkriti
-shell history ili popis procesa.
+
+Ključ se može zadati i izravno u naredbenom retku, ali to je manje poželjno jer
+ga mogu otkriti shell history ili popis procesa:
+
+.. code-block:: bash
+
+   python3 web/web-server.py --access-key 'example-key'
 
 Ključ je dodatna zaštita: helper i dalje sluša samo na loopbacku, provjerava
 točan ``Origin`` i zahtijeva očekivana zaglavlja lokalnog loadera.

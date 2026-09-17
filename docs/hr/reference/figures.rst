@@ -8,12 +8,18 @@ Pločice i hardver
 -----------------
 
 * :ref:`Raspored pinova ULX3S <fig-ulx3s-pinout>`
+* :ref:`Hazard3-Doom UART pinout na ULX3S-u <fig-ulx3s-uart-pinout>`
 * :ref:`Raspored pinova ULX4M-LD <fig-ulx4m-ld-pinout>`
 
 FPGA izgradnja
 --------------
 
 * :ref:`Paralelni nextpnr-ecp5 procesi <fig-concurrent-nextpnr-ecp5>`
+
+JTAG
+----
+
+* :ref:`Vanjski J4 JTAG pinout na ULX3S-u <fig-ulx3s-jtag-pinout>`
 
 WebUSB alati i USB upravljački programi
 ---------------------------------------

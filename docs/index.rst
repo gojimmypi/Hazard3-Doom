@@ -58,7 +58,7 @@ Start here
 ----------
 
 * :doc:`about/index` - understand what the project is and what you can learn from it.
-* :doc:`getting-started/no-install` - run an ULX3S from prebuilt images with the browser Device Tool and no FPGA build toolchain.
+* :doc:`getting-started/no-install` - run a ULX3S from prebuilt images with the browser Device Tool and no FPGA build toolchain.
 * :doc:`getting-started/quick-start` - install the development tools and build the FPGA, resident monitor, and Doom image from source.
 * :doc:`user-guide/web-tool` - use the browser Device Tool for common board bring-up and interactive tasks.
 

@@ -9,6 +9,7 @@ Boards and hardware
 -------------------
 
 * :ref:`ULX3S pinout <fig-ulx3s-pinout>`
+* :ref:`ULX3S Hazard3-Doom UART pinout <fig-ulx3s-uart-pinout>`
 * :ref:`ULX4M-LD pinout <fig-ulx4m-ld-pinout>`
 * :ref:`ULX3S J3 (WIFI_OFF) schematic detail <fig-ulx3s-j3-wifi-off>`
 * :ref:`micro-SD contact pinout <fig-microsd-pinout>`
@@ -29,6 +30,7 @@ SD card
 JTAG and USB drivers
 --------------------
 
+* :ref:`ULX3S J4 external JTAG pinout <fig-ulx3s-jtag-pinout>`
 * :ref:`Tigard Interface 1 configured for libusbK <fig-zadig-tigard-libusbk>`
 * :ref:`Zadig FTDI-to-WinUSB selection <fig-zadig-ftdi-winusb>`
 * :ref:`WebUSB access-denied diagnostic <fig-webusb-access-denied>`
