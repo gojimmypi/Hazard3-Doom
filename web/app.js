@@ -1521,6 +1521,22 @@ function refreshWadImage() {
     updateWadUploaderUi();
 }
 
+function restoreSelectedUploadFiles() {
+    const h3dFile = els.h3dFileInput.files?.[0];
+    if (h3dFile && !state.h3dImage) {
+        void selectH3dFile();
+    } else if (!h3dFile && els.h3dFileInput.value) {
+        els.h3dFileInput.value = "";
+    }
+
+    const wadFile = els.wadFileInput.files?.[0];
+    if (wadFile && !state.wadBytes) {
+        void selectWadFile();
+    } else if (!wadFile && els.wadFileInput.value) {
+        els.wadFileInput.value = "";
+    }
+}
+
 async function selectWadFile() {
     state.wadBytes = null;
     state.wadCrc32 = null;
@@ -2829,6 +2845,8 @@ function wireEvents() {
             await refreshAuthorizedPorts();
         });
     }
+
+    window.addEventListener("pageshow", restoreSelectedUploadFiles);
 
     window.addEventListener("beforeunload", () => {
         saveSettings();

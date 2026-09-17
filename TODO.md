@@ -52,6 +52,10 @@ running on ULX3S 12F, ULX3S 85F, or ULX4M-LD.
 
 - Get doom to boot from a secure bootloader, see [wolfssl/wolfboot](https://github.com/wolfssl/wolfboot)
 
+## ULX5M
+
+- Add support for [intergalaktik/ulx5m-gs](https://github.com/intergalaktik/ulx5m-gs), using [GateMate](https://colognechip.com/programmable-logic/gatemate/) chip. See [OLIMEX/GateMateA1-EVB](https://github.com/OLIMEX/GateMateA1-EVB)
+
 ## Implement UART or OTG device on ULX3S `US2`
 
 - This USB connection is conspicuously unused. 
