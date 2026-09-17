@@ -1,11 +1,12 @@
 Getting Started
 ===============
 
-This section covers the shortest path from a fresh checkout to a running Hazard3-Doom system.
+This section covers the shortest paths from prebuilt images or a fresh source checkout to a running Hazard3-Doom system.
 
 .. toctree::
    :maxdepth: 1
 
+   no-install
    quick-start
    prerequisites
    vm-tips

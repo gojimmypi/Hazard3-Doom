@@ -61,9 +61,9 @@ Počnite ovdje
 -------------
 
 * :doc:`about/index` - saznajte što je projekt i što iz njega možete naučiti.
-* :doc:`getting-started/quick-start` - pokrenite pločicu uz najmanji broj koraka.
+* :doc:`getting-started/no-install` - pokrenite ULX3S iz unaprijed izgrađenih slika u Device Toolu bez FPGA build alata.
+* :doc:`getting-started/quick-start` - instalirajte razvojne alate i iz izvornog koda izgradite FPGA, rezidentni monitor i Doom sliku.
 * :doc:`user-guide/web-tool` - koristite Device Tool u pregledniku za uobičajeno pokretanje pločice i interaktivne zadatke.
-* :doc:`getting-started/build` - izgradite FPGA, rezidentni monitor i Doom sliku.
 
 Istražite dalje
 ---------------

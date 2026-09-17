@@ -64,9 +64,9 @@ Commencer ici
 -------------
 
 * :doc:`about/index` - comprendre le projet et ce que vous pouvez y apprendre.
-* :doc:`getting-started/quick-start` - mettre une carte en fonctionnement avec un minimum d'étapes.
+* :doc:`getting-started/no-install` - exécuter une ULX3S avec des images précompilées et le Device Tool, sans chaîne de build FPGA.
+* :doc:`getting-started/quick-start` - installer les outils de développement et construire le FPGA, le moniteur résident et l'image Doom depuis les sources.
 * :doc:`user-guide/web-tool` - utiliser l'outil Device Tool du navigateur pour les tâches courantes de mise en route et d'interaction.
-* :doc:`getting-started/build` - construire le FPGA, le moniteur résident et l'image Doom.
 
 Pour aller plus loin
 --------------------

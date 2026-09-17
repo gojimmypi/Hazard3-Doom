@@ -1,5 +1,12 @@
-Démarrage rapide
-================
+Démarrage rapide depuis les sources
+====================================
+
+.. note::
+
+   Pour exécuter Hazard3-Doom avant d'installer les chaînes de développement
+   FPGA et RISC-V, commencez par :doc:`no-install` et les images précompilées
+   publiées.
+
 
 Cible
 -----

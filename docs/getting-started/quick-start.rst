@@ -1,5 +1,11 @@
-Quick Start
-===========
+Build-from-source Quick Start
+=============================
+
+.. note::
+
+   Want to run Hazard3-Doom before installing the FPGA and RISC-V development
+   toolchains? Start with :doc:`no-install` and the published prebuilt images.
+
 
 Target
 ------

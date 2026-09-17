@@ -18,6 +18,12 @@ FPGA izgradnja
 WebUSB alati i USB upravljački programi
 ---------------------------------------
 
+* :ref:`Objavljene ULX3S unaprijed izgrađene datoteke <fig-no-install-bin-prebuilt-files>`
+* :ref:`ULX3S GitHub Actions artifacti <fig-no-install-actions-artifacts>`
+* :ref:`ULX3S programiranje FPGA-a bez instalacije <fig-no-install-web-flasher>`
+* :ref:`ULX3S H3D prijenos bez instalacije <fig-no-install-h3d-upload>`
+* :ref:`ULX3S IWAD prijenos bez instalacije <fig-no-install-iwad-upload>`
+* :ref:`ULX3S pokretanje Dooma bez instalacije <fig-no-install-doom-running>`
 * :ref:`Hazard3-Doom FPGA WebUSB programator <fig-webusb-flasher>`
 * :ref:`Dijagnostika odbijenog WebUSB pristupa <fig-webusb-access-denied>`
 * :ref:`Zadig odabir FTDI prema WinUSB <fig-zadig-ftdi-winusb>`

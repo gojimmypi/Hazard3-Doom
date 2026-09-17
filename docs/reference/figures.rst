@@ -37,6 +37,12 @@ JTAG and USB drivers
 Browser tools
 -------------
 
+* :ref:`Published ULX3S prebuilt files <fig-no-install-bin-prebuilt-files>`
+* :ref:`GitHub Actions ULX3S build artifacts <fig-no-install-actions-artifacts>`
+* :ref:`ULX3S no-install FPGA WebUSB flasher workflow <fig-no-install-web-flasher>`
+* :ref:`ULX3S no-install H3D upload <fig-no-install-h3d-upload>`
+* :ref:`ULX3S no-install IWAD upload <fig-no-install-iwad-upload>`
+* :ref:`ULX3S no-install Doom launch <fig-no-install-doom-running>`
 * :ref:`Hazard3-Doom FPGA WebUSB flasher <fig-webusb-flasher>`
 * :ref:`Hazard3-Doom Device Tool and UART console <fig-hazard3-doom-web-console>`
 * :ref:`Web Serial device-selection dialog <fig-webserial-connect>`
