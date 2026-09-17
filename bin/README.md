@@ -9,7 +9,7 @@ The files are intended to support the Windows quick-start workflow without requi
 | File or directory | Purpose |
 |---|---|
 | `gdb/` | Bundled RISC-V GDB executable and its runtime files. GDB connects to OpenOCD, loads `hazard3-test.elf`, and provides source-level or command-line debugging. |
-| `riscv-gcc/` | Bundled RISC-V GCC toolchain support files used by the precompiled Hazard3 firmware and debugging workflow. Installed by `setup-xpack-riscv-gcc.cmd` in the /scripts/ directory. |
+| `riscv-gcc/` | Optional local xPack RISC-V GCC toolchain installed by `scripts/setup-xpack-riscv-gcc.cmd`. This directory is ignored by Git and is not redistributed as part of Hazard3-Doom. |
 | `dfu-prefix.exe` | DFU image utility for adding, checking, or removing a device-specific prefix from a DFU file. Distributed with dfu-util. |
 | `dfu-suffix.exe` | DFU image utility for adding, checking, or removing the standard USB DFU suffix from a DFU file. Distributed with dfu-util. |
 | `dfu-util-static.exe` | Statically linked Windows build of `dfu-util`. It provides the same USB Device Firmware Upgrade command-line functions with fewer external runtime dependencies. |

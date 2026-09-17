@@ -1484,9 +1484,15 @@ function updateWadUploaderUi() {
     } else if (!state.port) {
         els.wadUploadButton.textContent = "Connect UART first";
         disabledReason = "Connect the UART before uploading an IWAD.";
-    } else if (!state.wadImage) {
+    } else if (!state.wadBytes) {
         els.wadUploadButton.textContent = "Select IWAD";
         disabledReason = "Select a valid .wad file first.";
+    } else if (!els.wadMemoryProfile.value) {
+        els.wadUploadButton.textContent = "Select memory profile";
+        disabledReason = "Select the memory profile matching the resident monitor build.";
+    } else if (!state.wadImage) {
+        els.wadUploadButton.textContent = "Check IWAD";
+        disabledReason = "The selected IWAD or memory profile is not valid.";
     } else if (!ready) {
         els.wadUploadButton.textContent = "UART busy";
         disabledReason = serialOperationDisabledReason();
@@ -1499,6 +1505,12 @@ function updateWadUploaderUi() {
 function refreshWadImage() {
     state.wadImage = null;
     if (!state.wadBytes) {
+        updateWadUploaderUi();
+        return;
+    }
+    if (!els.wadMemoryProfile.value) {
+        els.wadFileDetails.textContent =
+            "Select the memory profile matching the resident monitor build.";
         updateWadUploaderUi();
         return;
     }
@@ -1559,7 +1571,6 @@ async function selectWadFile() {
     els.wadFileDetails.textContent = "Validating IWAD directory and CRC32...";
     try {
         state.wadBytes = new Uint8Array(await file.arrayBuffer());
-        validateIwad(state.wadBytes, els.wadMemoryProfile.value);
         state.wadCrc32 = crc32(state.wadBytes);
         refreshWadImage();
     } catch (error) {

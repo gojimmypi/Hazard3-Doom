@@ -340,13 +340,13 @@ j    launch the validated Doom image and IWAD
 
 ## Build the linked Doom image
 
-ULX3S or ULX4M-LD:
+64m ULX3S 85F or ULX4M-LD:
 
 ```bash
 HAZARD3_MEMORY_PROFILE=64m ./doom/build-doom-image.sh
 ```
 
-ULX4M-LS:
+32m ULX3S 12F default build or ULX4M-LS:
 
 ```bash
 HAZARD3_MEMORY_PROFILE=32m ./doom/build-doom-image.sh
@@ -400,16 +400,15 @@ Then upload a legally obtained IWAD and launch:
 py .\doom\upload-wad.py `
     C:\path\to\doom1.wad `
     --port COM7 `
+    --memory-profile 64m `
     --launch
 ```
 
-For ULX4M-LS, add:
+Use `--memory-profile 64m` for ULX3S 85F and ULX4M-LD.
 
-```text
---memory-profile 32m
-```
-
-The default `64m` uploader profile is correct for ULX3S and ULX4M-LD.
+Use `--memory-profile 32m` for the default ULX3S 12F build and ULX4M-LS.
+An explicitly built 64m ULX3S 12F image must instead use `64m`. The monitor,
+Doom image, and WAD uploader must always use the same profile.
 
 Expected transfer markers:
 
@@ -440,7 +439,7 @@ The internal 128 KiB SRAM map is shared by all targets:
 - `0x00010000-0x0001f9ff`: Doom 320x200 indexed working screen
 - `0x0001fa00-0x0001ffff`: unused internal SRAM
 
-The `64m` profile used by ULX3S and ULX4M-LD is:
+The `64m` profile used by ULX3S 85F, ULX4M-LD, and optional 64m ULX3S 12F builds is:
 
 - `0x20000000-0x23ffffff`: physical 64 MiB external memory
 - `0x24000000-0x27ffffff`: uncached diagnostic alias
@@ -449,7 +448,7 @@ The `64m` profile used by ULX3S and ULX4M-LD is:
 - `0x22c00000-0x23bfffff`: cached IWAD reservation, 16 MiB
 - `0x23c00000-0x23ffffff`: uncached video reservation
 
-The `32m` ULX4M-LS profile is:
+The `32m` profile used by the default ULX3S 12F build and ULX4M-LS is:
 
 - `0x20000000-0x21ffffff`: physical 32 MiB SDRAM
 - `0x24000000-0x25ffffff`: uncached diagnostic alias

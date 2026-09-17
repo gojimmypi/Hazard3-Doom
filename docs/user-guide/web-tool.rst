@@ -347,10 +347,14 @@ Select the memory profile that matches the resident monitor build:
      - Current use
    * - ``64m``
      - ``0x22c00000``
-     - ULX3S and ULX4M-LD
+     - ULX3S 85F; ULX4M-LD; ULX3S 12F only when explicitly built for ``64m``
    * - ``32m``
      - ``0x21000000``
-     - ULX4M-LS
+     - ULX3S 12F default; ULX4M-LS
+
+The Device Tool intentionally does not choose a memory profile automatically.
+Select the profile that matches the resident monitor before an IWAD can be
+uploaded.
 
 The profile matters because the H3W header contains the SDRAM destination
 address. Selecting the wrong profile is therefore not just a UI preference.
