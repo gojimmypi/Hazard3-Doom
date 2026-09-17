@@ -34,7 +34,7 @@ Unpin workflow OSS CAD Suite version once fixed.
 
 ## Full regression test with all builds for latest yoysys
 
-There may be other, similar problems as noted with bootleader, above.
+There may be other, similar problems as noted with bootloader, above.
 
 ## Implement ULX3S button GPIO RTL
 

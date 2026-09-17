@@ -105,9 +105,15 @@ Pour une protection supplémentaire :
 
 Le helper demande la clé sans l'afficher. Saisissez la même clé dans
 **Console firmware uploader**. Le navigateur la conserve seulement en mémoire
-de page, pas dans ``localStorage``. Passer la clé directement sur la ligne de
-commande est possible mais moins souhaitable, car l'historique du shell ou la
-liste des processus peut l'exposer.
+de page, pas dans ``localStorage``.
+
+Il est aussi possible de passer la clé directement sur la ligne de commande,
+mais c'est moins souhaitable car l'historique du shell ou la liste des
+processus peut l'exposer :
+
+.. code-block:: bash
+
+   python3 web/web-server.py --access-key 'example-key'
 
 La clé est une protection supplémentaire : le helper reste limité à loopback,
 vérifie exactement l'en-tête ``Origin`` et exige les en-têtes attendus du

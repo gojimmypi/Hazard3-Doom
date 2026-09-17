@@ -14,6 +14,8 @@ Image validation check:
 - ![e](./readthedocs-search-modal-setting.png)
 - ![e](./sd-card-pinout.png)
 - ![e](./ulx3s-pinout.png)
+- ![e](./ulx3s-jtag-pinout.png)
+- ![e](./ulx3s-uart-pinout.png)
 - ![e](./ulx3s.png)
 - ![e](./webserial-connect.png)
 - ![e](./WebUSB-USBDevice-Access-Denied.png)

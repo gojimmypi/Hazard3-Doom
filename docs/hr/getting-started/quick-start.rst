@@ -1,5 +1,11 @@
-Brzi početak
-============
+Brzi početak iz izvornog koda
+=============================
+
+.. note::
+
+   Ako želite pokrenuti Hazard3-Doom prije instalacije FPGA i RISC-V razvojnih
+   alata, počnite s :doc:`no-install` i objavljenim unaprijed izgrađenim slikama.
+
 
 Cilj
 ----

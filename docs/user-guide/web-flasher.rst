@@ -29,7 +29,7 @@ bitstream before considering a persistent flash update.
 .. _fig-webusb-flasher:
 
 .. figure:: ../images/Flash-from-WebUSB.png
-   :alt: Hazard3-Doom FPGA web flasher programming an ULX3S ECP5 image through WebUSB.
+   :alt: Hazard3-Doom FPGA web flasher programming a ULX3S ECP5 image through WebUSB.
    :class: screenshot
 
    The FPGA web flasher uses WebUSB for ULX3S JTAG while the rest of the page
@@ -194,7 +194,7 @@ One way to select WinUSB is with Zadig:
    :alt: Zadig configured to replace the ULX3S FTDI driver with WinUSB.
    :class: screenshot
 
-   Example Zadig selection for an ULX3S FT231X. Verify the selected device
+   Example Zadig selection for a ULX3S FT231X. Verify the selected device
    before replacing its driver.
 
 .. warning::
@@ -212,7 +212,7 @@ reinstall the appropriate FTDI VCP/D2XX package.
 .. _fig-windows-restore-ftdi-driver:
 
 .. figure:: ../images/Windows-set-default-USB-from-WinUSB.png
-   :alt: Windows Device Manager Update driver command for an ULX3S device using WinUSB.
+   :alt: Windows Device Manager Update driver command for a ULX3S device using WinUSB.
    :class: screenshot
 
    Device Manager can be used to restore the normal FTDI driver when an FTDI
