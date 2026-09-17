@@ -14,7 +14,7 @@ Git source: current index (`git ls-files --cached`)
 
 Files inventoried: 75
 
-Total bytes: 587683
+Total bytes: 588655
 
 ## Verification
 
@@ -61,7 +61,7 @@ should be identified before a public release.
 | `gdb/sao-touchwheel-led-off.gdb` | 1506 | `cc4b5f9124b2c935f35a1bfc72c393c00fad7110055150e3447bd9404b651a4a` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `gdb/sao-touchwheel-test.gdb` | 4547 | `13097de76e5acccbab3439a62ab2cd808d9b6b4b01b7288b2f8eb3db0ac07ff4` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `generate-ecp5-seed-matrix.py` | 2032 | `99bbc34c941180bff96a88a332ab8739a54d3984e424c54b3d29e43febd3a9e3` | REVIEW | File |
-| `generate-sbom.py` | 36084 | `babceb7df2a94bcaa3c96866ebe49e5b6db62d9c648b33a1fa848c2a5a900f81` | REVIEW | File |
+| `generate-sbom.py` | 36154 | `1f8e03201d140814e0245ecc9bd12cc3f9f9d5e0e9e696de6720e724c60368db` | REVIEW | File |
 | `git-exe.sh` | 1849 | `fd3a9ebccf709c8a45817d9ec67738b765d7074454309db41834af4a13dced66` | REVIEW | Shell script |
 | `hazard3-debug.gdb` | 1181 | `38a49cf5e41db070c8c21402e7b797c0d0e56f7d50d15de0dfdfbef39a4ac4a3` | REVIEW | File |
 | `hazard3-doom-source-status.sh` | 22103 | `0d9e973fbdf8e911030b72378572ad45506b50b7e5ffc6b6712eb03b90ba5614` | REVIEW | Shell script |
@@ -77,7 +77,7 @@ should be identified before a public release.
 | `load-fpga-bitstream.bat` | 2700 | `3c18dc6a74ff2e4b665b5d4634ff2dd537d03bf8dac963dd451ab45e42612206` | REVIEW | File |
 | `make-boot-hex.py` | 2794 | `bd4e1d863e021e5cb7345d5c57e0e37cf1751d3f8c333652eb52fd48d2ab05ac` | REVIEW | File |
 | `peek-elf.sh` | 24394 | `9ae200bee9f45c3ceddb53543efe362f5b79997bad4b23d147d06e625be18052` | REVIEW | Shell script |
-| `publish-check.sh` | 1962 | `9398421f152cfae3ae06e8d855d0c314e7ee1ce7b0fcd09836b0c64bb4d36e01` | REVIEW | Shell script |
+| `publish-check.sh` | 2864 | `0bbe46ddee13b48a1318fbff8500fc311b61ec964c2974fff3063d4e91229f1e` | REVIEW | Shell script |
 | `refresh-version.sh` | 4275 | `b90ebfc5f4954a88109370935c9233e59ef27bcf3bf4c6a239fab30434e109f4` | REVIEW | Shell script |
 | `requirements-check.sh` | 34394 | `12ed763e288632212f52c1531759dcea2361c6d7b62ddb31cc9d57c0d525d8d7` | REVIEW | Shell script |
 | `restart-from-monitor.py` | 2180 | `62fafcba0da53b21b5704f221c655c63eb5520f2def0fbe7312005a65c59dd2d` | REVIEW | File |

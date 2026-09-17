@@ -38,16 +38,33 @@ else
 fi
 
 printf '\n=== Git working tree ===\n'
-git status --short
+working_tree_status="$(
+    git status \
+        --porcelain=v1 \
+        --untracked-files=all \
+        --ignore-submodules=none
+)"
+if [[ -n "${working_tree_status}" ]]; then
+    printf '%s\n' "${working_tree_status}"
+    printf 'ERROR: Release check requires a clean Git working tree.\n' >&2
+    exit 1
+fi
+printf 'PASS: Git working tree is clean.\n'
 
 printf '\n=== Submodules ===\n'
-git submodule status --recursive
+submodule_status="$(git submodule status --recursive)"
+printf '%s\n' "${submodule_status}"
+if grep -Eq '^[+-U]' <<< "${submodule_status}"; then
+    printf 'ERROR: A submodule is uninitialized, modified from its pinned revision, or conflicted.\n' >&2
+    exit 1
+fi
+printf 'PASS: Submodules match their pinned revisions.\n'
 
 printf '\n=== Executable bits ===\n'
 ./scripts/check-executable.sh 1
 
 printf '\n=== SBOM ===\n'
-./scripts/generate-sbom.py
+./scripts/generate-sbom.py --check
 
 printf '\n=== Inventories ===\n'
 ./scripts/inventory.sh --check ./scripts/
@@ -57,6 +74,11 @@ printf '\n=== Script validation ===\n'
 ./scripts/test-scripts.sh
 
 printf '\n=== Verify no unexpected changes ===\n'
-git status --short
+if [[ -n "$(git status --porcelain=v1 --untracked-files=all --ignore-submodules=none)" ]]; then
+    git status --short --ignore-submodules=none
+    printf 'ERROR: Release checks changed the working tree.\n' >&2
+    exit 1
+fi
+printf 'PASS: Release checks left the working tree unchanged.\n'
 
 printf '\nPASS: final publish checks completed successfully.\n'

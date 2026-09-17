@@ -199,13 +199,18 @@ or browser connection that owns the UART port first, then run:
 .. code-block:: powershell
 
    py .\doom\upload-doom-image.py `
-       .\build\doom-image\hazard3-doom.h3d `
+       .\build\ulx3s\doom-image\hazard3-doom.h3d `
        --port COM7
 
    py .\doom\upload-wad.py `
        C:\path\to\DOOM.WAD `
        --port COM7 `
+       --memory-profile 64m `
        --launch
+
+The example above is for the primary ULX3S 85F target. For the default ULX3S
+12F build, use ``--memory-profile 32m`` and the matching 12F H3D image. The
+monitor, H3D image, and IWAD uploader must use the same memory profile.
 
 The UART port name is only an example; use the port assigned to your board.
 

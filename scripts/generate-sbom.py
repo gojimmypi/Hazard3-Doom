@@ -8,7 +8,7 @@ It records:
 - the Hazard3-Doom Git revision in release mode,
 - exact pinned Git submodule revisions,
 - known third-party/bundled components,
-- SHA-256 hashes for files redistributed under bin/,
+- SHA-256 hashes for Git-tracked files redistributed under bin/,
 - dependency relationships between logical packages and bundled files.
 
 By default, output is written to <repo>/bom.json.
@@ -158,13 +158,6 @@ BUNDLED_COMPONENTS = (
         "description": "Redistributed GDB/tooling directory.",
         "path_prefix": "bin/gdb/",
     },
-    {
-        "bom_ref": "riscv-gcc-bundle",
-        "name": "RISC-V GNU GCC toolchain bundle",
-        "type": "application",
-        "description": "Redistributed RISC-V GNU toolchain directory.",
-        "path_prefix": "bin/riscv-gcc/",
-    },
 )
 
 
@@ -267,6 +260,18 @@ def git_path_tracked(repo: Path, path: Path) -> bool:
         check=False,
     )
     return bool(value)
+
+def git_tracked_paths(repo: Path, pathspec: str) -> list[Path]:
+    output = run_git(
+        repo,
+        ["ls-files", "-z", "--cached", "--", pathspec],
+        check=True,
+    )
+    return [
+        repo / rel_path
+        for rel_path in output.split("\0")
+        if rel_path
+    ]
 
 
 def gitlink_sha(repo: Path, path: str) -> str | None:
@@ -484,7 +489,7 @@ def collect_bundled_files(
     }
     unmapped: list[str] = []
 
-    for path in sorted(bin_dir.rglob("*")):
+    for path in git_tracked_paths(repo, "bin"):
         if path.is_symlink():
             raise RuntimeError(f"Refusing symlink under bin/: {path}")
         if not path.is_file():
@@ -653,8 +658,8 @@ def build_bom(
                 "hazard3-doom:sbom-scope",
                 (
                     "Source tree, pinned source submodules, known bundled "
-                    "third-party components, and redistributed convenience "
-                    "binaries."
+                    "third-party components, and Git-tracked redistributed "
+                    "convenience binaries."
                 ),
             ),
             prop(

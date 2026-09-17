@@ -48,6 +48,30 @@ The .h3d is application software is current board specific; ideally the FPGA/mon
 hide the board differences behind the monitor service ABI. Doom shouldn't need to know whether it is 
 running on ULX3S 12F, ULX3S 85F, or ULX4M-LD.
 
+## doom/upload-wad.py memory profile
+
+Change and check usage, e.g. `./doom/upload-wad.py DOOM1.WAD --port COM7 --launch`
+
+```python
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Upload an IWAD to the Hazard3 ECP5 SDRAM WAD region")
+    parser.add_argument("wad", type=pathlib.Path)
+    parser.add_argument("--port", required=True)
+    parser.add_argument("--baud", type=int, default=115200)
+    parser.add_argument(
+        "--memory-profile",
+        choices=MEMORY_PROFILES,
+        required=True,
+        help=(
+            "must match the monitor build: "
+            "64m for ULX3S 85F and ULX4M-LD; "
+            "32m for the default ULX3S 12F build and ULX4M-LS"
+        ),
+    )
+
+```
+
 ## wolfBoot example
 
 - Get doom to boot from a secure bootloader, see [wolfssl/wolfboot](https://github.com/wolfssl/wolfboot)
