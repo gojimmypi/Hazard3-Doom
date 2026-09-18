@@ -54,9 +54,35 @@ Ou fournissez explicitement un ELF :
 
    ./scripts/load-firmware.sh /path/to/hazard3-boot-monitor.elf
 
-Le chargeur batch arrête la cible, charge l'ELF, vérifie les sections chargées
-avec ``compare-sections``, règle ``$pc`` sur ``_start``, relance le processeur,
-puis se déconnecte.
+La forme sans argument désigne la sortie du build autonome
+``scripts/build.sh``. Pour un build complet de carte, préférez le fichier de
+commandes GDB propre à la cible afin de ne pas confondre le moniteur avec un ELF
+construit pour une autre horloge ou un autre profil mémoire :
+
+.. code-block:: bash
+
+   # ULX3S 85F
+   riscv-none-elf-gdb -batch -x scripts/gdb/load-ulx3s-85f-monitor.gdb
+
+   # ULX3S 12F
+   riscv-none-elf-gdb -batch -x scripts/gdb/load-ulx3s-12f-monitor.gdb
+
+   # ULX4M-LD 85F
+   riscv-none-elf-gdb -batch -x scripts/gdb/load-ulx4m-ld-85f-monitor.gdb
+
+Chaque fichier sélectionne le moniteur sous le répertoire
+``build/<board>/monitor/`` correspondant, arrête la cible, charge et vérifie
+l'ELF avec ``compare-sections``, règle ``$pc`` sur ``_start``, relance le
+processeur puis se déconnecte. N'utilisez pas un ELF générique ou ancien provenant
+d'un autre build de carte : il peut s'exécuter tout en utilisant un diviseur UART,
+une carte mémoire ou un protocole de chargement incorrect.
+
+Lorsqu'un exécutable Windows ``.exe`` fourni est lancé depuis WSL, le shell reste
+Bash. Utilisez des chemins comme ``./bin/gdb/riscv-none-elf-gdb.exe`` et une
+barre oblique inverse finale (``\``) pour continuer une commande Bash. La
+syntaxe ``cmd.exe`` comme ``.\bin\...`` et la continuation ``^`` n'est valide
+qu'après être entré explicitement dans ``cmd.exe`` ; collée directement dans WSL,
+elle est interprétée comme des commandes Bash séparées ou altérées.
 
 FT231X intégré à l'ULX3S
 ------------------------
@@ -492,7 +518,7 @@ Construisez un moniteur logiciel correspondant sans relancer le routage FPGA :
 
 .. code-block:: bash
 
-   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-40mhz/monitor" \
+   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-monitor-test/monitor" \
    HAZARD3_MEMORY_PROFILE=64m \
    HAZARD3_SYS_CLK_HZ=40000000 \
        ./scripts/build.sh
@@ -502,7 +528,7 @@ Puis, avec OpenOCD ayant déjà examiné la cible :
 .. code-block:: bash
 
    ./scripts/load-firmware.sh \
-       ./build/ulx4m-ld-40mhz/monitor/hazard3-boot-monitor.elf
+       ./build/ulx4m-ld-monitor-test/monitor/hazard3-boot-monitor.elf
 
 Un chargement réussi signale des sections ``.vectors``, ``.text``, données en
 lecture seule et ``.data`` correspondantes avant de reprendre à l'adresse

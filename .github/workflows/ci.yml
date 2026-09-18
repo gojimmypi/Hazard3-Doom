@@ -640,7 +640,7 @@ jobs:
           for profile in 64m 32m; do
               build_dir="build/ci/doom-${profile}"
               elf="${build_dir}/hazard3-doom.elf"
-              image="${build_dir}/hazard3-doom.h3d"
+              image="${build_dir}/hazard3-doom.h3img"
               label="Doom profile=${profile}"
 
               echo "::group::${label}"
@@ -668,40 +668,14 @@ jobs:
               fi
 
               if [[ ! -s "${image}" ]]; then
-                  echo "::error file=${image}::Missing or empty H3D image: ${label}"
+                  echo "::error file=${image}::Missing or empty H3IMG image: ${label}"
                   status=1
                   echo "::endgroup::"
                   continue
               fi
 
-              if ! python3 - "${image}" <<'PY'
-          import pathlib
-          import struct
-          import sys
-          import zlib
-
-          image_path = pathlib.Path(sys.argv[1])
-          package = image_path.read_bytes()
-          if len(package) < 64:
-              raise SystemExit(f"{image_path}: package is shorter than its header")
-
-          words = struct.unpack("<16I", package[:64])
-          payload = package[64:]
-          if words[0] != 0x31443348:
-              raise SystemExit(f"{image_path}: bad H3D magic")
-          if words[1] != 64:
-              raise SystemExit(f"{image_path}: unsupported header size")
-          if words[5] != len(payload):
-              raise SystemExit(f"{image_path}: payload length mismatch")
-          if (zlib.crc32(payload) & 0xFFFFFFFF) != words[9]:
-              raise SystemExit(f"{image_path}: payload CRC32 mismatch")
-          print(
-              f"Validated {image_path}: payload={len(payload)} bytes, "
-              f"CRC32=0x{words[9]:08x}"
-          )
-          PY
-              then
-                  echo "::error file=${image}::H3D package validation failed: ${label}"
+              if ! python3 doom/upload-doom-image.py "${image}" --validate-only; then
+                  echo "::error file=${image}::H3IMG package validation failed: ${label}"
                   status=1
               fi
               echo "::endgroup::"
@@ -768,8 +742,8 @@ jobs:
 
           | Directory | Contents | Intended target |
           |---|---|---|
-          | `doom-64m/` | Doom ELF, map, and packaged H3D image using the 64 MiB memory map | ULX3S 85F and ULX4M-LD 85F |
-          | `doom-32m/` | Doom ELF, map, and packaged H3D image using the 32 MiB memory map | ULX4M-LS 85F |
+          | `doom-64m/` | Doom ELF, map, and packaged H3IMG image using the 64 MiB memory map | ULX3S 85F and ULX4M-LD 85F |
+          | `doom-32m/` | Doom ELF, map, and packaged H3IMG image using the 32 MiB memory map | ULX4M-LS 85F |
           | `monitor-64m-50000000/` | Resident monitor built for 64 MiB SDRAM at 50 MHz | ULX3S 85F |
           | `monitor-64m-40000000/` | Resident monitor built for 64 MiB SDRAM at 40 MHz | ULX4M-LD 85F |
           | `monitor-32m-50000000/` | Resident monitor built for 32 MiB SDRAM at 50 MHz | ULX4M-LS 85F |
@@ -778,7 +752,7 @@ jobs:
 
           For ULX3S 85F, use the `64m` software profile and 50 MHz monitor:
 
-          - `doom-64m/hazard3-doom.h3d`
+          - `doom-64m/hazard3-doom.h3img`
           - `doom-64m/hazard3-doom.elf` and `.map` for debugging/inspection
           - `monitor-64m-50000000/hazard3-boot-monitor.elf`
           - `monitor-64m-50000000/hazard3-boot-monitor.map`
@@ -797,7 +771,7 @@ jobs:
           - `hazard3-boot-monitor.map`: linker map for the resident monitor.
           - `hazard3-doom.elf`: linked Doom executable for debugging/inspection.
           - `hazard3-doom.map`: linker map for the Doom executable.
-          - `hazard3-doom.h3d`: packaged Doom image consumed by the Hazard3 monitor/loader.
+          - `hazard3-doom.h3img`: packaged Doom image consumed by the Hazard3 monitor/loader.
 
           The monitor, Doom image, and WAD uploader must use the same SDRAM
           memory profile (`64m` or `32m`).
@@ -812,7 +786,7 @@ jobs:
             build/ci/README.md
             build/ci/**/*.elf
             build/ci/**/*.map
-            build/ci/**/*.h3d
+            build/ci/**/*.h3img
             build/ci/logs/*.log
           if-no-files-found: warn
           retention-days: 7

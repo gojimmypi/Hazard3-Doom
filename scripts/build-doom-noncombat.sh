@@ -120,7 +120,7 @@ unset HAZARD3_DOOM_PREPARED_SOURCE
 
 G_OBJECT="${BUILD_DIR}/g_game.o"
 R_OBJECT="${BUILD_DIR}/r_things.o"
-OUTPUT="${BUILD_DIR}/hazard3-doom.h3d"
+OUTPUT="${BUILD_DIR}/hazard3-doom.h3img"
 require_file "${G_OBJECT}"
 require_file "${R_OBJECT}"
 require_file "${OUTPUT}"

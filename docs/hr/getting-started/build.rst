@@ -26,6 +26,18 @@ Uobičajeni build mora zadovoljiti sva ograničenja takta:
 
    ./scripts/build-ulx4m-ld-doom.sh
 
+Potpune omotne skripte spremaju artifacts specifične za cilj u direktorije
+vezane uz pločicu. Konkretno, Doom slike za prijenos nalaze se ovdje:
+
+.. code-block:: text
+
+   build/ulx3s/doom-image/hazard3-doom.h3img
+   build/ulx4m-ld/doom-image/hazard3-doom.h3img
+
+Samostalna naredba ``doom/build-doom-image.sh`` dokumentirana niže na ovoj
+stranici i dalje koristi generički direktorij ``build/doom-image/`` osim ako je
+postavljen ``HAZARD3_DOOM_BUILD_DIR``.
+
 Build koristi zajedničke ULX4M-LD postavke definirane u
 ``scripts/build-ecp5-bitstream-common.sh`` i sažete u
 :doc:`../reference/board-profiles`. Povijesna, verzijski spremljena zamrznuta
@@ -74,6 +86,26 @@ sistemski takt i linker skriptu za ciljni uređaj. Za ručne izgradnje glavne su
 kontrole ``HAZARD3_MEMORY_PROFILE``, ``HAZARD3_SYS_CLK_HZ`` i
 ``HAZARD3_MONITOR_LINKER_SCRIPT``.
 
+Za softversko ažuriranje samo ULX4M-LD monitora na već konfiguriranom FPGA-u na
+40 MHz, spremite izlaz odvojeno od rezidentnog preloada:
+
+.. code-block:: bash
+
+   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-monitor-test/monitor" \
+   HAZARD3_MEMORY_PROFILE=64m \
+   HAZARD3_SYS_CLK_HZ=40000000 \
+       ./scripts/build.sh
+
+Učitajte ga kroz već pokrenutu OpenOCD sesiju pomoću:
+
+.. code-block:: bash
+
+   ./scripts/load-firmware.sh \
+       ./build/ulx4m-ld-monitor-test/monitor/hazard3-boot-monitor.elf
+
+Time se ažurira samo procesorski softver u aktivnom FPGA-u i ne rerouta se
+poznato dobar bitstream.
+
 Samo povezana Doom slika
 ------------------------
 
@@ -98,7 +130,7 @@ Tipični izlazi:
    build/doom-image/hazard3-doom.elf
    build/doom-image/hazard3-doom.map
    build/doom-image/hazard3-doom.bin
-   build/doom-image/hazard3-doom.h3d
+   build/doom-image/hazard3-doom.h3img
 
 Ispitivanje druge Hazard3 kopije
 --------------------------------

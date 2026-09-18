@@ -214,6 +214,26 @@ Doom upload istječe
 * Zatvorite PuTTY ili drugi program koji koristi UART port.
 * Potvrdite odabrani COM/TTY uređaj.
 * Potvrdite da monitor i uploader koriste isti memorijski profil.
+* Na zadanom kvalificiranom ULX4M-LD profilu Hazard3 sistemski takt je 40 MHz,
+  a UART se i dalje
+  očekuje na 115200 bauda. Ako programirana slika istječe na 115200, ali odgovara
+  oko 92160 bauda, to je snažan dijagnostički znak da je UART djelitelj monitora
+  izračunat uz pretpostavku takta od 50 MHz dok FPGA zapravo radi na 40 MHz
+  (``115200 * 40 / 50 = 92160``). Ponovno izgradite cijeli cilj s
+  ``./scripts/build-ulx4m-ld-doom.sh``, ponovno programirajte bitstream i testirajte
+  na 115200; 92160 koristite samo kao dijagnostički baud.
+* Neki WSL ``/dev/ttyS*`` serijski mostovi odbijaju nestandardni dijagnostički
+  baud 92160 uz ``termios.error: (5, 'Input/output error')``. Ako je taj test
+  potreban, pokrenite uploader s Windows Pythonom preko odgovarajućeg COM porta,
+  primjerice iz WSL-a:
+
+  .. code-block:: bash
+
+     cmd.exe /c "py doom/upload-doom-image.py build/ulx4m-ld/doom-image/hazard3-doom.h3img --port COM8 --baud 92160"
+* Ako cilj dosegne ``H3L READY`` pa prijavi ``H3L ERROR invalid header``, UART
+  handshake radi. Provjerite jesu li rezidentni monitor i ``.h3img`` nastali iz
+  međusobno kompatibilnog builda/profila prije promjene serijskih drivera ili
+  ožičenja.
 
 Nema micro-SD kartice, ali hladno pokretanje prijavljuje CMD0 pogrešku
 -----------------------------------------------------------------------
@@ -237,7 +257,7 @@ nedostajućoj kartici nije kvar sustava.
 SD kartica se montira, ali datoteke nisu pronađene
 --------------------------------------------------
 
-* Koristite nazive u korijenu ``DOOM.H3D`` i ``DOOM.WAD``.
+* Koristite nazive u korijenu ``DOOM.IMG`` i ``DOOM.WAD``.
 * Potvrdite FAT16/FAT32 formatiranje.
 * Koristite naredbu monitora ``c`` za pregled FAT tipa, stanja mounta i pronađenih veličina datoteka.
 * Nemojte se oslanjati na duge nazive datoteka; boot put projektiran je oko korijenskih 8.3 naziva.
@@ -342,7 +362,7 @@ Korisne provjere:
 Prije OpenOCD-a odspojite i browser FPGA WebUSB flasher s ``US1`` jer oba
 koriste isti FT231X JTAG. Vanjski J1 USB-UART neovisan je i može ostati spojen.
 
-Ako H3D/H3W kasnije istekne čekajući ``READY``, prvo provjerite radi li
+Ako H3IMG/H3W kasnije istekne čekajući ``READY``, prvo provjerite radi li
 rezidentni monitor na ``>`` promptu. Ako helper odgovara, ali OpenOCD nije
 prisutan, Device Tool dodatno podsjeća da monitor možda još treba učitati.
 

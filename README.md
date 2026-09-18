@@ -229,13 +229,13 @@ build/fpga_ulx3s.bit
 build/fpga_ulx3s_12f.bit
 build/fpga_ulx4m_ld.bit
 build/ulx3s/monitor/hazard3-boot-monitor.elf
-build/ulx3s/doom-image/hazard3-doom.h3d
+build/ulx3s/doom-image/hazard3-doom.h3img
 build/ulx3s/hazard3-boot-monitor.hex
 build/ulx3s-12f/monitor/hazard3-boot-monitor.elf
-build/ulx3s-12f/doom-image/hazard3-doom.h3d
+build/ulx3s-12f/doom-image/hazard3-doom.h3img
 build/ulx3s-12f/hazard3-12f-bootstrap.hex
 build/ulx4m-ld/monitor/hazard3-boot-monitor.elf
-build/ulx4m-ld/doom-image/hazard3-doom.h3d
+build/ulx4m-ld/doom-image/hazard3-doom.h3img
 build/ulx4m-ld/hazard3-boot-monitor.hex
 ```
 
@@ -358,7 +358,7 @@ Output:
 build/doom-image/hazard3-doom.elf
 build/doom-image/hazard3-doom.map
 build/doom-image/hazard3-doom.bin
-build/doom-image/hazard3-doom.h3d
+build/doom-image/hazard3-doom.h3img
 ```
 
 A compile-only object-size report is available with:
@@ -382,7 +382,7 @@ Upload the executable image without launching it:
 
 ```bash
 python3 doom/upload-doom-image.py \
-    build/doom-image/hazard3-doom.h3d \
+    build/doom-image/hazard3-doom.h3img \
     --port COM7
 ```
 
@@ -390,7 +390,7 @@ PowerShell:
 
 ```powershell
 py .\doom\upload-doom-image.py `
-    .\build\doom-image\hazard3-doom.h3d `
+    .\build\doom-image\hazard3-doom.h3img `
     --port COM7
 ```
 

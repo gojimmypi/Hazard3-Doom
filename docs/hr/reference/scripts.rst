@@ -291,9 +291,12 @@ Programiranje i OpenOCD
    zadati kao prvi argument; inače se koristi binarna datoteka iz repozitorija.
 
 ``scripts/load-firmware.sh``
-   Učitava normalni monitor ELF kroz aktivni OpenOCD GDB server, zaustavlja cilj,
-   učitava i uspoređuje sekcije, postavlja ``$pc`` na ``_start``, nastavlja i
-   prekida vezu. Time GDB ne ostaje spojen nakon programiranja.
+   Učitava monitor ELF kroz aktivni OpenOCD GDB server, zaustavlja cilj, učitava
+   i uspoređuje sekcije, postavlja ``$pc`` na ``_start``, nastavlja i prekida
+   vezu. Bez argumenta koristi samostalni izlaz
+   ``build/hazard3-boot-monitor.elf``. Potpuni board buildovi trebaju izričito
+   proslijediti board-specific ELF ili koristiti odgovarajući
+   ``scripts/gdb/load-*-monitor.gdb`` helper.
 
 ``scripts/load-firmware-12f.sh``
    Učitava ULX3S 12F monitor smješten u SDRAM-u nakon što je kompaktni FPGA
@@ -329,8 +332,19 @@ GDB pomoćni alati
 ``scripts/hazard3-debug.gdb``
    Zajedničke definicije Hazard3 GDB naredbi koje koristi projektna debug postava.
 
-``scripts/gdb/load-hazard3-test-elf.gdb``
-   Fokusirana GDB datoteka naredbi za učitavanje Hazard3 monitor/test ELF-a.
+``scripts/gdb/load-ulx3s-85f-monitor.gdb``
+   Učitava, provjerava i pokreće monitor koji stvara potpuni ULX3S 85F build u
+   ``build/ulx3s/monitor/hazard3-boot-monitor.elf``.
+
+``scripts/gdb/load-ulx3s-12f-monitor.gdb``
+   Učitava, provjerava i pokreće SDRAM-rezidentni monitor koji stvara potpuni
+   ULX3S 12F build u ``build/ulx3s-12f/monitor/hazard3-boot-monitor.elf``.
+
+``scripts/gdb/load-ulx4m-ld-85f-monitor.gdb``
+   Učitava, provjerava i pokreće monitor koji stvara potpuni ULX4M-LD 85F build
+   u ``build/ulx4m-ld/monitor/hazard3-boot-monitor.elf``. Koristite monitor iz
+   istog board builda kao FPGA sliku kako bi sat, memorijska mapa, linker i
+   protokol loadera ostali usklađeni.
 
 ``scripts/gdb/sao-probe.gdb``
    Ispituje stanje SAO bridgea iz GDB-a.

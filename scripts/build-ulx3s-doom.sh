@@ -55,7 +55,7 @@ MONITOR_BIN="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.bin"
 BOOT_HEX_WORK="${HAZARD3_ROOT}/example_soc/soc/hazard3-boot-monitor.hex"
 BOOT_HEX_OUTPUT="${BOARD_BUILD_DIR}/hazard3-boot-monitor.hex"
 SDCARD_DIR="${BOARD_BUILD_DIR}/sdcard"
-DOOM_OUTPUT="${DOOM_BUILD_DIR}/hazard3-doom.h3d"
+DOOM_OUTPUT="${DOOM_BUILD_DIR}/hazard3-doom.h3img"
 HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
 
 
@@ -156,7 +156,7 @@ require_file "${MONITOR_OUTPUT}"
 require_file "${DOOM_OUTPUT}"
 
 mkdir -p "${SDCARD_DIR}"
-cp "${DOOM_OUTPUT}" "${SDCARD_DIR}/DOOM.H3D"
+cp "${DOOM_OUTPUT}" "${SDCARD_DIR}/DOOM.IMG"
 if [[ -n "${HAZARD3_DOOM_WAD:-}" ]]; then
     require_file "${HAZARD3_DOOM_WAD}"
     cp "${HAZARD3_DOOM_WAD}" "${SDCARD_DIR}/DOOM.WAD"
@@ -166,5 +166,5 @@ printf '\nULX3S 85F Doom build complete.\n'
 printf '  FPGA:    %s\n' "${FPGA_OUTPUT}"
 printf '  Monitor: %s\n' "${MONITOR_OUTPUT}"
 printf '  Doom:    %s\n' "${DOOM_OUTPUT}"
-printf '  SD H3D:  %s\n' "${SDCARD_DIR}/DOOM.H3D"
+printf '  SD H3IMG:  %s\n' "${SDCARD_DIR}/DOOM.IMG"
 printf '  Boot HEX: %s\n' "${BOOT_HEX_OUTPUT}"

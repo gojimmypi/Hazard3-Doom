@@ -17,7 +17,7 @@ Postavite ove datoteke u korijenski direktorij micro-SD kartice formatirane kao 
 
 .. code-block:: text
 
-   DOOM.H3D
+   DOOM.IMG
    DOOM.WAD
 
 ``DOOM.WAD`` je kanonski naziv IWAD datoteke koji trenutačni postupak hladnog pokretanja koristi.
@@ -35,7 +35,7 @@ Slijed hladnog pokretanja
 #. Hazard3 počinje na svojoj reset/monitor ulaznoj točki.
 #. SDRAM se inicijalizira.
 #. Monitor inicijalizira SD karticu i montira FAT.
-#. ``DOOM.H3D`` se učitava u SDRAM i provjerava.
+#. ``DOOM.IMG`` se učitava u SDRAM i provjerava.
 #. ``DOOM.WAD`` se pronalazi i učitava u svoje rezervirano područje.
 #. Monitor pokreće Doom.
 

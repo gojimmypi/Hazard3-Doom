@@ -37,7 +37,7 @@ static hazard3_fat_fs_t fat_fs;
 static uint32_t sd_mount_ok;
 static uint32_t sd_boot_runs;
 static uint32_t sd_boot_failures;
-static uint32_t sd_last_h3d_bytes;
+static uint32_t sd_last_h3img_bytes;
 static uint32_t sd_last_wad_bytes;
 static const char* sd_last_wad_name;
 static uint8_t sd_directory_sector[512];
@@ -247,15 +247,15 @@ static int open_wad(hazard3_fat_file_t* file, const char** file_name)
 
 int hazard3_sd_boot(int launch_after_load)
 {
-    static const char h3d_name83[11] = {
-        'D','O','O','M',' ',' ',' ',' ','H','3','D'
+    static const char h3img_name83[11] = {
+        'D','O','O','M',' ',' ',' ',' ','I','M','G'
     };
-    hazard3_fat_file_t h3d_file;
+    hazard3_fat_file_t h3img_file;
     hazard3_fat_file_t wad_file;
     const char* wad_name;
     ++sd_boot_runs;
     sd_mount_ok = 0u;
-    sd_last_h3d_bytes = 0u;
+    sd_last_h3img_bytes = 0u;
     sd_last_wad_bytes = 0u;
     sd_last_wad_name = (const char*)0;
 
@@ -281,18 +281,18 @@ int hazard3_sd_boot(int launch_after_load)
     }
     sd_mount_ok = 1u;
     hazard3_fat_print_status(&fat_fs);
-    if (!hazard3_fat_open_83(&fat_fs, h3d_name83, &h3d_file)) {
+    if (!hazard3_fat_open_83(&fat_fs, h3img_name83, &h3img_file)) {
         ++sd_boot_failures;
-        hazard3_console_puts("SD boot: DOOM.H3D not found in FAT root\r\n");
+        hazard3_console_puts("SD boot: DOOM.IMG not found in FAT root\r\n");
         return 0;
     }
-    sd_last_h3d_bytes = h3d_file.size;
-    hazard3_console_puts("SD boot: loading DOOM.H3D bytes=");
-    hazard3_console_put_hex32(h3d_file.size);
+    sd_last_h3img_bytes = h3img_file.size;
+    hazard3_console_puts("SD boot: loading DOOM.IMG bytes=");
+    hazard3_console_put_hex32(h3img_file.size);
     hazard3_console_puts("\r\n");
-    if (!doom_image_loader_load_stream(fat_stream_read, &h3d_file)) {
+    if (!doom_image_loader_load_stream(fat_stream_read, &h3img_file)) {
         ++sd_boot_failures;
-        hazard3_console_puts("SD boot: H3D load/CRC validation failed\r\n");
+        hazard3_console_puts("SD boot: H3IMG load/CRC validation failed\r\n");
         return 0;
     }
     if (!open_wad(&wad_file, &wad_name)) {
@@ -334,8 +334,8 @@ void hazard3_sd_boot_print_status(void)
         hazard3_fat_print_status(&fat_fs);
         hazard3_sd_print_root_directory();
     }
-    hazard3_console_puts("sd_h3d_bytes=");
-    hazard3_console_put_hex32(sd_last_h3d_bytes);
+    hazard3_console_puts("sd_h3img_bytes=");
+    hazard3_console_put_hex32(sd_last_h3img_bytes);
     hazard3_console_puts(" sd_wad_bytes=");
     hazard3_console_put_hex32(sd_last_wad_bytes);
     hazard3_console_puts(" wad=");

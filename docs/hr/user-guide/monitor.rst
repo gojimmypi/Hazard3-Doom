@@ -32,7 +32,7 @@ provjerenu predmemoriranu kopiju u rezerviranom SDRAM-u. Upit sposobnosti
 ``0x1c`` vraća ACK dok je ta predmemorija valjana, a ``0x1d`` serijalizira
 predmemorirani okvir.
 
-Učitavanje slike ``.h3d`` naredbom ``l`` samo pohranjuje i provjerava izvršnu
+Učitavanje slike ``.h3img`` naredbom ``l`` samo pohranjuje i provjerava izvršnu
 datoteku u SDRAM-u; ono **ne** pokreće tu sliku niti aktivira Doomov vlastiti
 rukovatelj snimkom zaslona. Doom postaje aktivni pružatelj zaslona tek nakon što
 ``j`` pokrene sliku i počne raditi njegova UART/HDMI petlja. HDMI GUI I2CDrivera

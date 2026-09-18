@@ -225,7 +225,7 @@ component_for_path()
     libusb-1.0.dll)
         echo "libusb"
         ;;
-    fpga_*.bit|hazard3-*.elf|hazard3-*.map|hazard3-*.h3d)
+    fpga_*.bit|hazard3-*.elf|hazard3-*.map|hazard3-*.h3img)
         echo "Hazard3-Doom project output"
         ;;
     inventory.sh)
@@ -254,7 +254,7 @@ kind_for_path()
     *.bit)
         echo "FPGA bitstream"
         ;;
-    *.h3d)
+    *.h3img)
         echo "Hazard3-Doom image"
         ;;
     *.map)

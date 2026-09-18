@@ -17,7 +17,7 @@ REM Run from repo root:
 ```
 
 Additionally, this VisualGDB solution does not implement the FPGA synthesis (yosys, nexpnr, etc). For getting started,
-there's a pre-synthesized `fpga_ulx3s_hdmi_doom.bit` file in the [.\bin\](../bin/) directory.
+there's a pre-synthesized `fpga_ulx3s_85f_hdmi_doom.bit` file in the [.\bin\](../bin/) directory.
 
 ## Hazard3-Doom Project
 

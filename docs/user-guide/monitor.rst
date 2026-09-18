@@ -31,7 +31,7 @@ protocol. After it successfully presents the monitor RGB332 test pattern, it
 keeps a validated cached copy in reserved SDRAM. A ``0x1c`` capability query
 returns ACK while that cache is valid, and ``0x1d`` serializes the cached frame.
 
-Uploading an ``.h3d`` image with ``l`` only stores and validates the executable
+Uploading an ``.h3img`` image with ``l`` only stores and validates the executable
 in SDRAM; it does **not** run that image or activate Doom's own screen-snip
 handler. Doom becomes the active screen provider only after ``j`` launches the
 image and its UART/HDMI loop begins running. The I2CDriver HDMI GUI similarly

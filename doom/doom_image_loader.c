@@ -538,7 +538,7 @@ int doom_image_loader_launch(void)
         ++launch_failure_count;
         hazard3_console_puts(
             "\r\nDoom restart image verification failed. "
-            "Upload the H3D again.\r\n");
+            "Upload the H3IMG again.\r\n");
         return 0;
     }
     entry = (doom_entry_fn_t)(uintptr_t)loaded_header.entry_address;

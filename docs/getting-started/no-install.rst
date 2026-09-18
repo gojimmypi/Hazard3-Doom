@@ -24,7 +24,7 @@ What you need
 * an HDMI display;
 * the ULX3S ``US1`` USB connection for FPGA WebUSB programming;
 * an external USB-to-UART adapter connected to the Hazard3-Doom UART;
-* a matching prebuilt ``.bit`` file and ``.h3d`` file; and
+* a matching prebuilt ``.bit`` file and ``.h3img`` file; and
 * a legally obtained Doom IWAD such as ``DOOM.WAD`` or ``DOOM1.WAD``.
 
 See :doc:`../user-guide/pinouts` for the UART connections and
@@ -52,13 +52,13 @@ board:
 
    * - Board
      - FPGA image
-     - Doom H3D image
+     - Doom H3IMG image
    * - ULX3S 85F
-     - ``fpga_ulx3s_hdmi_doom.bit``
-     - ``hazard3-doom-ulx3s-85F.h3d``
+     - ``fpga_ulx3s_85f_hdmi_doom.bit``
+     - ``hazard3-doom-ulx3s-85F.h3img``
    * - ULX3S 12F
      - ``fpga_ulx3s_12f_hdmi_doom.bit``
-     - ``hazard3-doom-ulx3s-12F.h3d``
+     - ``hazard3-doom-ulx3s-12F.h3img``
 
 Do not mix files from different board profiles. The browser flasher probes the
 physical ECP5 JTAG ID and rejects a ``.bit`` file whose embedded target does not
@@ -67,7 +67,7 @@ match the FPGA it detected.
 .. _fig-no-install-bin-prebuilt-files:
 
 .. figure:: ../images/no-install-bin-prebuilt-files.png
-   :alt: GitHub Hazard3-Doom bin directory showing the ULX3S prebuilt bitstream and H3D files.
+   :alt: GitHub Hazard3-Doom bin directory showing the ULX3S prebuilt bitstream and H3IMG files.
    :width: 85%
    :class: screenshot
 
@@ -175,25 +175,25 @@ not need to load ``hazard3-boot-monitor.elf`` for this procedure.
 If no prompt appears, see :doc:`../troubleshooting` and
 :doc:`../user-guide/web-serial` before continuing.
 
-5. Upload the Doom H3D image
-----------------------------
+5. Upload the Doom H3IMG image
+------------------------------
 
-Under **Device uploading**, expand **Doom H3D uploader**:
+Under **Device uploading**, expand **Doom H3IMG uploader**:
 
-#. Select the matching ``hazard3-doom-*.h3d`` file.
-#. Choose **Upload H3D**.
+#. Select the matching ``hazard3-doom-*.h3img`` file.
+#. Choose **Upload H3IMG**.
 #. Wait for the monitor to accept the image.
 
-Keep the H3D image matched to the same board profile as the ``.bit`` file.
+Keep the H3IMG image matched to the same board profile as the ``.bit`` file.
 
-.. _fig-no-install-h3d-upload:
+.. _fig-no-install-h3img-upload:
 
-.. figure:: ../images/no-install-h3d-upload.png
-   :alt: Hazard3-Doom Device Tool H3D uploader with a board-specific Doom image selected.
+.. figure:: ../images/no-install-h3img-upload.png
+   :alt: Hazard3-Doom Device Tool H3IMG uploader with a board-specific Doom image selected.
    :width: 85%
    :class: screenshot
 
-   Uploading the board-matched ``hazard3-doom-*.h3d`` image through the Device
+   Uploading the board-matched ``hazard3-doom-*.h3img`` image through the Device
    Tool.
 
 6. Upload your Doom IWAD
@@ -256,7 +256,7 @@ remain connected for monitor and diagnostic commands.
    :width: 85%
    :class: screenshot
 
-   Doom running after a successful FPGA program, H3D upload, and IWAD upload.
+   Doom running after a successful FPGA program, H3IMG upload, and IWAD upload.
 
 What this path does not install
 -------------------------------
@@ -269,7 +269,7 @@ install or require:
 * a RISC-V GCC toolchain;
 * the Hazard3-Doom source checkout or submodules;
 * the command-line Doom upload scripts; or
-* OpenOCD/GDB for the normal boot-monitor/H3D/IWAD path.
+* OpenOCD/GDB for the normal boot-monitor/H3IMG/IWAD path.
 
 When you are ready to rebuild or modify the FPGA, monitor firmware, or Doom
 image, continue with :doc:`quick-start` and :doc:`build`.

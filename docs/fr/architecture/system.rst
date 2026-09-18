@@ -76,12 +76,12 @@ Chemins de démarrage
 Démarrage de développement
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Chargement FPGA -> moniteur résident -> téléversement UART ``.h3d`` -> téléversement UART ``DOOM.WAD`` -> lancement.
+Chargement FPGA -> moniteur résident -> téléversement UART ``.h3img`` -> téléversement UART ``DOOM.WAD`` -> lancement.
 
 Démarrage autonome
 ~~~~~~~~~~~~~~~~~~
 
-Configuration FPGA depuis flash SPI -> moniteur résident EBR préchargé -> initialisation SDRAM -> micro-SD ``DOOM.H3D`` + ``DOOM.WAD`` -> lancement.
+Configuration FPGA depuis flash SPI -> moniteur résident EBR préchargé -> initialisation SDRAM -> micro-SD ``DOOM.IMG`` + ``DOOM.WAD`` -> lancement.
 
 Le préchargement SRAM du moniteur résident est une personnalisation du fork
 Hazard3 ULX3S. Il permet au système de démarrer immédiatement un firmware utile

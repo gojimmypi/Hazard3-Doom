@@ -33,7 +33,7 @@ SIZE="${TOOLCHAIN_PREFIX}size"
 BUILD_DIR="${HAZARD3_DOOM_BUILD_DIR:-${ROOT_DIR}/build/doom-image}"
 OUTPUT_ELF="${BUILD_DIR}/hazard3-doom.elf"
 OUTPUT_BIN="${BUILD_DIR}/hazard3-doom.bin"
-OUTPUT_IMAGE="${BUILD_DIR}/hazard3-doom.h3d"
+OUTPUT_IMAGE="${BUILD_DIR}/hazard3-doom.h3img"
 
 # Run ShellCheck to ensure this is a good script.
 # Specify the executable shell checker you want to use:

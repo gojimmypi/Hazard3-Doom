@@ -61,7 +61,7 @@ fi
 
 if [[ ! -f "${ELF}" ]]; then
     echo "Missing firmware ELF: ${ELF}" >&2
-    echo "Run ${ROOT_DIR}/scripts/build.sh first or use the file in the prebuilt ./bin/ directory." >&2
+    echo "Run a monitor build first, or pass the board-specific monitor ELF from build/<board>/monitor/." >&2
     exit 1
 fi
 

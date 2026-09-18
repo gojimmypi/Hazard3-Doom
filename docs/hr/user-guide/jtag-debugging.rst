@@ -48,9 +48,34 @@ Ili navedite ELF izričito:
 
    ./scripts/load-firmware.sh /path/to/hazard3-boot-monitor.elf
 
-Batch loader zaustavlja metu, učitava ELF, provjerava učitane sekcije s
-``compare-sections``, postavlja ``$pc`` na ``_start``, nastavlja procesor i
-odspaja se.
+Oblik bez argumenta odnosi se na izlaz samostalnog ``scripts/build.sh`` builda.
+Za potpuni board build radije koristite GDB datoteku naredbi za točno određenu
+metu kako se monitor ne bi zamijenio s ELF-om izgrađenim za drugi takt ili
+memorijski profil:
+
+.. code-block:: bash
+
+   # ULX3S 85F
+   riscv-none-elf-gdb -batch -x scripts/gdb/load-ulx3s-85f-monitor.gdb
+
+   # ULX3S 12F
+   riscv-none-elf-gdb -batch -x scripts/gdb/load-ulx3s-12f-monitor.gdb
+
+   # ULX4M-LD 85F
+   riscv-none-elf-gdb -batch -x scripts/gdb/load-ulx4m-ld-85f-monitor.gdb
+
+Svaka datoteka odabire monitor iz odgovarajućeg ``build/<board>/monitor/``
+direktorija, zaustavlja metu, učitava i provjerava ELF s ``compare-sections``,
+postavlja ``$pc`` na ``_start``, nastavlja procesor i odspaja se. Nemojte koristiti
+generički ili zastarjeli monitor ELF iz drugog board builda; može se izvršavati,
+a ipak koristiti pogrešan UART djelitelj, memorijsku mapu ili protokol loadera.
+
+Kada iz WSL-a pokrećete priloženu Windows ``.exe`` datoteku, okolna ljuska i
+dalje je Bash. Koristite put poput ``./bin/gdb/riscv-none-elf-gdb.exe`` i završnu
+obrnutu kosu crtu (``\``) za nastavak Bash naredbe. ``cmd.exe`` sintaksa poput
+``.\bin\...`` i nastavak retka znakom ``^`` vrijede samo nakon izričitog ulaska
+u ``cmd.exe``; zalijepljeni izravno u WSL tumače se kao odvojene ili izmijenjene
+Bash naredbe.
 
 Ugrađeni ULX3S FT231X
 ---------------------
@@ -474,7 +499,7 @@ Izgradite odgovarajući software-only monitor bez ponovnog routanja FPGA-a:
 
 .. code-block:: bash
 
-   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-40mhz/monitor" \
+   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-monitor-test/monitor" \
    HAZARD3_MEMORY_PROFILE=64m \
    HAZARD3_SYS_CLK_HZ=40000000 \
        ./scripts/build.sh
@@ -484,7 +509,7 @@ Zatim, dok OpenOCD već ispituje metu:
 .. code-block:: bash
 
    ./scripts/load-firmware.sh \
-       ./build/ulx4m-ld-40mhz/monitor/hazard3-boot-monitor.elf
+       ./build/ulx4m-ld-monitor-test/monitor/hazard3-boot-monitor.elf
 
 Uspješno učitavanje prijavljuje podudarne ``.vectors``, ``.text``, read-only
 podatke i ``.data`` sekcije prije nastavka s adrese ``0x00000040``.

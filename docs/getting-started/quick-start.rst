@@ -104,7 +104,7 @@ Important outputs include:
 
    build/fpga_ulx3s.bit
    build/ulx3s/monitor/hazard3-boot-monitor.elf
-   build/ulx3s/doom-image/hazard3-doom.h3d
+   build/ulx3s/doom-image/hazard3-doom.h3img
    build/ulx3s/hazard3-boot-monitor.hex
 
 3. Program the FPGA for a test run
@@ -189,8 +189,8 @@ The browser device tool can perform both Doom transfers without leaving the web
 console. Expand **Serial connection**, connect the board UART, and confirm the
 resident monitor ``>`` prompt is active. Then expand **Device uploading**:
 
-#. Open **Doom H3D uploader**, select
-   ``build/ulx3s/doom-image/hazard3-doom.h3d``, and choose **Upload H3D**.
+#. Open **Doom H3IMG uploader**, select
+   ``build/ulx3s/doom-image/hazard3-doom.h3img``, and choose **Upload H3IMG**.
 #. Open **Doom IWAD uploader**, select a legally obtained ``.wad`` file, choose
    the memory profile matching the resident monitor, and choose **Upload IWAD**.
 #. Select **Launch with ``j`` after upload** on the IWAD uploader if Doom should
@@ -200,12 +200,18 @@ For the complete browser workflow and memory-profile table, see
 :doc:`../user-guide/web-tool`.
 
 The command-line uploaders remain available when preferred. Close any terminal
-or browser connection that owns the UART port first, then run:
+or browser connection that owns the UART port first. On Windows, use the syntax
+for the shell that is actually open: PowerShell uses the backtick (`````) for
+line continuation, while Windows Command Prompt (``cmd.exe``, often called the
+DOS prompt) uses the caret (``^``). Do not paste PowerShell backticks into
+``cmd.exe``.
+
+**Windows PowerShell**
 
 .. code-block:: powershell
 
    py .\doom\upload-doom-image.py `
-       .\build\ulx3s\doom-image\hazard3-doom.h3d `
+       .\build\ulx3s\doom-image\hazard3-doom.h3img `
        --port COM7
 
    py .\doom\upload-wad.py `
@@ -214,11 +220,41 @@ or browser connection that owns the UART port first, then run:
        --memory-profile 64m `
        --launch
 
-The example above is for the primary ULX3S 85F target. For the default ULX3S
-12F build, use ``--memory-profile 32m`` and the matching 12F H3D image. The
-monitor, H3D image, and IWAD uploader must use the same memory profile.
+**Windows Command Prompt (cmd.exe / DOS prompt)**
 
-The UART port name is only an example; use the port assigned to your board.
+.. code-block:: bat
+
+   py .\doom\upload-doom-image.py ^
+       .\build\ulx3s\doom-image\hazard3-doom.h3img ^
+       --port COM7
+
+   py .\doom\upload-wad.py ^
+       C:\path\to\DOOM.WAD ^
+       --port COM7 ^
+       --memory-profile 64m ^
+       --launch
+
+**Linux (Bash)**
+
+.. code-block:: bash
+
+   python3 doom/upload-doom-image.py \
+       build/ulx3s/doom-image/hazard3-doom.h3img \
+       --port /dev/ttyUSB0
+
+   python3 doom/upload-wad.py \
+       /path/to/DOOM.WAD \
+       --port /dev/ttyUSB0 \
+       --memory-profile 64m \
+       --launch
+
+These examples are for the primary ULX3S 85F target. For the default ULX3S 12F
+build, use ``--memory-profile 32m`` and the matching 12F H3IMG image. The
+monitor, H3IMG image, and IWAD uploader must use the same memory profile.
+
+The UART port names are only examples. On Windows use the COM port assigned to
+your board. On Linux use the corresponding device, commonly ``/dev/ttyUSB0`` or
+``/dev/ttyACM0``.
 
 5. Verify startup
 -----------------
@@ -241,7 +277,19 @@ ULX4M-LD fast path
 ------------------
 
 For ULX4M-LD, use a timing-qualified 40 MHz Hazard3 / 60 MHz LiteDRAM
-bitstream, program it through DFU, then explicitly leave DFU:
+bitstream. To enter ordinary DFU, remove power, hold PCB ``BTN3`` while
+connecting the ULX4M Micro-B USB cable, wait for VID:PID ``1d50:614b`` to
+enumerate, then release ``BTN3``. ``BTN3`` does **not** need to remain held
+during programming.
+
+When running the bundled Windows tools directly from WSL, make them executable
+if Bash reports ``Permission denied``:
+
+.. code-block:: bash
+
+   chmod +x ./bin/openFPGALoader.exe ./bin/dfu-util.exe
+
+Program the persistent user bitstream, then explicitly leave DFU:
 
 .. code-block:: bash
 
@@ -252,22 +300,43 @@ bitstream, program it through DFU, then explicitly leave DFU:
    ./bin/dfu-util.exe -a 0 -e
 
 Use Tigard Interface 0 with the FTDI VCP driver for the 115200 UART and
-Interface 1 with libusbK for OpenOCD JTAG. Once the monitor is running, check
-``s`` for ``external_memory_ready=YES`` and run ``q``. The current qualified
-route also passes ``k``, ``d``, and ``x``.
+Interface 1 with libusbK for OpenOCD JTAG. The complete ULX4M-LD build writes
+the Doom upload image to
+``build/ulx4m-ld/doom-image/hazard3-doom.h3img``. For example, from WSL/Bash
+when the Tigard VCP is exposed as ``/dev/ttyS8``:
+
+.. code-block:: bash
+
+   ./doom/upload-doom-image.py \
+       ./build/ulx4m-ld/doom-image/hazard3-doom.h3img \
+       --port /dev/ttyS8
+
+The serial device name is only an example; use the COM/TTY device assigned on
+your system. Once the monitor is running, check ``s`` for
+``external_memory_ready=YES`` and run ``q``. The current qualified route also
+passes ``k``, ``d``, and ``x``.
 
 For a software-only monitor update matching the 40 MHz FPGA:
 
 .. code-block:: bash
 
-   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-40mhz/monitor" \
+   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-monitor-test/monitor" \
    HAZARD3_MEMORY_PROFILE=64m \
    HAZARD3_SYS_CLK_HZ=40000000 \
        ./scripts/build.sh
 
-Then start the ULX4M Tigard OpenOCD configuration and load the ELF with
-``scripts/load-firmware.sh``. See :doc:`../user-guide/jtag-debugging` for the
-complete driver, wiring, IDCODE, and DTM troubleshooting details.
+Then start the ULX4M Tigard OpenOCD configuration and load that explicitly
+separated test ELF:
+
+.. code-block:: bash
+
+   ./scripts/load-firmware.sh \
+       ./build/ulx4m-ld-monitor-test/monitor/hazard3-boot-monitor.elf
+
+For a normal complete ULX4M-LD build, use the board-specific
+``scripts/gdb/load-ulx4m-ld-85f-monitor.gdb`` helper instead. See
+:doc:`../user-guide/jtag-debugging` for complete driver, wiring, IDCODE, and DTM
+troubleshooting details.
 
 Next steps
 ----------

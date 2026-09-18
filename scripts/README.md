@@ -245,7 +245,7 @@ scripts\check_submodules.bat
 
 - `start-openocd.sh` - Starts OpenOCD on Linux/WSL using the repository ULX3S configuration; converts paths when a Windows `.exe` is used from WSL.
 - `start-openocd.bat` - Starts the Windows OpenOCD server using the repository configuration.
-- `load-firmware.sh` - Loads, verifies, starts, and disconnects the normal monitor ELF through a running GDB/OpenOCD server.
+- `load-firmware.sh` - Loads, verifies, starts, and disconnects a monitor ELF through a running GDB/OpenOCD server. With no argument it uses the standalone `build/hazard3-boot-monitor.elf`; complete board builds should pass the board-specific `build/<board>/monitor/hazard3-boot-monitor.elf` explicitly or use the matching `gdb/load-*-monitor.gdb` helper.
 - `load-firmware-12f.sh` - Loads the ULX3S 12F SDRAM-resident monitor after FPGA configuration.
 - `load-firmware.bat` - Windows monitor loader through GDB/OpenOCD.
 - `load-fpga-bitstream.bat` - Windows FPGA bitstream loader.
@@ -256,9 +256,14 @@ scripts\check_submodules.bat
 
 ### GDB command files
 
-The `gdb/` directory contains focused command scripts for monitor and SAO tests:
+The `gdb/` directory contains focused command scripts for monitor and SAO tests.
+Use the board-specific monitor helper that matches the complete board build; do
+not substitute a generic or stale monitor ELF because the system clock, memory
+map, linker placement, and loader protocol must match the FPGA configuration.
 
-- `gdb/load-hazard3-test-elf.gdb` - GDB command sequence for loading the Hazard3 test/monitor ELF.
+- `gdb/load-ulx3s-85f-monitor.gdb` - Load and verify `build/ulx3s/monitor/hazard3-boot-monitor.elf`.
+- `gdb/load-ulx3s-12f-monitor.gdb` - Load and verify the SDRAM-resident `build/ulx3s-12f/monitor/hazard3-boot-monitor.elf`.
+- `gdb/load-ulx4m-ld-85f-monitor.gdb` - Load and verify `build/ulx4m-ld/monitor/hazard3-boot-monitor.elf`.
 - `gdb/sao-probe.gdb` - Probe SAO bridge state from GDB.
 - `gdb/sao-scan.gdb` - Exercise the SAO I2C scan path from GDB.
 - `gdb/sao-touchwheel-test.gdb` - Interactive/debug test sequence for the SAO touchwheel.
@@ -323,7 +328,7 @@ test run.
 The normal Hazard3-Doom build remains unchanged by the Supercon helper flow.
 The demo uses a dedicated noncombat image and a separately generated WAD.
 
-- `build-doom-noncombat.sh` - Builds `build/doom-image-noncombat/hazard3-doom.h3d` with the dedicated noncombat source transform and verifies marker symbols in the compiled objects.
+- `build-doom-noncombat.sh` - Builds `build/doom-image-noncombat/hazard3-doom.h3img` with the dedicated noncombat source transform and verifies marker symbols in the compiled objects.
 - `apply-doom-noncombat.py` - Internal transform applied only to the prepared DoomGeneric build copy; it does not edit the submodule.
 - `build-supercon10-wad.py` - Verifies the Supercon PWAD, merges it with a local `wads/DOOM1.WAD`, verifies expected banner textures, and writes `wads/SUPERCON10.WAD` by default.
 - `cleanup-supercon-dev.py.bak` - Retained backup of an older development cleanup helper; it is not part of the normal supported workflow.
@@ -334,7 +339,7 @@ Example:
 ./scripts/build-doom-noncombat.sh
 ./scripts/build-supercon10-wad.py
 ./scripts/return-to-monitor.py --port /dev/ttyS7
-./doom/upload-doom-image.py ./build/doom-image-noncombat/hazard3-doom.h3d --port /dev/ttyS7
+./doom/upload-doom-image.py ./build/doom-image-noncombat/hazard3-doom.h3img --port /dev/ttyS7
 ./doom/upload-wad.py ./wads/SUPERCON10.WAD --port /dev/ttyS7 --launch
 ```
 

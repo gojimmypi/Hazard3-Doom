@@ -14,7 +14,7 @@ micro-SD pohrana
 ----------------
 
 micro-SD je izmjenjiva nevolatilna pohrana. Samostalni ULX3S boot može s nje
-učitati ``DOOM.H3D`` i ``DOOM.WAD``.
+učitati ``DOOM.IMG`` i ``DOOM.WAD``.
 
 * SPI flash čuva trajnu FPGA konfiguraciju;
 * EBR može sadržavati rezidentni monitor;

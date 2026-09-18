@@ -2,7 +2,7 @@
 
 Try it live at [ulx3s.github.io/Hazard3-Doom](https://ulx3s.github.io/Hazard3-Doom/)
 
-A dependency-free browser device tool for the Hazard3-Doom UART console, H3D and IWAD loading, ULX3S FPGA SRAM programming, HDMI screen snip, and optional local GDB/OpenOCD console-firmware loading. Web Serial and WebUSB device operations run directly in a Chromium-based browser; the console-firmware uploader uses the local `web-server.py` helper.
+A dependency-free browser device tool for the Hazard3-Doom UART console, H3IMG and IWAD loading, ULX3S FPGA SRAM programming, HDMI screen snip, and optional local GDB/OpenOCD console-firmware loading. Web Serial and WebUSB device operations run directly in a Chromium-based browser; the console-firmware uploader uses the local `web-server.py` helper.
 
 Windows users need to change drivers from default **FTDI** to **WinUSB** to use the WebUSB programmer.
 
@@ -22,7 +22,7 @@ Click "Update" and allow Windows to search for default drivers. Be sure to disco
 - Connect/disconnect using the browser's serial-port picker.
 - Enumerate all serial ports already authorized for this site and select which one Reconnect opens.
 - Reconnect to the selected previously authorized port.
-- Validate and upload packaged `.h3d` Doom images over UART using the monitor H3L handshake, with optional launch after upload.
+- Validate and upload packaged `.h3img` Doom images over UART using the monitor H3L handshake, with optional launch after upload.
 - Validate and upload legal `.wad` IWAD files over UART using the monitor H3W handshake, with 64 MiB/32 MiB memory-profile selection and optional launch after upload.
 - Configurable baud rate, data bits, parity, stop bits, and line ending, with all six serial controls kept on one desktop row.
 - Separate collapsible **Device uploading** and **Serial connection** panels; the four upload/programming workflows are individually collapsible inside **Device uploading**.
@@ -60,7 +60,7 @@ From this directory, use the project server to enable the console firmware loade
 
 Then open `http://localhost:8000/` in a browser that supports Web Serial.
 
-The static UART, H3D, IWAD, and FPGA controls also work with a generic static server,
+The static UART, H3IMG, IWAD, and FPGA controls also work with a generic static server,
 but the console firmware loader will be unavailable:
 
 ```bash
@@ -86,7 +86,7 @@ The app does not send UART or FPGA programming data to a server. JavaScript comm
 ## Console firmware uploader
 
 The collapsible **Console firmware uploader** sits between the FPGA flasher and
-the Doom H3D uploader. It accepts `hazard3-boot-monitor.elf`, validates that the
+the Doom H3IMG uploader. It accepts `hazard3-boot-monitor.elf`, validates that the
 file is a 32-bit little-endian RISC-V executable, and passes it to the existing
 GDB loader. The local server listens only on `127.0.0.1`, limits the ELF to
 16 MiB, requires a custom local-request header, applies an exact CORS origin
@@ -155,23 +155,23 @@ loader only when testing another checkout:
 ./web-server.py --firmware-loader ../scripts/load-firmware-12f.sh
 ```
 
-## Doom H3D UART uploader
+## Doom H3IMG UART uploader
 
-The collapsible **Doom H3D uploader** loads a packaged `.h3d` Doom image through the same Web Serial connection used by the UART terminal. It does not write the SD card. The resident monitor must be active at its `>` prompt; if Doom is running, stop Doom first and wait for the prompt before starting the upload.
+The collapsible **Doom H3IMG uploader** loads a packaged `.h3img` Doom image through the same Web Serial connection used by the UART terminal. It does not write the SD card. The resident monitor must be active at its `>` prompt; if Doom is running, stop Doom first and wait for the prompt before starting the upload.
 
-The browser validates the fixed 64-byte `H3D1` package header, format version, CRC32 flag, reserved words, package length, and payload CRC32 before sending anything. It then follows the same H3L handshake as `doom/upload-doom-image.py`:
+The browser validates the fixed 64-byte `H3I1` package header, format version, CRC32 flag, reserved words, package length, and payload CRC32 before sending anything. It then follows the same H3L handshake as `doom/upload-doom-image.py`:
 
 ```text
 browser -> l
 monitor -> H3L READY\r\n
-browser -> 64-byte H3D header
+browser -> 64-byte H3IMG header
 monitor -> header summary
 monitor -> H3L DATA\r\n
-browser -> raw H3D payload bytes
+browser -> raw H3IMG payload bytes
 monitor -> H3L OK ...\r\n
 ```
 
-The payload is sent in 4096-byte browser writes while the page shows transfer progress. Normal UART command controls and screen-snip capability probes are suspended during the binary transfer so no unrelated byte can be inserted into the H3D payload. The monitor still performs its own header and CRC validation before accepting the image. If the initial `H3L READY` response times out, the page shows a prominent monitor diagnostic. When the local helper is available, that diagnostic also reports whether OpenOCD is listening on port 3333 and suggests loading or reloading `hazard3-boot-monitor.elf` when appropriate. OpenOCD is needed to load the monitor, but it does not need to remain running after the monitor has been loaded.
+The payload is sent in 4096-byte browser writes while the page shows transfer progress. Normal UART command controls and screen-snip capability probes are suspended during the binary transfer so no unrelated byte can be inserted into the H3IMG payload. The monitor still performs its own header and CRC validation before accepting the image. If the initial `H3L READY` response times out, the page shows a prominent monitor diagnostic. When the local helper is available, that diagnostic also reports whether OpenOCD is listening on port 3333 and suggests loading or reloading `hazard3-boot-monitor.elf` when appropriate. OpenOCD is needed to load the monitor, but it does not need to remain running after the monitor has been loaded.
 
 **Launch with `j` after upload** is optional and disabled by default. When selected, the browser sends the monitor's raw `j` command only after `H3L OK` is received.
 
@@ -179,7 +179,7 @@ The payload is sent in 4096-byte browser writes while the page shows transfer pr
 
 The collapsible **Doom IWAD uploader** accepts a legally obtained `.wad` file and follows the same H3W protocol as `doom/upload-wad.py`. The browser validates the `IWAD` identification, directory bounds, every lump range, Doom-visible filename, reserved SDRAM size, and CRC32 before sending anything.
 
-If the initial `H3W READY` response times out, the page provides the same resident-monitor/OpenOCD diagnostic used by the H3D uploader.
+If the initial `H3W READY` response times out, the page provides the same resident-monitor/OpenOCD diagnostic used by the H3IMG uploader.
 
 Select the memory profile that matches the resident monitor build:
 

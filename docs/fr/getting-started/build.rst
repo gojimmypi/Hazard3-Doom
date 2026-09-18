@@ -26,6 +26,19 @@ ULX4M-LD 85F, cartographie logicielle 64 Mio, Hazard3 à 40 MHz et LiteDRAM à
 
    ./scripts/build-ulx4m-ld-doom.sh
 
+Les wrappers complets conservent les artifacts propres à chaque cible dans des
+répertoires propres à la carte. En particulier, les images Doom à téléverser
+sont :
+
+.. code-block:: text
+
+   build/ulx3s/doom-image/hazard3-doom.h3img
+   build/ulx4m-ld/doom-image/hazard3-doom.h3img
+
+La commande autonome ``doom/build-doom-image.sh`` documentée plus loin sur cette
+page continue d'utiliser le répertoire générique ``build/doom-image/`` sauf si
+``HAZARD3_DOOM_BUILD_DIR`` est défini.
+
 Le build utilise les paramètres ULX4M-LD communs définis dans
 ``scripts/build-ecp5-bitstream-common.sh`` et résumés dans
 :doc:`../reference/board-profiles`. Le point de contrôle historique seed 2 figé
@@ -75,6 +88,26 @@ système et le script de linker propres à la cible. Pour les builds manuels, le
 principaux contrôles sont ``HAZARD3_MEMORY_PROFILE``, ``HAZARD3_SYS_CLK_HZ`` et
 ``HAZARD3_MONITOR_LINKER_SCRIPT``.
 
+Pour une mise à jour logicielle seule du moniteur ULX4M-LD sur un FPGA déjà
+configuré à 40 MHz, conservez la sortie séparée du preload résident :
+
+.. code-block:: bash
+
+   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-monitor-test/monitor" \
+   HAZARD3_MEMORY_PROFILE=64m \
+   HAZARD3_SYS_CLK_HZ=40000000 \
+       ./scripts/build.sh
+
+Chargez-la dans une session OpenOCD déjà active avec :
+
+.. code-block:: bash
+
+   ./scripts/load-firmware.sh \
+       ./build/ulx4m-ld-monitor-test/monitor/hazard3-boot-monitor.elf
+
+Cette opération met à jour uniquement le logiciel processeur dans le FPGA en
+cours d'exécution et ne reroute pas le bitstream connu comme bon.
+
 Image Doom liée uniquement
 --------------------------
 
@@ -99,7 +132,7 @@ Sorties typiques :
    build/doom-image/hazard3-doom.elf
    build/doom-image/hazard3-doom.map
    build/doom-image/hazard3-doom.bin
-   build/doom-image/hazard3-doom.h3d
+   build/doom-image/hazard3-doom.h3img
 
 Tester un autre checkout Hazard3
 --------------------------------

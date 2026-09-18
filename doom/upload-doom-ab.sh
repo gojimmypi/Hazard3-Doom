@@ -41,7 +41,7 @@ case "${resolution}" in
     ;;
 esac
 
-image="${ROOT_DIR}/build/doom-ab/${resolution}/hazard3-doom.h3d"
+image="${ROOT_DIR}/build/doom-ab/${resolution}/hazard3-doom.h3img"
 if [[ ! -f "${image}" ]]; then
     echo "Missing A/B image: ${image}" >&2
     echo "Build it first with: ./doom/build-doom-ab.sh ${resolution}" >&2

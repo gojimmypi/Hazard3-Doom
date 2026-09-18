@@ -137,7 +137,7 @@ jobs:
               test -s "build/${{ matrix.fpga_name }}.seed"
           fi
           test -s "${{ matrix.monitor_dir }}/hazard3-boot-monitor.elf"
-          test -s "${{ matrix.doom_dir }}/hazard3-doom.h3d"
+          test -s "${{ matrix.doom_dir }}/hazard3-doom.h3img"
           test -s "${{ matrix.boot_init }}"
 
       - name: Upload build artifacts and timing logs
@@ -153,7 +153,7 @@ jobs:
             ${{ matrix.monitor_dir }}/hazard3-boot-monitor.bin
             ${{ matrix.doom_dir }}/hazard3-doom.elf
             ${{ matrix.doom_dir }}/hazard3-doom.map
-            ${{ matrix.doom_dir }}/hazard3-doom.h3d
+            ${{ matrix.doom_dir }}/hazard3-doom.h3img
             ${{ matrix.boot_init }}
           if-no-files-found: warn
           retention-days: 14

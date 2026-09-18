@@ -19,7 +19,7 @@ wt -w "Hazard3-Doom" new-tab --title "GDB"           --suppressApplicationTitle 
 
 wt -w "Hazard3-Doom" new-tab --title "Build Doom"    --suppressApplicationTitle wsl.exe -d Ubuntu --cd /mnt/c/workspace/Hazard3-Doom     bash -c "printf '\nTypical command:\n\n  ./doom/build-doom-image.sh                                                                 \n\n' && exec bash"
 
-wt -w "Hazard3-Doom" new-tab --title "Load Doom"     --suppressApplicationTitle wsl.exe -d Ubuntu --cd /mnt/c/workspace/Hazard3-Doom     bash -c "printf '\nTypical command:\n\n  ./doom/upload-doom-image.py  ./build/doom-image/hazard3-doom.h3d --port /dev/ttyS8         \n\n' && exec bash"
+wt -w "Hazard3-Doom" new-tab --title "Load Doom"     --suppressApplicationTitle wsl.exe -d Ubuntu --cd /mnt/c/workspace/Hazard3-Doom     bash -c "printf '\nTypical command:\n\n  ./doom/upload-doom-image.py  ./build/doom-image/hazard3-doom.h3img --port /dev/ttyS8         \n\n' && exec bash"
 
 wt -w "Hazard3-Doom" new-tab --title "Load WAD"      --suppressApplicationTitle wsl.exe -d Ubuntu --cd /mnt/c/workspace/Hazard3-Doom     bash -c "printf '\nTypical command:\n\n  ./doom/upload-wad.py  ./wads/DOOM.WAD  --port /dev/ttyS8                                   \n\n' && exec bash"
 

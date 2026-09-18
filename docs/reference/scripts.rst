@@ -300,9 +300,11 @@ Programming and OpenOCD
    as the first argument; otherwise the repository binary is used.
 
 ``scripts/load-firmware.sh``
-   Load the normal monitor ELF through a running OpenOCD GDB server, halt the
-   target, load and compare sections, set ``$pc`` to ``_start``, resume, and
-   disconnect. This avoids leaving GDB attached after programming.
+   Load a monitor ELF through a running OpenOCD GDB server, halt the target, load
+   and compare sections, set ``$pc`` to ``_start``, resume, and disconnect. With
+   no argument it uses the standalone ``build/hazard3-boot-monitor.elf`` output.
+   Complete board builds should pass the board-specific ELF explicitly or use the
+   matching ``scripts/gdb/load-*-monitor.gdb`` helper.
 
 ``scripts/load-firmware-12f.sh``
    Load the ULX3S 12F SDRAM-resident monitor after the compact FPGA bitstream has
@@ -336,8 +338,19 @@ GDB helpers
 ``scripts/hazard3-debug.gdb``
    Common Hazard3 GDB command definitions used by the project debug setup.
 
-``scripts/gdb/load-hazard3-test-elf.gdb``
-   Focused GDB command file for loading the Hazard3 monitor/test ELF.
+``scripts/gdb/load-ulx3s-85f-monitor.gdb``
+   Load, verify, and run the monitor produced by the complete ULX3S 85F build at
+   ``build/ulx3s/monitor/hazard3-boot-monitor.elf``.
+
+``scripts/gdb/load-ulx3s-12f-monitor.gdb``
+   Load, verify, and run the SDRAM-resident monitor produced by the complete
+   ULX3S 12F build at ``build/ulx3s-12f/monitor/hazard3-boot-monitor.elf``.
+
+``scripts/gdb/load-ulx4m-ld-85f-monitor.gdb``
+   Load, verify, and run the monitor produced by the complete ULX4M-LD 85F build
+   at ``build/ulx4m-ld/monitor/hazard3-boot-monitor.elf``. Use the monitor from
+   the same board build as the FPGA image so clock, memory-map, linker, and
+   loader-protocol settings remain matched.
 
 ``scripts/gdb/sao-probe.gdb``
    Probe SAO bridge state from GDB.

@@ -4,7 +4,7 @@ Exécuter Doom
 Chargement UART
 ---------------
 
-Le flux de développement normal envoie un exécutable empaqueté ``.h3d`` au moniteur résident, puis envoie ``DOOM.WAD`` et lance l'application.
+Le flux de développement normal envoie un exécutable empaqueté ``.h3img`` au moniteur résident, puis envoie ``DOOM.WAD`` et lance l'application.
 
 Le profil mémoire 64 Mio est le profil par défaut pour ULX3S 85F et ULX4M-LD 85F.
 

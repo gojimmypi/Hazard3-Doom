@@ -25,7 +25,7 @@ napajanja.
 * HDMI zaslon;
 * ULX3S ``US1`` USB veza za WebUSB programiranje FPGA-a;
 * vanjski USB-UART adapter spojen na Hazard3-Doom UART;
-* odgovarajuće unaprijed izgrađene ``.bit`` i ``.h3d`` datoteke;
+* odgovarajuće unaprijed izgrađene ``.bit`` i ``.h3img`` datoteke;
 * legalno nabavljen Doom IWAD, primjerice ``DOOM.WAD`` ili ``DOOM1.WAD``.
 
 Za UART veze pogledajte :doc:`../user-guide/pinouts`, a za potpuni opis alata
@@ -52,13 +52,13 @@ Odaberite par koji odgovara FPGA-u na pločici:
 
    * - Pločica
      - FPGA slika
-     - Doom H3D slika
+     - Doom H3IMG slika
    * - ULX3S 85F
-     - ``fpga_ulx3s_hdmi_doom.bit``
-     - ``hazard3-doom-ulx3s-85F.h3d``
+     - ``fpga_ulx3s_85f_hdmi_doom.bit``
+     - ``hazard3-doom-ulx3s-85F.h3img``
    * - ULX3S 12F
      - ``fpga_ulx3s_12f_hdmi_doom.bit``
-     - ``hazard3-doom-ulx3s-12F.h3d``
+     - ``hazard3-doom-ulx3s-12F.h3img``
 
 Nemojte miješati datoteke različitih profila pločica. Programator u pregledniku
 provjerava fizički ECP5 JTAG ID i odbija ``.bit`` datoteku čiji ugrađeni cilj ne
@@ -175,25 +175,25 @@ nije potrebno učitati ``hazard3-boot-monitor.elf``.
 Ako se odzivnik ne pojavi, prije nastavka pogledajte :doc:`../troubleshooting` i
 :doc:`../user-guide/web-serial`.
 
-5. Prenesite Doom H3D sliku
----------------------------
+5. Prenesite Doom H3IMG sliku
+-----------------------------
 
-U **Device uploading** otvorite **Doom H3D uploader**:
+U **Device uploading** otvorite **Doom H3IMG uploader**:
 
-#. Odaberite odgovarajuću ``hazard3-doom-*.h3d`` datoteku.
-#. Odaberite **Upload H3D**.
+#. Odaberite odgovarajuću ``hazard3-doom-*.h3img`` datoteku.
+#. Odaberite **Upload H3IMG**.
 #. Pričekajte da monitor prihvati sliku.
 
-H3D slika mora odgovarati istom profilu pločice kao i ``.bit`` datoteka.
+H3IMG slika mora odgovarati istom profilu pločice kao i ``.bit`` datoteka.
 
-.. _fig-no-install-h3d-upload:
+.. _fig-no-install-h3img-upload:
 
-.. figure:: ../images/no-install-h3d-upload.png
-   :alt: Hazard3-Doom H3D alat za prijenos s odabranom slikom Doom specifičnom za pločicu.
+.. figure:: ../images/no-install-h3img-upload.png
+   :alt: Hazard3-Doom H3IMG alat za prijenos s odabranom slikom Doom specifičnom za pločicu.
    :width: 85%
    :class: screenshot
 
-   Prijenos slike ``hazard3-doom-*.h3d`` koja odgovara profilu pločice putem
+   Prijenos slike ``hazard3-doom-*.h3img`` koja odgovara profilu pločice putem
    Device Toola.
 
 6. Prenesite svoj Doom IWAD
@@ -256,7 +256,7 @@ ostati spojen za naredbe monitora i dijagnostiku.
    :width: 85%
    :class: screenshot
 
-   Doom u radu nakon uspješnog FPGA programiranja te prijenosa H3D i IWAD
+   Doom u radu nakon uspješnog FPGA programiranja te prijenosa H3IMG i IWAD
    datoteka.
 
 Što ovaj put ne instalira
@@ -265,7 +265,7 @@ ostati spojen za naredbe monitora i dijagnostiku.
 Ovaj brzi postupak namjerno izbjegava razvojno okruženje. Ne instalira niti
 zahtijeva Yosys, nextpnr, Project Trellis, RISC-V GCC alatni lanac, Hazard3-Doom
 checkout i podmodule, naredbene skripte za prijenos ili OpenOCD/GDB za uobičajeni
-put monitor/H3D/IWAD.
+put monitor/H3IMG/IWAD.
 
 Kada želite ponovno izgraditi ili mijenjati FPGA, firmware monitora ili Doom
 sliku, nastavite s :doc:`quick-start` i :doc:`build`.

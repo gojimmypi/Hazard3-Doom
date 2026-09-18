@@ -17,17 +17,18 @@ const SCREEN_SNIP_TRANSITION_WINDOW_MS = 15000;
 const SCREEN_SNIP_TIMEOUT_MS = 30_000;
 const SCREEN_SNIP_MAX_SOURCE_PIXELS = 1_000_000;
 const SCREEN_SNIP_MAX_DISPLAY_PIXELS = 4_000_000;
-const H3D_IMAGE_MAGIC = 0x31443348;
-const H3D_HEADER_BYTES = 64;
-const H3D_FORMAT_VERSION = 1;
-const H3D_FLAG_CRC32 = 1;
-const H3D_UPLOAD_CHUNK_BYTES = 4096;
-const H3D_READY_MARKER = "H3L READY\r\n";
-const H3D_DATA_MARKER = "H3L DATA\r\n";
-const H3D_OK_MARKER = "H3L OK";
-const H3D_ERROR_MARKER = "H3L ERROR";
-const H3D_RESPONSE_TIMEOUT_MS = 10_000;
-const H3D_RESULT_MARGIN_MS = 20_000;
+const H3IMG_IMAGE_MAGIC_TEXT = "H3I1";
+const H3IMG_IMAGE_MAGIC = 0x31493348; // Little-endian uint32 encoding of H3I1.
+const H3IMG_HEADER_BYTES = 64;
+const H3IMG_FORMAT_VERSION = 1;
+const H3IMG_FLAG_CRC32 = 1;
+const H3IMG_UPLOAD_CHUNK_BYTES = 4096;
+const H3IMG_READY_MARKER = "H3L READY\r\n";
+const H3IMG_DATA_MARKER = "H3L DATA\r\n";
+const H3IMG_OK_MARKER = "H3L OK";
+const H3IMG_ERROR_MARKER = "H3L ERROR";
+const H3IMG_RESPONSE_TIMEOUT_MS = 10_000;
+const H3IMG_RESULT_MARGIN_MS = 20_000;
 const WAD_PACKAGE_MAGIC = 0x31573348;
 const WAD_HEADER_BYTES = 64;
 const WAD_FORMAT_VERSION = 1;
@@ -75,7 +76,7 @@ const state = {
     screenSnipProbeTimer: null,
     screenSnipWatchTimer: null,
     screenSnipTransitionDeadline: 0,
-    h3dImage: null,
+    h3imgImage: null,
     wadBytes: null,
     wadCrc32: null,
     wadImage: null,
@@ -133,18 +134,18 @@ const els = {
     copyButtonLabel: document.getElementById("copyButtonLabel"),
     screenSnipControl: document.getElementById("screenSnipControl"),
     screenSnipButton: document.getElementById("screenSnipButton"),
-    h3dFileInput: document.getElementById("h3dFileInput"),
-    h3dFileName: document.getElementById("h3dFileName"),
-    h3dFileDetails: document.getElementById("h3dFileDetails"),
-    h3dUploadButton: document.getElementById("h3dUploadButton"),
-    h3dLaunchAfterUpload: document.getElementById("h3dLaunchAfterUpload"),
-    h3dProgress: document.getElementById("h3dProgress"),
-    h3dProgressLabel: document.getElementById("h3dProgressLabel"),
-    h3dUploadDiagnostic: document.getElementById("h3dUploadDiagnostic"),
-    h3dUartRequirement: document.getElementById("h3dUartRequirement"),
-    h3dUartRequirementTitle: document.getElementById("h3dUartRequirementTitle"),
-    h3dUartRequirementDetail: document.getElementById("h3dUartRequirementDetail"),
-    h3dConnectUartButton: document.getElementById("h3dConnectUartButton"),
+    h3imgFileInput: document.getElementById("h3imgFileInput"),
+    h3imgFileName: document.getElementById("h3imgFileName"),
+    h3imgFileDetails: document.getElementById("h3imgFileDetails"),
+    h3imgUploadButton: document.getElementById("h3imgUploadButton"),
+    h3imgLaunchAfterUpload: document.getElementById("h3imgLaunchAfterUpload"),
+    h3imgProgress: document.getElementById("h3imgProgress"),
+    h3imgProgressLabel: document.getElementById("h3imgProgressLabel"),
+    h3imgUploadDiagnostic: document.getElementById("h3imgUploadDiagnostic"),
+    h3imgUartRequirement: document.getElementById("h3imgUartRequirement"),
+    h3imgUartRequirementTitle: document.getElementById("h3imgUartRequirementTitle"),
+    h3imgUartRequirementDetail: document.getElementById("h3imgUartRequirementDetail"),
+    h3imgConnectUartButton: document.getElementById("h3imgConnectUartButton"),
     wadFileInput: document.getElementById("wadFileInput"),
     wadFileName: document.getElementById("wadFileName"),
     wadFileDetails: document.getElementById("wadFileDetails"),
@@ -211,8 +212,8 @@ function serialOperationDisabledReason() {
     if (state.screenSnip !== null) {
         return "Wait for the screen capture to finish.";
     }
-    if (state.serialOperation === "h3d-upload") {
-        return "Wait for the H3D upload to finish.";
+    if (state.serialOperation === "h3img-upload") {
+        return "Wait for the H3IMG upload to finish.";
     }
     if (state.serialOperation === "wad-upload") {
         return "Wait for the IWAD upload to finish.";
@@ -242,7 +243,7 @@ function updateDeviceToolPeerUi() {
     if (!state.port) {
         updateAuthorizedPortDetails();
     }
-    updateH3dUploaderUi();
+    updateH3imgUploaderUi();
     updateWadUploaderUi();
 }
 
@@ -455,8 +456,8 @@ function screenSnipStatusText() {
     if (state.consoleFirmwareBusy) {
         return "Screen snip is paused while console firmware is loading.";
     }
-    if (state.serialOperation === "h3d-upload") {
-        return "Screen snip is paused while an H3D image is uploading.";
+    if (state.serialOperation === "h3img-upload") {
+        return "Screen snip is paused while an H3IMG image is uploading.";
     }
     if (state.serialOperation === "wad-upload") {
         return "Screen snip is paused while an IWAD is uploading.";
@@ -487,7 +488,7 @@ function updateScreenSnipUi() {
     els.screenSnipButton.title = status;
     els.screenSnipButton.setAttribute("aria-label", status);
     updateConsoleFirmwareUi();
-    updateH3dUploaderUi();
+    updateH3imgUploaderUi();
     updateWadUploaderUi();
 }
 
@@ -993,9 +994,9 @@ async function loadConsoleFirmware() {
     }
 }
 
-function validateH3dPackage(bytes) {
-    if (bytes.byteLength < H3D_HEADER_BYTES) {
-        throw new Error("file is shorter than the 64-byte H3D header");
+function validateH3imgPackage(bytes) {
+    if (bytes.byteLength < H3IMG_HEADER_BYTES) {
+        throw new Error("file is shorter than the 64-byte H3IMG header");
     }
 
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -1004,30 +1005,30 @@ function validateH3dPackage(bytes) {
     const [magic, headerBytes, formatVersion, flags, loadAddress, imageBytes,
         entryAddress, bssAddress, bssBytes, payloadCrc32] = words;
 
-    if (magic !== H3D_IMAGE_MAGIC) {
-        throw new Error("invalid H3D magic; expected H3D1");
+    if (magic !== H3IMG_IMAGE_MAGIC) {
+        throw new Error(`invalid H3IMG magic; expected ${H3IMG_IMAGE_MAGIC_TEXT}`);
     }
-    if (headerBytes !== H3D_HEADER_BYTES) {
-        throw new Error(`unsupported H3D header size ${headerBytes}`);
+    if (headerBytes !== H3IMG_HEADER_BYTES) {
+        throw new Error(`unsupported H3IMG header size ${headerBytes}`);
     }
-    if (formatVersion !== H3D_FORMAT_VERSION) {
-        throw new Error(`unsupported H3D format version ${formatVersion}`);
+    if (formatVersion !== H3IMG_FORMAT_VERSION) {
+        throw new Error(`unsupported H3IMG format version ${formatVersion}`);
     }
-    if (flags !== H3D_FLAG_CRC32) {
-        throw new Error(`unsupported H3D flags ${formatHex32(flags)}`);
+    if (flags !== H3IMG_FLAG_CRC32) {
+        throw new Error(`unsupported H3IMG flags ${formatHex32(flags)}`);
     }
     if (imageBytes === 0 || bytes.byteLength !== headerBytes + imageBytes) {
-        throw new Error("H3D package length does not match its header");
+        throw new Error("H3IMG package length does not match its header");
     }
     if (words.slice(10).some((value) => value !== 0)) {
-        throw new Error("H3D reserved header words must be zero");
+        throw new Error("H3IMG reserved header words must be zero");
     }
 
     const payload = bytes.subarray(headerBytes);
     const actualCrc32 = crc32(payload);
     if (actualCrc32 !== payloadCrc32) {
         throw new Error(
-            `H3D payload CRC mismatch: expected ${formatHex32(payloadCrc32)}, ` +
+            `H3IMG payload CRC mismatch: expected ${formatHex32(payloadCrc32)}, ` +
             `calculated ${formatHex32(actualCrc32)}`);
     }
 
@@ -1111,44 +1112,44 @@ function updateUploaderUartRequirement(container, title, detail, button, protoco
     setButtonDisabledReason(button, serialOperationDisabledReason());
 }
 
-function updateH3dUploaderUi() {
-    const uploading = state.serialOperation === "h3d-upload";
-    const ready = Boolean(state.port && state.h3dImage &&
+function updateH3imgUploaderUi() {
+    const uploading = state.serialOperation === "h3img-upload";
+    const ready = Boolean(state.port && state.h3imgImage &&
         state.serialOperation === null && state.screenSnip === null &&
         !state.consoleFirmwareBusy);
 
     updateUploaderUartRequirement(
-        els.h3dUartRequirement,
-        els.h3dUartRequirementTitle,
-        els.h3dUartRequirementDetail,
-        els.h3dConnectUartButton,
+        els.h3imgUartRequirement,
+        els.h3imgUartRequirementTitle,
+        els.h3imgUartRequirementDetail,
+        els.h3imgConnectUartButton,
         "H3L",
     );
 
-    els.h3dFileInput.disabled = uploading || state.consoleFirmwareBusy;
-    els.h3dLaunchAfterUpload.disabled = uploading || state.consoleFirmwareBusy;
-    els.h3dUploadButton.disabled = !ready;
+    els.h3imgFileInput.disabled = uploading || state.consoleFirmwareBusy;
+    els.h3imgLaunchAfterUpload.disabled = uploading || state.consoleFirmwareBusy;
+    els.h3imgUploadButton.disabled = !ready;
 
     let disabledReason = "";
     if (uploading) {
-        els.h3dUploadButton.textContent = "Uploading...";
-        disabledReason = "H3D upload is already in progress.";
+        els.h3imgUploadButton.textContent = "Uploading...";
+        disabledReason = "H3IMG upload is already in progress.";
     } else if (!serialSupported) {
-        els.h3dUploadButton.textContent = "Web Serial unavailable";
+        els.h3imgUploadButton.textContent = "Web Serial unavailable";
         disabledReason = "Web Serial is not available in this browser.";
     } else if (!state.port) {
-        els.h3dUploadButton.textContent = "Connect UART first";
-        disabledReason = "Connect the UART before uploading an H3D image.";
-    } else if (!state.h3dImage) {
-        els.h3dUploadButton.textContent = "Select H3D image";
-        disabledReason = "Select a packaged .h3d image first.";
+        els.h3imgUploadButton.textContent = "Connect UART first";
+        disabledReason = "Connect the UART before uploading an H3IMG image.";
+    } else if (!state.h3imgImage) {
+        els.h3imgUploadButton.textContent = "Select H3IMG image";
+        disabledReason = "Select a packaged .h3img image first.";
     } else if (!ready) {
-        els.h3dUploadButton.textContent = "UART busy";
+        els.h3imgUploadButton.textContent = "UART busy";
         disabledReason = serialOperationDisabledReason();
     } else {
-        els.h3dUploadButton.textContent = "Upload H3D";
+        els.h3imgUploadButton.textContent = "Upload H3IMG";
     }
-    setButtonDisabledReason(els.h3dUploadButton, disabledReason);
+    setButtonDisabledReason(els.h3imgUploadButton, disabledReason);
 }
 
 function setSerialOperation(operation) {
@@ -1214,45 +1215,45 @@ function observeSerialResponse(bytes) {
     }
 }
 
-async function selectH3dFile() {
-    state.h3dImage = null;
-    els.h3dFileName.textContent = "No H3D image selected";
-    els.h3dFileDetails.textContent = "";
-    els.h3dProgress.value = 0;
-    els.h3dProgressLabel.textContent = "Idle";
-    clearUploadDiagnostic(els.h3dUploadDiagnostic);
+async function selectH3imgFile() {
+    state.h3imgImage = null;
+    els.h3imgFileName.textContent = "No H3IMG image selected";
+    els.h3imgFileDetails.textContent = "";
+    els.h3imgProgress.value = 0;
+    els.h3imgProgressLabel.textContent = "Idle";
+    clearUploadDiagnostic(els.h3imgUploadDiagnostic);
 
-    const file = els.h3dFileInput.files?.[0];
+    const file = els.h3imgFileInput.files?.[0];
     if (!file) {
-        updateH3dUploaderUi();
+        updateH3imgUploaderUi();
         return;
     }
 
-    els.h3dFileName.textContent = file.name;
-    els.h3dFileDetails.textContent = "Validating package and CRC32...";
+    els.h3imgFileName.textContent = file.name;
+    els.h3imgFileDetails.textContent = "Validating package and CRC32...";
     try {
         const bytes = new Uint8Array(await file.arrayBuffer());
-        const image = validateH3dPackage(bytes);
-        state.h3dImage = { ...image, fileName: file.name };
-        els.h3dFileDetails.textContent =
+        const image = validateH3imgPackage(bytes);
+        state.h3imgImage = { ...image, fileName: file.name };
+        els.h3imgFileDetails.textContent =
             `${image.imageBytes.toLocaleString()} payload bytes | ` +
             `CRC32 ${formatHex32(image.payloadCrc32)} | ` +
             `load ${formatHex32(image.loadAddress)} | entry ${formatHex32(image.entryAddress)}`;
     } catch (error) {
-        els.h3dFileDetails.textContent = `Invalid H3D image: ${error.message}`;
+        els.h3imgFileDetails.textContent = `Invalid H3IMG image: ${error.message}`;
     }
 
-    updateH3dUploaderUi();
+    updateH3imgUploaderUi();
 }
 
-async function uploadH3dImage() {
-    const image = state.h3dImage;
+async function uploadH3imgImage() {
+    const image = state.h3imgImage;
     if (!state.port?.writable) {
-        appendSystem("H3D upload requires an open serial connection.");
+        appendSystem("H3IMG upload requires an open serial connection.");
         return;
     }
     if (!image) {
-        appendSystem("Select a valid H3D image first.");
+        appendSystem("Select a valid H3IMG image first.");
         return;
     }
     if (state.serialOperation !== null || state.screenSnip !== null) {
@@ -1260,7 +1261,7 @@ async function uploadH3dImage() {
         return;
     }
 
-    const launchAfterUpload = els.h3dLaunchAfterUpload.checked;
+    const launchAfterUpload = els.h3imgLaunchAfterUpload.checked;
     let uploadSucceeded = false;
     const startedAt = performance.now();
 
@@ -1268,86 +1269,86 @@ async function uploadH3dImage() {
     stopScreenSnipCapabilityWatch();
     clearScreenSnipProbe();
     setScreenSnipCapability("checking");
-    setSerialOperation("h3d-upload");
-    els.h3dProgress.value = 0;
-    els.h3dProgressLabel.textContent = "Starting monitor loader...";
-    clearUploadDiagnostic(els.h3dUploadDiagnostic);
+    setSerialOperation("h3img-upload");
+    els.h3imgProgress.value = 0;
+    els.h3imgProgressLabel.textContent = "Starting monitor loader...";
+    clearUploadDiagnostic(els.h3imgUploadDiagnostic);
     appendSystem(
-        `H3D upload: ${image.fileName}, payload=${image.imageBytes.toLocaleString()} bytes, ` +
+        `H3IMG upload: ${image.fileName}, payload=${image.imageBytes.toLocaleString()} bytes, ` +
         `CRC32=${formatHex32(image.payloadCrc32)}.`);
 
     try {
         const readyPromise = waitForSerialResponse(
-            [H3D_READY_MARKER, H3D_ERROR_MARKER],
-            H3D_RESPONSE_TIMEOUT_MS,
+            [H3IMG_READY_MARKER, H3IMG_ERROR_MARKER],
+            H3IMG_RESPONSE_TIMEOUT_MS,
             "H3L READY");
         if (!await writeBytes(new Uint8Array([0x6c]))) {
             clearSerialResponseWaiter();
-            throw new Error("could not send the H3D loader command");
+            throw new Error("could not send the H3IMG loader command");
         }
         const readyResult = await readyPromise;
-        if (readyResult === H3D_ERROR_MARKER) {
+        if (readyResult === H3IMG_ERROR_MARKER) {
             throw new Error("monitor reported an H3L error before receiving the header");
         }
 
-        els.h3dProgressLabel.textContent = "Sending 64-byte header...";
+        els.h3imgProgressLabel.textContent = "Sending 64-byte header...";
         const dataPromise = waitForSerialResponse(
-            [H3D_DATA_MARKER, H3D_ERROR_MARKER],
-            H3D_RESPONSE_TIMEOUT_MS,
+            [H3IMG_DATA_MARKER, H3IMG_ERROR_MARKER],
+            H3IMG_RESPONSE_TIMEOUT_MS,
             "H3L DATA");
         if (!await writeBytes(image.packageBytes.subarray(0, image.headerBytes))) {
             clearSerialResponseWaiter();
-            throw new Error("could not send the H3D header");
+            throw new Error("could not send the H3IMG header");
         }
         const dataResult = await dataPromise;
-        if (dataResult === H3D_ERROR_MARKER) {
-            throw new Error("monitor rejected the H3D header");
+        if (dataResult === H3IMG_ERROR_MARKER) {
+            throw new Error("monitor rejected the H3IMG header");
         }
 
         const wireMs = Math.ceil(
             (image.headerBytes + image.imageBytes) * 10 * 1000 / Number(els.baudRate.value));
         const resultPromise = waitForSerialResponse(
-            [H3D_OK_MARKER, H3D_ERROR_MARKER],
-            Math.max(H3D_RESULT_MARGIN_MS, wireMs + H3D_RESULT_MARGIN_MS),
+            [H3IMG_OK_MARKER, H3IMG_ERROR_MARKER],
+            Math.max(H3IMG_RESULT_MARGIN_MS, wireMs + H3IMG_RESULT_MARGIN_MS),
             "H3L OK");
 
         let sent = 0;
         while (sent < image.payload.byteLength) {
-            const end = Math.min(sent + H3D_UPLOAD_CHUNK_BYTES, image.payload.byteLength);
+            const end = Math.min(sent + H3IMG_UPLOAD_CHUNK_BYTES, image.payload.byteLength);
             if (!await writeBytes(image.payload.subarray(sent, end))) {
                 clearSerialResponseWaiter();
-                throw new Error("serial write failed during H3D payload upload");
+                throw new Error("serial write failed during H3IMG payload upload");
             }
             sent = end;
             const percent = sent * 100 / image.payload.byteLength;
-            els.h3dProgress.value = percent;
-            els.h3dProgressLabel.textContent =
+            els.h3imgProgress.value = percent;
+            els.h3imgProgressLabel.textContent =
                 `${sent.toLocaleString()} / ${image.payload.byteLength.toLocaleString()} bytes ` +
                 `(${percent.toFixed(1)}%)`;
         }
 
         const result = await resultPromise;
-        if (result === H3D_ERROR_MARKER) {
+        if (result === H3IMG_ERROR_MARKER) {
             throw new Error("monitor reported an H3L upload error; see the UART terminal");
         }
 
         uploadSucceeded = true;
-        els.h3dProgress.value = 100;
+        els.h3imgProgress.value = 100;
         const elapsedSeconds = (performance.now() - startedAt) / 1000;
-        els.h3dProgressLabel.textContent = `Accepted in ${elapsedSeconds.toFixed(1)} s`;
-        appendSystem(`H3D upload accepted in ${elapsedSeconds.toFixed(1)} seconds.`);
+        els.h3imgProgressLabel.textContent = `Accepted in ${elapsedSeconds.toFixed(1)} s`;
+        appendSystem(`H3IMG upload accepted in ${elapsedSeconds.toFixed(1)} seconds.`);
 
         if (launchAfterUpload) {
             appendSystem("Launching the uploaded Doom image with monitor command j.");
             await writeBytes(new Uint8Array([0x6a]));
         }
     } catch (error) {
-        els.h3dProgressLabel.textContent = `Failed: ${error.message}`;
+        els.h3imgProgressLabel.textContent = `Failed: ${error.message}`;
         if (error.message === "timed out waiting for H3L READY") {
-            showMonitorUploadDiagnostic(els.h3dUploadDiagnostic, "H3L");
+            showMonitorUploadDiagnostic(els.h3imgUploadDiagnostic, "H3L");
         }
         appendSystem(
-            `H3D upload failed: ${error.message}. ` +
+            `H3IMG upload failed: ${error.message}. ` +
             "Make sure the resident monitor prompt is active; stop Doom before retrying.");
     } finally {
         clearSerialResponseWaiter();
@@ -1534,11 +1535,11 @@ function refreshWadImage() {
 }
 
 function restoreSelectedUploadFiles() {
-    const h3dFile = els.h3dFileInput.files?.[0];
-    if (h3dFile && !state.h3dImage) {
-        void selectH3dFile();
-    } else if (!h3dFile && els.h3dFileInput.value) {
-        els.h3dFileInput.value = "";
+    const h3imgFile = els.h3imgFileInput.files?.[0];
+    if (h3imgFile && !state.h3imgImage) {
+        void selectH3imgFile();
+    } else if (!h3imgFile && els.h3imgFileInput.value) {
+        els.h3imgFileInput.value = "";
     }
 
     const wadFile = els.wadFileInput.files?.[0];
@@ -2781,9 +2782,9 @@ function wireEvents() {
             void checkConsoleFirmwareLoader();
         }
     });
-    els.h3dFileInput.addEventListener("change", selectH3dFile);
-    els.h3dUploadButton.addEventListener("click", uploadH3dImage);
-    els.h3dConnectUartButton.addEventListener("click", connect);
+    els.h3imgFileInput.addEventListener("change", selectH3imgFile);
+    els.h3imgUploadButton.addEventListener("click", uploadH3imgImage);
+    els.h3imgConnectUartButton.addEventListener("click", connect);
     els.wadFileInput.addEventListener("change", selectWadFile);
     els.wadVisibleName.addEventListener("input", refreshWadImage);
     els.wadMemoryProfile.addEventListener("change", refreshWadImage);

@@ -304,10 +304,12 @@ Programmation et OpenOCD
    fourni comme premier argument ; sinon le binaire du dépôt est utilisé.
 
 ``scripts/load-firmware.sh``
-   Charge l'ELF normal du moniteur via un serveur GDB OpenOCD en cours
-   d'exécution, arrête la cible, charge et compare les sections, règle ``$pc``
-   sur ``_start``, reprend l'exécution puis se déconnecte. Cela évite de laisser
-   GDB attaché après la programmation.
+   Charge un ELF de moniteur via un serveur GDB OpenOCD en cours d'exécution,
+   arrête la cible, charge et compare les sections, règle ``$pc`` sur ``_start``,
+   reprend l'exécution puis se déconnecte. Sans argument, il utilise la sortie
+   autonome ``build/hazard3-boot-monitor.elf``. Les builds complets de carte
+   doivent passer explicitement l'ELF propre à la carte ou utiliser le helper
+   ``scripts/gdb/load-*-monitor.gdb`` correspondant.
 
 ``scripts/load-firmware-12f.sh``
    Charge le moniteur ULX3S 12F résident en SDRAM après programmation du
@@ -343,8 +345,20 @@ Outils GDB
    Définitions communes de commandes GDB Hazard3 utilisées par la configuration
    de débogage du projet.
 
-``scripts/gdb/load-hazard3-test-elf.gdb``
-   Fichier de commandes GDB ciblé pour charger l'ELF de test/moniteur Hazard3.
+``scripts/gdb/load-ulx3s-85f-monitor.gdb``
+   Charge, vérifie et exécute le moniteur produit par le build complet ULX3S 85F
+   dans ``build/ulx3s/monitor/hazard3-boot-monitor.elf``.
+
+``scripts/gdb/load-ulx3s-12f-monitor.gdb``
+   Charge, vérifie et exécute le moniteur résident en SDRAM produit par le build
+   complet ULX3S 12F dans
+   ``build/ulx3s-12f/monitor/hazard3-boot-monitor.elf``.
+
+``scripts/gdb/load-ulx4m-ld-85f-monitor.gdb``
+   Charge, vérifie et exécute le moniteur produit par le build complet ULX4M-LD
+   85F dans ``build/ulx4m-ld/monitor/hazard3-boot-monitor.elf``. Utilisez le
+   moniteur issu du même build de carte que l'image FPGA afin que l'horloge, la
+   carte mémoire, l'édition de liens et le protocole du chargeur restent alignés.
 
 ``scripts/gdb/sao-probe.gdb``
    Sonde l'état du pont SAO depuis GDB.

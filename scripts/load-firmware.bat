@@ -44,7 +44,7 @@ if not exist "%GDB%" (
 
 if not exist "%ELF%" (
     >&2 echo Missing firmware ELF: %ELF%
-    >&2 echo Expected the firmware at: %ROOT_DIR%\build\hazard3-boot-monitor.elf or specify the prebuilt image in ./bin/ directory.
+    >&2 echo Build the monitor first, or pass a board-specific ELF such as build\ulx3s\monitor\hazard3-boot-monitor.elf.
     exit /b 1
 )
 

@@ -6,7 +6,7 @@ répertoire ``web/``. Elle utilise l'API Web Serial du navigateur pour
 communiquer directement avec l'UART de la carte et peut également demander une
 capture d'écran aux applications HDMI prises en charge.
 
-Pour le flux complet de l'outil web, y compris les téléversements H3D/IWAD
+Pour le flux complet de l'outil web, y compris les téléversements H3IMG/IWAD
 et le chargement du firmware console, voir :doc:`web-tool`.
 
 La même application web contient aussi un programmateur FPGA WebUSB distinct
@@ -77,10 +77,10 @@ Le verrou est limité à une origine. Ainsi ``http://127.0.0.1:8000`` et
 ``https://ulx3s.github.io`` ne partagent pas le même Web Lock. Un PuTTY,
 une autre application ou une page d'une autre origine ne peut pas être identifié
 par nom ; un échec de ``SerialPort.open()`` est alors présenté comme un conflit
-probable de propriété et les panneaux H3D/IWAD proposent **Retry UART**.
+probable de propriété et les panneaux H3IMG/IWAD proposent **Retry UART**.
 
 Pendant le sélecteur ou l'ouverture du port, la page affiche **Connecting
-UART**. Les sections H3D et IWAD affichent aussi clairement le prérequis UART et
+UART**. Les sections H3IMG et IWAD affichent aussi clairement le prérequis UART et
 leur propre bouton **Connect UART** lorsqu'aucune connexion n'est active.
 
 Les boutons et badges compacts utilisent des infobulles contextuelles. Pour un
@@ -102,7 +102,7 @@ Le moniteur résident actuel peut également fournir une capture d'écran. Aprè
 avoir présenté avec succès sa mire de test, il stocke une copie validée de cette
 image RGB332 dans la SDRAM réservée et peut sérialiser ce cache sur demande.
 Doom et l'interface HDMI I2CDriver fournissent leurs propres implémentations
-d'écran actif. Une image ``.h3d`` chargée mais non exécutée ne fournit pas la
+d'écran actif. Une image ``.h3img`` chargée mais non exécutée ne fournit pas la
 capacité simplement parce qu'elle est présente en SDRAM.
 
 Détection de capacité

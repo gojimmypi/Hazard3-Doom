@@ -20,7 +20,7 @@ micro-SD storage
 ----------------
 
 The micro-SD socket gives ULX3S a removable nonvolatile storage path. In
-Hazard3-Doom it supports the standalone cold-boot flow for ``DOOM.H3D`` and
+Hazard3-Doom it supports the standalone cold-boot flow for ``DOOM.IMG`` and
 ``DOOM.WAD``.
 
 The SD card has a different job from both FPGA SPI flash and SDRAM:
@@ -38,7 +38,7 @@ A standalone ULX3S Doom boot therefore crosses several layers:
        -> resident monitor in EBR
        -> SDRAM initialization
        -> micro-SD/FAT file reads
-       -> DOOM.H3D + DOOM.WAD
+       -> DOOM.IMG + DOOM.WAD
        -> execution from the Hazard3 memory map
 
 Shared SD ownership with ESP32

@@ -15,7 +15,7 @@ Stockage micro-SD
 -----------------
 
 La micro-SD est un stockage amovible non volatil. Le démarrage autonome ULX3S
-peut y lire ``DOOM.H3D`` et ``DOOM.WAD``.
+peut y lire ``DOOM.IMG`` et ``DOOM.WAD``.
 
 * la flash SPI stocke la configuration FPGA persistante ;
 * l'EBR peut contenir le moniteur résident ;

@@ -51,4 +51,4 @@ Standalone boot zato prelazi više granica:
 .. code-block:: text
 
    SPI flash -> FPGA konfiguracija -> EBR monitor -> DRAM init
-             -> micro-SD/FAT -> DOOM.H3D + DOOM.WAD -> Hazard3
+             -> micro-SD/FAT -> DOOM.IMG + DOOM.WAD -> Hazard3
