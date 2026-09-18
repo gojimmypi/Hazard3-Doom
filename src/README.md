@@ -11,8 +11,11 @@ and provides the boot and console environment used before launching Doom.
 Core resident monitor files:
 
 - `link.ld` - linker script for the resident monitor
+- `link-12f-sdram.ld` - linker script for the ULX3S 12F SDRAM-resident monitor
 - `main.c` - main resident monitor implementation
 - `start.S` - startup and entry code
+- `bootstrap-12f.S` - minimal 115200-baud cold-boot message for the 12F EBR
+- `link-12f-bootstrap.ld` - linker script constraining that bootstrap to 1 KiB
 
 ## Tiny Tapeout Template Files
 

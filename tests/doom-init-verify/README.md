@@ -25,7 +25,7 @@ Build:
 
 Output:
 
-`build/doom-init-verify/doom-image/hazard3-doom.h3d`
+`build/doom-init-verify/doom-image/hazard3-doom.h3img`
 
 The same command also rebuilds
 `build/ulx3s-12f/monitor/hazard3-boot-monitor.elf`. Load that monitor before

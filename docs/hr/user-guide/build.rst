@@ -10,12 +10,12 @@ Uobičajene izgradnje za pločice
 -------------------------------
 
 Za uobičajenu izgradnju koristite potpuni wrapper za ciljnu pločicu. Ti wrapperi
-održavaju FPGA dizajn, rezidentni monitor, Doom sliku, takt i memorijski profil
-međusobno usklađenima:
+održavaju FPGA dizajn, monitor, Doom sliku, takt i memorijski profil međusobno
+usklađenima:
 
 .. code-block:: bash
 
-   ./scripts/build-ulx3s-doom.sh
+   ./scripts/build-ulx3s-85f-doom.sh
    ./scripts/build-ulx3s-12f-doom.sh
    ./scripts/build-ulx4m-ld-doom.sh
 

@@ -34,6 +34,11 @@ READY_MARKER = b"H3W READY\r\n"
 DATA_MARKER = b"H3W DATA\r\n"
 OK_MARKER = b"H3W OK"
 ERROR_MARKER = b"H3W ERROR"
+VERSION_END_MARKER = b"\r\n> "
+PROFILE_MARKERS = {
+    "32m": b"memory_profile=32m",
+    "64m": b"memory_profile=64m",
+}
 
 
 def import_serial():
@@ -57,6 +62,23 @@ def read_until_any(port, markers: tuple[bytes, ...], timeout_seconds: float) -> 
         else:
             time.sleep(0.01)
     raise TimeoutError("timed out waiting for WAD loader response")
+
+
+def detect_memory_profile(port) -> str:
+    port.write(b"v")
+    port.flush()
+    try:
+        response = read_until_any(port, (VERSION_END_MARKER,), 5.0)
+    except TimeoutError as error:
+        raise RuntimeError(
+            "monitor did not complete the version response; rebuild/reload the "
+            "current monitor or pass --memory-profile 32m/64m explicitly") from error
+    for profile, marker in PROFILE_MARKERS.items():
+        if marker in response:
+            return profile
+    raise RuntimeError(
+        "monitor did not report memory_profile; rebuild/reload the current "
+        "monitor or pass --memory-profile 32m/64m explicitly")
 
 
 def validate_name(name: str) -> bytes:
@@ -123,8 +145,8 @@ def main() -> int:
     parser.add_argument("--port", required=True)
     parser.add_argument("--baud", type=int, default=115200)
     parser.add_argument(
-        "--memory-profile", choices=MEMORY_PROFILES, default="64m",
-        help="must match the monitor build (default: 64m)")
+        "--memory-profile", choices=("auto", *MEMORY_PROFILES), default="auto",
+        help="monitor memory profile (default: auto-detect with monitor 'v' command)")
     parser.add_argument("--chunk-size", type=int, default=4096)
     parser.add_argument("--name", help="Doom-visible filename; defaults to the input basename")
     parser.add_argument("--launch", action="store_true")
@@ -132,22 +154,25 @@ def main() -> int:
     args = parser.parse_args()
     if args.chunk_size <= 0:
         raise RuntimeError("chunk size must be positive")
-    wad_base, wad_limit = MEMORY_PROFILES[args.memory_profile]
     wad = args.wad.read_bytes()
-    lump_count, directory_offset = validate_iwad(wad, wad_base, wad_limit)
     visible_name = args.name if args.name is not None else args.wad.name.lower()
     encoded_name = validate_name(visible_name)
-    header, crc = create_header(wad, encoded_name, wad_base)
     serial = import_serial()
-    print(
-        f"Opening {args.port} at {args.baud}; profile={args.memory_profile}, "
-        f"load=0x{wad_base:08x}, name={visible_name}, bytes={len(wad)}, "
-        f"lumps={lump_count}, directory=0x{directory_offset:08x}, "
-        f"CRC32=0x{crc:08x}")
     with serial.Serial(
             args.port, args.baud, timeout=0.1, write_timeout=10.0) as port:
         port.reset_input_buffer()
         port.reset_output_buffer()
+        memory_profile = args.memory_profile
+        if memory_profile == "auto":
+            memory_profile = detect_memory_profile(port)
+        wad_base, wad_limit = MEMORY_PROFILES[memory_profile]
+        lump_count, directory_offset = validate_iwad(wad, wad_base, wad_limit)
+        header, crc = create_header(wad, encoded_name, wad_base)
+        print(
+            f"Opening {args.port} at {args.baud}; profile={memory_profile}, "
+            f"load=0x{wad_base:08x}, name={visible_name}, bytes={len(wad)}, "
+            f"lumps={lump_count}, directory=0x{directory_offset:08x}, "
+            f"CRC32=0x{crc:08x}")
         port.write(b"w")
         port.flush()
         text = read_until_any(port, (READY_MARKER,), 10.0)

@@ -74,12 +74,12 @@ Putovi pokretanja
 Razvojno pokretanje
 ~~~~~~~~~~~~~~~~~~~
 
-FPGA učitavanje -> rezidentni monitor -> UART prijenos ``.h3d`` -> UART prijenos ``DOOM.WAD`` -> pokretanje.
+FPGA učitavanje -> rezidentni monitor -> UART prijenos ``.h3img`` -> UART prijenos ``DOOM.WAD`` -> pokretanje.
 
 Samostalno pokretanje
 ~~~~~~~~~~~~~~~~~~~~~
 
-FPGA konfiguracija iz SPI flasha -> unaprijed učitan rezidentni monitor u EBR-u -> inicijalizacija SDRAM-a -> micro-SD ``DOOM.H3D`` + ``DOOM.WAD`` -> pokretanje.
+FPGA konfiguracija iz SPI flasha -> unaprijed učitan rezidentni monitor u EBR-u -> inicijalizacija SDRAM-a -> micro-SD ``DOOM.IMG`` + ``DOOM.WAD`` -> pokretanje.
 
 SRAM preload rezidentnog monitora prilagodba je u ULX3S Hazard3 forku. Omogućuje
 sustavu da pokrene koristan firmware odmah nakon konfiguracije FPGA-a bez

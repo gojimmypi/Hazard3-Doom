@@ -100,21 +100,21 @@ Pour un checkout existant :
 
 .. code-block:: bash
 
-   ./scripts/build-ulx3s-doom.sh
+   ./scripts/build-ulx3s-85f-doom.sh
 
 Les sorties importantes incluent :
 
 .. code-block:: text
 
-   build/fpga_ulx3s.bit
-   build/ulx3s/monitor/hazard3-boot-monitor.elf
-   build/ulx3s/doom-image/hazard3-doom.h3d
-   build/ulx3s/hazard3-boot-monitor.hex
+   build/fpga_ulx3s_85f.bit
+   build/ulx3s-85f/monitor/hazard3-boot-monitor.elf
+   build/ulx3s-85f/doom-image/hazard3-doom.h3img
+   build/ulx3s-85f/hazard3-boot-monitor.hex
 
 3. Programmer le FPGA pour un essai
 -----------------------------------
 
-Pour ULX3S, l'application web Hazard3-Doom peut charger ``fpga_ulx3s.bit``
+Pour ULX3S, l'application web Hazard3-Doom peut charger ``fpga_ulx3s_85f.bit``
 directement dans la SRAM du FPGA via l'interface JTAG FT231X ``US1`` de la
 carte. Développez **FPGA web flasher**, sélectionnez le fichier ``.bit``,
 connectez le périphérique USB ULX3S, sondez le JTAG puis choisissez
@@ -167,7 +167,7 @@ Vous pouvez alors continuer avec la page publique
 indiquer **Local loader Ready** et **OpenOCD Ready** ; **refresh** force une
 vérification immédiate.
 
-Sélectionnez ``build/ulx3s/monitor/hazard3-boot-monitor.elf`` puis chargez-le.
+Sélectionnez ``build/ulx3s-85f/monitor/hazard3-boot-monitor.elf`` puis chargez-le.
 GDB se connecte au serveur OpenOCD déjà actif, vérifie les sections ELF, reprend
 Hazard3 puis se déconnecte. La vérification d'état OpenOCD du helper est passive
 et ne consomme pas de connexion GDB.
@@ -185,8 +185,8 @@ navigateur. Développez **Serial connection**, connectez l'UART de la carte et
 vérifiez que l'invite ``>`` du moniteur résident est active. Développez ensuite
 **Device uploading** :
 
-#. Ouvrez **Doom H3D uploader**, sélectionnez
-   ``build/ulx3s/doom-image/hazard3-doom.h3d`` puis **Upload H3D**.
+#. Ouvrez **Doom H3IMG uploader**, sélectionnez
+   ``build/ulx3s-85f/doom-image/hazard3-doom.h3img`` puis **Upload H3IMG**.
 #. Ouvrez **Doom IWAD uploader**, sélectionnez un fichier ``.wad`` obtenu
    légalement, choisissez le profil mémoire correspondant au moniteur résident
    puis **Upload IWAD**.
@@ -197,12 +197,19 @@ Pour le flux complet et la table des profils mémoire, voir
 :doc:`../user-guide/web-tool`.
 
 Les chargeurs en ligne de commande restent disponibles. Fermez d'abord tout
-terminal ou connexion navigateur qui possède le port UART, puis exécutez :
+terminal ou connexion navigateur qui possède le port UART. Sous Windows,
+utilisez la syntaxe du shell réellement ouvert : PowerShell utilise l'accent
+grave (`````) pour continuer une commande sur la ligne suivante, tandis que
+l'invite de commandes Windows (``cmd.exe``, souvent appelée invite DOS) utilise
+l'accent circonflexe (``^``). Ne collez pas les accents graves PowerShell dans
+``cmd.exe``.
+
+**Windows PowerShell**
 
 .. code-block:: powershell
 
    py .\doom\upload-doom-image.py `
-       .\build\doom-image\hazard3-doom.h3d `
+       .\build\ulx3s-85f\doom-image\hazard3-doom.h3img `
        --port COM7
 
    py .\doom\upload-wad.py `
@@ -210,8 +217,44 @@ terminal ou connexion navigateur qui possède le port UART, puis exécutez :
        --port COM7 `
        --launch
 
-Le nom du port UART n'est qu'un exemple ; utilisez le port attribué à votre
-carte.
+**Invite de commandes Windows (cmd.exe / invite DOS)**
+
+.. code-block:: bat
+
+   py .\doom\upload-doom-image.py ^
+       .\build\ulx3s-85f\doom-image\hazard3-doom.h3img ^
+       --port COM7
+
+   py .\doom\upload-wad.py ^
+       C:\path\to\DOOM.WAD ^
+       --port COM7 ^
+       --launch
+
+**Linux (Bash)**
+
+.. code-block:: bash
+
+   python3 doom/upload-doom-image.py \
+       build/ulx3s-85f/doom-image/hazard3-doom.h3img \
+       --port /dev/ttyUSB0
+
+   python3 doom/upload-wad.py \
+       /path/to/DOOM.WAD \
+       --port /dev/ttyUSB0 \
+       --launch
+
+Le chargeur IWAD en ligne de commande utilise désormais ``--memory-profile auto``
+par défaut. Il interroge le moniteur en cours d'exécution avec la commande ``v``
+et sélectionne la région WAD ``32m`` ou ``64m`` du moniteur avant d'envoyer
+l'en-tête. Cela évite qu'un moniteur 12F de 32 Mio reçoive accidentellement
+une adresse WAD de 64 Mio. Les options explicites ``--memory-profile 32m`` ou
+``--memory-profile 64m`` restent disponibles pour un ancien moniteur qui ne
+signale pas ``memory_profile``. L'image H3IMG doit toujours correspondre au
+build de la carte.
+
+Les noms de ports UART ne sont que des exemples. Sous Windows, utilisez le port
+COM attribué à votre carte. Sous Linux, utilisez le périphérique correspondant,
+souvent ``/dev/ttyUSB0`` ou ``/dev/ttyACM0``.
 
 5. Vérifier le démarrage
 ------------------------
@@ -230,6 +273,71 @@ Un lancement UART sain contient des marqueurs similaires à :
    monitor ABI: PASS
    Doom interactive HDMI loop: READY
 
+Chemin rapide ULX4M-LD
+------------------------
+
+Pour ULX4M-LD, utilisez un bitstream qualifié avec Hazard3 à 40 MHz et LiteDRAM
+à 60 MHz. Pour entrer en DFU normal, coupez l'alimentation, maintenez le bouton
+PCB ``BTN3`` pendant la connexion du câble Micro-B ULX4M, attendez l'énumération
+du VID:PID ``1d50:614b``, puis relâchez ``BTN3``. Il n'est **pas** nécessaire de
+maintenir ``BTN3`` pendant la programmation.
+
+Si Bash sous WSL signale ``Permission denied`` pour les outils Windows fournis,
+rendez-les exécutables :
+
+.. code-block:: bash
+
+   chmod +x ./bin/openFPGALoader.exe ./bin/dfu-util.exe
+
+Programmez le bitstream utilisateur persistant puis quittez explicitement DFU :
+
+.. code-block:: bash
+
+   ./bin/openFPGALoader.exe --dfu \
+       --vid 0x1d50 --pid 0x614b --altsetting 0 \
+       ./build/fpga_ulx4m_ld.bit
+
+   ./bin/dfu-util.exe -a 0 -e
+
+Utilisez l'interface 0 de Tigard avec le pilote FTDI VCP pour l'UART à 115200
+bauds et l'interface 1 avec libusbK pour le JTAG OpenOCD. Le build ULX4M-LD
+complet écrit l'image Doom dans
+``build/ulx4m-ld/doom-image/hazard3-doom.h3img``. Par exemple, sous WSL/Bash si
+le VCP Tigard apparaît comme ``/dev/ttyS8`` :
+
+.. code-block:: bash
+
+   ./doom/upload-doom-image.py \
+       ./build/ulx4m-ld/doom-image/hazard3-doom.h3img \
+       --port /dev/ttyS8
+
+Le nom du périphérique série n'est qu'un exemple. Une fois le moniteur actif,
+vérifiez ``s`` pour ``external_memory_ready=YES`` puis exécutez ``q``. Le chemin
+qualifié actuel passe également ``k``, ``d`` et ``x``.
+
+Pour une mise à jour logicielle seule du moniteur correspondant au FPGA à
+40 MHz :
+
+.. code-block:: bash
+
+   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-monitor-test/monitor" \
+   HAZARD3_MEMORY_PROFILE=64m \
+   HAZARD3_SYS_CLK_HZ=40000000 \
+       ./scripts/build.sh
+
+Démarrez ensuite la configuration OpenOCD Tigard ULX4M et chargez explicitement
+cet ELF de test séparé :
+
+.. code-block:: bash
+
+   ./scripts/load-firmware.sh \
+       ./build/ulx4m-ld-monitor-test/monitor/hazard3-boot-monitor.elf
+
+Pour un build complet ULX4M-LD normal, utilisez plutôt l'outil propre à la carte
+``scripts/gdb/load-ulx4m-ld-85f-monitor.gdb``. Voir
+:doc:`../user-guide/jtag-debugging` pour les détails sur les pilotes, le câblage,
+l'IDCODE et le dépannage DTM.
+
 Étapes suivantes
 ----------------
 
@@ -238,3 +346,7 @@ Un lancement UART sain contient des marqueurs similaires à :
 * Utilisez :doc:`../user-guide/jtag-debugging` pour le débogage au niveau du code source.
 * Utilisez :doc:`../user-guide/sao` pour la prise en charge SAO/I2C.
 * Utilisez :doc:`../user-guide/i2cdriver` pour l'interface HDMI d'analyse I2C.
+
+Références d'implémentation
+---------------------------
+* `openFPGALoader <https://trabucayre.github.io/openFPGALoader/guide/install.html>`_

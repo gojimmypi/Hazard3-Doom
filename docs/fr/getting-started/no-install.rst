@@ -1,7 +1,7 @@
 Démarrage sans installation - ULX3S
 ====================================
 
-Le moyen le plus rapide d'essayer Hazard3-Doom sur une ULX3S consiste à utiliser
+Le moyen le plus rapide d'essayer Hazard3-Doom sur une ULX3S 85F consiste à utiliser
 les fichiers précompilés du projet et le Device Tool dans le navigateur. Cette
 méthode ne nécessite ni clonage du dépôt, ni Yosys, ni nextpnr, ni compilateur
 RISC-V, ni scripts Python d'upload, ni OpenOCD, ni GDB.
@@ -21,12 +21,18 @@ perdue à la mise hors tension.
 Matériel et fichiers nécessaires
 --------------------------------
 
-* une carte ULX3S 85F ou ULX3S 12F ;
+* une carte ULX3S 85F ;
 * un écran HDMI ;
 * la connexion USB ``US1`` de l'ULX3S pour la programmation WebUSB du FPGA ;
 * un adaptateur USB-vers-UART externe connecté à l'UART Hazard3-Doom ;
-* les fichiers précompilés ``.bit`` et ``.h3d`` correspondant à la carte ;
+* les fichiers précompilés ``.bit`` et ``.h3img`` correspondant à la carte ;
 * un IWAD Doom obtenu légalement, par exemple ``DOOM.WAD`` ou ``DOOM1.WAD``.
+
+Pour une installation matérielle compacte, le panneau HDMI Elecrow de sept
+pouces est un exemple documenté avec un boîtier ULX3S optionnel imprimable en
+3D. Le boîtier est spécifique à ce panneau, mais Hazard3-Doom ne l'est pas ; un
+autre écran HDMI peut être utilisé s'il accepte la temporisation vidéo générée.
+Voir :doc:`../hardware/ulx3s/video-and-storage` pour les détails.
 
 Voir :doc:`../user-guide/pinouts` pour les connexions UART et
 :doc:`../user-guide/web-tool` pour la référence complète du Device Tool.
@@ -52,13 +58,10 @@ Sélectionnez la paire correspondant au FPGA de la carte :
 
    * - Carte
      - Image FPGA
-     - Image Doom H3D
+     - Image Doom H3IMG
    * - ULX3S 85F
-     - ``fpga_ulx3s_hdmi_doom.bit``
-     - ``hazard3-doom-ulx3s-85F.h3d``
-   * - ULX3S 12F
-     - ``fpga_ulx3s_12f_hdmi_doom.bit``
-     - ``hazard3-doom-ulx3s-12F.h3d``
+     - ``fpga_ulx3s_85f.bit``
+     - ``hazard3-doom-ulx3s-85F.h3img``
 
 Ne mélangez pas des fichiers provenant de profils de carte différents. Le
 flasher du navigateur sonde l'identifiant JTAG ECP5 physique et refuse un
@@ -170,50 +173,41 @@ Hazard3-Doom habituels :
    1 stop bit
    no flow control
 
-Le moniteur résident est déjà intégré à l image FPGA Hazard3-Doom normale. Un
-démarrage réussi affiche la bannière du moniteur puis l invite ``>``. Il n est
-pas nécessaire de charger ``hazard3-boot-monitor.elf`` pour cette procédure.
+Le moniteur résident est déjà intégré à l image FPGA Hazard3-Doom normale de
+l ULX3S 85F. Un démarrage réussi affiche la bannière du moniteur puis l invite
+``>``. Il n est pas nécessaire de charger ``hazard3-boot-monitor.elf`` pour
+cette procédure.
 
 Si aucune invite n apparaît, voir :doc:`../troubleshooting` et
 :doc:`../user-guide/web-serial` avant de continuer.
 
-5. Charger l'image Doom H3D
----------------------------
+5. Charger l'image Doom H3IMG
+-----------------------------
 
-Sous **Device uploading**, développez **Doom H3D uploader** :
+Sous **Device uploading**, développez **Doom H3IMG uploader** :
 
-#. Sélectionnez le fichier ``hazard3-doom-*.h3d`` correspondant.
-#. Choisissez **Upload H3D**.
+#. Sélectionnez le fichier ``hazard3-doom-*.h3img`` correspondant.
+#. Choisissez **Upload H3IMG**.
 #. Attendez que le moniteur accepte l'image.
 
-Conservez toujours l'image H3D du même profil de carte que le fichier ``.bit``.
+Conservez toujours l'image H3IMG du même profil de carte que le fichier ``.bit``.
 
-.. _fig-no-install-h3d-upload:
+.. _fig-no-install-h3img-upload:
 
-.. figure:: ../images/no-install-h3d-upload.png
-   :alt: Outil d'upload H3D de Hazard3-Doom avec une image Doom spécifique à la carte sélectionnée.
+.. figure:: ../images/no-install-h3img-upload.png
+   :alt: Outil d'upload H3IMG de Hazard3-Doom avec une image Doom spécifique à la carte sélectionnée.
    :width: 85%
    :class: screenshot
 
-   Envoi de l'image ``hazard3-doom-*.h3d`` correspondant à la carte via le
+   Envoi de l'image ``hazard3-doom-*.h3img`` correspondant à la carte via le
    Device Tool.
 
 6. Charger votre IWAD Doom
 --------------------------
 
 Développez **Doom IWAD uploader** et sélectionnez votre fichier ``.wad`` obtenu
-légalement. Choisissez le profil mémoire correspondant au moniteur résident :
-
-.. list-table::
-   :header-rows: 1
-   :widths: 45 25
-
-   * - Carte
-     - Profil mémoire
-   * - ULX3S 85F
-     - ``64m``
-   * - ULX3S 12F
-     - ``32m``
+légalement. Pour cette procédure ULX3S 85F, choisissez le profil mémoire
+``64m``.
 
 Choisissez **Upload IWAD**. Pour lancer Doom automatiquement après le transfert,
 activez **Launch with ``j`` after upload** avant de démarrer l'upload.
@@ -259,7 +253,7 @@ rester connecté pour les commandes du moniteur et les diagnostics.
    :class: screenshot
 
    Doom en cours d'exécution après une programmation FPGA réussie et les uploads
-   H3D et IWAD.
+   H3IMG et IWAD.
 
 Ce que cette méthode n'installe pas
 -----------------------------------
@@ -267,10 +261,30 @@ Ce que cette méthode n'installe pas
 Cette procédure évite volontairement l'environnement de développement. Elle
 n'installe et ne nécessite pas Yosys, nextpnr, Project Trellis, une chaîne GCC
 RISC-V, le checkout Hazard3-Doom et ses submodules, les scripts d'upload en ligne
-de commande, ni OpenOCD/GDB pour le chemin normal moniteur/H3D/IWAD.
+de commande, ni OpenOCD/GDB pour le chemin normal moniteur/H3IMG/IWAD.
 
 Pour reconstruire ou modifier le FPGA, le firmware du moniteur ou l'image Doom,
 continuez avec :doc:`quick-start` et :doc:`build`.
+
+ULX3S 12F
+---------
+
+L'ULX3S 12F utilise un démarrage compact en deux étapes, car le moniteur complet
+ne tient pas dans la petite mémoire de démarrage interne disponible sur le 12F.
+Son image FPGA contient un bootstrap UART de 1 Kio qui confirme que le FPGA
+fonctionne ; le moniteur complet est ensuite chargé en SDRAM externe.
+
+Après avoir programmé ``fpga_ulx3s_12f.bit`` ou l'image 12F précompilée
+correspondante, connectez l'UART à 115200 bauds. Le bootstrap affiche une courte
+bannière et demande d'exécuter::
+
+   ./scripts/load-firmware-12f.sh
+
+Cet outil démarre ou réutilise OpenOCD, charge en SDRAM l'ELF du moniteur propre
+à la carte, le vérifie et le démarre. Le chemin 12F nécessite donc un checkout
+local de Hazard3-Doom avec les outils OpenOCD/GDB fournis ou installés ; il ne
+fait pas partie du chemin entièrement basé sur le navigateur ci-dessus. Voir
+:doc:`quick-start`, :doc:`build` et :doc:`../user-guide/jtag-debugging`.
 
 ULX4M-LD
 --------

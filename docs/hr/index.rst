@@ -75,6 +75,7 @@ Istražite dalje
 * :doc:`user-guide/web-flasher` - programirajte ULX3S FPGA izravno putem WebUSB-a.
 * :doc:`architecture/hazard3/index` - upoznajte Hazard3 RISC-V procesor, cjevovod, ISA konfiguraciju, sabirnice i arhitekturu za otklanjanje pogrešaka.
 * :doc:`architecture/system` - razumijte kako su povezani FPGA, monitor, memorija, HDMI, SD, SAO i ESP32.
+* :doc:`reference/apb-peripherals` - pregledajte APB adrese, registre, bitove i samostalne C primjere.
 * :doc:`reference/timing-sweeps` - pokrenite ECP5 sweepove i protumačite timing rezultate.
 * :doc:`user-guide/sd-card` - podesite samostalno hladno pokretanje s micro-SD kartice.
 * :doc:`getting-started/tiny-tapeout-ulx3s` - gradite Tiny Tapeout projekte za ULX3S ECP5.

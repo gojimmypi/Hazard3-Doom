@@ -1,7 +1,7 @@
 Pokretanje bez instalacije - ULX3S
 ==================================
 
-Najbrži način za isprobati Hazard3-Doom na ULX3S pločici jest koristiti
+Najbrži način za isprobati Hazard3-Doom na ULX3S 85F pločici jest koristiti
 unaprijed izgrađene datoteke projekta i Device Tool u pregledniku. Za ovaj put
 nije potrebno klonirati repozitorij niti instalirati Yosys, nextpnr, RISC-V
 prevoditelj, Python skripte za prijenos, OpenOCD ili GDB.
@@ -21,12 +21,18 @@ napajanja.
 Što je potrebno
 ---------------
 
-* ULX3S 85F ili ULX3S 12F pločica;
+* ULX3S 85F pločica;
 * HDMI zaslon;
 * ULX3S ``US1`` USB veza za WebUSB programiranje FPGA-a;
 * vanjski USB-UART adapter spojen na Hazard3-Doom UART;
-* odgovarajuće unaprijed izgrađene ``.bit`` i ``.h3d`` datoteke;
+* odgovarajuće unaprijed izgrađene ``.bit`` i ``.h3img`` datoteke;
 * legalno nabavljen Doom IWAD, primjerice ``DOOM.WAD`` ili ``DOOM1.WAD``.
+
+Za kompaktni hardverski sustav dokumentirani je primjer Elecrow 7-inčni HDMI
+zaslon s opcionalnim 3D ispisivim ULX3S kućištem. Kućište je specifično za taj
+panel, ali Hazard3-Doom nije; može se koristiti i drugi HDMI zaslon ako prihvaća
+generirani video timing. Za detalje vidi
+:doc:`../hardware/ulx3s/video-and-storage`.
 
 Za UART veze pogledajte :doc:`../user-guide/pinouts`, a za potpuni opis alata
 :doc:`../user-guide/web-tool`.
@@ -52,13 +58,10 @@ Odaberite par koji odgovara FPGA-u na pločici:
 
    * - Pločica
      - FPGA slika
-     - Doom H3D slika
+     - Doom H3IMG slika
    * - ULX3S 85F
-     - ``fpga_ulx3s_hdmi_doom.bit``
-     - ``hazard3-doom-ulx3s-85F.h3d``
-   * - ULX3S 12F
-     - ``fpga_ulx3s_12f_hdmi_doom.bit``
-     - ``hazard3-doom-ulx3s-12F.h3d``
+     - ``fpga_ulx3s_85f.bit``
+     - ``hazard3-doom-ulx3s-85F.h3img``
 
 Nemojte miješati datoteke različitih profila pločica. Programator u pregledniku
 provjerava fizički ECP5 JTAG ID i odbija ``.bit`` datoteku čiji ugrađeni cilj ne
@@ -168,50 +171,39 @@ postavkama:
    1 stop bit
    no flow control
 
-Rezidentni monitor već je ugrađen u uobičajenu Hazard3-Doom FPGA sliku.
-Uspješno pokretanje prikazuje banner monitora i odzivnik ``>``. Za ovaj postupak
-nije potrebno učitati ``hazard3-boot-monitor.elf``.
+Rezidentni monitor već je ugrađen u uobičajenu Hazard3-Doom FPGA sliku za
+ULX3S 85F. Uspješno pokretanje prikazuje banner monitora i odzivnik ``>``. Za
+ovaj postupak nije potrebno učitati ``hazard3-boot-monitor.elf``.
 
 Ako se odzivnik ne pojavi, prije nastavka pogledajte :doc:`../troubleshooting` i
 :doc:`../user-guide/web-serial`.
 
-5. Prenesite Doom H3D sliku
----------------------------
+5. Prenesite Doom H3IMG sliku
+-----------------------------
 
-U **Device uploading** otvorite **Doom H3D uploader**:
+U **Device uploading** otvorite **Doom H3IMG uploader**:
 
-#. Odaberite odgovarajuću ``hazard3-doom-*.h3d`` datoteku.
-#. Odaberite **Upload H3D**.
+#. Odaberite odgovarajuću ``hazard3-doom-*.h3img`` datoteku.
+#. Odaberite **Upload H3IMG**.
 #. Pričekajte da monitor prihvati sliku.
 
-H3D slika mora odgovarati istom profilu pločice kao i ``.bit`` datoteka.
+H3IMG slika mora odgovarati istom profilu pločice kao i ``.bit`` datoteka.
 
-.. _fig-no-install-h3d-upload:
+.. _fig-no-install-h3img-upload:
 
-.. figure:: ../images/no-install-h3d-upload.png
-   :alt: Hazard3-Doom H3D alat za prijenos s odabranom slikom Doom specifičnom za pločicu.
+.. figure:: ../images/no-install-h3img-upload.png
+   :alt: Hazard3-Doom H3IMG alat za prijenos s odabranom slikom Doom specifičnom za pločicu.
    :width: 85%
    :class: screenshot
 
-   Prijenos slike ``hazard3-doom-*.h3d`` koja odgovara profilu pločice putem
+   Prijenos slike ``hazard3-doom-*.h3img`` koja odgovara profilu pločice putem
    Device Toola.
 
 6. Prenesite svoj Doom IWAD
 ---------------------------
 
 Otvorite **Doom IWAD uploader** i odaberite legalno nabavljenu ``.wad`` datoteku.
-Odaberite memorijski profil koji odgovara rezidentnom monitoru:
-
-.. list-table::
-   :header-rows: 1
-   :widths: 45 25
-
-   * - Pločica
-     - Memorijski profil
-   * - ULX3S 85F
-     - ``64m``
-   * - ULX3S 12F
-     - ``32m``
+Za ovaj ULX3S 85F postupak odaberite memorijski profil ``64m``.
 
 Odaberite **Upload IWAD**. Za automatsko pokretanje Dooma nakon prijenosa prije
 uploada uključite **Launch with ``j`` after upload**.
@@ -256,7 +248,7 @@ ostati spojen za naredbe monitora i dijagnostiku.
    :width: 85%
    :class: screenshot
 
-   Doom u radu nakon uspješnog FPGA programiranja te prijenosa H3D i IWAD
+   Doom u radu nakon uspješnog FPGA programiranja te prijenosa H3IMG i IWAD
    datoteka.
 
 Što ovaj put ne instalira
@@ -265,10 +257,30 @@ ostati spojen za naredbe monitora i dijagnostiku.
 Ovaj brzi postupak namjerno izbjegava razvojno okruženje. Ne instalira niti
 zahtijeva Yosys, nextpnr, Project Trellis, RISC-V GCC alatni lanac, Hazard3-Doom
 checkout i podmodule, naredbene skripte za prijenos ili OpenOCD/GDB za uobičajeni
-put monitor/H3D/IWAD.
+put monitor/H3IMG/IWAD.
 
 Kada želite ponovno izgraditi ili mijenjati FPGA, firmware monitora ili Doom
 sliku, nastavite s :doc:`quick-start` i :doc:`build`.
+
+ULX3S 12F
+---------
+
+ULX3S 12F koristi kompaktno pokretanje u dvije faze jer puni monitor ne stane u
+mali proračun ugrađene memorije za pokretanje na 12F. FPGA slika sadrži UART
+bootstrap od 1 KiB koji potvrđuje da FPGA radi, a puni monitor zatim se učitava
+u vanjski SDRAM.
+
+Nakon programiranja ``fpga_ulx3s_12f.bit`` ili odgovarajuće unaprijed izgrađene
+12F slike spojite UART na 115200 baud. Bootstrap ispisuje kratki banner i traži
+pokretanje::
+
+   ./scripts/load-firmware-12f.sh
+
+Ta skripta pokreće ili ponovno koristi OpenOCD, učitava ELF monitora specifičan
+za pločicu u SDRAM, provjerava ga i pokreće. Zato 12F postupak zahtijeva lokalni
+Hazard3-Doom checkout s priloženim ili instaliranim OpenOCD/GDB alatima i nije
+dio postupka samo u pregledniku iznad. Pogledajte :doc:`quick-start`,
+:doc:`build` i :doc:`../user-guide/jtag-debugging`.
 
 ULX4M-LD
 --------

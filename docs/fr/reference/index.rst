@@ -8,4 +8,5 @@ Référence
    scripts
    timing-sweeps
    board-profiles
+   apb-peripherals
    figures

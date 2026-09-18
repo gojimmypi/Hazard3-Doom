@@ -32,7 +32,7 @@ en conserve une copie validée dans la SDRAM réservée. Une requête de capacit
 ``0x1c`` renvoie un ACK tant que ce cache est valide, et ``0x1d`` sérialise
 l'image mise en cache.
 
-Le téléversement d'une image ``.h3d`` avec ``l`` ne fait que stocker et valider
+Le téléversement d'une image ``.h3img`` avec ``l`` ne fait que stocker et valider
 l'exécutable en SDRAM ; il **n'exécute pas** cette image et n'active pas le
 gestionnaire de capture d'écran propre à Doom. Doom ne devient le fournisseur
 d'écran actif qu'après que ``j`` a lancé l'image et que sa boucle UART/HDMI a

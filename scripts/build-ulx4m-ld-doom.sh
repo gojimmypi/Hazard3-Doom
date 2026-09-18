@@ -22,6 +22,21 @@
 #
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+BUILD_DIR="${ROOT_DIR}/build"
+BOARD_BUILD_DIR="${BUILD_DIR}/ulx4m-ld"
+BUILD_LOG="${BUILD_DIR}/build-ulx4m-ld-doom.log"
+
+if ! command -v tee >/dev/null 2>&1; then
+    echo "ERROR: tee is required to capture the build log" >&2
+    exit 1
+fi
+
+mkdir -p "${BUILD_DIR}"
+exec > >(tee "${BUILD_LOG}") 2>&1
+printf 'Build log: %s\n' "${BUILD_LOG}"
+
 # Run shellcheck to ensure this is a good script.
 # Specify the executable shell checker you want to use:
 MY_SHELLCHECK="shellcheck"
@@ -53,11 +68,12 @@ BOARD_BUILD_DIR="${ROOT_DIR}/build/ulx4m-ld"
 MONITOR_BUILD_DIR="${HAZARD3_BUILD_DIR:-${BOARD_BUILD_DIR}/monitor}"
 DOOM_BUILD_DIR="${HAZARD3_DOOM_BUILD_DIR:-${BOARD_BUILD_DIR}/doom-image}"
 FPGA_OUTPUT="${ROOT_DIR}/build/fpga_ulx4m_ld.bit"
+PNR_LOG="${ROOT_DIR}/build/fpga_ulx4m_ld.pnr.log"
 MONITOR_OUTPUT="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.elf"
 MONITOR_BIN="${MONITOR_BUILD_DIR}/hazard3-boot-monitor.bin"
 BOOT_HEX_WORK="${HAZARD3_ROOT}/example_soc/soc/hazard3-boot-monitor.hex"
 BOOT_HEX_OUTPUT="${BOARD_BUILD_DIR}/hazard3-boot-monitor.hex"
-DOOM_OUTPUT="${DOOM_BUILD_DIR}/hazard3-doom.h3d"
+DOOM_OUTPUT="${DOOM_BUILD_DIR}/hazard3-doom.h3img"
 LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM"
 HAZARD3_ULX4M_SYS_CLK_MHZ="${HAZARD3_ULX4M_SYS_CLK_MHZ:-40}"
 ULX4M_LITEDRAM_CPU="${ULX4M_LITEDRAM_CPU:-serv}"
@@ -93,6 +109,54 @@ require_tool()
         echo "Missing required tool: ${tool}" >&2
         exit 1
     }
+}
+
+print_final_timing_summary()
+{
+    local pnr_log="$1"
+    local timing_lines
+    local timing_line
+
+    if [[ ! -f "${pnr_log}" ]]; then
+        printf '  Final timing: unavailable (missing %s)\n' "${pnr_log}"
+        return
+    fi
+
+    if ! command -v awk >/dev/null 2>&1; then
+        printf '  Final timing: unavailable (awk not found; see %s)\n' "${pnr_log}"
+        return
+    fi
+
+    timing_lines="$(
+        awk '
+        /Max frequency for clock/ {
+            clock = $0
+            sub(/^.*clock /, "", clock)
+            sub(/: .*$/, "", clock)
+            if (!(clock in seen)) {
+                order[++count] = clock
+                seen[clock] = 1
+            }
+            line = $0
+            sub(/^Info: /, "", line)
+            last[clock] = line
+        }
+        END {
+            for (i = 1; i <= count; ++i) {
+                print last[order[i]]
+            }
+        }' "${pnr_log}"
+    )"
+
+    if [[ -z "${timing_lines}" ]]; then
+        printf '  Final timing: unavailable (no clock results in %s)\n' "${pnr_log}"
+        return
+    fi
+
+    printf '  Final timing:\n'
+    while IFS= read -r timing_line; do
+        printf '    %s\n' "${timing_line}"
+    done <<< "${timing_lines}"
 }
 
 case "${HAZARD3_ULX4M_SYS_CLK_MHZ}" in
@@ -176,4 +240,17 @@ printf '\nULX4M-LD 85F Doom build complete.\n'
 printf '  FPGA:    %s\n' "${FPGA_OUTPUT}"
 printf '  Monitor: %s\n' "${MONITOR_OUTPUT}"
 printf '  Doom:    %s\n' "${DOOM_OUTPUT}"
+printf '  Log:     %s\n' "${BUILD_LOG}"
+print_final_timing_summary "${PNR_LOG}"
 printf '  Boot HEX: %s\n' "${BOOT_HEX_OUTPUT}"
+printf '  Profile: 64m address map, %s MHz, LiteDRAM CPU=%s\n\n' \
+    "${HAZARD3_ULX4M_SYS_CLK_MHZ}" "${ULX4M_LITEDRAM_CPU}"
+printf 'To program the ULX4M user bitstream through the protected DFU path:\n\n'
+printf '  ./scripts/ulx4m-bootloader.sh program-user ./build/fpga_ulx4m_ld.bit\n\n'
+printf 'Follow the BTN3/DFU prompts. This programs the persistent user slot.\n'
+printf 'After the requested cold boot, the resident monitor starts automatically.\n'
+printf 'No separate firmware-load step is required.\n\n'
+printf 'To load Doom executable:\n\n'
+printf '  ./doom/upload-doom-image.py  ./build/ulx4m-ld/doom-image/hazard3-doom.h3img  --port /dev/ttyS7\n\n'
+printf 'To load Doom WAD:\n\n'
+printf '  ./doom/upload-wad.py  ./wads/DOOM1.WAD  --port /dev/ttyS7  --launch\n\n'

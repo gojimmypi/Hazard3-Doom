@@ -14,6 +14,8 @@ Repository tree
    |-- benchmarks/coremark/
    |-- bin/
    |-- doom/
+   |-- examples/apb-register-dump/
+   |-- examples/apb-uart-timer/
    |-- examples/esp32-sao-shared/
    |-- openocd/
    |-- scripts/

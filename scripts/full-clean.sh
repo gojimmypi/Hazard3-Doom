@@ -53,6 +53,14 @@
 #   fpga_ulx3s.bit
 #   fpga_ulx3s_synth.v
 #
+#   fpga_ulx3s_85f.json
+#   fpga_ulx3s_85f.asc
+#   fpga_ulx3s_85f.bit
+#   fpga_ulx3s_85f_synth.v
+#   fpga_ulx3s_85f.config
+#   fpga_ulx3s_85f.svf
+#   fpga_ulx3s_85f.memory-profile
+#
 #   fpga_ulx3s_12f.json
 #   fpga_ulx3s_12f.asc
 #   fpga_ulx3s_12f.bit

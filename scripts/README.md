@@ -20,8 +20,8 @@ Sweep summaries:
 Complete board builds:
 
 ```bash
-./scripts/build-ulx3s-doom.sh
 ./scripts/build-ulx3s-12f-doom.sh
+./scripts/build-ulx3s-85f-doom.sh
 ./scripts/build-ulx4m-ld-doom.sh
 ```
 
@@ -69,7 +69,7 @@ placement-sensitive RTL, memory, video, clock, or toolchain changes.
 - `build.sh` - Builds the shared Hazard3 monitor firmware. Defaults to the 64 MiB map at 50 MHz. Unless `TOOLCHAIN_PREFIX` is set, it prefers `/opt/riscv/bin/riscv32-unknown-elf-*` when installed and otherwise uses `riscv-none-elf-*` from `PATH`; accepts `HAZARD3_MEMORY_PROFILE`, `HAZARD3_SYS_CLK_HZ`, `HAZARD3_BUILD_DIR`, `TOOLCHAIN_PREFIX`, and `HAZARD3_MONITOR_LINKER_SCRIPT` overrides.
 - `build-ecp5-bitstream-common.sh` - Internal shared ECP5 synthesis/place-and-route implementation used by the board-specific bitstream wrappers. Normally do not invoke it directly.
 - `build-ulx3s-85f-bitstream.sh` - ULX3S 85F entry point for the shared ECP5 flow.
-- `build-ulx3s-doom.sh` - Complete ULX3S 85F build: monitor, boot image, FPGA bitstream, Doom image, and SD-card staging files under `build/ulx3s/`.
+- `build-ulx3s-85f-doom.sh` - Complete ULX3S 85F build: monitor, boot image, FPGA bitstream, Doom image, and SD-card staging files under `build/ulx3s-85f/`.
 - `build-ulx3s-12f-bitstream.sh` - ULX3S 12F entry point for the shared ECP5 flow. Defaults to `HAZARD3_MEMORY_PROFILE=32m`.
 - `build-ulx3s-12f-doom.sh` - Complete ULX3S 12F build. Uses a 40 MHz Hazard3 clock, defaults to the 32 MiB map, and intentionally accepts only `HAZARD3_DOOM_HDMI_RESOLUTION=320x200`.
 - `build-ulx4m-ld-bitstream.sh` - ULX4M-LD 85F entry point for the shared ECP5 flow. Supports `SKIP_SYNTH=1` for routing an existing frozen JSON without invoking Make/Yosys.
@@ -97,13 +97,17 @@ intended to use that map:
 HAZARD3_MEMORY_PROFILE=64m ./scripts/build-ulx3s-12f-doom.sh
 ```
 
-After programming the FPGA and starting OpenOCD, load the SDRAM-resident monitor
-with:
+The 12F bitstream contains a small resident EBR bootstrap rather than the full
+monitor. At cold boot it initializes the 115200-baud UART and prints instructions
+for loading the SDRAM-resident monitor. After programming the FPGA, run:
 
 ```bash
 ./scripts/load-firmware-12f.sh
 ```
 
+The helper reuses OpenOCD when port 3333 is already listening; otherwise it
+starts the project OpenOCD launcher, waits for the GDB server, loads and verifies
+the board-specific monitor, and stops only the OpenOCD instance it started.
 The 12F build intentionally supports the standard 320x200 Doom/video path only.
 
 ### ULX3S 85F HDMI framebuffer profiles
@@ -112,8 +116,8 @@ The ULX3S 85F build supports a lean standard framebuffer and an extended profile
 The complete 85F wrapper defaults to extended modes enabled.
 
 ```bash
-HAZARD3_HDMI_EXTENDED_MODES=0 ./scripts/build-ulx3s-doom.sh
-HAZARD3_HDMI_EXTENDED_MODES=1 ./scripts/build-ulx3s-doom.sh
+HAZARD3_HDMI_EXTENDED_MODES=0 ./scripts/build-ulx3s-85f-doom.sh
+HAZARD3_HDMI_EXTENDED_MODES=1 ./scripts/build-ulx3s-85f-doom.sh
 ```
 
 Use the standard profile for unrelated FPGA development or when only 320x200 is
@@ -245,20 +249,25 @@ scripts\check_submodules.bat
 
 - `start-openocd.sh` - Starts OpenOCD on Linux/WSL using the repository ULX3S configuration; converts paths when a Windows `.exe` is used from WSL.
 - `start-openocd.bat` - Starts the Windows OpenOCD server using the repository configuration.
-- `load-firmware.sh` - Loads, verifies, starts, and disconnects the normal monitor ELF through a running GDB/OpenOCD server.
+- `load-firmware.sh` - Loads, verifies, starts, and disconnects a monitor ELF through a running GDB/OpenOCD server. With no argument it uses the standalone `build/hazard3-boot-monitor.elf`; complete board builds should pass the board-specific `build/<board>/monitor/hazard3-boot-monitor.elf` explicitly or use the matching `gdb/load-*-monitor.gdb` helper.
 - `load-firmware-12f.sh` - Loads the ULX3S 12F SDRAM-resident monitor after FPGA configuration.
 - `load-firmware.bat` - Windows monitor loader through GDB/OpenOCD.
 - `load-fpga-bitstream.bat` - Windows FPGA bitstream loader.
-- `flash-ulx3s-persistent.sh` - Programs the built ULX3S 85F bitstream into persistent SPI flash for cold boot; requires `build/fpga_ulx3s.bit`.
+- `flash-ulx3s-persistent.sh` - Programs the built ULX3S 85F bitstream into persistent SPI flash for cold boot; requires `build/fpga_ulx3s_85f.bit`.
 - `hazard3-debug.gdb` - GDB command definitions used for source-level Hazard3 debugging through OpenOCD.
 - `return-to-monitor.py` - Sends Ctrl-X over UART to stop a running Doom instance and return to the resident monitor; defaults to `/dev/ttyS7` at 115200 baud.
 - `restart-from-monitor.py` - Sends monitor command `j` over UART to start the already loaded Doom image; defaults to `/dev/ttyS7` at 115200 baud.
 
 ### GDB command files
 
-The `gdb/` directory contains focused command scripts for monitor and SAO tests:
+The `gdb/` directory contains focused command scripts for monitor and SAO tests.
+Use the board-specific monitor helper that matches the complete board build; do
+not substitute a generic or stale monitor ELF because the system clock, memory
+map, linker placement, and loader protocol must match the FPGA configuration.
 
-- `gdb/load-hazard3-test-elf.gdb` - GDB command sequence for loading the Hazard3 test/monitor ELF.
+- `gdb/load-ulx3s-85f-monitor.gdb` - Load and verify `build/ulx3s-85f/monitor/hazard3-boot-monitor.elf`.
+- `gdb/load-ulx3s-12f-monitor.gdb` - Load and verify the SDRAM-resident `build/ulx3s-12f/monitor/hazard3-boot-monitor.elf`.
+- `gdb/load-ulx4m-ld-85f-monitor.gdb` - Load and verify `build/ulx4m-ld/monitor/hazard3-boot-monitor.elf`.
 - `gdb/sao-probe.gdb` - Probe SAO bridge state from GDB.
 - `gdb/sao-scan.gdb` - Exercise the SAO I2C scan path from GDB.
 - `gdb/sao-touchwheel-test.gdb` - Interactive/debug test sequence for the SAO touchwheel.
@@ -323,7 +332,7 @@ test run.
 The normal Hazard3-Doom build remains unchanged by the Supercon helper flow.
 The demo uses a dedicated noncombat image and a separately generated WAD.
 
-- `build-doom-noncombat.sh` - Builds `build/doom-image-noncombat/hazard3-doom.h3d` with the dedicated noncombat source transform and verifies marker symbols in the compiled objects.
+- `build-doom-noncombat.sh` - Builds `build/doom-image-noncombat/hazard3-doom.h3img` with the dedicated noncombat source transform and verifies marker symbols in the compiled objects.
 - `apply-doom-noncombat.py` - Internal transform applied only to the prepared DoomGeneric build copy; it does not edit the submodule.
 - `build-supercon10-wad.py` - Verifies the Supercon PWAD, merges it with a local `wads/DOOM1.WAD`, verifies expected banner textures, and writes `wads/SUPERCON10.WAD` by default.
 - `cleanup-supercon-dev.py.bak` - Retained backup of an older development cleanup helper; it is not part of the normal supported workflow.
@@ -334,7 +343,7 @@ Example:
 ./scripts/build-doom-noncombat.sh
 ./scripts/build-supercon10-wad.py
 ./scripts/return-to-monitor.py --port /dev/ttyS7
-./doom/upload-doom-image.py ./build/doom-image-noncombat/hazard3-doom.h3d --port /dev/ttyS7
+./doom/upload-doom-image.py ./build/doom-image-noncombat/hazard3-doom.h3img --port /dev/ttyS7
 ./doom/upload-wad.py ./wads/SUPERCON10.WAD --port /dev/ttyS7 --launch
 ```
 

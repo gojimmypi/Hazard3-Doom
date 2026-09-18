@@ -30,10 +30,10 @@ SWEEP_JOBS="${SWEEP_JOBS:-4}"
 SWEEP_SKIP_SYNTH="${SWEEP_SKIP_SYNTH:-0}"
 SWEEP_PREPARE_ONLY="${SWEEP_PREPARE_ONLY:-0}"
 HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
-SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s.video-profile"
-SYNTH_DURATION_STAMP="${BUILD_DIR}/fpga_ulx3s.synth-seconds"
-SYNTH_LOG="${BUILD_DIR}/fpga_ulx3s.synth.log"
-NETLIST="${BUILD_DIR}/fpga_ulx3s.json"
+SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.video-profile"
+SYNTH_DURATION_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.synth-seconds"
+SYNTH_LOG="${BUILD_DIR}/fpga_ulx3s_85f.synth.log"
+NETLIST="${BUILD_DIR}/fpga_ulx3s_85f.json"
 LPF="${SYNTH_DIR}/fpga_ulx3s.lpf"
 
 # shellcheck source=scripts/sweep-ecp5-common.sh
@@ -158,7 +158,7 @@ else
     synth_start_seconds="$(date +%s)"
     sweep_ecp5_run_synthesis "${SYNTH_DIR}" "${SYNTH_LOG}" \
         -f ULX3S.mk \
-        CHIPNAME="${BUILD_DIR}/fpga_ulx3s" \
+        CHIPNAME="${BUILD_DIR}/fpga_ulx3s_85f" \
         HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES}" synth
     if [[ "${SWEEP_SYNTHESIS_RAN}" == 1 ]]; then
         synthesis_seconds="$(( $(date +%s) - synth_start_seconds ))"
@@ -195,7 +195,7 @@ mkdir -p "${SWEEP_DIR}"
     printf 'clk_tmds_required_mhz=250.00\n'
     printf 'synthesis_seconds=%s\n' "${synthesis_seconds}"
     printf 'netlist_sha256=%s\n' "${netlist_sha256}"
-    printf 'netlist=fpga_ulx3s.json\n'
+    printf 'netlist=fpga_ulx3s_85f.json\n'
     printf 'generated_utc=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 } > "${SWEEP_DIR}/metadata.txt"
 
@@ -217,9 +217,9 @@ run_seed()
     local seed="$1"
     local pnr_log="${SWEEP_DIR}/pnr-${seed}.log"
     local failed_log="${SWEEP_DIR}/pnr-${seed}-failed.log"
-    local config="${SWEEP_DIR}/fpga_ulx3s-${seed}.config"
-    local svf="${SWEEP_DIR}/fpga_ulx3s-${seed}.svf"
-    local bit="${SWEEP_DIR}/fpga_ulx3s-${seed}.bit"
+    local config="${SWEEP_DIR}/fpga_ulx3s_85f-${seed}.config"
+    local svf="${SWEEP_DIR}/fpga_ulx3s_85f-${seed}.svf"
+    local bit="${SWEEP_DIR}/fpga_ulx3s_85f-${seed}.bit"
     local result="${SWEEP_DIR}/result-seed-${seed}.csv"
     local clk_sys clk_video clk_tmds
     local route_start_seconds route_start_time

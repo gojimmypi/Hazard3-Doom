@@ -7,9 +7,9 @@ wt -w "Hazard3-Doom" new-tab --title "Regression"    --suppressApplicationTitle 
 
 wt -w "Hazard3-Doom" new-tab --title "sweep"         --suppressApplicationTitle wsl.exe -d Ubuntu --cd /mnt/c/workspace/Hazard3-Doom     bash -c "printf '\nTypical command:\n\n  SWEEP_JOBS=1 \\ \n  SWEEP_SKIP_SYNTH=1 \\ \n  SWEEP_ROUTE_TIMEOUT_SECONDS=7200 \\ \n    ./scripts/sweep-ulx3s-85f.sh  11-12  \n\n' && exec bash"
 
-wt -w "Hazard3-Doom" new-tab --title "dfu"           --suppressApplicationTitle wsl.exe -d Ubuntu --cd /mnt/c/workspace/Hazard3-Doom     bash -c "printf '\nTypical command:\n\n  ./bin/fujprog-v48-win64.exe ./build/fpga_ulx3s.bit                                         \n\n' && exec bash"
+wt -w "Hazard3-Doom" new-tab --title "dfu"           --suppressApplicationTitle wsl.exe -d Ubuntu --cd /mnt/c/workspace/Hazard3-Doom     bash -c "printf '\nTypical command:\n\n  ./bin/fujprog-v48-win64.exe ./build/fpga_ulx3s_85f.bit                                         \n\n' && exec bash"
 
-wt -w "Hazard3-Doom" new-tab --title "bitstream"     --suppressApplicationTitle wsl.exe -d Ubuntu --cd /mnt/c/workspace/Hazard3-Doom     bash -c "printf '\nTypical command:\n\n  ./bin/fujprog-v48-win64.exe ./build/fpga_ulx3s.bit                                         \n\n' && exec bash"
+wt -w "Hazard3-Doom" new-tab --title "bitstream"     --suppressApplicationTitle wsl.exe -d Ubuntu --cd /mnt/c/workspace/Hazard3-Doom     bash -c "printf '\nTypical command:\n\n  ./bin/fujprog-v48-win64.exe ./build/fpga_ulx3s_85f.bit                                         \n\n' && exec bash"
 
 wt -w "Hazard3-Doom" new-tab --title "Monitor build" --suppressApplicationTitle wsl.exe -d Ubuntu --cd /mnt/c/workspace/Hazard3-Doom     bash -c "printf '\nTypical command:\n\n  ./scripts/build.sh                                                                         \n\n' && exec bash"
 
@@ -19,7 +19,7 @@ wt -w "Hazard3-Doom" new-tab --title "GDB"           --suppressApplicationTitle 
 
 wt -w "Hazard3-Doom" new-tab --title "Build Doom"    --suppressApplicationTitle wsl.exe -d Ubuntu --cd /mnt/c/workspace/Hazard3-Doom     bash -c "printf '\nTypical command:\n\n  ./doom/build-doom-image.sh                                                                 \n\n' && exec bash"
 
-wt -w "Hazard3-Doom" new-tab --title "Load Doom"     --suppressApplicationTitle wsl.exe -d Ubuntu --cd /mnt/c/workspace/Hazard3-Doom     bash -c "printf '\nTypical command:\n\n  ./doom/upload-doom-image.py  ./build/doom-image/hazard3-doom.h3d --port /dev/ttyS8         \n\n' && exec bash"
+wt -w "Hazard3-Doom" new-tab --title "Load Doom"     --suppressApplicationTitle wsl.exe -d Ubuntu --cd /mnt/c/workspace/Hazard3-Doom     bash -c "printf '\nTypical command:\n\n  ./doom/upload-doom-image.py  ./build/doom-image/hazard3-doom.h3img --port /dev/ttyS8         \n\n' && exec bash"
 
 wt -w "Hazard3-Doom" new-tab --title "Load WAD"      --suppressApplicationTitle wsl.exe -d Ubuntu --cd /mnt/c/workspace/Hazard3-Doom     bash -c "printf '\nTypical command:\n\n  ./doom/upload-wad.py  ./wads/DOOM.WAD  --port /dev/ttyS8                                   \n\n' && exec bash"
 

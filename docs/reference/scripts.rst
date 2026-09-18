@@ -19,7 +19,7 @@ Complete board builds
 The complete board wrappers keep the monitor, FPGA design, Doom image, and SDRAM
 memory map aligned.
 
-``scripts/build-ulx3s-doom.sh``
+``scripts/build-ulx3s-85f-doom.sh``
    Complete ULX3S 85F build. It builds the 50 MHz/64 MiB monitor, prepares the
    FPGA resident boot image, builds or reuses the 85F bitstream, builds the Doom
    image, and stages files used by the SD-card workflow. The 85F wrapper defaults
@@ -30,7 +30,8 @@ memory map aligned.
    Complete ULX3S 12F compact build. The default is the 32 MiB memory profile at
    a 40 MHz Hazard3 system clock. The 64 MiB map is optional through
    ``HAZARD3_MEMORY_PROFILE=64m``. The compact target intentionally accepts only
-   ``HAZARD3_DOOM_HDMI_RESOLUTION=320x200`` and uses an SDRAM-resident monitor.
+   ``HAZARD3_DOOM_HDMI_RESOLUTION=320x200``. It builds a small UART bootstrap
+   for the 1 KiB resident EBR window and the full monitor for external SDRAM.
 
 ``scripts/build-ulx4m-ld-doom.sh``
    Complete ULX4M-LD 85F build. It uses the 64 MiB software map at 40 MHz and
@@ -48,8 +49,8 @@ Examples:
 
 .. code-block:: bash
 
-   ./scripts/build-ulx3s-doom.sh
    ./scripts/build-ulx3s-12f-doom.sh
+   ./scripts/build-ulx3s-85f-doom.sh
    ./scripts/build-ulx4m-ld-doom.sh
 
 To test another Hazard3 checkout without changing the Hazard3-Doom gitlink:
@@ -57,7 +58,7 @@ To test another Hazard3 checkout without changing the Hazard3-Doom gitlink:
 .. code-block:: bash
 
    HAZARD3_ROOT=/mnt/c/workspace/Hazard3 \
-       ./scripts/build-ulx3s-doom.sh
+       ./scripts/build-ulx3s-85f-doom.sh
 
 Monitor and bitstream build helpers
 -----------------------------------
@@ -94,8 +95,9 @@ Monitor and bitstream build helpers
    constraints; build output is not retained beneath the submodule.
 
 ``scripts/make-boot-hex.py``
-   Convert a monitor binary into the hexadecimal initialization file consumed by
-   FPGA boot memory.
+   Convert a firmware binary into the hexadecimal initialization file consumed by
+   FPGA boot memory. It is used for both the full resident monitor preload and
+   the compact ULX3S 12F bootstrap.
 
 ``scripts/build-xpack.cmd``
    Native Windows monitor build using ``bin/riscv-gcc``. Its arguments are
@@ -300,13 +302,20 @@ Programming and OpenOCD
    as the first argument; otherwise the repository binary is used.
 
 ``scripts/load-firmware.sh``
-   Load the normal monitor ELF through a running OpenOCD GDB server, halt the
-   target, load and compare sections, set ``$pc`` to ``_start``, resume, and
-   disconnect. This avoids leaving GDB attached after programming.
+   Load a monitor ELF through a running OpenOCD GDB server, halt the target, load
+   and compare sections, set ``$pc`` to ``_start``, resume, and disconnect. The
+   script checks ``localhost:3333`` before starting GDB so a missing OpenOCD
+   server cannot fall back to GDB's local ``exec`` target and produce misleading
+   section comparisons. With no argument it uses the standalone
+   ``build/hazard3-boot-monitor.elf`` output. Complete board builds should pass
+   the board-specific ELF explicitly or use the matching
+   ``scripts/gdb/load-*-monitor.gdb`` helper.
 
 ``scripts/load-firmware-12f.sh``
-   Load the ULX3S 12F SDRAM-resident monitor after the compact FPGA bitstream has
-   been programmed and OpenOCD is running.
+   One-command second-stage loader for ULX3S 12F. After the compact bitstream has
+   been programmed, it reuses OpenOCD on port 3333 or starts the project launcher
+   automatically, waits for the GDB server, loads and verifies the SDRAM-resident
+   monitor, and cleans up only the OpenOCD process it started.
 
 ``scripts/load-firmware.bat``
    Native Windows monitor loader using GDB and OpenOCD.
@@ -315,7 +324,7 @@ Programming and OpenOCD
    Native Windows helper for loading a generated or prebuilt FPGA bitstream.
 
 ``scripts/flash-ulx3s-persistent.sh``
-   Program ``build/fpga_ulx3s.bit`` into ULX3S SPI flash for persistent cold
+   Program ``build/fpga_ulx3s_85f.bit`` into ULX3S SPI flash for persistent cold
    boot. This is distinct from volatile SRAM programming.
 
 UART control
@@ -336,8 +345,19 @@ GDB helpers
 ``scripts/hazard3-debug.gdb``
    Common Hazard3 GDB command definitions used by the project debug setup.
 
-``scripts/gdb/load-hazard3-test-elf.gdb``
-   Focused GDB command file for loading the Hazard3 monitor/test ELF.
+``scripts/gdb/load-ulx3s-85f-monitor.gdb``
+   Load, verify, and run the monitor produced by the complete ULX3S 85F build at
+   ``build/ulx3s-85f/monitor/hazard3-boot-monitor.elf``.
+
+``scripts/gdb/load-ulx3s-12f-monitor.gdb``
+   Load, verify, and run the SDRAM-resident monitor produced by the complete
+   ULX3S 12F build at ``build/ulx3s-12f/monitor/hazard3-boot-monitor.elf``.
+
+``scripts/gdb/load-ulx4m-ld-85f-monitor.gdb``
+   Load, verify, and run the monitor produced by the complete ULX4M-LD 85F build
+   at ``build/ulx4m-ld/monitor/hazard3-boot-monitor.elf``. Use the monitor from
+   the same board build as the FPGA image so clock, memory-map, linker, and
+   loader-protocol settings remain matched.
 
 ``scripts/gdb/sao-probe.gdb``
    Probe SAO bridge state from GDB.

@@ -4,7 +4,7 @@
 # Path:        doom/package-doom-image.py
 #
 # Project:     Hazard3-Doom
-# Purpose:     Convert a linked Doom ELF image into the Hazard3-Doom loadable H3D
+# Purpose:     Convert a linked Doom ELF image into the Hazard3-Doom loadable H3IMG
 #              package format.
 #
 # Copyright (c) 2026 gojimmypi
@@ -25,7 +25,8 @@ import subprocess
 import sys
 import zlib
 
-IMAGE_MAGIC = 0x31443348
+IMAGE_MAGIC_BYTES = b"H3I1"
+IMAGE_MAGIC = int.from_bytes(IMAGE_MAGIC_BYTES, "little")
 FORMAT_VERSION = 1
 HEADER_BYTES = 64
 FLAG_CRC32 = 1

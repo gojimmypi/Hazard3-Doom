@@ -10,12 +10,12 @@ Compilations normales des cartes
 ---------------------------------
 
 Pour une compilation normale, utilisez de préférence le wrapper complet de la
-carte cible. Ces wrappers maintiennent ensemble la conception FPGA, le moniteur
-résident, l'image Doom, l'horloge et le profil mémoire :
+carte cible. Ces wrappers maintiennent ensemble la conception FPGA, le moniteur,
+l'image Doom, l'horloge et le profil mémoire :
 
 .. code-block:: bash
 
-   ./scripts/build-ulx3s-doom.sh
+   ./scripts/build-ulx3s-85f-doom.sh
    ./scripts/build-ulx3s-12f-doom.sh
    ./scripts/build-ulx4m-ld-doom.sh
 

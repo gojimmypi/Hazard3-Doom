@@ -140,6 +140,16 @@ Le layout DFU validé est :
      - ``0x200000-0xFFFFFF``
      - Bitstream utilisateur normal.
 
+Pour une mise à jour normale, coupez l'alimentation, maintenez PCB ``BTN3``
+pendant la connexion du câble Micro-B, attendez l'énumération de ``1d50:614b``,
+puis relâchez ``BTN3``. Le bouton ne doit pas rester maintenu pendant le
+transfert. Sous WSL, si Bash signale ``Permission denied`` pour les outils
+Windows fournis :
+
+.. code-block:: bash
+
+   chmod +x ./bin/openFPGALoader.exe ./bin/dfu-util.exe
+
 Commande normale de programmation Hazard3-Doom :
 
 .. code-block:: bash

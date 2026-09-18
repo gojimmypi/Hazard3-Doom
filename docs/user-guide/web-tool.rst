@@ -19,7 +19,7 @@ A public HTTPS build is hosted on GitHub Pages:
 
 `Open the Hazard3-Doom Device Tool <https://ulx3s.github.io/Hazard3-Doom/>`_
 
-The hosted page can be used directly for FPGA SRAM programming, Doom H3D/IWAD
+The hosted page can be used directly for FPGA SRAM programming, Doom H3IMG/IWAD
 upload, and UART terminal access. Console firmware loading is the one workflow
 that also needs the local ``web-server.py`` loopback helper, because the browser
 cannot start or control local GDB/OpenOCD processes directly.
@@ -33,7 +33,7 @@ key`_ below.
 The current page provides four main areas:
 
 * **Device uploading** - FPGA SRAM programming, console firmware loading, Doom
-  H3D upload, and Doom IWAD upload.
+  H3IMG upload, and Doom IWAD upload.
 * **Serial connection** - Web Serial port selection and UART settings.
 * **UART terminal** - live monitor/Doom output, command entry, logging, and HDMI
   screen snip.
@@ -60,7 +60,7 @@ The web tool uses three independent device paths:
      |
      +-- Web Serial --> USB-UART --> resident monitor / Doom
      |                  |             |
-     |                  |             +-- H3L .h3d upload
+     |                  |             +-- H3L .h3img upload
      |                  |             +-- H3W .wad upload
      |                  |             +-- terminal / commands / screen snip
      |
@@ -87,7 +87,7 @@ Use a current Chromium-based browser such as Chrome or Edge. Web Serial and
 WebUSB require a secure context. HTTPS satisfies that requirement for the hosted
 tool, and ``localhost``/loopback is accepted for local development.
 
-UART access, H3D/IWAD upload, screen snip, and FPGA WebUSB programming do not
+UART access, H3IMG/IWAD upload, screen snip, and FPGA WebUSB programming do not
 need a local web server. The browser performs those operations directly.
 
 Console firmware loading additionally requires the local helper. From the
@@ -171,7 +171,7 @@ Expand **Serial connection** and choose the UART device.
    :class: screenshot
 
    **Web Serial connection** - select the board UART before using the terminal
-   or the H3D/IWAD uploaders.
+   or the H3IMG/IWAD uploaders.
 
 The normal Hazard3-Doom settings are:
 
@@ -203,7 +203,7 @@ browser origins, so their tab locks cannot coordinate with each other. The
 underlying serial-port open failure still protects the port from being opened by
 both at once.
 
-The H3D and IWAD sections also show the UART prerequisite prominently. When no
+The H3IMG and IWAD sections also show the UART prerequisite prominently. When no
 UART is connected they provide their own **Connect UART** control; when the UART
 is connected the section header reflects that state.
 
@@ -284,23 +284,23 @@ The console uploader works from either the local Device Tool page or the public
 HTTPS page. In both cases, the helper, GDB, and OpenOCD remain local to the
 user's computer.
 
-Doom H3D uploader
-~~~~~~~~~~~~~~~~~
+Doom H3IMG uploader
+~~~~~~~~~~~~~~~~~~~
 
-The **Doom H3D uploader** sends a packaged ``.h3d`` image over the same Web
+The **Doom H3IMG uploader** sends a packaged ``.h3img`` image over the same Web
 Serial connection as the terminal. The resident monitor must be at its ``>``
 prompt.
 
-Before transmission, the browser validates the H3D header, package length, and
+Before transmission, the browser validates the H3IMG header, package length, and
 payload CRC32. It then follows the monitor H3L loader handshake:
 
 .. code-block:: text
 
    browser -> l
    monitor -> H3L READY
-   browser -> 64-byte H3D header
+   browser -> 64-byte H3IMG header
    monitor -> H3L DATA
-   browser -> H3D payload
+   browser -> H3IMG payload
    monitor -> H3L OK
 
 The upload changes SDRAM only; it does not modify the SD card. **Launch with
@@ -308,7 +308,7 @@ The upload changes SDRAM only; it does not modify the SD card. **Launch with
 soon as the monitor accepts it.
 
 If Doom is already running, use **Stop Doom** first and wait for the monitor
-``>`` prompt before starting an H3D transfer.
+``>`` prompt before starting an H3IMG transfer.
 
 If the upload times out waiting for ``H3L READY``, the Device Tool now displays
 a prominent diagnostic rather than only a log line. It first asks the user to
@@ -359,14 +359,14 @@ uploaded.
 The profile matters because the H3W header contains the SDRAM destination
 address. Selecting the wrong profile is therefore not just a UI preference.
 
-As with H3D, **Launch with ``j`` after upload** is optional and is sent only
+As with H3IMG, **Launch with ``j`` after upload** is optional and is sent only
 after the monitor reports ``H3W OK``. H3W timeout diagnostics use the same
-resident-monitor/OpenOCD guidance as the H3D uploader.
+resident-monitor/OpenOCD guidance as the H3IMG uploader.
 
 Binary-transfer ownership
 -------------------------
 
-H3D and IWAD payloads are binary UART transfers. During either upload the web
+H3IMG and IWAD payloads are binary UART transfers. During either upload the web
 application temporarily suspends ordinary command controls and screen-snip
 capability probes so unrelated bytes cannot be inserted into the payload.
 Normal terminal operation resumes when the transfer finishes or fails.
@@ -398,7 +398,7 @@ Suggested browser bring-up flow
 .. note::
 
    The local helper and OpenOCD are needed only when loading the console
-   firmware. They are not prerequisites for normal UART use, H3D/IWAD upload,
+   firmware. They are not prerequisites for normal UART use, H3IMG/IWAD upload,
    screen snip, or FPGA SRAM programming with the WebUSB flasher.
 
 For a normal ULX3S development session, a convenient order is:
@@ -422,7 +422,7 @@ For a normal ULX3S development session, a convenient order is:
    ``hazard3-boot-monitor.elf`` through the already-running OpenOCD server.
 #. Confirm that the new monitor banner is readable and the ``>`` prompt responds
    to the one-byte **Help** command (``h`` or ``?``).
-#. Upload the packaged Doom ``.h3d`` image.
+#. Upload the packaged Doom ``.h3img`` image.
 #. Upload a legally obtained IWAD using the memory profile matching the monitor.
 #. Launch with ``j`` from the uploader option or the terminal.
 
@@ -453,7 +453,7 @@ The browser tool deliberately keeps the persistence boundaries visible:
    * - Console firmware uploader
      - Loopback HTTP + GDB/OpenOCD
      - No; volatile system memory only
-   * - H3D uploader
+   * - H3IMG uploader
      - Web Serial / H3L
      - No; SDRAM only
    * - IWAD uploader
@@ -470,7 +470,7 @@ Related documentation
 * :doc:`web-flasher` - detailed ULX3S WebUSB/JTAG FPGA programming guide.
 * :doc:`monitor` - resident monitor commands and loader behavior.
 * :doc:`doom` - Doom image and runtime operation.
-* :doc:`sd-card` - standalone H3D/IWAD loading from micro-SD.
+* :doc:`sd-card` - standalone H3IMG/IWAD loading from micro-SD.
 * :doc:`jtag-debugging` - OpenOCD/GDB debug setup.
 
 External references

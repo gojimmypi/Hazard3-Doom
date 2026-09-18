@@ -97,21 +97,21 @@ Za postojeću kopiju repozitorija:
 
 .. code-block:: bash
 
-   ./scripts/build-ulx3s-doom.sh
+   ./scripts/build-ulx3s-85f-doom.sh
 
 Važni izlazni artefakti uključuju:
 
 .. code-block:: text
 
-   build/fpga_ulx3s.bit
-   build/ulx3s/monitor/hazard3-boot-monitor.elf
-   build/ulx3s/doom-image/hazard3-doom.h3d
-   build/ulx3s/hazard3-boot-monitor.hex
+   build/fpga_ulx3s_85f.bit
+   build/ulx3s-85f/monitor/hazard3-boot-monitor.elf
+   build/ulx3s-85f/doom-image/hazard3-doom.h3img
+   build/ulx3s-85f/hazard3-boot-monitor.hex
 
 3. Programirajte FPGA za probno pokretanje
 ------------------------------------------
 
-Za ULX3S web-aplikacija Hazard3-Doom može učitati ``fpga_ulx3s.bit``
+Za ULX3S web-aplikacija Hazard3-Doom može učitati ``fpga_ulx3s_85f.bit``
 izravno u FPGA SRAM preko JTAG sučelja FT231X na priključku ``US1``.
 Proširite **FPGA web flasher**, odaberite datoteku ``.bit``, povežite ULX3S USB
 uređaj, ispitajte JTAG i odaberite **Program FPGA SRAM**.
@@ -161,7 +161,7 @@ Zatim možete nastaviti s javnom stranicom
 **Local loader Ready** i **OpenOCD Ready**; **refresh** pokreće trenutačnu
 provjeru.
 
-Odaberite ``build/ulx3s/monitor/hazard3-boot-monitor.elf`` i učitajte ga. GDB se
+Odaberite ``build/ulx3s-85f/monitor/hazard3-boot-monitor.elf`` i učitajte ga. GDB se
 spaja na već pokrenuti OpenOCD server, provjerava ELF sekcije, nastavlja Hazard3
 i prekida vezu. OpenOCD status provjera u helperu pasivna je i ne troši GDB
 connection slot.
@@ -178,8 +178,8 @@ Web alat može obaviti oba Doom prijenosa bez napuštanja pregledničke konzole.
 Proširite **Serial connection**, spojite UART pločice i provjerite da je aktivan
 ``>`` prompt rezidentnog monitora. Zatim proširite **Device uploading**:
 
-#. Otvorite **Doom H3D uploader**, odaberite
-   ``build/ulx3s/doom-image/hazard3-doom.h3d`` i kliknite **Upload H3D**.
+#. Otvorite **Doom H3IMG uploader**, odaberite
+   ``build/ulx3s-85f/doom-image/hazard3-doom.h3img`` i kliknite **Upload H3IMG**.
 #. Otvorite **Doom IWAD uploader**, odaberite zakonito pribavljenu ``.wad``
    datoteku, odaberite memorijski profil koji odgovara rezidentnom monitoru i
    kliknite **Upload IWAD**.
@@ -190,12 +190,18 @@ Za cijeli web postupak i tablicu memorijskih profila pogledajte
 :doc:`../user-guide/web-tool`.
 
 Naredbeni uploaderi i dalje su dostupni. Najprije zatvorite terminal ili
-pregledničku vezu koja koristi UART port, a zatim pokrenite:
+pregledničku vezu koja koristi UART port. U sustavu Windows upotrijebite sintaksu
+ljuske koja je stvarno otvorena: PowerShell koristi obrnuti apostrof (`````)
+za nastavak naredbe u sljedećem retku, dok Windows Command Prompt (``cmd.exe``,
+često nazivan DOS prompt) koristi znak ``^``. Nemojte lijepiti PowerShellove
+obrnute apostrofe u ``cmd.exe``.
+
+**Windows PowerShell**
 
 .. code-block:: powershell
 
    py .\doom\upload-doom-image.py `
-       .\build\doom-image\hazard3-doom.h3d `
+       .\build\ulx3s-85f\doom-image\hazard3-doom.h3img `
        --port COM7
 
    py .\doom\upload-wad.py `
@@ -203,7 +209,43 @@ pregledničku vezu koja koristi UART port, a zatim pokrenite:
        --port COM7 `
        --launch
 
-Naziv UART porta samo je primjer; upotrijebite port dodijeljen pločici.
+**Windows Command Prompt (cmd.exe / DOS prompt)**
+
+.. code-block:: bat
+
+   py .\doom\upload-doom-image.py ^
+       .\build\ulx3s-85f\doom-image\hazard3-doom.h3img ^
+       --port COM7
+
+   py .\doom\upload-wad.py ^
+       C:\path\to\DOOM.WAD ^
+       --port COM7 ^
+       --launch
+
+**Linux (Bash)**
+
+.. code-block:: bash
+
+   python3 doom/upload-doom-image.py \
+       build/ulx3s-85f/doom-image/hazard3-doom.h3img \
+       --port /dev/ttyUSB0
+
+   python3 doom/upload-wad.py \
+       /path/to/DOOM.WAD \
+       --port /dev/ttyUSB0 \
+       --launch
+
+Naredbeni IWAD uploader sada zadano koristi ``--memory-profile auto``. Naredbom
+``v`` ispituje pokrenuti monitor i prije slanja zaglavlja odabire njegovu WAD
+regiju ``32m`` ili ``64m``. Time se sprječava da 12F monitor s 32 MiB
+slučajno primi WAD adresu za 64 MiB. Izričite opcije
+``--memory-profile 32m`` i ``--memory-profile 64m`` ostaju dostupne za stariji
+monitor koji ne prijavljuje ``memory_profile``. H3IMG slika i dalje mora
+odgovarati buildu pločice.
+
+Nazivi UART portova samo su primjeri. U sustavu Windows upotrijebite COM port
+dodijeljen pločici. U Linuxu upotrijebite odgovarajući uređaj, najčešće
+``/dev/ttyUSB0`` ili ``/dev/ttyACM0``.
 
 5. Provjerite pokretanje
 ------------------------
@@ -222,6 +264,69 @@ Ispravno pokretanje putem UART-a sadrži oznake slične ovima:
    monitor ABI: PASS
    Doom interactive HDMI loop: READY
 
+Brzi postupak za ULX4M-LD
+---------------------------
+
+Za ULX4M-LD koristite timing-kvalificirani bitstream s Hazard3 na 40 MHz i
+LiteDRAM na 60 MHz. Za ulazak u normalni DFU isključite napajanje, držite PCB
+``BTN3`` dok spajate ULX4M Micro-B USB kabel, pričekajte da se enumerira VID:PID
+``1d50:614b``, a zatim otpustite ``BTN3``. ``BTN3`` **ne** treba ostati pritisnut
+tijekom programiranja.
+
+Ako Bash u WSL-u za priložene Windows alate prijavi ``Permission denied``,
+postavite izvršne dozvole:
+
+.. code-block:: bash
+
+   chmod +x ./bin/openFPGALoader.exe ./bin/dfu-util.exe
+
+Programirajte trajni korisnički bitstream, a zatim izričito izađite iz DFU-a:
+
+.. code-block:: bash
+
+   ./bin/openFPGALoader.exe --dfu \
+       --vid 0x1d50 --pid 0x614b --altsetting 0 \
+       ./build/fpga_ulx4m_ld.bit
+
+   ./bin/dfu-util.exe -a 0 -e
+
+Za UART na 115200 koristite Tigard Interface 0 s FTDI VCP driverom, a za OpenOCD
+JTAG Interface 1 s libusbK driverom. Potpuni ULX4M-LD build sprema Doom sliku u
+``build/ulx4m-ld/doom-image/hazard3-doom.h3img``. Na primjer, iz WSL/Basha kada
+je Tigard VCP dostupan kao ``/dev/ttyS8``:
+
+.. code-block:: bash
+
+   ./doom/upload-doom-image.py \
+       ./build/ulx4m-ld/doom-image/hazard3-doom.h3img \
+       --port /dev/ttyS8
+
+Naziv serijskog uređaja samo je primjer. Nakon pokretanja monitora provjerite
+``s`` za ``external_memory_ready=YES`` i pokrenite ``q``. Trenutačno kvalificirani
+put prolazi i ``k``, ``d`` i ``x``.
+
+Za softversko ažuriranje samo monitora koje odgovara FPGA-u na 40 MHz:
+
+.. code-block:: bash
+
+   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-monitor-test/monitor" \
+   HAZARD3_MEMORY_PROFILE=64m \
+   HAZARD3_SYS_CLK_HZ=40000000 \
+       ./scripts/build.sh
+
+Zatim pokrenite ULX4M Tigard OpenOCD konfiguraciju i izričito učitajte taj
+odvojeni testni ELF:
+
+.. code-block:: bash
+
+   ./scripts/load-firmware.sh \
+       ./build/ulx4m-ld-monitor-test/monitor/hazard3-boot-monitor.elf
+
+Za normalan potpuni ULX4M-LD build radije koristite board-specific helper
+``scripts/gdb/load-ulx4m-ld-85f-monitor.gdb``. Za potpune detalje o driverima,
+ožičenju, IDCODE-u i DTM dijagnostici pogledajte
+:doc:`../user-guide/jtag-debugging`.
+
 Sljedeći koraci
 ---------------
 
@@ -230,3 +335,7 @@ Sljedeći koraci
 * Upotrijebite :doc:`../user-guide/jtag-debugging` za otklanjanje pogrešaka na razini izvornog koda.
 * Upotrijebite :doc:`../user-guide/sao` za podršku SAO/I2C-a.
 * Upotrijebite :doc:`../user-guide/i2cdriver` za HDMI sučelje skenera/analizatora I2C-a.
+
+Implementacijske reference
+---------------------------
+* `openFPGALoader <https://trabucayre.github.io/openFPGALoader/guide/install.html>`_

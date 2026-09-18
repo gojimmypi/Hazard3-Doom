@@ -20,7 +20,7 @@ Potpuni buildovi pločica
 Potpuni omotači za pločice održavaju monitor, FPGA dizajn, Doom sliku i SDRAM
 memorijsku mapu međusobno usklađenima.
 
-``scripts/build-ulx3s-doom.sh``
+``scripts/build-ulx3s-85f-doom.sh``
    Potpuni build za ULX3S 85F. Gradi monitor za 50 MHz/64 MiB, priprema
    rezidentnu FPGA boot sliku, gradi ili ponovno koristi 85F bitstream, gradi
    Doom sliku i priprema datoteke za SD-card tijek rada. 85F omotač zadano
@@ -31,7 +31,8 @@ memorijsku mapu međusobno usklađenima.
    Potpuni kompaktni build za ULX3S 12F. Zadano koristi memorijski profil od
    32 MiB pri Hazard3 sistemskom taktu od 40 MHz. Mapa od 64 MiB opcionalna je
    kroz ``HAZARD3_MEMORY_PROFILE=64m``. Kompaktni cilj namjerno prihvaća samo
-   ``HAZARD3_DOOM_HDMI_RESOLUTION=320x200`` i koristi monitor smješten u SDRAM-u.
+   ``HAZARD3_DOOM_HDMI_RESOLUTION=320x200``. Gradi mali UART bootstrap za
+   rezidentni EBR prozor od 1 KiB i puni monitor za vanjski SDRAM.
 
 ``scripts/build-ulx4m-ld-doom.sh``
    Potpuni build za ULX4M-LD 85F. Koristi softversku mapu od 64 MiB pri 40 MHz i prije
@@ -46,7 +47,7 @@ Primjeri:
 
 .. code-block:: bash
 
-   ./scripts/build-ulx3s-doom.sh
+   ./scripts/build-ulx3s-85f-doom.sh
    ./scripts/build-ulx3s-12f-doom.sh
    ./scripts/build-ulx4m-ld-doom.sh
 
@@ -55,7 +56,7 @@ Za testiranje drugog Hazard3 checkouta bez promjene Hazard3-Doom gitlinka:
 .. code-block:: bash
 
    HAZARD3_ROOT=/mnt/c/workspace/Hazard3 \
-       ./scripts/build-ulx3s-doom.sh
+       ./scripts/build-ulx3s-85f-doom.sh
 
 Pomoćni alati za build monitora i bitstreama
 --------------------------------------------
@@ -89,8 +90,9 @@ Pomoćni alati za build monitora i bitstreama
    pruža samo izvore i ograničenja.
 
 ``scripts/make-boot-hex.py``
-   Pretvara binarnu datoteku monitora u heksadecimalnu inicijalizacijsku
-   datoteku koju koristi FPGA boot memorija.
+   Pretvara firmware binarnu datoteku u heksadecimalnu inicijalizacijsku datoteku
+   koju koristi FPGA boot memorija. Koristi se i za puni preload rezidentnog
+   monitora i za kompaktni ULX3S 12F bootstrap.
 
 ``scripts/build-xpack.cmd``
    Native Windows build monitora koji koristi ``bin/riscv-gcc``. Argumenti su
@@ -291,9 +293,12 @@ Programiranje i OpenOCD
    zadati kao prvi argument; inače se koristi binarna datoteka iz repozitorija.
 
 ``scripts/load-firmware.sh``
-   Učitava normalni monitor ELF kroz aktivni OpenOCD GDB server, zaustavlja cilj,
-   učitava i uspoređuje sekcije, postavlja ``$pc`` na ``_start``, nastavlja i
-   prekida vezu. Time GDB ne ostaje spojen nakon programiranja.
+   Učitava monitor ELF kroz aktivni OpenOCD GDB server, zaustavlja cilj, učitava
+   i uspoređuje sekcije, postavlja ``$pc`` na ``_start``, nastavlja i prekida
+   vezu. Bez argumenta koristi samostalni izlaz
+   ``build/hazard3-boot-monitor.elf``. Potpuni board buildovi trebaju izričito
+   proslijediti board-specific ELF ili koristiti odgovarajući
+   ``scripts/gdb/load-*-monitor.gdb`` helper.
 
 ``scripts/load-firmware-12f.sh``
    Učitava ULX3S 12F monitor smješten u SDRAM-u nakon što je kompaktni FPGA
@@ -307,7 +312,7 @@ Programiranje i OpenOCD
    FPGA bitstreama.
 
 ``scripts/flash-ulx3s-persistent.sh``
-   Programira ``build/fpga_ulx3s.bit`` u ULX3S SPI flash za trajno hladno
+   Programira ``build/fpga_ulx3s_85f.bit`` u ULX3S SPI flash za trajno hladno
    pokretanje. To se razlikuje od volatilnog SRAM programiranja.
 
 UART upravljanje
@@ -329,8 +334,19 @@ GDB pomoćni alati
 ``scripts/hazard3-debug.gdb``
    Zajedničke definicije Hazard3 GDB naredbi koje koristi projektna debug postava.
 
-``scripts/gdb/load-hazard3-test-elf.gdb``
-   Fokusirana GDB datoteka naredbi za učitavanje Hazard3 monitor/test ELF-a.
+``scripts/gdb/load-ulx3s-85f-monitor.gdb``
+   Učitava, provjerava i pokreće monitor koji stvara potpuni ULX3S 85F build u
+   ``build/ulx3s-85f/monitor/hazard3-boot-monitor.elf``.
+
+``scripts/gdb/load-ulx3s-12f-monitor.gdb``
+   Učitava, provjerava i pokreće SDRAM-rezidentni monitor koji stvara potpuni
+   ULX3S 12F build u ``build/ulx3s-12f/monitor/hazard3-boot-monitor.elf``.
+
+``scripts/gdb/load-ulx4m-ld-85f-monitor.gdb``
+   Učitava, provjerava i pokreće monitor koji stvara potpuni ULX4M-LD 85F build
+   u ``build/ulx4m-ld/monitor/hazard3-boot-monitor.elf``. Koristite monitor iz
+   istog board builda kao FPGA sliku kako bi sat, memorijska mapa, linker i
+   protokol loadera ostali usklađeni.
 
 ``scripts/gdb/sao-probe.gdb``
    Ispituje stanje SAO bridgea iz GDB-a.

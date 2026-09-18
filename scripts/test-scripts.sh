@@ -517,13 +517,13 @@ run_integration_tests()
             HAZARD3_DOOM_NONCOMBAT_BUILD_DIR="${TEST_DIR}/doom-image-noncombat" \
             "${SCRIPT_DIR}/build-doom-noncombat.sh"
 
-    run_logged 'build-ulx3s-doom.sh: complete ULX3S 85F build' \
-        'build-ulx3s-doom' \
+    run_logged 'build-ulx3s-85f-doom.sh: complete ULX3S 85F build' \
+        'build-ulx3s-85f-doom' \
         env \
             FORCE_BITSTREAM_REBUILD=1 \
             HAZARD3_BUILD_DIR="${TEST_DIR}/ulx3s-85f/monitor" \
             HAZARD3_DOOM_BUILD_DIR="${TEST_DIR}/ulx3s-85f/doom-image" \
-            "${SCRIPT_DIR}/build-ulx3s-doom.sh"
+            "${SCRIPT_DIR}/build-ulx3s-85f-doom.sh"
     if (( LAST_COMMAND_STATUS == 0 )); then
         run_logged 'sweep-ecp5.sh: ULX3S 85F routed sample' \
             'sweep-ulx3s-85f' \

@@ -4,7 +4,7 @@
 # Path:        scripts/make-boot-hex.py
 #
 # Project:     Hazard3-Doom
-# Purpose:     Convert the resident monitor binary into 32-bit little-endian
+# Purpose:     Convert a firmware binary into 32-bit little-endian
 #              FPGA boot-memory initialization data.
 #
 # Copyright (c) 2026 gojimmypi
@@ -23,7 +23,7 @@
 #
 # See submodule Hazard3 for sram readmemh
 #
-"""Convert the resident monitor binary to 32-bit little-endian readmemh data."""
+"""Convert a firmware binary to 32-bit little-endian readmemh data."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ def main() -> int:
         raise SystemExit("load address must be inside the preload region")
     if len(payload) > args.bytes - args.load_address:
         raise SystemExit(
-            f"monitor binary is {len(payload)} bytes; only "
+            f"firmware binary is {len(payload)} bytes; only "
             f"{args.bytes - args.load_address} bytes remain after load address")
 
     # GNU objcopy's raw binary starts at the lowest loadable section rather
@@ -63,7 +63,7 @@ def main() -> int:
             word = int.from_bytes(data[offset:offset + 4], "little")
             output.write(f"{word:08x}\n")
 
-    print(f"resident monitor: {args.input_bin} (load address 0x{args.load_address:x})")
+    print(f"boot image:       {args.input_bin} (load address 0x{args.load_address:x})")
     print(f"EBR preload hex:  {args.output_hex}")
     return 0
 

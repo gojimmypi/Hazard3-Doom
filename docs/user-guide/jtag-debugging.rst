@@ -48,9 +48,45 @@ Or provide an explicit ELF:
 
    ./scripts/load-firmware.sh /path/to/hazard3-boot-monitor.elf
 
-The batch loader halts the target, loads the ELF, verifies the loaded sections
-with ``compare-sections``, sets ``$pc`` to ``_start``, resumes the processor,
-and disconnects.
+For ULX3S 12F after programming ``fpga_ulx3s_12f.bit``, the preferred
+second-stage command is:
+
+.. code-block:: bash
+
+   ./scripts/load-firmware-12f.sh
+
+It reuses OpenOCD if port 3333 is already listening; otherwise it starts the
+project OpenOCD launcher, waits for the GDB server, loads and verifies the
+board-specific SDRAM monitor, and stops only the OpenOCD process it started.
+
+The no-argument form refers to the standalone ``scripts/build.sh`` output. For a
+complete board build, prefer the board-specific GDB command file so the monitor
+ELF cannot be confused with one built for another clock or memory profile:
+
+.. code-block:: bash
+
+   # ULX3S 85F
+   riscv-none-elf-gdb -batch -x scripts/gdb/load-ulx3s-85f-monitor.gdb
+
+   # ULX3S 12F
+   riscv-none-elf-gdb -batch -x scripts/gdb/load-ulx3s-12f-monitor.gdb
+
+   # ULX4M-LD 85F
+   riscv-none-elf-gdb -batch -x scripts/gdb/load-ulx4m-ld-85f-monitor.gdb
+
+Each command file selects the monitor under the corresponding
+``build/<board>/monitor/`` directory, halts the target, loads and verifies the
+ELF with ``compare-sections``, sets ``$pc`` to ``_start``, resumes the processor,
+and disconnects. Do not use a generic or stale monitor ELF from another board
+build; it may execute while still using the wrong UART divisor, memory map, or
+loader protocol.
+
+When launching a bundled Windows ``.exe`` from WSL, the surrounding shell is
+still Bash. Use paths such as ``./bin/gdb/riscv-none-elf-gdb.exe`` and a trailing
+backslash (``\``) for Bash line continuation. Windows ``cmd.exe`` syntax such
+as ``.\bin\...`` and ``^`` line continuation is only valid after explicitly
+entering ``cmd.exe``; pasted directly into WSL it is parsed as separate/mangled
+Bash commands.
 
 ULX3S on-board FT231X
 ---------------------
@@ -61,6 +97,13 @@ current ``ft232r`` OpenOCD path has been verified on Windows with **WinUSB** and
 Hazard3-Doom WebUSB FPGA flasher. The default FTDI VCP/D2XX binding is for
 FTDI-native tools such as Windows ``fujprog`` and is not the libusb OpenOCD
 path.
+
+If Windows OpenOCD reports ``LIBUSB_ERROR_NOT_SUPPORTED`` followed by
+``ft232r not found: vid=0403, pid=6015``, the FT231X is normally still bound to
+FTDIBUS/D2XX. Use Zadig to select WinUSB or libusbK for the ULX3S device before
+starting OpenOCD. If you programmed the FPGA with Windows ``fujprog`` first,
+remember that ``fujprog`` uses the native FTDI binding, so moving between these
+two host tools can require changing the driver.
 
 See :doc:`web-flasher` for the ULX3S driver compatibility matrix.
 
@@ -476,7 +519,7 @@ matching software-only monitor without rerouting the FPGA:
 
 .. code-block:: bash
 
-   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-40mhz/monitor" \
+   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-monitor-test/monitor" \
    HAZARD3_MEMORY_PROFILE=64m \
    HAZARD3_SYS_CLK_HZ=40000000 \
        ./scripts/build.sh
@@ -486,7 +529,7 @@ Then, with OpenOCD already examining the target:
 .. code-block:: bash
 
    ./scripts/load-firmware.sh \
-       ./build/ulx4m-ld-40mhz/monitor/hazard3-boot-monitor.elf
+       ./build/ulx4m-ld-monitor-test/monitor/hazard3-boot-monitor.elf
 
 A successful load reports matching ``.vectors``, ``.text``, read-only data,
 and ``.data`` sections before resuming from address ``0x00000040``.

@@ -48,9 +48,45 @@ Ili navedite ELF izričito:
 
    ./scripts/load-firmware.sh /path/to/hazard3-boot-monitor.elf
 
-Batch loader zaustavlja metu, učitava ELF, provjerava učitane sekcije s
-``compare-sections``, postavlja ``$pc`` na ``_start``, nastavlja procesor i
-odspaja se.
+Za ULX3S 12F nakon programiranja ``fpga_ulx3s_12f.bit`` preporučena naredba
+drugog stupnja je:
+
+.. code-block:: bash
+
+   ./scripts/load-firmware-12f.sh
+
+Ponovno koristi OpenOCD ako port 3333 već sluša; inače pokreće projektni
+OpenOCD launcher, čeka GDB server, učitava i provjerava board-specific SDRAM
+monitor te zaustavlja samo OpenOCD proces koji je sama pokrenula.
+
+Oblik bez argumenta odnosi se na izlaz samostalnog ``scripts/build.sh`` builda.
+Za potpuni board build radije koristite GDB datoteku naredbi za točno određenu
+metu kako se monitor ne bi zamijenio s ELF-om izgrađenim za drugi takt ili
+memorijski profil:
+
+.. code-block:: bash
+
+   # ULX3S 85F
+   riscv-none-elf-gdb -batch -x scripts/gdb/load-ulx3s-85f-monitor.gdb
+
+   # ULX3S 12F
+   riscv-none-elf-gdb -batch -x scripts/gdb/load-ulx3s-12f-monitor.gdb
+
+   # ULX4M-LD 85F
+   riscv-none-elf-gdb -batch -x scripts/gdb/load-ulx4m-ld-85f-monitor.gdb
+
+Svaka datoteka odabire monitor iz odgovarajućeg ``build/<board>/monitor/``
+direktorija, zaustavlja metu, učitava i provjerava ELF s ``compare-sections``,
+postavlja ``$pc`` na ``_start``, nastavlja procesor i odspaja se. Nemojte koristiti
+generički ili zastarjeli monitor ELF iz drugog board builda; može se izvršavati,
+a ipak koristiti pogrešan UART djelitelj, memorijsku mapu ili protokol loadera.
+
+Kada iz WSL-a pokrećete priloženu Windows ``.exe`` datoteku, okolna ljuska i
+dalje je Bash. Koristite put poput ``./bin/gdb/riscv-none-elf-gdb.exe`` i završnu
+obrnutu kosu crtu (``\``) za nastavak Bash naredbe. ``cmd.exe`` sintaksa poput
+``.\bin\...`` i nastavak retka znakom ``^`` vrijede samo nakon izričitog ulaska
+u ``cmd.exe``; zalijepljeni izravno u WSL tumače se kao odvojene ili izmijenjene
+Bash naredbe.
 
 Ugrađeni ULX3S FT231X
 ---------------------
@@ -60,6 +96,13 @@ OpenOCD ``ft232r`` put provjeren je na Windowsu s driverima **WinUSB** i
 **libusbK**. WinUSB je praktičan kada isti FT231X koristi i Hazard3-Doom WebUSB
 FPGA flasher. Zadani FTDI VCP/D2XX binding namijenjen je FTDI-native alatima
 poput Windows ``fujprog`` i nije libusb OpenOCD put.
+
+Ako Windows OpenOCD prijavi ``LIBUSB_ERROR_NOT_SUPPORTED`` pa zatim
+``ft232r not found: vid=0403, pid=6015``, FT231X je obično još vezan na
+FTDIBUS/D2XX. Prije pokretanja OpenOCD-a pomoću Zadiga odaberite WinUSB ili
+libusbK za ULX3S uređaj. Ako ste FPGA najprije programirali Windows
+``fujprog`` alatom, imajte na umu da ``fujprog`` koristi izvorni FTDI driver,
+pa prelazak između ta dva host alata može zahtijevati promjenu drivera.
 
 Za matricu kompatibilnosti ULX3S drivera pogledajte :doc:`web-flasher`.
 
@@ -474,7 +517,7 @@ Izgradite odgovarajući software-only monitor bez ponovnog routanja FPGA-a:
 
 .. code-block:: bash
 
-   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-40mhz/monitor" \
+   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-monitor-test/monitor" \
    HAZARD3_MEMORY_PROFILE=64m \
    HAZARD3_SYS_CLK_HZ=40000000 \
        ./scripts/build.sh
@@ -484,7 +527,7 @@ Zatim, dok OpenOCD već ispituje metu:
 .. code-block:: bash
 
    ./scripts/load-firmware.sh \
-       ./build/ulx4m-ld-40mhz/monitor/hazard3-boot-monitor.elf
+       ./build/ulx4m-ld-monitor-test/monitor/hazard3-boot-monitor.elf
 
 Uspješno učitavanje prijavljuje podudarne ``.vectors``, ``.text``, read-only
 podatke i ``.data`` sekcije prije nastavka s adrese ``0x00000040``.

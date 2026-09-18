@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#171a21">
     <title>Hazard3-Doom Device Tool and Console</title>
-    <link rel="stylesheet" href="styles.css?v=20260914-r12">
+    <link rel="stylesheet" href="styles.css?v=20260920-r13">
     <link rel="icon" href="icons/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
@@ -183,8 +183,8 @@
                                 <strong>Load flow</strong>
                                 <span>1. Program the matching FPGA bitstream.</span>
                                 <span>2. Disconnect the browser FPGA flasher from US1.</span>
-                                <span>3. Start OpenOCD with the matching board configuration.</span>
-                                <span>4. Select the RISC-V ELF and load it.</span>
+                                <span>3. Start <code>web-server.py</code> with the matching OpenOCD board.</span>
+                                <span>4. Select <code>hazard3-boot-monitor.elf</code> and load it.</span>
                             </div>
                         </div>
 
@@ -199,63 +199,63 @@
                     </div>
                 </details>
 
-                <details id="h3dUploader" class="flasher-section">
+                <details id="h3imgUploader" class="flasher-section">
                     <summary>
-                        <span class="summary-title" title="Click to toggle visibility of this entire section.">Doom H3D uploader</span>
+                        <span class="summary-title" title="Click to toggle visibility of this entire section.">Doom H3IMG uploader</span>
                         <span class="summary-tag" title="Uses Web Serial and the Hazard3 H3L protocol to upload a packaged Doom image over UART.">UART / H3L</span>
-                        <span class="flasher-header-actions" aria-label="H3D uploader actions">
-                            <button id="h3dConnectUartButton" type="button" class="primary compact-action-button" data-enabled-title="Connect the Web Serial UART used for H3L uploads.">Connect UART</button>
-                            <button id="h3dUploadButton" type="button" class="primary compact-action-button" data-enabled-title="Upload the selected packaged H3D image over UART using the H3L protocol." disabled>Upload H3D</button>
+                        <span class="flasher-header-actions" aria-label="H3IMG uploader actions">
+                            <button id="h3imgConnectUartButton" type="button" class="primary compact-action-button" data-enabled-title="Connect the Web Serial UART used for H3L uploads.">Connect UART</button>
+                            <button id="h3imgUploadButton" type="button" class="primary compact-action-button" data-enabled-title="Upload the selected packaged H3IMG image over UART using the H3L protocol." disabled>Upload H3IMG</button>
                         </span>
                     </summary>
                     <div class="flasher-body">
                         <div class="flasher-intro">
                             <div>
                                 <h3>Load a Doom image over UART</h3>
-                                <p>Select a packaged <code>.h3d</code> image and send it directly to the resident monitor. The browser validates the H3D header and payload CRC32 before transfer. This loads SDRAM only; it does not modify the SD card.</p>
+                                <p>Select a packaged <code>.h3img</code> image and send it directly to the resident monitor. The browser validates the H3IMG header and payload CRC32 before transfer. This loads SDRAM only; it does not modify the SD card.</p>
                             </div>
                             <div class="flasher-state">
                                 <span>Protocol</span>
                                 <strong  title="Custom Hazard3 L (load) protocol over Web Serial">H3L over Web Serial</strong>
                                 <span>Monitor</span>
-                                <strong>Use from the &gt; prompt</strong>
+                                <strong>Use from the <span class="prompt-token" aria-label="monitor prompt">&gt;</span> prompt</strong>
                             </div>
                         </div>
 
-                        <div id="h3dUartRequirement" class="uart-requirement" role="status" aria-live="polite">
+                        <div id="h3imgUartRequirement" class="uart-requirement" role="status" aria-live="polite">
                             <span class="uart-requirement-indicator" aria-hidden="true"></span>
                             <div class="uart-requirement-copy">
-                                <strong id="h3dUartRequirementTitle">UART connection required</strong>
-                                <span id="h3dUartRequirementDetail">Connect Web Serial before uploading an H3D image.</span>
+                                <strong id="h3imgUartRequirementTitle">UART connection required</strong>
+                                <span id="h3imgUartRequirementDetail">Connect Web Serial before uploading an H3IMG image.</span>
                             </div>
                         </div>
 
                         <div class="flasher-grid">
                             <label class="svf-picker">
-                                <span>Hazard3-Doom image (.h3d)</span>
-                                <input id="h3dFileInput" type="file" accept=".h3d">
-                                <strong id="h3dFileName">No H3D image selected</strong>
-                                <small id="h3dFileDetails"></small>
+                                <span>Hazard3-Doom image (.h3img)</span>
+                                <input id="h3imgFileInput" type="file" accept=".h3img">
+                                <strong id="h3imgFileName">No H3IMG image selected</strong>
+                                <small id="h3imgFileDetails"></small>
                             </label>
 
                             <div class="flasher-checklist">
                                 <strong>Upload flow</strong>
                                 <span>1. Connect the UART terminal.</span>
                                 <span>2. Stop Doom first if it is currently running.</span>
-                                <span>3. Select a valid packaged H3D image.</span>
+                                <span>3. Select a valid packaged H3IMG image.</span>
                                 <span>4. Upload; the browser performs the H3L READY/DATA/OK handshake.</span>
-                                <label class="check-control"><input id="h3dLaunchAfterUpload" type="checkbox"> Launch with <code>j</code> after upload</label>
+                                <label class="check-control"><input id="h3imgLaunchAfterUpload" type="checkbox"> Launch with <code>j</code> after upload</label>
                             </div>
                         </div>
 
                         <div class="flasher-progress-row">
-                            <progress id="h3dProgress" max="100" value="0"></progress>
-                            <span id="h3dProgressLabel">Idle</span>
+                            <progress id="h3imgProgress" max="100" value="0"></progress>
+                            <span id="h3imgProgressLabel">Idle</span>
                         </div>
 
-                        <div id="h3dUploadDiagnostic" class="upload-diagnostic" role="alert" hidden></div>
+                        <div id="h3imgUploadDiagnostic" class="upload-diagnostic" role="alert" hidden></div>
 
-                        <p class="flasher-note"><strong>The H3L loader must own the UART.</strong> If Doom is running, use Stop Doom first and wait for the resident monitor <code>&gt;</code> prompt before uploading.</p>
+                        <p class="flasher-note"><strong>The UART terminal may stay connected.</strong> During an H3IMG upload, the uploader temporarily owns UART writes while terminal output remains visible. Doom itself must be stopped and the resident monitor <span class="prompt-token" aria-label="monitor prompt">&gt;</span> prompt active. On ULX3S 12F, progress can reach 100% while the monitor is still copying and CRC-verifying the restart image; wait for <code>H3L OK</code>.</p>
                     </div>
                 </details>
 
@@ -280,7 +280,7 @@
                                 <span>Protocol</span>
                                 <strong title="Custom Hazard3 W (write) protocol over Web Serial">H3W over Web Serial</strong>
                                 <span>Monitor</span>
-                                <strong>Use from the &gt; prompt</strong>
+                                <strong>Use from the <span class="prompt-token" aria-label="monitor prompt">&gt;</span> prompt</strong>
                             </div>
                         </div>
 
@@ -331,7 +331,7 @@
 
                         <div id="wadUploadDiagnostic" class="upload-diagnostic" role="alert" hidden></div>
 
-                        <p class="flasher-note"><strong>IWAD files are not included with Hazard3-Doom.</strong> Use a legally obtained IWAD. The selected memory profile must match the resident monitor build because the H3W header contains the SDRAM load address.</p>
+                        <p class="flasher-note"><strong>IWAD files are not included with Hazard3-Doom.</strong> Use a legally obtained IWAD. The selected memory profile must match the resident monitor (.h3img file) build because the H3W header contains the SDRAM load address.</p>
                     </div>
                 </details>
             </div>
@@ -528,7 +528,7 @@
     </footer>
 
     <script src="generated/version.js" defer></script>
-    <script src="app.js?v=20260916-r12" defer></script>
+    <script src="app.js?v=20260920-r14" defer></script>
     <script src="flasher.js?v=20260914-r4" defer></script>
 </body>
 </html>

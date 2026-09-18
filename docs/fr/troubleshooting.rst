@@ -226,6 +226,26 @@ Le téléversement de Doom expire
 * Fermez PuTTY ou tout autre programme qui possède le port UART.
 * Confirmez le périphérique COM/TTY sélectionné.
 * Confirmez que le moniteur et l'outil de téléversement utilisent le même profil mémoire.
+* Sur le profil ULX4M-LD qualifié par défaut, l'horloge système Hazard3 est de
+  40 MHz et l'UART doit
+  néanmoins fonctionner à 115200 bauds. Si une image programmée expire à 115200
+  mais répond près de 92160 bauds, cela indique fortement un diviseur UART du
+  moniteur calculé avec une hypothèse de 50 MHz alors que le FPGA fonctionne à
+  40 MHz (``115200 * 40 / 50 = 92160``). Reconstruisez la cible complète avec
+  ``./scripts/build-ulx4m-ld-doom.sh``, reprogrammez le bitstream et retestez à
+  115200 ; 92160 n'est qu'un débit de diagnostic.
+* Certains ponts série WSL ``/dev/ttyS*`` refusent un débit non standard comme
+  92160 avec ``termios.error: (5, 'Input/output error')``. Si ce test est
+  nécessaire, utilisez Python Windows avec le port COM correspondant, par
+  exemple depuis WSL :
+
+  .. code-block:: bash
+
+     cmd.exe /c "py doom/upload-doom-image.py build/ulx4m-ld/doom-image/hazard3-doom.h3img --port COM8 --baud 92160"
+* Si la cible atteint ``H3L READY`` puis signale ``H3L ERROR invalid header``,
+  le handshake UART fonctionne. Vérifiez que le moniteur résident et le fichier
+  ``.h3img`` proviennent d'un build/profil compatible avant de modifier les
+  pilotes série ou le câblage.
 
 Aucune carte micro-SD n'est installée, mais le démarrage à froid signale un échec CMD0
 -----------------------------------------------------------------------------------------
@@ -249,7 +269,7 @@ message de carte absente n'indique pas une panne du système.
 La carte SD est montée mais les fichiers sont introuvables
 ----------------------------------------------------------
 
-* Utilisez les noms de fichiers racine ``DOOM.H3D`` et ``DOOM.WAD``.
+* Utilisez les noms de fichiers racine ``DOOM.IMG`` et ``DOOM.WAD``.
 * Confirmez le formatage FAT16/FAT32.
 * Utilisez la commande ``c`` du moniteur pour inspecter le type FAT, l'état de montage et les tailles de fichiers détectées.
 * Évitez de dépendre de noms longs ; le chemin de démarrage est conçu autour de noms 8.3 à la racine.
@@ -354,7 +374,7 @@ Déconnectez aussi le flasher FPGA WebUSB de ``US1`` avant OpenOCD, car ils
 utilisent le même FT231X JTAG. L'adaptateur J1 USB-UART externe est indépendant
 et peut rester connecté.
 
-Si H3D/H3W expire ensuite en attendant ``READY``, vérifiez d'abord que le
+Si H3IMG/H3W expire ensuite en attendant ``READY``, vérifiez d'abord que le
 moniteur résident est réellement à l'invite ``>``. Lorsque le helper répond
 mais qu'OpenOCD est absent, le Device Tool rappelle également que le moniteur
 doit peut-être encore être chargé.

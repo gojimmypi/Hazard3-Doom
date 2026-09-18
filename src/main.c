@@ -336,7 +336,7 @@ static void console_print_help(void)
     uart_puts("  l       receive a packaged Doom image over UART\r\n");
     uart_puts("  w       receive an IWAD into reserved SDRAM\r\n");
     uart_puts("  j       launch/restart the validated Doom image and IWAD\r\n");
-    uart_puts("  b       load DOOM.H3D + DOOM1.WAD from micro-SD and launch\r\n");
+    uart_puts("  b       load DOOM.IMG + DOOM1.WAD from micro-SD and launch\r\n");
     uart_puts("  c       micro-SD/FAT boot status\r\n");
     uart_puts("  f       rewrite/present the 320x200 RGB332 HDMI test frame\r\n");
     uart_puts("  z       reset heap; invalidates every heap pointer\r\n");
@@ -431,6 +431,10 @@ static void console_print_version(void)
         ddr_adapter_build_id) ? "YES" : "NO");
     uart_puts("\r\nmemory_controller=");
     uart_puts(memory_controller_name(fpga_build_id));
+    uart_puts("\r\nmemory_profile=");
+    uart_puts(HAZARD3_FIRMWARE_MEMORY_PROFILE);
+    uart_puts(" system_clock=");
+    uart_puts(HAZARD3_FIRMWARE_SYS_CLK_NAME);
     uart_puts("\r\n> ");
 }
 
@@ -2092,7 +2096,9 @@ static void console_init(void)
     uart_put_hex32(HAZARD3_FIRMWARE_BUILD_ID);
     uart_puts("\r\n");
     uart_puts("UART: board serial RX / TX, 115200 8N1\r\n");
-    uart_puts("CPU: 50 MHz Hazard3, Timer: 10 ms machine interrupt\r\n");
+    uart_puts("CPU: ");
+    uart_puts(HAZARD3_FIRMWARE_SYS_CLK_NAME);
+    uart_puts(" Hazard3, Timer: 10 ms machine interrupt\r\n");
     if (HAZARD3_VIDEO_FPGA_BUILD_ID == HAZARD3_FPGA_BUILD_ID_ULX3S_12F) {
         uart_puts("Doom screen: 0x20040000-0x2004F9FF external SDRAM (320x200 indexed)\r\n");
     } else {

@@ -4,7 +4,7 @@ Running Doom
 UART loading
 ------------
 
-The normal development flow sends a packaged ``.h3d`` executable to the resident monitor, then sends ``DOOM.WAD`` and launches the application.
+The normal development flow sends a packaged ``.h3img`` executable to the resident monitor, then sends ``DOOM.WAD`` and launches the application.
 
 The 64 MiB memory profile is the default for ULX3S 85F and ULX4M-LD 85F.
 

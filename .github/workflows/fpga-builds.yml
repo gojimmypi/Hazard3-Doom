@@ -34,12 +34,12 @@ jobs:
         include:
           - name: ULX3S 85F
             board: ulx3s-85f
-            command: ./scripts/build-ulx3s-doom.sh
-            fpga_name: fpga_ulx3s
-            monitor_dir: build/ulx3s/monitor
-            doom_dir: build/ulx3s/doom-image
+            command: ./scripts/build-ulx3s-85f-doom.sh
+            fpga_name: fpga_ulx3s_85f
+            monitor_dir: build/ulx3s-85f/monitor
+            doom_dir: build/ulx3s-85f/doom-image
             seed_required: false
-            boot_init: build/ulx3s/hazard3-boot-monitor.hex
+            boot_init: build/ulx3s-85f/hazard3-boot-monitor.hex
           - name: ULX3S 12F
             board: ulx3s-12f
             command: ./scripts/build-ulx3s-12f-doom.sh
@@ -137,7 +137,7 @@ jobs:
               test -s "build/${{ matrix.fpga_name }}.seed"
           fi
           test -s "${{ matrix.monitor_dir }}/hazard3-boot-monitor.elf"
-          test -s "${{ matrix.doom_dir }}/hazard3-doom.h3d"
+          test -s "${{ matrix.doom_dir }}/hazard3-doom.h3img"
           test -s "${{ matrix.boot_init }}"
 
       - name: Upload build artifacts and timing logs
@@ -153,7 +153,7 @@ jobs:
             ${{ matrix.monitor_dir }}/hazard3-boot-monitor.bin
             ${{ matrix.doom_dir }}/hazard3-doom.elf
             ${{ matrix.doom_dir }}/hazard3-doom.map
-            ${{ matrix.doom_dir }}/hazard3-doom.h3d
+            ${{ matrix.doom_dir }}/hazard3-doom.h3img
             ${{ matrix.boot_init }}
           if-no-files-found: warn
           retention-days: 14

@@ -17,7 +17,7 @@ Placez ces fichiers dans le répertoire racine d'une carte micro-SD formatée en
 
 .. code-block:: text
 
-   DOOM.H3D
+   DOOM.IMG
    DOOM.WAD
 
 ``DOOM.WAD`` est le nom de fichier IWAD canonique utilisé par le flux de démarrage à froid actuel.
@@ -35,7 +35,7 @@ Séquence de démarrage à froid
 #. Hazard3 démarre à son point d'entrée reset/moniteur.
 #. La SDRAM est initialisée.
 #. Le moniteur initialise la carte SD et monte le système FAT.
-#. ``DOOM.H3D`` est chargé en SDRAM et validé.
+#. ``DOOM.IMG`` est chargé en SDRAM et validé.
 #. ``DOOM.WAD`` est localisé et chargé dans sa région réservée.
 #. Le moniteur lance Doom.
 

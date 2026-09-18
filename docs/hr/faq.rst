@@ -19,32 +19,30 @@ neće probuditi na prvi video signal. Pokušajte isključiti napajanje i priček
 nekoliko sekundi prije ponovnog pokušaja. Takvo je ponašanje zabilježeno na
 Elecrow 7" HDMI zaslonu.
 
-Naredba "monitor" nije podržana za ovaj target.
-------------------------------------------------
+OpenOCD ne sluša na ``localhost:3333``
+-----------------------------------------
 
-Pogledajte sljedeći odjeljak: to ne možete učiniti kada je target ``exec``.
+Trenutačni ``scripts/load-firmware.sh`` provjerava port 3333 prije pokretanja
+GDB-a. Ako OpenOCD ne radi, skripta se zaustavlja s izravnom pogreškom umjesto
+da dopusti GDB-u prelazak na lokalni ``exec`` target. Starije verzije loadera
+mogle su ispisati ``monitor command not supported`` ili ``target is exec`` i
+zatim prikazati lokalne ELF sekcije kao ``matched``; te usporedbe **nisu**
+provjeravale FPGA memoriju.
 
-To ne možete učiniti kada je target ``exec``
---------------------------------------------
+Za ULX3S 12F nakon programiranja bitstreama koristite praktični loader:
 
-Ako pri učitavanju firmwarea Console Monitora pomoću GDB-a vidite sličnu
-pogrešku, provjerite radi li OpenOCD i sluša li na očekivanom portu (zadano:
-3333).
+.. code-block:: bash
 
-$ ./scripts/load-firmware-12f.sh
-Calling /mnt/c/workspace/Hazard3-Doom/scripts/load-firmware.sh \
--rwxr-xr-x 1 gojimmypi gojimmypi 316036 Aug 25 12:10 hazard3-boot-monitor.elf
-localhost:3333: Connection timed out.
-"monitor" command not supported by this target.
-You can't do that when your target is ``exec``
-Section .vectors, range 0x20000040 -- 0x20000076: matched.
-Section .text, range 0x20000078 -- 0x2000bacb: matched.
-Section .srodata.bar_colors.1, range 0x2000bacc -- 0x2000bad4: matched.
-Section .data, range 0x2000bad4 -- 0x2000badc: matched.
-No registers.
+   ./scripts/load-firmware-12f.sh
 
-You can't do that when your target is ``exec``
+Ponovno koristi OpenOCD na portu 3333 ili automatski pokreće projektni OpenOCD
+launcher, čeka GDB server i zatim učitava board-specific SDRAM monitor.
 
+Na Windowsu/WSL-u, ako OpenOCD prijavi ``LIBUSB_ERROR_NOT_SUPPORTED`` i ne može
+pronaći ``0403:6015``, ULX3S FT231X je obično još vezan na izvorni FTDI
+FTDIBUS/D2XX driver. Pomoću Zadiga vežite WinUSB ili libusbK za OpenOCD. Windows
+``fujprog`` koristi izvorni FTDI driver, pa prelazak između ``fujprog`` i
+OpenOCD-a može zahtijevati promjenu tog vezanja.
 
 Web Serial ne prikazuje kompatibilne uređaje, ali Windows vidi COM port. Što prvo pokušati?
 --------------------------------------------------------------------------------------------
