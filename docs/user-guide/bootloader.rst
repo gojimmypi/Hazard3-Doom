@@ -185,6 +185,14 @@ For a routine Hazard3-Doom user-bitstream update:
 #. Wait for ``1d50:614b`` to enumerate, then release ``BTN3``.
 #. Program alt 0.
 
+``BTN3`` selects DFU only during startup; do not keep it held for the transfer.
+When using the bundled Windows tools directly from WSL, run the following first
+if Bash reports ``Permission denied``:
+
+.. code-block:: bash
+
+   chmod +x ./bin/openFPGALoader.exe ./bin/dfu-util.exe
+
 A validated command is:
 
 .. code-block:: bash

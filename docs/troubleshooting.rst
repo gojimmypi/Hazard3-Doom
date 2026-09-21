@@ -46,6 +46,55 @@ the normal FTDI VCP/D2XX driver.
 See :doc:`user-guide/web-flasher` for the complete WebUSB programming flow
 and driver restore notes.
 
+Zadig reports ``Driver Installation: FAILED (Could not allocate resource)``
+----------------------------------------------------------------------------
+
+If Zadig fails while replacing the ULX3S FTDI driver with a message such as
+``Driver Installation: FAILED (Could not allocate resource)``, check for a
+stale libwdi/Zadig helper process before removing drivers or changing the
+device configuration.
+
+Closing Zadig does not necessarily terminate the helper. In one verified
+failure, ``zadig.exe`` was no longer running but ``installer_x64.exe`` remained
+stuck in the background and prevented the next driver installation.
+
+From PowerShell, check for the relevant installer/helper processes:
+
+.. code-block:: powershell
+
+   Get-Process installer_x64*, wdi*, dpinst*, pnputil* -ErrorAction SilentlyContinue |
+       Select-Object Id, ProcessName, Path
+
+If a stale ``installer_x64.exe`` is present and no driver installation is
+intentionally in progress, terminate it:
+
+.. code-block:: powershell
+
+   Stop-Process -Name installer_x64 -Force
+
+Then confirm that it is gone:
+
+.. code-block:: powershell
+
+   Get-Process installer_x64* -ErrorAction SilentlyContinue
+
+If an old ``pnputil.exe`` process is also still running from an abandoned
+device-install/remove operation, terminate that process as well before retrying.
+
+After clearing the stale helper:
+
+#. Close Zadig.
+#. Unplug the ULX3S USB connection.
+#. Wait a few seconds and reconnect it.
+#. Start Zadig as Administrator.
+#. Enable **Options -> List All Devices**.
+#. Select the intended ULX3S FTDI interface and verify USB ID ``0403:6015``.
+#. Retry the WinUSB/libusb driver installation.
+
+Do not uninstall unrelated FTDI devices as a first step. A leftover
+``installer_x64.exe`` can cause this error even when Zadig, OpenOCD,
+``fujprog``, and other visible USB tools are no longer running.
+
 WebUSB flasher reports an unrecognized JTAG ID
 ----------------------------------------------
 
@@ -127,7 +176,7 @@ a failed ``SerialPort.open()`` is reported as a likely ownership conflict.
 Typical recovery is:
 
 #. Close or disconnect the other Device Tool tab or serial application.
-#. Return to the H3D/IWAD or Serial connection section.
+#. Return to the H3IMG/IWAD or Serial connection section.
 #. Use **Retry UART** or **Connect UART** and select the port again.
 
 Remember that ``http://127.0.0.1:8000`` and the public
@@ -255,6 +304,26 @@ Doom upload times out
 * Close PuTTY or any other program that owns the UART port.
 * Confirm the selected COM/TTY device.
 * Confirm that the monitor and uploader use the same memory profile.
+* On the default qualified ULX4M-LD profile, the Hazard3 system clock is 40 MHz
+  and the UART is still
+  expected to operate at 115200 baud. If a programmed image times out at 115200
+  but responds near 92160 baud, that is a strong diagnostic for a monitor UART
+  divisor built with a 50 MHz clock assumption while the FPGA is actually
+  running at 40 MHz (``115200 * 40 / 50 = 92160``). Rebuild the complete target
+  with ``./scripts/build-ulx4m-ld-doom.sh``, reprogram the bitstream, and retest
+  at 115200 rather than treating 92160 as a supported operating baud.
+* Some WSL ``/dev/ttyS*`` serial bridges reject a nonstandard diagnostic baud
+  such as 92160 with ``termios.error: (5, 'Input/output error')``. If that test
+  is needed, run the uploader with Windows Python against the corresponding COM
+  port instead; for example from WSL:
+
+  .. code-block:: bash
+
+     cmd.exe /c "py doom/upload-doom-image.py build/ulx4m-ld/doom-image/hazard3-doom.h3img --port COM8 --baud 92160"
+* If the target reaches ``H3L READY`` and then reports ``H3L ERROR invalid
+  header``, the UART handshake is working. Verify that the resident monitor and
+  ``.h3img`` were produced by the same compatible build/profile before changing
+  serial drivers or wiring.
 
 No micro-SD card is installed, but cold boot reports CMD0 failure
 -----------------------------------------------------------------
@@ -277,7 +346,7 @@ message is not a system failure.
 SD card mounts but files are not found
 --------------------------------------
 
-* Use root filenames ``DOOM.H3D`` and ``DOOM.WAD``.
+* Use root filenames ``DOOM.IMG`` and ``DOOM.WAD``.
 * Confirm FAT16/FAT32 formatting.
 * Use the monitor ``c`` command to inspect FAT type, mount state, and discovered file sizes.
 * Avoid relying on long filenames; the boot path is designed around root 8.3 names.
@@ -459,7 +528,7 @@ Also disconnect the browser FPGA web flasher from ``US1`` before OpenOCD starts,
 because both use the same FT231X JTAG interface. The external J1 USB-UART adapter
 is separate and may remain connected.
 
-If H3D/H3W upload later times out waiting for ``READY``, first confirm that the
+If H3IMG/H3W upload later times out waiting for ``READY``, first confirm that the
 resident monitor is actually running at the ``>`` prompt. When the helper is
 reachable but OpenOCD is not detected, the Device Tool additionally points out
 that the monitor may still need to be loaded. OpenOCD does not have to remain

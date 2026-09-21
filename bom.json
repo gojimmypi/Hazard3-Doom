@@ -162,7 +162,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "5f2f8187560902141b67bfc534a95431f6dcc2ab6608d7f66495f5d3c98a2094"
+          "content": "5c3116f14ba20c397b431c62118d47094531cb60079134b6bd6a31846f1148b5"
         }
       ],
       "properties": [
@@ -180,7 +180,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "74f47562bb4221edbba79ffc721f6700ff0603f3a4a8fe7ffee2a8317b79d297"
+          "content": "54cf9ee6e90ed99be9202d21e4c1205107d72744829bb123d9a10d0543b9a42f"
         }
       ],
       "properties": [
@@ -198,7 +198,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "b8006141c51da5f24262391779aecdbbbb962580bf6c78b12e79f2e79b66958d"
+          "content": "f3730c48885aff2731759738cf5edd51a29ec23fee6b6a10de7b47071a769f32"
         }
       ],
       "properties": [
@@ -216,7 +216,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "8245e9326b77fb8fd2b8741a4c19677b8e42d44f8537a4becd33c8bd0c5030e2"
+          "content": "de350023aa58cda9ee9e6bdbfbb9475afe4f9d8b2595385f40c73f5226553c88"
         }
       ],
       "properties": [
@@ -300,37 +300,37 @@
     },
     {
       "type": "file",
-      "bom-ref": "file:bin/fpga_ulx3s_12f_hdmi_doom.bit",
-      "name": "fpga_ulx3s_12f_hdmi_doom.bit",
+      "bom-ref": "file:bin/fpga_ulx3s_12f.bit",
+      "name": "fpga_ulx3s_12f.bit",
       "scope": "optional",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "624af4eecb823b66281fce84f851d2e88d9ed90f1df176fe640c970308898550"
+          "content": "da68d4c3049fb1ee2ded4a3da8ac81c9e5d7efc646b162075f0464b1dc094084"
         }
       ],
       "properties": [
         {
           "name": "hazard3-doom:bundle-location",
-          "value": "bin/fpga_ulx3s_12f_hdmi_doom.bit"
+          "value": "bin/fpga_ulx3s_12f.bit"
         }
       ]
     },
     {
       "type": "file",
-      "bom-ref": "file:bin/fpga_ulx3s_hdmi_doom.bit",
-      "name": "fpga_ulx3s_hdmi_doom.bit",
+      "bom-ref": "file:bin/fpga_ulx3s_85f.bit",
+      "name": "fpga_ulx3s_85f.bit",
       "scope": "optional",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "bff230edfccf43fbab7be1987cc0028893f4db92f67e4dd65b96fd4b3ecd1411"
+          "content": "9a7265336898e8aa52c627bb3ce84b46f65a56b420299d3f091237cb091bf125"
         }
       ],
       "properties": [
         {
           "name": "hazard3-doom:bundle-location",
-          "value": "bin/fpga_ulx3s_hdmi_doom.bit"
+          "value": "bin/fpga_ulx3s_85f.bit"
         }
       ]
     },
@@ -342,31 +342,13 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "4c279f3e0a960e88e33337647d2345fefd8ddabb041065bc5ff90c3286821547"
+          "content": "1e7be30f31f6aefc4c4c3aff67b6614b27221e627012404cd9863a7b531badb7"
         }
       ],
       "properties": [
         {
           "name": "hazard3-doom:bundle-location",
           "value": "bin/fpga_ulx4m_ld.bit"
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "bom-ref": "file:bin/fpga_ulx4m_ld_hdmi_doom.bit",
-      "name": "fpga_ulx4m_ld_hdmi_doom.bit",
-      "scope": "optional",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "294602982dfc4a9906961f2e8b6f43de925d8c11a7e5e6bb0f5e392965a868de"
-        }
-      ],
-      "properties": [
-        {
-          "name": "hazard3-doom:bundle-location",
-          "value": "bin/fpga_ulx4m_ld_hdmi_doom.bit"
         }
       ]
     },
@@ -552,91 +534,73 @@
     },
     {
       "type": "file",
-      "bom-ref": "file:bin/hazard3-doom-ulx3s-12F.h3d",
-      "name": "hazard3-doom-ulx3s-12F.h3d",
+      "bom-ref": "file:bin/hazard3-boot-monitor-ulx3s-12f.elf",
+      "name": "hazard3-boot-monitor-ulx3s-12f.elf",
       "scope": "optional",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "bd68939b3e57918d2e65a66ad04b58cd3b5fd5f1e86c3bee8166dea8ca68fb8a"
+          "content": "a4bcdf28a17d054255477ee771b8895fa684545c5db1e913d0f161c9bbbb630f"
         }
       ],
       "properties": [
         {
           "name": "hazard3-doom:bundle-location",
-          "value": "bin/hazard3-doom-ulx3s-12F.h3d"
+          "value": "bin/hazard3-boot-monitor-ulx3s-12f.elf"
         }
       ]
     },
     {
       "type": "file",
-      "bom-ref": "file:bin/hazard3-doom-ulx4m-ld.h3d",
-      "name": "hazard3-doom-ulx4m-ld.h3d",
+      "bom-ref": "file:bin/hazard3-doom-ulx3s-12F.h3img",
+      "name": "hazard3-doom-ulx3s-12F.h3img",
       "scope": "optional",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "61abd398cc7c1f1fe8c487f17b2adfa4d12f30096a3f16e8c083e1e9b52b5180"
+          "content": "e6f56e479ee47948ea5787034fadf37e54f0db640ca772733ad8e3d3cf56baa2"
         }
       ],
       "properties": [
         {
           "name": "hazard3-doom:bundle-location",
-          "value": "bin/hazard3-doom-ulx4m-ld.h3d"
+          "value": "bin/hazard3-doom-ulx3s-12F.h3img"
         }
       ]
     },
     {
       "type": "file",
-      "bom-ref": "file:bin/hazard3-doom.h3d",
-      "name": "hazard3-doom.h3d",
+      "bom-ref": "file:bin/hazard3-doom-ulx3s-85F.h3img",
+      "name": "hazard3-doom-ulx3s-85F.h3img",
       "scope": "optional",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "04f3b77056d776bf786c02d74de8833b5b51079098ee159d13018c935a0e6d8f"
+          "content": "d89a94f250619d6b6cc7c7d8eee4945479f832722d83f79d6ddd98e247567de8"
         }
       ],
       "properties": [
         {
           "name": "hazard3-doom:bundle-location",
-          "value": "bin/hazard3-doom.h3d"
+          "value": "bin/hazard3-doom-ulx3s-85F.h3img"
         }
       ]
     },
     {
       "type": "file",
-      "bom-ref": "file:bin/hazard3-test.elf",
-      "name": "hazard3-test.elf",
+      "bom-ref": "file:bin/hazard3-doom-ulx4m-ld.h3img",
+      "name": "hazard3-doom-ulx4m-ld.h3img",
       "scope": "optional",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "d2abab8d70b32ae5ef8d59179eee5fcc9747530896e2aa8653bd5db9b0e439d6"
+          "content": "b750a50829717871f71363eabe368cfc0b515640f17de8d73a61ad8f971c1707"
         }
       ],
       "properties": [
         {
           "name": "hazard3-doom:bundle-location",
-          "value": "bin/hazard3-test.elf"
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "bom-ref": "file:bin/hazard3-test.map",
-      "name": "hazard3-test.map",
-      "scope": "optional",
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "10706f95b12b79215d01d596aa1046bce7880d976c0c52b73731eac29657c531"
-        }
-      ],
-      "properties": [
-        {
-          "name": "hazard3-doom:bundle-location",
-          "value": "bin/hazard3-test.map"
+          "value": "bin/hazard3-doom-ulx4m-ld.h3img"
         }
       ]
     },
@@ -1108,15 +1072,13 @@
         "file:bin/INVENTORY.sha256",
         "file:bin/INVENTORY.tsv",
         "file:bin/README.md",
-        "file:bin/fpga_ulx3s_12f_hdmi_doom.bit",
-        "file:bin/fpga_ulx3s_hdmi_doom.bit",
+        "file:bin/fpga_ulx3s_12f.bit",
+        "file:bin/fpga_ulx3s_85f.bit",
         "file:bin/fpga_ulx4m_ld.bit",
-        "file:bin/fpga_ulx4m_ld_hdmi_doom.bit",
-        "file:bin/hazard3-doom-ulx3s-12F.h3d",
-        "file:bin/hazard3-doom-ulx4m-ld.h3d",
-        "file:bin/hazard3-doom.h3d",
-        "file:bin/hazard3-test.elf",
-        "file:bin/hazard3-test.map",
+        "file:bin/hazard3-boot-monitor-ulx3s-12f.elf",
+        "file:bin/hazard3-doom-ulx3s-12F.h3img",
+        "file:bin/hazard3-doom-ulx3s-85F.h3img",
+        "file:bin/hazard3-doom-ulx4m-ld.h3img",
         "fujprog",
         "had2019-bootloader",
         "hazard3",

@@ -54,4 +54,4 @@ Un démarrage autonome traverse donc :
 .. code-block:: text
 
    flash SPI -> configuration FPGA -> moniteur EBR -> init DRAM
-             -> lecture micro-SD/FAT -> DOOM.H3D + DOOM.WAD -> Hazard3
+             -> lecture micro-SD/FAT -> DOOM.IMG + DOOM.WAD -> Hazard3

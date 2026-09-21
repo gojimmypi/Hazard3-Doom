@@ -28,7 +28,7 @@ ULX3S cold boot: trying micro-SD...
 SD boot: initializing micro-SD...
 sd_initialized=YES type=SDHC/SDXC ocr=0xC0FF8000
 fat_type=FAT32 partition_lba=0x00002000 sectors_per_cluster=0x00000010
-SD boot: loading DOOM.H3D bytes=0x00090130
+SD boot: loading DOOM.h3img bytes=0x00090130
 
 H3L SD header
   load=0x20100000 bytes=0x000900F0 entry=0x20100000
@@ -58,7 +58,7 @@ Commands:
   l       receive a packaged Doom image over UART
   w       receive an IWAD into reserved SDRAM
   j       launch/restart the validated Doom image and IWAD
-  b       load DOOM.H3D + DOOM1.WAD from micro-SD and launch
+  b       load DOOM.h3img + DOOM1.WAD from micro-SD and launch
   c       micro-SD/FAT boot status
   f       rewrite/present the 320x200 RGB332 HDMI test frame
   z       reset heap; invalidates every heap pointer
@@ -150,7 +150,7 @@ SD FAT root (8.3):
   NEWTEX~1.TXT  bytes=0x00000000
   ULX3S-~1.CON  bytes=0x00000080
   DOOM.WAD  bytes=0x004006B4
-  DOOM.H3D  bytes=0x00090130
+  DOOM.h3img  bytes=0x00090130
 root_entries=0x00000011
 sd_h3d_bytes=0x00090130 sd_wad_bytes=0x004006B4 wad=DOOM.WAD
 >

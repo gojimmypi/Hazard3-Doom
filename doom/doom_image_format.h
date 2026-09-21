@@ -24,7 +24,7 @@
 
 #include "hazard3_memory_map.h"
 
-#define HAZARD3_DOOM_IMAGE_MAGIC          0x31443348u /* "H3D1" */
+#define HAZARD3_DOOM_IMAGE_MAGIC          0x31493348u /* little-endian "H3I1" */
 #define HAZARD3_DOOM_IMAGE_FORMAT_VERSION 1u
 #define HAZARD3_DOOM_IMAGE_HEADER_BYTES   64u
 #define HAZARD3_DOOM_IMAGE_FLAG_CRC32     (1u << 0)

@@ -73,7 +73,7 @@ A standalone Doom boot therefore crosses several hardware boundaries:
        -> resident monitor in EBR
        -> external DRAM initialization
        -> micro-SD/FAT file reads
-       -> DOOM.H3D + DOOM.WAD in external memory
+       -> DOOM.IMG + DOOM.WAD in external memory
        -> execution on Hazard3
 
 Keeping those roles separate makes boot failures much easier to diagnose.

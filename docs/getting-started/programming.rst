@@ -37,7 +37,7 @@ The intended standalone sequence is:
 #. Block RAM is initialized with the resident Hazard3 monitor image.
 #. Hazard3 starts without a host PC.
 #. The monitor initializes SDRAM and the micro-SD interface.
-#. ``DOOM.H3D`` and ``DOOM.WAD`` are read from the SD card.
+#. ``DOOM.IMG`` and ``DOOM.WAD`` are read from the SD card.
 #. Doom is launched on HDMI.
 
 ULX4M-LD temporary FPGA load
@@ -75,9 +75,14 @@ connection is separate from the external Tigard JTAG/UART debug adapter.
 To enter the established DFU recovery/programming mode:
 
 #. Remove power.
-#. Hold the board recovery button used by your ULX4M revision.
+#. Hold PCB ``BTN3`` (some board versions may use other buttons!).
 #. Connect the ULX4M Micro-B USB cable.
-#. Release the button after the DFU device enumerates.
+#. Wait for VID:PID ``1d50:614b`` to enumerate, then release ``BTN3``.
+
+``BTN3`` is required only to select DFU at startup; it does not need to remain
+held during the transfer. When invoking the bundled Windows executables directly
+from WSL, use ``chmod +x ./bin/openFPGALoader.exe ./bin/dfu-util.exe`` if Bash
+reports ``Permission denied``.
 
 The working programming command is:
 

@@ -11,7 +11,7 @@ ULX3S 85F, 64 Mio, 50 MHz :
 
 .. code-block:: bash
 
-   ./scripts/build-ulx3s-doom.sh
+   ./scripts/build-ulx3s-85f-doom.sh
 
 Cible compacte ULX3S 12F, 32 Mio par défaut, 40 MHz :
 
@@ -25,6 +25,20 @@ ULX4M-LD 85F, cartographie logicielle 64 Mio, Hazard3 à 40 MHz et LiteDRAM à
 .. code-block:: bash
 
    ./scripts/build-ulx4m-ld-doom.sh
+
+Les wrappers complets conservent les artifacts propres à chaque cible dans des
+répertoires propres à la carte. En particulier, les images Doom à téléverser
+sont :
+
+.. code-block:: text
+
+   build/ulx3s-85f/doom-image/hazard3-doom.h3img
+   build/ulx3s-12f/doom-image/hazard3-doom.h3img
+   build/ulx4m-ld/doom-image/hazard3-doom.h3img
+
+La commande autonome ``doom/build-doom-image.sh`` documentée plus loin sur cette
+page continue d'utiliser le répertoire générique ``build/doom-image/`` sauf si
+``HAZARD3_DOOM_BUILD_DIR`` est défini.
 
 Le build utilise les paramètres ULX4M-LD communs définis dans
 ``scripts/build-ecp5-bitstream-common.sh`` et résumés dans
@@ -46,12 +60,20 @@ moniteur et l'image Doom cohérents :
    HAZARD3_MEMORY_PROFILE=64m ./scripts/build-ulx3s-12f-doom.sh
 
 La cible compacte 12F prend volontairement en charge uniquement le chemin
-Doom/vidéo 320x200. Après programmation du bitstream 12F et démarrage d'OpenOCD,
-chargez son moniteur résident en SDRAM avec :
+Doom/vidéo 320x200. Son EBR de 1 Kio ne peut pas contenir le moniteur complet ;
+le build complet génère donc un petit bootstrap UART résident et l'intègre dans
+``fpga_ulx3s_12f.bit``. Au démarrage à froid, ce bootstrap initialise la console
+à 115200 bauds et indique que le moniteur complet réside en SDRAM. Après avoir
+programmé le bitstream 12F, exécutez :
 
 .. code-block:: bash
 
    ./scripts/load-firmware-12f.sh
+
+L'outil réutilise un serveur OpenOCD déjà à l'écoute sur ``localhost:3333`` ou
+lance automatiquement ``scripts/start-openocd.sh``, attend le serveur GDB,
+charge et vérifie ``build/ulx3s-12f/monitor/hazard3-boot-monitor.elf``, puis
+arrête uniquement le processus OpenOCD qu'il a lui-même lancé.
 
 Moniteur résident uniquement
 ----------------------------
@@ -74,6 +96,26 @@ Les wrappers complets des cartes règlent pour vous le profil mémoire, l'horlog
 système et le script de linker propres à la cible. Pour les builds manuels, les
 principaux contrôles sont ``HAZARD3_MEMORY_PROFILE``, ``HAZARD3_SYS_CLK_HZ`` et
 ``HAZARD3_MONITOR_LINKER_SCRIPT``.
+
+Pour une mise à jour logicielle seule du moniteur ULX4M-LD sur un FPGA déjà
+configuré à 40 MHz, conservez la sortie séparée du preload résident :
+
+.. code-block:: bash
+
+   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-monitor-test/monitor" \
+   HAZARD3_MEMORY_PROFILE=64m \
+   HAZARD3_SYS_CLK_HZ=40000000 \
+       ./scripts/build.sh
+
+Chargez-la dans une session OpenOCD déjà active avec :
+
+.. code-block:: bash
+
+   ./scripts/load-firmware.sh \
+       ./build/ulx4m-ld-monitor-test/monitor/hazard3-boot-monitor.elf
+
+Cette opération met à jour uniquement le logiciel processeur dans le FPGA en
+cours d'exécution et ne reroute pas le bitstream connu comme bon.
 
 Image Doom liée uniquement
 --------------------------
@@ -99,7 +141,7 @@ Sorties typiques :
    build/doom-image/hazard3-doom.elf
    build/doom-image/hazard3-doom.map
    build/doom-image/hazard3-doom.bin
-   build/doom-image/hazard3-doom.h3d
+   build/doom-image/hazard3-doom.h3img
 
 Tester un autre checkout Hazard3
 --------------------------------
@@ -110,7 +152,7 @@ Hazard3-Doom épinglé :
 .. code-block:: bash
 
    HAZARD3_ROOT=/mnt/c/workspace/Hazard3 \
-       ./scripts/build-ulx3s-doom.sh
+       ./scripts/build-ulx3s-85f-doom.sh
 
 Préparation et vérification des sous-modules
 --------------------------------------------

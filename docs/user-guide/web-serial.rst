@@ -4,7 +4,7 @@ Web Serial Console and HDMI Screen Snip
 Hazard3-Doom includes a dependency-free browser console in the ``web/``
 directory. It uses the browser Web Serial API to talk directly to the board's
 UART and can also request a screen snip from supported HDMI applications.
-For the complete browser device-tool workflow, including H3D/IWAD upload and
+For the complete browser device-tool workflow, including H3IMG/IWAD upload and
 console firmware loading, see :doc:`web-tool`.
 
 The same web application also contains a separate WebUSB FPGA programmer for
@@ -87,11 +87,11 @@ The lock is scoped to a browser origin. For example,
 same Web Lock even when they are open in the same browser. A competing PuTTY
 session, another application, or a Device Tool from a different origin also
 cannot be identified by name. In those cases a failed ``SerialPort.open()`` is
-reported as a likely port-ownership conflict and the H3D/IWAD panels provide a
+reported as a likely port-ownership conflict and the H3IMG/IWAD panels provide a
 **Retry UART** path.
 
 While the browser serial chooser or ``open()`` operation is pending, the page
-shows a **Connecting UART** state. Both the H3D and IWAD uploader sections also
+shows a **Connecting UART** state. Both the H3IMG and IWAD uploader sections also
 show a prominent UART prerequisite and their own **Connect UART** control when
 no serial connection is active.
 
@@ -119,7 +119,7 @@ The current resident monitor can also be a screen-snip provider. After a
 successful monitor test-pattern presentation it stores a validated cached copy
 of that RGB332 frame in reserved SDRAM and can serialize that cache on request.
 Doom and the I2CDriver HDMI GUI provide their own active-screen implementations.
-A loaded-but-not-running ``.h3d`` image does not provide capability merely by
+A loaded-but-not-running ``.h3img`` image does not provide capability merely by
 being present in SDRAM.
 
 Capability detection

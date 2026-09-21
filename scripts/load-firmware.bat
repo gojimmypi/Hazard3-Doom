@@ -44,11 +44,20 @@ if not exist "%GDB%" (
 
 if not exist "%ELF%" (
     >&2 echo Missing firmware ELF: %ELF%
-    >&2 echo Expected the firmware at: %ROOT_DIR%\build\hazard3-boot-monitor.elf or specify the prebuilt image in ./bin/ directory.
+    >&2 echo Build the monitor first, or pass a board-specific ELF such as build\ulx3s-85f\monitor\hazard3-boot-monitor.elf.
     exit /b 1
 )
 
 rem OpenOCD must already be listening on localhost port 3333.
+rem Inspect the listener table without connecting; a TCP connect probe is visible
+rem to OpenOCD as a malformed GDB connection.
+powershell.exe -NoProfile -Command "if (Get-NetTCPConnection -LocalPort 3333 -State Listen -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }" >nul 2>&1
+if errorlevel 1 (
+    >&2 echo ERROR: OpenOCD GDB server is not listening on localhost:3333.
+    >&2 echo Run scripts\start-openocd.bat first, then run this script again.
+    exit /b 1
+)
+
 echo.
 echo Running RISC-V GDB...
 echo GDB: "%GDB%"

@@ -7,6 +7,16 @@ Hazard3 émet des transactions normales d'instructions et de données ; le SoC
 environnant décode ces fenêtres d'adresses physiques. Voir
 :doc:`hazard3/memory-and-bus` pour la frontière CPU/bus.
 
+
+Espace des peripheriques APB
+----------------------------
+
+Les adresses CPU commencant a ``0x40000000`` passent par le pont SoC
+AHB-vers-APB. L'integration actuelle fournit les esclaves APB timer, UART, GPIO,
+SAO, SPI micro-SD et HDMI/video. Voir :doc:`../reference/apb-peripherals` pour
+les fenetres du decodeur, la carte complete des registres, les definitions de
+bits et les exemples C autonomes.
+
 SRAM interne
 ------------
 

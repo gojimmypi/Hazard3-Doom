@@ -5,7 +5,7 @@ Hazard3-Doom uključuje pregledničku konzolu bez dodatnih ovisnosti u direktori
 ``web/``. Koristi preglednički Web Serial API za izravnu komunikaciju s UART-om
 pločice i može zatražiti i snimku zaslona od podržanih HDMI aplikacija.
 
-Za potpuni tijek web alata, uključujući H3D/IWAD prijenos i učitavanje
+Za potpuni tijek web alata, uključujući H3IMG/IWAD prijenos i učitavanje
 firmwarea konzole, pogledajte :doc:`web-tool`.
 
 Ista web-aplikacija sadrži i zaseban WebUSB FPGA programator za ULX3S ``US1``
@@ -74,11 +74,11 @@ in use** umjesto tihog neuspjeha nakon browser pickera.
 Lock vrijedi samo unutar iste origine. Zato ``http://127.0.0.1:8000`` i
 ``https://ulx3s.github.io`` ne dijele isti Web Lock. PuTTY, druga aplikacija
 ili stranica druge origine ne mogu se imenovati; neuspjeli ``SerialPort.open()``
-tada se prikazuje kao vjerojatan konflikt vlasništva, a H3D/IWAD paneli nude
+tada se prikazuje kao vjerojatan konflikt vlasništva, a H3IMG/IWAD paneli nude
 **Retry UART**.
 
 Dok traje picker ili otvaranje porta, stranica prikazuje **Connecting UART**.
-H3D i IWAD odjeljci također jasno prikazuju UART preduvjet i vlastiti **Connect
+H3IMG i IWAD odjeljci također jasno prikazuju UART preduvjet i vlastiti **Connect
 UART** kada veza nije aktivna.
 
 Gumbi i kratke transport/status oznake koriste kontekstualni hover tekst. Za
@@ -104,7 +104,7 @@ Trenutačni rezidentni monitor također može biti pružatelj snimke zaslona. Na
 uspješnog prikaza monitorskog testnog uzorka sprema provjerenu predmemoriranu
 kopiju tog RGB332 okvira u rezervirani SDRAM i na zahtjev može serijalizirati tu
 predmemoriju. Doom i I2CDriver HDMI GUI imaju vlastite implementacije aktivnog
-zaslona. Učitana, ali nepokrenuta ``.h3d`` slika ne pruža sposobnost samo zato
+zaslona. Učitana, ali nepokrenuta ``.h3img`` slika ne pruža sposobnost samo zato
 što je prisutna u SDRAM-u.
 
 Otkrivanje sposobnosti

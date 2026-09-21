@@ -18,7 +18,7 @@ that all exact binary versions have been identified.
 | `libftdi1.dll` | libftdi1 main library / LGPL-2.1-only | Exact DLL version, SHA-256, `LICENSE`/`COPYING.LIB`, and source required |
 | `libusb-1.0.dll` | libusb / LGPL-2.1-or-later | Exact DLL version, SHA-256, `COPYING`, and source required |
 | `gdb/` | GNU GDB package plus runtime dependencies | Multi-file audit required; preserve exact package license tree/source |
-| project `.bit`, `.elf`, `.h3d`, `.map` outputs | Generated from Hazard3-Doom + Hazard3 + DoomGeneric/toolchain inputs | Record exact source commits/build config and satisfy licenses of incorporated code |
+| project `.bit`, `.elf`, `.h3img`, `.map` outputs | Generated from Hazard3-Doom + Hazard3 + DoomGeneric/toolchain inputs | Record exact source commits/build config and satisfy licenses of incorporated code |
 
 ## Locally installed tools not redistributed
 

@@ -41,7 +41,7 @@ build_mode()
 
     printf '\n=== Doom A/B build: %s ===\n' "${resolution}"
     printf 'Memory profile: %s\n' "${MEMORY_PROFILE}"
-    printf 'Output:         %s\n\n' "${build_dir}/hazard3-doom.h3d"
+    printf 'Output:         %s\n\n' "${build_dir}/hazard3-doom.h3img"
 
     HAZARD3_DOOM_BUILD_DIR="${build_dir}" \
     HAZARD3_MEMORY_PROFILE="${MEMORY_PROFILE}" \
@@ -60,7 +60,7 @@ fi
 
 printf '\nA/B images ready:\n'
 for resolution in 320x200 400x240; do
-    image="${ROOT_DIR}/build/doom-ab/${resolution}/hazard3-doom.h3d"
+    image="${ROOT_DIR}/build/doom-ab/${resolution}/hazard3-doom.h3img"
     if [[ -f "${image}" ]]; then
         if command -v sha256sum >/dev/null 2>&1; then
             sha256sum "${image}"

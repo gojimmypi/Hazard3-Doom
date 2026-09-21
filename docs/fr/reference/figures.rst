@@ -28,7 +28,7 @@ Outils WebUSB et pilotes USB
 * :ref:`Fichiers ULX3S précompilés publiés <fig-no-install-bin-prebuilt-files>`
 * :ref:`Artefacts ULX3S de GitHub Actions <fig-no-install-actions-artifacts>`
 * :ref:`Programmation FPGA ULX3S sans installation <fig-no-install-web-flasher>`
-* :ref:`Upload H3D ULX3S sans installation <fig-no-install-h3d-upload>`
+* :ref:`Upload H3IMG ULX3S sans installation <fig-no-install-h3img-upload>`
 * :ref:`Upload IWAD ULX3S sans installation <fig-no-install-iwad-upload>`
 * :ref:`Lancement de Doom ULX3S sans installation <fig-no-install-doom-running>`
 * :ref:`Programmateur FPGA Hazard3-Doom via WebUSB <fig-webusb-flasher>`

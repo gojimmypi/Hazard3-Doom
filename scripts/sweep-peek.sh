@@ -33,9 +33,9 @@ SYNTH_DIR="${HAZARD3_ROOT}/example_soc/synth"
 BUILD_DIR="${REPO_ROOT}/build"
 SWEEP_JOBS="${SWEEP_JOBS:-4}"
 HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
-NETLIST="${BUILD_DIR}/fpga_ulx3s.json"
-SYNTH_LOG="${BUILD_DIR}/fpga_ulx3s.synth.log"
-SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s.video-profile"
+NETLIST="${BUILD_DIR}/fpga_ulx3s_85f.json"
+SYNTH_LOG="${BUILD_DIR}/fpga_ulx3s_85f.synth.log"
+SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.video-profile"
 
 usage()
 {
@@ -146,7 +146,7 @@ printf 'HDMI video profile: %s (extended modes=%s)\n' \
 # Always ask make to ensure the synthesized netlist is current. This is a no-op
 # when the selected profile and source dependencies are already up to date.
 if make -C "${SYNTH_DIR}" -f ULX3S.mk \
-    CHIPNAME="${BUILD_DIR}/fpga_ulx3s" \
+    CHIPNAME="${BUILD_DIR}/fpga_ulx3s_85f" \
     HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES}" synth; then
     synth_status=0
 else
@@ -173,9 +173,9 @@ if [[ -n "${netlist_sha256_before}" &&
       "${netlist_sha256_before}" != "${netlist_sha256}" ]]; then
     printf 'Synthesized netlist changed; invalidating routed FPGA artifacts.\n'
     rm -f \
-        "${BUILD_DIR}/fpga_ulx3s.config" \
-        "${BUILD_DIR}/fpga_ulx3s.bit" \
-        "${BUILD_DIR}/fpga_ulx3s.svf"
+        "${BUILD_DIR}/fpga_ulx3s_85f.config" \
+        "${BUILD_DIR}/fpga_ulx3s_85f.bit" \
+        "${BUILD_DIR}/fpga_ulx3s_85f.svf"
 fi
 
 mkdir -p "${SWEEP_DIR}"
@@ -184,7 +184,7 @@ mkdir -p "${SWEEP_DIR}"
     printf 'video_profile=%s\n' "${VIDEO_PROFILE}"
     printf 'hazard3_hdmi_extended_modes=%s\n' "${HAZARD3_HDMI_EXTENDED_MODES}"
     printf 'netlist_sha256=%s\n' "${netlist_sha256}"
-    printf 'netlist=fpga_ulx3s.json\n'
+    printf 'netlist=fpga_ulx3s_85f.json\n'
     printf 'generated_utc=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 } > "${SWEEP_DIR}/metadata.txt"
 

@@ -34,7 +34,7 @@
 
 static uint32_t memory_wad_position;
 static int memory_wad_is_open;
-static uint32_t h3div_wad_read_trace_count;
+static uint32_t h3imgiv_wad_read_trace_count;
 
 static int path_matches_wad(const char* path)
 {
@@ -217,7 +217,7 @@ ssize_t _read(int file, void* buffer, size_t byte_count)
         if (copy_count > (size_t)remaining) {
             copy_count = (size_t)remaining;
         }
-        trace = h3div_wad_read_trace_count++ == 0u && copy_count >= 4u;
+        trace = h3imgiv_wad_read_trace_count++ == 0u && copy_count >= 4u;
         if (trace) {
             const uint8_t* source =
                 (const uint8_t*)(uintptr_t)source_address;
@@ -236,7 +236,7 @@ ssize_t _read(int file, void* buffer, size_t byte_count)
                 ((uint32_t)destination[1] << 8) |
                 ((uint32_t)destination[2] << 16) |
                 ((uint32_t)destination[3] << 24);
-            hazard3_console_puts("H3DIV _read source=");
+            hazard3_console_puts("H3IMGIV _read source=");
             hazard3_console_put_hex32(source_address);
             hazard3_console_puts(" word=");
             hazard3_console_put_hex32(source_word);

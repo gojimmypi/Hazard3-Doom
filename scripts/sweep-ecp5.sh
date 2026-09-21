@@ -118,7 +118,7 @@ case "$1" in
     target="$(canonical_target "$2")"
     case "${target}" in
     ulx3s-85f)
-        printf 'build/fpga_ulx3s.json\n'
+        printf 'build/fpga_ulx3s_85f.json\n'
         ;;
     ulx3s-12f)
         printf 'build/fpga_ulx3s_12f.json\n'

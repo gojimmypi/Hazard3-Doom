@@ -102,7 +102,7 @@ static void print_wad_header(const hazard3_monitor_services_t* services)
         ((uint32_t)header[2] << 16) |
         ((uint32_t)header[3] << 24);
 
-    hazard3_console_puts("  H3DIV direct IWAD header=");
+    hazard3_console_puts("  H3IMGIV direct IWAD header=");
     hazard3_console_put_hex32(header_word);
     hazard3_console_puts("\r\n");
 }

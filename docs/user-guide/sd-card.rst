@@ -10,7 +10,7 @@ Place these files in the root directory of a FAT-formatted micro-SD card:
 
 .. code-block:: text
 
-   DOOM.H3D
+   DOOM.IMG
    DOOM.WAD
 
 ``DOOM.WAD`` is the canonical IWAD filename used by the current cold-boot flow.
@@ -48,7 +48,7 @@ Cold-boot sequence
 #. Hazard3 begins at its reset/monitor entry point.
 #. SDRAM is initialized.
 #. The monitor initializes the SD card and mounts FAT.
-#. ``DOOM.H3D`` is loaded into SDRAM and validated.
+#. ``DOOM.IMG`` is loaded into SDRAM and validated.
 #. ``DOOM.WAD`` is located and loaded into its reserved region.
 #. The monitor launches Doom.
 

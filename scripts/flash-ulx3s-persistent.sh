@@ -26,7 +26,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 HAZARD3_ROOT="${HAZARD3_ROOT:-${ROOT_DIR}/third_party/Hazard3}"
-BITSTREAM="${ROOT_DIR}/build/fpga_ulx3s.bit"
+BITSTREAM="${ROOT_DIR}/build/fpga_ulx3s_85f.bit"
 
 command -v ujprog >/dev/null 2>&1 || {
     echo "Missing required tool: ujprog" >&2
@@ -35,7 +35,7 @@ command -v ujprog >/dev/null 2>&1 || {
 
 [[ -s "${BITSTREAM}" ]] || {
     echo "Missing bitstream: ${BITSTREAM}" >&2
-    echo "Run ./scripts/build-ulx3s-doom.sh first." >&2
+    echo "Run ./scripts/build-ulx3s-85f-doom.sh first." >&2
     exit 1
 }
 

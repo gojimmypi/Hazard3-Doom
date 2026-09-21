@@ -10,12 +10,12 @@ Normal board builds
 -------------------
 
 For a normal build, prefer the complete board wrapper for the target. These
-wrappers keep the FPGA design, resident monitor, Doom image, clock, and memory
-profile aligned:
+wrappers keep the FPGA design, monitor, Doom image, clock, and memory profile
+aligned:
 
 .. code-block:: bash
 
-   ./scripts/build-ulx3s-doom.sh
+   ./scripts/build-ulx3s-85f-doom.sh
    ./scripts/build-ulx3s-12f-doom.sh
    ./scripts/build-ulx4m-ld-doom.sh
 

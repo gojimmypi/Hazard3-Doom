@@ -6,6 +6,16 @@ RISC-V ISA-i ili fiksnoj memorijskoj mapi procesora Hazard3. Hazard3 izdaje
 obične instrukcijske/podatkovne transakcije; okolni SoC dekodira ove fizičke
 adresne prozore. Pogledajte :doc:`hazard3/memory-and-bus` za granicu CPU/sabirnica.
 
+
+APB prostor perifernih uredjaja
+-------------------------------
+
+CPU adrese koje pocinju s ``0x40000000`` prolaze kroz SoC AHB-na-APB most.
+Trenutna integracija sadrzi APB periferije za timer, UART, GPIO, SAO,
+micro-SD SPI i HDMI/video. Pogledajte :doc:`../reference/apb-peripherals` za
+prozore dekodera, potpunu mapu registara, definicije bitova i samostalne C
+primjere.
+
 Interni SRAM
 ------------
 

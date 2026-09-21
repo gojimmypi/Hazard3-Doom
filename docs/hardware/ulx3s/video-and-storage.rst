@@ -16,11 +16,44 @@ See :doc:`../../architecture/video` for the framebuffer/palette architecture and
 :doc:`../../user-guide/web-serial` for Screen Snip, which captures the indexed
 source over UART rather than sampling the physical TMDS signal.
 
+HDMI displays and example enclosure
+-----------------------------------
+
+The GPDI output can be used with an HDMI display through the appropriate
+GPDI-to-HDMI connection. The Hazard3-Doom video path is not tied to a specific
+monitor: the Elecrow seven-inch display is one convenient hardware example, but
+other HDMI displays can be used as well.
+
+A 3D-printable enclosure is available for a compact ULX3S demonstration system
+built around the Elecrow seven-inch 1024x600 IPS HDMI display. It mounts the
+ULX3S and display together while retaining access to board controls, status
+LEDs, GPIO/JTAG headers, display controls, and cable routing. The enclosure also
+includes options for a stand, development feet, an OLED frame, and a small
+internal fan.
+
+The enclosure is mechanically designed for that Elecrow panel; it is not a
+requirement for Hazard3-Doom and does not limit the FPGA video output to that
+display. For design files, printing notes, assembly details, and compatibility
+notes, see:
+
+* `ULX3S Elecrow 7 inch HDMI Display Enclosure
+  <https://github.com/gojimmypi/ulx3s-elecrow-7inch-hdmi-enclosure>`_
+* `Crowd Supply: New Enclosure & Upcoming Campaign News
+  <https://www.crowdsupply.com/radiona/ulx3s/updates/new-enclosure-and-upcoming-campaign-news>`_
+
+.. warning::
+
+   The enclosure documentation includes connection-specific cautions. In
+   particular, do not use the enclosure's external HDMI input at the same time
+   as the internally connected ULX3S video path, and do not connect the
+   display's USB touch and USB power inputs simultaneously. Review the enclosure
+   repository before assembly.
+
 micro-SD storage
 ----------------
 
 The micro-SD socket gives ULX3S a removable nonvolatile storage path. In
-Hazard3-Doom it supports the standalone cold-boot flow for ``DOOM.H3D`` and
+Hazard3-Doom it supports the standalone cold-boot flow for ``DOOM.IMG`` and
 ``DOOM.WAD``.
 
 The SD card has a different job from both FPGA SPI flash and SDRAM:
@@ -38,7 +71,7 @@ A standalone ULX3S Doom boot therefore crosses several layers:
        -> resident monitor in EBR
        -> SDRAM initialization
        -> micro-SD/FAT file reads
-       -> DOOM.H3D + DOOM.WAD
+       -> DOOM.IMG + DOOM.WAD
        -> execution from the Hazard3 memory map
 
 Shared SD ownership with ESP32

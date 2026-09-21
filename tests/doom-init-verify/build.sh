@@ -64,7 +64,7 @@ HAZARD3_DOOM_PREPARED_SOURCE="${PREPARED_DIR}" \
 HAZARD3_DOOM_BUILD_DIR="${DOOM_BUILD_DIR}" \
     "${ROOT_DIR}/doom/build-doom-image.sh"
 
-printf '\nDiagnostic H3D: %s\n' \
-    "${DOOM_BUILD_DIR}/hazard3-doom.h3d"
+printf '\nDiagnostic Hazard3 image: %s\n' \
+    "${DOOM_BUILD_DIR}/hazard3-doom.h3img"
 printf 'Matching monitor: %s\n' \
     "${MONITOR_BUILD_DIR}/hazard3-boot-monitor.elf"

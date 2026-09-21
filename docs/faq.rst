@@ -17,31 +17,30 @@ If the display sat powered without an active HDMI signal for some time, it may n
 signal. Try removing power and waiting a few seconds before trying again. The behavior was observed with the
 Elecrow 7" HDMI screen.
 
-"monitor" command not supported by this target.
------------------------------------------------
+OpenOCD is not listening on ``localhost:3333``
+------------------------------------------------
 
-See next section: You can't do that when your target is ``exec``
+The current ``scripts/load-firmware.sh`` checks port 3333 before launching GDB.
+If OpenOCD is not running, it stops with a direct error instead of allowing GDB
+to fall back to its local ``exec`` target. Older loader versions could print
+``monitor command not supported`` or ``target is exec`` and then show local ELF
+sections as ``matched``; those comparisons did **not** verify FPGA memory.
 
-You can't do that when your target is ``exec``
-----------------------------------------------
+For ULX3S 12F, use the convenience loader after programming the bitstream:
 
-If you see an error similar to this when loading Console Monitor firmware with gdb,
-make sure OpenOCD is running and listening on the expected port (default: 3333)
+.. code-block:: bash
 
-$ ./scripts/load-firmware-12f.sh
-Calling /mnt/c/workspace/Hazard3-Doom/scripts/load-firmware.sh \
--rwxr-xr-x 1 gojimmypi gojimmypi 316036 Aug 25 12:10 hazard3-boot-monitor.elf
-localhost:3333: Connection timed out.
-"monitor" command not supported by this target.
-You can't do that when your target is ``exec``
-Section .vectors, range 0x20000040 -- 0x20000076: matched.
-Section .text, range 0x20000078 -- 0x2000bacb: matched.
-Section .srodata.bar_colors.1, range 0x2000bacc -- 0x2000bad4: matched.
-Section .data, range 0x2000bad4 -- 0x2000badc: matched.
-No registers.
+   ./scripts/load-firmware-12f.sh
 
-You can't do that when your target is ``exec``
+It reuses OpenOCD on port 3333 or starts the project OpenOCD launcher
+automatically, waits for the GDB server, and then loads the board-specific SDRAM
+monitor.
 
+On Windows/WSL, if OpenOCD reports ``LIBUSB_ERROR_NOT_SUPPORTED`` and cannot
+find ``0403:6015``, the ULX3S FT231X is usually still bound to the native FTDI
+FTDIBUS/D2XX driver. Use Zadig to bind WinUSB or libusbK for OpenOCD. Windows
+``fujprog`` uses the native FTDI driver, so switching between ``fujprog`` and
+OpenOCD may require changing that binding.
 
 Web Serial reports no compatible devices, but Windows sees my COM port. What should I try first?
 --------------------------------------------------------------------------------------------------

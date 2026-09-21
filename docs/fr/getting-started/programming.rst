@@ -33,7 +33,7 @@ La séquence autonome prévue est :
 #. La Block RAM est initialisée avec l'image du moniteur résident Hazard3.
 #. Hazard3 démarre sans PC hôte.
 #. Le moniteur initialise la SDRAM et l'interface micro-SD.
-#. ``DOOM.H3D`` et ``DOOM.WAD`` sont lus depuis la carte SD.
+#. ``DOOM.IMG`` et ``DOOM.WAD`` sont lus depuis la carte SD.
 #. Doom est lancé sur HDMI.
 
 ULX4M-LD : chargement FPGA temporaire
@@ -59,6 +59,18 @@ ULX4M-LD : programmation DFU persistante
 Le bootloader DFU Micro-B de l'ULX4M-LD écrit le bitstream utilisateur persistant
 dans la flash SPI. Cette image est conservée après une coupure d'alimentation et
 est distincte du bootloader DFU lui-même.
+
+Pour entrer en DFU normal, coupez l'alimentation, maintenez le bouton PCB
+``BTN3`` pendant la connexion du câble Micro-B, attendez l'énumération de
+``1d50:614b``, puis relâchez ``BTN3``. Il n'est pas nécessaire de maintenir le
+bouton pendant la programmation. Sous WSL, si Bash signale ``Permission denied``
+pour les exécutables Windows fournis, utilisez :
+
+.. code-block:: bash
+
+   chmod +x ./bin/openFPGALoader.exe ./bin/dfu-util.exe
+
+Puis programmez alt 0 :
 
 .. code-block:: bash
 

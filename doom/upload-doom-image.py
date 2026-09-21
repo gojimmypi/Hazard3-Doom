@@ -4,7 +4,7 @@
 # Path:        doom/upload-doom-image.py
 #
 # Project:     Hazard3-Doom
-# Purpose:     Upload a Hazard3-Doom H3D executable image over the monitor serial
+# Purpose:     Upload a Hazard3-Doom H3IMG executable image over the monitor serial
 #              protocol.
 #
 # Copyright (c) 2026 gojimmypi
@@ -23,9 +23,15 @@ import pathlib
 import struct
 import sys
 import time
+import zlib
 
-IMAGE_MAGIC = 0x31443348
+IMAGE_MAGIC_BYTES = b"H3I1"
+IMAGE_MAGIC = int.from_bytes(IMAGE_MAGIC_BYTES, "little")
 HEADER_BYTES = 64
+FORMAT_VERSION = 1
+FLAG_CRC32 = 1
+IMAGE_BASE = 0x20100000
+IMAGE_LIMIT = 0x20400000
 READY_MARKER = b"H3L READY\r\n"
 DATA_MARKER = b"H3L DATA\r\n"
 OK_MARKER = b"H3L OK"
@@ -48,26 +54,52 @@ def read_until_any(port, markers: tuple[bytes, ...], timeout_seconds: float) -> 
         else: time.sleep(0.01)
     raise TimeoutError("timed out waiting for loader response")
 
+def range_is_valid(address: int, byte_count: int) -> bool:
+    if address < IMAGE_BASE or address > IMAGE_LIMIT:
+        return False
+    return byte_count <= IMAGE_LIMIT - address
+
 def validate_package(package: bytes) -> tuple[int, int]:
     if len(package) < HEADER_BYTES: raise RuntimeError("package shorter than header")
     words = struct.unpack("<16I", package[:HEADER_BYTES])
     if words[0] != IMAGE_MAGIC: raise RuntimeError("bad package magic")
     if words[1] != HEADER_BYTES: raise RuntimeError("unsupported header size")
+    if words[2] != FORMAT_VERSION: raise RuntimeError("unsupported format version")
+    if words[3] != FLAG_CRC32: raise RuntimeError("unsupported package flags")
+    if words[4] != IMAGE_BASE: raise RuntimeError("unexpected load address")
+    if words[5] == 0: raise RuntimeError("payload size must be nonzero")
+    if not range_is_valid(words[4], words[5]): raise RuntimeError("payload range outside image reservation")
+    if not range_is_valid(words[7], words[8]): raise RuntimeError("BSS range outside image reservation")
+    load_end = words[4] + words[5]
+    bss_end = words[7] + words[8]
+    if words[6] < words[4] or words[6] >= load_end: raise RuntimeError("entry address outside payload")
+    if words[7] < load_end: raise RuntimeError("BSS overlaps payload")
+    if words[7] & 3: raise RuntimeError("BSS address is not 4-byte aligned")
+    if bss_end > IMAGE_LIMIT: raise RuntimeError("BSS end outside image reservation")
+    if any(words[10:]): raise RuntimeError("reserved header words must be zero")
     if len(package) != HEADER_BYTES + words[5]: raise RuntimeError("package length mismatch")
+    payload = package[HEADER_BYTES:]
+    actual_crc = zlib.crc32(payload) & 0xffffffff
+    if actual_crc != words[9]: raise RuntimeError("payload CRC32 mismatch")
     return words[5], words[9]
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("image", type=pathlib.Path)
-    parser.add_argument("--port", required=True)
+    parser.add_argument("--port")
     parser.add_argument("--baud", type=int, default=115200)
     parser.add_argument("--chunk-size", type=int, default=4096)
     parser.add_argument("--launch", action="store_true")
     parser.add_argument("--launch-read-seconds", type=float, default=15.0)
+    parser.add_argument("--validate-only", action="store_true")
     args = parser.parse_args()
     if args.chunk_size <= 0: raise RuntimeError("chunk size must be positive")
     package = args.image.read_bytes()
     image_bytes, crc = validate_package(package)
+    if args.validate_only:
+        print(f"Validated {args.image}: payload={image_bytes} bytes, CRC32=0x{crc:08x}")
+        return 0
+    if args.port is None: parser.error("--port is required unless --validate-only is used")
     serial = import_serial()
     print(f"Opening {args.port} at {args.baud}; payload={image_bytes}, CRC32=0x{crc:08x}")
     with serial.Serial(args.port, args.baud, timeout=0.1, write_timeout=10.0) as port:

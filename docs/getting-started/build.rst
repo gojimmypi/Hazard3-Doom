@@ -11,7 +11,7 @@ ULX3S 85F, 64 MiB, 50 MHz:
 
 .. code-block:: bash
 
-   ./scripts/build-ulx3s-doom.sh
+   ./scripts/build-ulx3s-85f-doom.sh
 
 ULX3S 12F compact target, 32 MiB default, 40 MHz:
 
@@ -25,6 +25,19 @@ The normal complete-build route must close every required clock:
 .. code-block:: bash
 
    ./scripts/build-ulx4m-ld-doom.sh
+
+The complete board wrappers keep target-specific artifacts under board-scoped
+directories. In particular, the Doom upload images are:
+
+.. code-block:: text
+
+   build/ulx3s-85f/doom-image/hazard3-doom.h3img
+   build/ulx3s-12f/doom-image/hazard3-doom.h3img
+   build/ulx4m-ld/doom-image/hazard3-doom.h3img
+
+The standalone ``doom/build-doom-image.sh`` command documented later on this
+page still uses the generic ``build/doom-image/`` directory unless
+``HAZARD3_DOOM_BUILD_DIR`` is set.
 
 The build uses the shared ULX4M-LD routing defaults defined in
 ``scripts/build-ecp5-bitstream-common.sh`` and summarized in
@@ -45,12 +58,19 @@ The 12F wrapper supports either a 32 MiB or 64 MiB SDRAM map, but defaults to
    HAZARD3_MEMORY_PROFILE=64m ./scripts/build-ulx3s-12f-doom.sh
 
 The compact 12F target intentionally supports the 320x200 Doom/video path only.
-After programming the 12F bitstream and starting OpenOCD, load its SDRAM-resident
-monitor with:
+Its 1 KiB EBR cannot contain the full monitor, so the complete build generates a
+small resident UART bootstrap and embeds that in ``fpga_ulx3s_12f.bit``. At cold
+boot the bootstrap initializes the 115200-baud console and explains that the full
+monitor is SDRAM-resident. After programming the 12F bitstream, run:
 
 .. code-block:: bash
 
    ./scripts/load-firmware-12f.sh
+
+The helper reuses an OpenOCD server already listening on ``localhost:3333`` or
+starts ``scripts/start-openocd.sh`` automatically, waits for the GDB server,
+loads and verifies ``build/ulx3s-12f/monitor/hazard3-boot-monitor.elf``, and
+stops only the OpenOCD process that it started.
 
 Resident monitor only
 ---------------------
@@ -79,7 +99,7 @@ For a software-only ULX4M-LD monitor update against an already configured
 
 .. code-block:: bash
 
-   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-40mhz/monitor" \
+   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-monitor-test/monitor" \
    HAZARD3_MEMORY_PROFILE=64m \
    HAZARD3_SYS_CLK_HZ=40000000 \
        ./scripts/build.sh
@@ -89,7 +109,7 @@ Load it through an already-running OpenOCD session with:
 .. code-block:: bash
 
    ./scripts/load-firmware.sh \
-       ./build/ulx4m-ld-40mhz/monitor/hazard3-boot-monitor.elf
+       ./build/ulx4m-ld-monitor-test/monitor/hazard3-boot-monitor.elf
 
 This updates only processor software in the running FPGA and does not reroute
 the known-good bitstream.
@@ -118,7 +138,7 @@ Typical outputs:
    build/doom-image/hazard3-doom.elf
    build/doom-image/hazard3-doom.map
    build/doom-image/hazard3-doom.bin
-   build/doom-image/hazard3-doom.h3d
+   build/doom-image/hazard3-doom.h3img
 
 Testing another Hazard3 checkout
 --------------------------------
@@ -129,7 +149,7 @@ submodule pointer:
 .. code-block:: bash
 
    HAZARD3_ROOT=/mnt/c/workspace/Hazard3 \
-       ./scripts/build-ulx3s-doom.sh
+       ./scripts/build-ulx3s-85f-doom.sh
 
 Submodule preparation and verification
 --------------------------------------

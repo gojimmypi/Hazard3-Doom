@@ -11,7 +11,7 @@ ULX3S 85F, 64 MiB, 50 MHz:
 
 .. code-block:: bash
 
-   ./scripts/build-ulx3s-doom.sh
+   ./scripts/build-ulx3s-85f-doom.sh
 
 Kompaktni cilj ULX3S 12F, zadano 32 MiB, 40 MHz:
 
@@ -25,6 +25,19 @@ Uobičajeni build mora zadovoljiti sva ograničenja takta:
 .. code-block:: bash
 
    ./scripts/build-ulx4m-ld-doom.sh
+
+Potpune omotne skripte spremaju artifacts specifične za cilj u direktorije
+vezane uz pločicu. Konkretno, Doom slike za prijenos nalaze se ovdje:
+
+.. code-block:: text
+
+   build/ulx3s-85f/doom-image/hazard3-doom.h3img
+   build/ulx3s-12f/doom-image/hazard3-doom.h3img
+   build/ulx4m-ld/doom-image/hazard3-doom.h3img
+
+Samostalna naredba ``doom/build-doom-image.sh`` dokumentirana niže na ovoj
+stranici i dalje koristi generički direktorij ``build/doom-image/`` osim ako je
+postavljen ``HAZARD3_DOOM_BUILD_DIR``.
 
 Build koristi zajedničke ULX4M-LD postavke definirane u
 ``scripts/build-ecp5-bitstream-common.sh`` i sažete u
@@ -44,13 +57,21 @@ međusobno usklađeni:
 
    HAZARD3_MEMORY_PROFILE=64m ./scripts/build-ulx3s-12f-doom.sh
 
-Kompaktni cilj 12F namjerno podržava samo Doom/video put 320x200.
-Nakon programiranja 12F bitstreama i pokretanja OpenOCD-a, učitajte njegov
-monitor koji se nalazi u SDRAM-u pomoću:
+Kompaktni cilj 12F namjerno podržava samo Doom/video put 320x200. Njegov EBR
+od 1 KiB ne može sadržavati puni monitor, pa potpuni build stvara mali rezidentni
+UART bootstrap i ugrađuje ga u ``fpga_ulx3s_12f.bit``. Pri hladnom pokretanju
+bootstrap inicijalizira konzolu na 115200 baud i objašnjava da se puni monitor
+nalazi u SDRAM-u. Nakon programiranja 12F bitstreama pokrenite:
 
 .. code-block:: bash
 
    ./scripts/load-firmware-12f.sh
+
+Pomoćna skripta ponovno koristi OpenOCD server koji već sluša na
+``localhost:3333`` ili automatski pokreće ``scripts/start-openocd.sh``, čeka GDB
+server, učitava i provjerava
+``build/ulx3s-12f/monitor/hazard3-boot-monitor.elf`` te zaustavlja samo OpenOCD
+proces koji je sama pokrenula.
 
 Samo rezidentni monitor
 -----------------------
@@ -73,6 +94,26 @@ Potpune omotne skripte za pločice umjesto vas postavljaju profil memorije,
 sistemski takt i linker skriptu za ciljni uređaj. Za ručne izgradnje glavne su
 kontrole ``HAZARD3_MEMORY_PROFILE``, ``HAZARD3_SYS_CLK_HZ`` i
 ``HAZARD3_MONITOR_LINKER_SCRIPT``.
+
+Za softversko ažuriranje samo ULX4M-LD monitora na već konfiguriranom FPGA-u na
+40 MHz, spremite izlaz odvojeno od rezidentnog preloada:
+
+.. code-block:: bash
+
+   HAZARD3_BUILD_DIR="$PWD/build/ulx4m-ld-monitor-test/monitor" \
+   HAZARD3_MEMORY_PROFILE=64m \
+   HAZARD3_SYS_CLK_HZ=40000000 \
+       ./scripts/build.sh
+
+Učitajte ga kroz već pokrenutu OpenOCD sesiju pomoću:
+
+.. code-block:: bash
+
+   ./scripts/load-firmware.sh \
+       ./build/ulx4m-ld-monitor-test/monitor/hazard3-boot-monitor.elf
+
+Time se ažurira samo procesorski softver u aktivnom FPGA-u i ne rerouta se
+poznato dobar bitstream.
 
 Samo povezana Doom slika
 ------------------------
@@ -98,7 +139,7 @@ Tipični izlazi:
    build/doom-image/hazard3-doom.elf
    build/doom-image/hazard3-doom.map
    build/doom-image/hazard3-doom.bin
-   build/doom-image/hazard3-doom.h3d
+   build/doom-image/hazard3-doom.h3img
 
 Ispitivanje druge Hazard3 kopije
 --------------------------------
@@ -109,7 +150,7 @@ Hazard3-Dooma:
 .. code-block:: bash
 
    HAZARD3_ROOT=/mnt/c/workspace/Hazard3 \
-       ./scripts/build-ulx3s-doom.sh
+       ./scripts/build-ulx3s-85f-doom.sh
 
 Priprema i provjera podmodula
 -----------------------------

@@ -72,6 +72,7 @@ Explore further
 * :doc:`user-guide/web-flasher` - program the ULX3S FPGA directly with WebUSB.
 * :doc:`architecture/hazard3/index` - learn the Hazard3 RISC-V processor, pipeline, ISA configuration, buses, and debug architecture.
 * :doc:`architecture/system` - understand how the FPGA, monitor, memory, HDMI, SD, SAO, and ESP32 pieces fit together.
+* :doc:`reference/apb-peripherals` - inspect every APB peripheral address, register, bit field, and standalone C example.
 * :doc:`reference/timing-sweeps` - run ECP5 seed sweeps and interpret timing results.
 * :doc:`user-guide/sd-card` - configure standalone cold boot from micro-SD.
 * :doc:`getting-started/tiny-tapeout-ulx3s` - build Tiny Tapeout projects for ULX3S ECP5.

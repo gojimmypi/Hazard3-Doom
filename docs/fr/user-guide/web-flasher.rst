@@ -196,7 +196,7 @@ Pour le build ULX3S standard, l'image est généralement :
 
 .. code-block:: text
 
-   build/fpga_ulx3s.bit
+   build/fpga_ulx3s_85f.bit
 
 Pour la programmer :
 
@@ -213,11 +213,11 @@ Une session 85F réussie contient des messages similaires à :
 
 .. code-block:: text
 
-   INFO: Converted fpga_ulx3s.bit to the Project Trellis ECP5 SRAM SVF sequence for LFE5U-85F.
-   INFO: Loaded fpga_ulx3s.bit: 1,018 programming commands.
+   INFO: Converted fpga_ulx3s_85f.bit to the Project Trellis ECP5 SRAM SVF sequence for LFE5U-85F.
+   INFO: Loaded fpga_ulx3s_85f.bit: 1,018 programming commands.
    INFO: Connected to ULX3S FPGA ...
    OK: JTAG probe found LFE5U-85F (0x41113043).
-   INFO: Programming fpga_ulx3s.bit into LFE5U-85F FPGA SRAM...
+   INFO: Programming fpga_ulx3s_85f.bit into LFE5U-85F FPGA SRAM...
    OK: Programming stream completed successfully in ... s (1,018 commands).
 
 Après une configuration SRAM réussie, la nouvelle image FPGA démarre
@@ -288,8 +288,8 @@ Project Trellis peut générer un flux équivalent de programmation SRAM ECP5 av
 .. code-block:: bash
 
    python3 /path/to/prjtrellis/tools/bit_to_svf.py \
-       build/fpga_ulx3s.bit \
-       build/fpga_ulx3s.svf
+       build/fpga_ulx3s_85f.bit \
+       build/fpga_ulx3s_85f.svf
 
 Le navigateur implémente les opérations SVF requises par la séquence normale de
 programmation SRAM ECP5 de Project Trellis. Les commandes non prises en charge

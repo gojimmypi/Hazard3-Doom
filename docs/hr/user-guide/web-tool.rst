@@ -9,7 +9,7 @@ alata za prijenos.
 Trenutačna stranica ima četiri glavna područja:
 
 * **Device uploading** - programiranje FPGA SRAM-a, učitavanje firmwarea
-  konzole, prijenos Doom H3D slike i prijenos Doom IWAD-a;
+  konzole, prijenos Doom H3IMG slike i prijenos Doom IWAD-a;
 * **Serial connection** - odabir Web Serial porta i UART postavke;
 * **UART terminal** - izlaz monitora/Dooma, unos naredbi, zapis i HDMI snimka;
 * **Hazard3-Doom controls** - brze naredbe za monitor, SAO i I2CDriver.
@@ -34,7 +34,7 @@ Web alat koristi tri neovisna puta:
      |
      +-- Web Serial --> USB-UART --> rezidentni monitor / Doom
      |                  |             |
-     |                  |             +-- H3L .h3d prijenos
+     |                  |             +-- H3L .h3img prijenos
      |                  |             +-- H3W .wad prijenos
      |                  |             +-- terminal / naredbe / screen snip
      |
@@ -65,7 +65,7 @@ Javna stranica dostupna je na:
 
    https://ulx3s.github.io/Hazard3-Doom/
 
-UART terminal, H3D/IWAD prijenos, screen snip i WebUSB programiranje FPGA-a ne
+UART terminal, H3IMG/IWAD prijenos, screen snip i WebUSB programiranje FPGA-a ne
 zahtijevaju lokalni web server.
 
 Učitavanje firmwarea konzole dodatno zahtijeva lokalni helper. Iz korijena
@@ -162,7 +162,7 @@ vjerojatan konflikt vlasništva porta.
 origine, pa ne dijele taj lock. Operacijski sustav ipak sprječava da obje
 stranice istodobno otvore isti serijski port.
 
-H3D i IWAD odjeljci također jasno prikazuju UART preduvjet i, kada UART nije
+H3IMG i IWAD odjeljci također jasno prikazuju UART preduvjet i, kada UART nije
 spojen, nude vlastiti **Connect UART**.
 
 Učitavanje i programiranje
@@ -229,22 +229,22 @@ UART može ostati spojen.
 Console uploader radi i s lokalne stranice i s javne HTTPS stranice. U oba
 slučaja GDB i OpenOCD ostaju lokalni.
 
-Doom H3D uploader
-~~~~~~~~~~~~~~~~~
+Doom H3IMG uploader
+~~~~~~~~~~~~~~~~~~~
 
-**Doom H3D uploader** šalje zapakiranu ``.h3d`` sliku preko iste Web Serial veze
+**Doom H3IMG uploader** šalje zapakiranu ``.h3img`` sliku preko iste Web Serial veze
 koju koristi terminal. Rezidentni monitor mora biti na svom ``>`` promptu.
 
-Prije prijenosa preglednik provjerava H3D zaglavlje, duljinu paketa i CRC32
+Prije prijenosa preglednik provjerava H3IMG zaglavlje, duljinu paketa i CRC32
 payload-a, a zatim koristi H3L protokol monitora:
 
 .. code-block:: text
 
    preglednik -> l
    monitor    -> H3L READY
-   preglednik -> 64-bajtno H3D zaglavlje
+   preglednik -> 64-bajtno H3IMG zaglavlje
    monitor    -> H3L DATA
-   preglednik -> H3D payload
+   preglednik -> H3IMG payload
    monitor    -> H3L OK
 
 Prijenos mijenja samo SDRAM; ne mijenja SD karticu. Opcija **Launch with ``j``
@@ -296,16 +296,16 @@ Odaberite memorijski profil koji odgovara buildu rezidentnog monitora:
 Profil je bitan jer H3W zaglavlje sadrži odredišnu SDRAM adresu; pogrešan profil
 nije samo UI postavka.
 
-Kao i kod H3D-a, **Launch with ``j`` after upload** šalje ``j`` tek nakon
+Kao i kod H3IMG-a, **Launch with ``j`` after upload** šalje ``j`` tek nakon
 ``H3W OK``.
 
 H3W timeout dijagnostika koristi isti savjet za rezidentni monitor i OpenOCD kao
-H3D uploader.
+H3IMG uploader.
 
 Vlasništvo UART-a tijekom binarnog prijenosa
 --------------------------------------------
 
-H3D i IWAD payload-i su binarni UART prijenosi. Tijekom prijenosa web aplikacija
+H3IMG i IWAD payload-i su binarni UART prijenosi. Tijekom prijenosa web aplikacija
 privremeno zaustavlja obične kontrole naredbi i screen-snip capability probeove
 kako dodatni bajt ne bi završio u payload-u. Normalan terminal nastavlja rad
 nakon završetka ili pogreške.
@@ -350,7 +350,7 @@ Za tipičnu ULX3S razvojnu sesiju:
    uploader**.
 #. Provjerite banner monitora i da ``>`` prompt odgovara na jednobajtni gumb
    **Help**.
-#. Prenesite Doom ``.h3d`` sliku.
+#. Prenesite Doom ``.h3img`` sliku.
 #. Prenesite zakonito pribavljeni IWAD s odgovarajućim memorijskim profilom.
 #. Pokrenite s ``j`` iz uploadera ili terminala.
 
@@ -377,7 +377,7 @@ Granice podataka i trajnosti
    * - Console firmware uploader
      - loopback HTTP + GDB/OpenOCD
      - Ne; učitano u aktivni FPGA sustav
-   * - H3D uploader
+   * - H3IMG uploader
      - Web Serial / H3L
      - Ne; samo SDRAM
    * - IWAD uploader
@@ -394,5 +394,5 @@ Povezana dokumentacija
 * :doc:`web-flasher` - detaljni ULX3S WebUSB/JTAG vodič.
 * :doc:`monitor` - naredbe i loaderi rezidentnog monitora.
 * :doc:`doom` - Doom slika i rad programa.
-* :doc:`sd-card` - samostalno H3D/IWAD učitavanje s micro-SD kartice.
+* :doc:`sd-card` - samostalno H3IMG/IWAD učitavanje s micro-SD kartice.
 * :doc:`jtag-debugging` - OpenOCD/GDB postavljanje.

@@ -44,17 +44,17 @@ upload_image = load_script("upload_doom_image", "upload-doom-image.py")
 upload_wad = load_script("upload_wad", "upload-wad.py")
 
 
-def make_h3d_package(payload: bytes) -> bytes:
+def make_h3img_package(payload: bytes) -> bytes:
     crc = zlib.crc32(payload) & 0xFFFFFFFF
     words = [
         upload_image.IMAGE_MAGIC,
         upload_image.HEADER_BYTES,
-        1,
-        1,
-        0x20100000,
+        upload_image.FORMAT_VERSION,
+        upload_image.FLAG_CRC32,
+        upload_image.IMAGE_BASE,
         len(payload),
-        0x20100000,
-        0x20100000 + len(payload),
+        upload_image.IMAGE_BASE,
+        upload_image.IMAGE_BASE + len(payload),
         0,
         crc,
     ] + [0] * 6
@@ -82,7 +82,7 @@ class ChunkPort:
 class DoomImagePackageTests(unittest.TestCase):
     def test_validate_package_accepts_valid_package(self):
         payload = b"Hazard3 Doom"
-        package = make_h3d_package(payload)
+        package = make_h3img_package(payload)
         expected_crc = zlib.crc32(payload) & 0xFFFFFFFF
 
         self.assertEqual(
@@ -101,7 +101,7 @@ class DoomImagePackageTests(unittest.TestCase):
 
     def test_validate_package_rejects_bad_headers(self):
         payload = b"Doom"
-        valid = bytearray(make_h3d_package(payload))
+        valid = bytearray(make_h3img_package(payload))
         cases = []
 
         cases.append((b"short", "package shorter than header"))
@@ -114,12 +114,83 @@ class DoomImagePackageTests(unittest.TestCase):
         struct.pack_into("<I", bad_header_size, 4, 32)
         cases.append((bytes(bad_header_size), "unsupported header size"))
 
+        bad_format_version = bytearray(valid)
+        struct.pack_into("<I", bad_format_version, 8, upload_image.FORMAT_VERSION + 1)
+        cases.append((bytes(bad_format_version), "unsupported format version"))
+
+        bad_flags = bytearray(valid)
+        struct.pack_into("<I", bad_flags, 12, 0)
+        cases.append((bytes(bad_flags), "unsupported package flags"))
+
+        bad_load_address = bytearray(valid)
+        struct.pack_into("<I", bad_load_address, 16, upload_image.IMAGE_BASE + 4)
+        cases.append((bytes(bad_load_address), "unexpected load address"))
+
+        zero_payload = bytearray(valid)
+        struct.pack_into("<I", zero_payload, 20, 0)
+        cases.append((bytes(zero_payload), "payload size must be nonzero"))
+
+        oversized_payload = bytearray(valid)
+        struct.pack_into(
+            "<I", oversized_payload, 20,
+            upload_image.IMAGE_LIMIT - upload_image.IMAGE_BASE + 1)
+        cases.append((bytes(oversized_payload), "payload range outside image reservation"))
+
+        bad_bss_range = bytearray(valid)
+        struct.pack_into("<I", bad_bss_range, 28, upload_image.IMAGE_LIMIT + 4)
+        cases.append((bytes(bad_bss_range), "BSS range outside image reservation"))
+
+        bad_entry = bytearray(valid)
+        struct.pack_into("<I", bad_entry, 24, upload_image.IMAGE_BASE + len(payload))
+        cases.append((bytes(bad_entry), "entry address outside payload"))
+
+        overlapping_bss = bytearray(valid)
+        struct.pack_into("<I", overlapping_bss, 28, upload_image.IMAGE_BASE)
+        cases.append((bytes(overlapping_bss), "BSS overlaps payload"))
+
+        unaligned_bss = bytearray(valid)
+        struct.pack_into(
+            "<I", unaligned_bss, 28, upload_image.IMAGE_BASE + len(payload) + 1)
+        cases.append((bytes(unaligned_bss), "BSS address is not 4-byte aligned"))
+
+        bad_bss_end = bytearray(valid)
+        struct.pack_into("<I", bad_bss_end, 28, upload_image.IMAGE_LIMIT - 4)
+        struct.pack_into("<I", bad_bss_end, 32, 8)
+        cases.append((bytes(bad_bss_end), "BSS range outside image reservation"))
+
+        bad_reserved = bytearray(valid)
+        struct.pack_into("<I", bad_reserved, 40, 1)
+        cases.append((bytes(bad_reserved), "reserved header words must be zero"))
+
         cases.append((bytes(valid[:-1]), "package length mismatch"))
+
+        bad_payload_crc = bytearray(valid)
+        bad_payload_crc[-1] ^= 0xFF
+        cases.append((bytes(bad_payload_crc), "payload CRC32 mismatch"))
 
         for package, message in cases:
             with self.subTest(message=message):
                 with self.assertRaisesRegex(RuntimeError, message):
                     upload_image.validate_package(package)
+
+    def test_validate_only_cli(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            image = pathlib.Path(temporary_directory) / "doom.h3img"
+            image.write_bytes(make_h3img_package(b"Hazard3 Doom"))
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(DOOM_DIR / "upload-doom-image.py"),
+                    str(image),
+                    "--validate-only",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertIn("Validated", result.stdout)
 
 
 class WadPackageTests(unittest.TestCase):
@@ -194,7 +265,7 @@ class DoomImagePackagerTests(unittest.TestCase):
             temporary = pathlib.Path(temporary_directory)
             elf = temporary / "doom.elf"
             binary = temporary / "doom.bin"
-            image = temporary / "doom.h3d"
+            image = temporary / "doom.h3img"
             fake_nm = temporary / "fake-nm"
 
             elf.write_bytes(b"not used by the fake nm tool")

@@ -4,7 +4,7 @@ Pokretanje Dooma
 Učitavanje putem UART-a
 -----------------------
 
-Uobičajeni razvojni postupak šalje zapakiranu izvršnu datoteku ``.h3d`` rezidentnom monitoru, zatim šalje ``DOOM.WAD`` i pokreće aplikaciju.
+Uobičajeni razvojni postupak šalje zapakiranu izvršnu datoteku ``.h3img`` rezidentnom monitoru, zatim šalje ``DOOM.WAD`` i pokreće aplikaciju.
 
 Memorijski profil od 64 MiB zadan je za ULX3S 85F i ULX4M-LD 85F.
 

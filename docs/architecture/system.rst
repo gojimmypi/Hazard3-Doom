@@ -75,12 +75,12 @@ Boot paths
 Development boot
 ~~~~~~~~~~~~~~~~
 
-FPGA load -> resident monitor -> UART ``.h3d`` upload -> UART ``DOOM.WAD`` upload -> launch.
+FPGA load -> resident monitor -> UART ``.h3img`` upload -> UART ``DOOM.WAD`` upload -> launch.
 
 Standalone boot
 ~~~~~~~~~~~~~~~
 
-SPI flash FPGA configuration -> preloaded EBR resident monitor -> SDRAM init -> micro-SD ``DOOM.H3D`` + ``DOOM.WAD`` -> launch.
+SPI flash FPGA configuration -> preloaded EBR resident monitor -> SDRAM init -> micro-SD ``DOOM.IMG`` + ``DOOM.WAD`` -> launch.
 
 The resident-monitor SRAM preload is a customization in the ULX3S Hazard3 fork.
 It lets the system start useful firmware immediately after FPGA configuration

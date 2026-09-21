@@ -28,7 +28,7 @@ Any first mismatch terminates through the normal Doom `I_Error` path with an
 The image is written to:
 
 ```text
-build/texture-verify/doom-image/hazard3-doom.h3d
+build/texture-verify/doom-image/hazard3-doom.h3img
 ```
 
 ## ULX3S 12F test
@@ -38,7 +38,7 @@ With the 12F FPGA already configured and OpenOCD running:
 ```bash
 ./scripts/load-firmware-12f.sh
 python3 doom/upload-doom-image.py \
-    build/texture-verify/doom-image/hazard3-doom.h3d \
+    build/texture-verify/doom-image/hazard3-doom.h3img \
     --port /dev/ttyS6
 ```
 

@@ -11,12 +11,6 @@ board-revision notes. Their purpose is different: connect the physical hardware
 to the Verilog, constraints, memory controllers, firmware, and debugging tools
 used by this project.
 
-.. toctree::
-   :maxdepth: 2
-
-   ulx3s/index
-   ulx4m/index
-
 Why a hardware guide?
 ---------------------
 
@@ -30,3 +24,9 @@ in the address map, and what has been validated on real boards.
 The guides keep those layers visible. When a public board description, an
 upstream schematic, and a populated board disagree, the difference is recorded
 rather than silently choosing one source.
+
+.. toctree::
+   :maxdepth: 2
+
+   ulx3s/index
+   ulx4m/index

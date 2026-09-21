@@ -137,6 +137,15 @@ Provjereni DFU raspored:
      - ``0x200000-0xFFFFFF``
      - Normalno područje korisničkog bitstreama.
 
+Za uobičajeno ažuriranje isključite napajanje, držite PCB ``BTN3`` dok spajate
+Micro-B kabel, pričekajte enumeraciju ``1d50:614b``, a zatim otpustite ``BTN3``.
+Tipku nije potrebno držati tijekom prijenosa. Ako Bash u WSL-u za priložene
+Windows alate prijavi ``Permission denied``:
+
+.. code-block:: bash
+
+   chmod +x ./bin/openFPGALoader.exe ./bin/dfu-util.exe
+
 Normalna Hazard3-Doom naredba:
 
 .. code-block:: bash

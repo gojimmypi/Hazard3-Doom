@@ -31,7 +31,7 @@ Predviđeni samostalni slijed jest:
 #. Block RAM se inicijalizira slikom rezidentnog Hazard3 monitora.
 #. Hazard3 se pokreće bez računala domaćina.
 #. Monitor inicijalizira SDRAM i micro-SD sučelje.
-#. ``DOOM.H3D`` i ``DOOM.WAD`` čitaju se sa SD kartice.
+#. ``DOOM.IMG`` i ``DOOM.WAD`` čitaju se sa SD kartice.
 #. Doom se pokreće na HDMI-ju.
 
 ULX4M-LD: privremeno učitavanje FPGA-a
@@ -55,6 +55,17 @@ ULX4M-LD: trajno DFU programiranje
 ULX4M-LD Micro-B DFU bootloader zapisuje trajni korisnički bitstream u SPI flash.
 Ta slika ostaje nakon isključivanja napajanja i odvojena je od samog DFU
 bootloadera.
+
+Za ulazak u normalni DFU isključite napajanje, držite PCB ``BTN3`` dok spajate
+Micro-B kabel, pričekajte enumeraciju ``1d50:614b``, a zatim otpustite ``BTN3``.
+Tipku nije potrebno držati tijekom programiranja. U WSL-u, ako Bash za priložene
+Windows izvršne datoteke prijavi ``Permission denied``, upotrijebite:
+
+.. code-block:: bash
+
+   chmod +x ./bin/openFPGALoader.exe ./bin/dfu-util.exe
+
+Zatim programirajte alt 0:
 
 .. code-block:: bash
 

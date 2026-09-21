@@ -9,7 +9,7 @@ plusieurs outils de téléversement en ligne de commande.
 La page actuelle comporte quatre zones principales :
 
 * **Device uploading** - programmation de la SRAM FPGA, chargement du firmware
-  console, téléversement Doom H3D et téléversement Doom IWAD ;
+  console, téléversement Doom H3IMG et téléversement Doom IWAD ;
 * **Serial connection** - sélection du port Web Serial et paramètres UART ;
 * **UART terminal** - sortie du moniteur/Doom, saisie de commandes, journaux et
   capture HDMI ;
@@ -36,7 +36,7 @@ L'outil web utilise trois chemins indépendants :
      |
      +-- Web Serial --> USB-UART --> moniteur résident / Doom
      |                  |             |
-     |                  |             +-- téléversement H3L .h3d
+     |                  |             +-- téléversement H3L .h3img
      |                  |             +-- téléversement H3W .wad
      |                  |             +-- terminal / commandes / capture écran
      |
@@ -69,7 +69,7 @@ La page publique est disponible ici :
 
    https://ulx3s.github.io/Hazard3-Doom/
 
-Le terminal UART, les téléversements H3D/IWAD, la capture d'écran et la
+Le terminal UART, les téléversements H3IMG/IWAD, la capture d'écran et la
 programmation FPGA WebUSB n'ont besoin d'aucun serveur local.
 
 Le chargement du firmware console nécessite en plus le helper local. Depuis la
@@ -175,7 +175,7 @@ de propriété du port.
 différentes et ne partagent donc pas ce verrou. Le système empêche néanmoins
 les deux pages d'ouvrir simultanément le même port.
 
-Les sections H3D et IWAD affichent aussi clairement le prérequis UART. Sans
+Les sections H3IMG et IWAD affichent aussi clairement le prérequis UART. Sans
 connexion, elles proposent leur propre bouton **Connect UART**.
 
 Téléversement des périphériques
@@ -248,23 +248,23 @@ Le chargeur console fonctionne aussi bien depuis la page locale que depuis la
 page HTTPS publique. Dans les deux cas, GDB et OpenOCD restent sur la machine
 de l'utilisateur.
 
-Chargeur Doom H3D
-~~~~~~~~~~~~~~~~~
+Chargeur Doom H3IMG
+~~~~~~~~~~~~~~~~~~~
 
-**Doom H3D uploader** envoie une image ``.h3d`` empaquetée par la même connexion
+**Doom H3IMG uploader** envoie une image ``.h3img`` empaquetée par la même connexion
 Web Serial que le terminal. Le moniteur résident doit afficher son invite
 ``>``.
 
-Avant l'envoi, le navigateur valide l'en-tête H3D, la longueur du paquet et le
+Avant l'envoi, le navigateur valide l'en-tête H3IMG, la longueur du paquet et le
 CRC32 de la charge utile. Il suit ensuite le protocole H3L du moniteur :
 
 .. code-block:: text
 
    navigateur -> l
    moniteur   -> H3L READY
-   navigateur -> en-tête H3D de 64 octets
+   navigateur -> en-tête H3IMG de 64 octets
    moniteur   -> H3L DATA
-   navigateur -> charge utile H3D
+   navigateur -> charge utile H3IMG
    moniteur   -> H3L OK
 
 Le téléversement modifie uniquement la SDRAM ; il ne modifie pas la carte SD.
@@ -318,16 +318,16 @@ Sélectionnez le profil mémoire correspondant au moniteur résident :
 Le profil est important car l'en-tête H3W contient l'adresse de destination en
 SDRAM. Un mauvais profil n'est donc pas un simple choix d'affichage.
 
-Comme pour H3D, l'option **Launch with ``j`` after upload** n'envoie ``j``
+Comme pour H3IMG, l'option **Launch with ``j`` after upload** n'envoie ``j``
 qu'après réception de ``H3W OK``.
 
 Les diagnostics de timeout H3W utilisent le même guidage concernant le moniteur
-résident et OpenOCD que le chargeur H3D.
+résident et OpenOCD que le chargeur H3IMG.
 
 Propriété du transport pendant un transfert binaire
 ---------------------------------------------------
 
-Les charges utiles H3D et IWAD sont des transferts UART binaires. Pendant l'un
+Les charges utiles H3IMG et IWAD sont des transferts UART binaires. Pendant l'un
 de ces téléversements, l'application suspend temporairement les commandes
 ordinaires et les sondes de capacité de capture d'écran afin qu'aucun octet
 étranger ne soit inséré dans la charge utile. Le fonctionnement normal du
@@ -377,7 +377,7 @@ Pour une session ULX3S typique :
    uploader**.
 #. Vérifiez que la bannière du moniteur est lisible et que l'invite ``>`` répond
    au bouton **Help** à un octet.
-#. Téléversez l'image Doom ``.h3d``.
+#. Téléversez l'image Doom ``.h3img``.
 #. Téléversez un IWAD obtenu légalement avec le profil mémoire du moniteur.
 #. Lancez avec ``j`` depuis l'uploader ou le terminal.
 
@@ -404,7 +404,7 @@ Limites des données et de la persistance
    * - Console firmware uploader
      - HTTP loopback + GDB/OpenOCD
      - Non ; chargé dans le système FPGA en cours
-   * - H3D uploader
+   * - H3IMG uploader
      - Web Serial / H3L
      - Non ; SDRAM uniquement
    * - IWAD uploader
@@ -421,5 +421,5 @@ Documentation associée
 * :doc:`web-flasher` - guide détaillé WebUSB/JTAG pour ULX3S.
 * :doc:`monitor` - commandes et chargeurs du moniteur résident.
 * :doc:`doom` - image Doom et fonctionnement à l'exécution.
-* :doc:`sd-card` - chargement autonome H3D/IWAD depuis micro-SD.
+* :doc:`sd-card` - chargement autonome H3IMG/IWAD depuis micro-SD.
 * :doc:`jtag-debugging` - configuration OpenOCD/GDB.

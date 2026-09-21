@@ -34,8 +34,8 @@ if exist "%ROOT_DIR%\build\hazard3-boot-monitor.bit" (
     echo   "!SOURCE_BITSTREAM!"
     echo.
 ) else (
-    if exist "%ROOT_DIR%\bin\fpga_ulx3s_hdmi_doom.bit" (
-        set "SOURCE_BITSTREAM=%ROOT_DIR%\bin\fpga_ulx3s_hdmi_doom.bit"
+    if exist "%ROOT_DIR%\bin\fpga_ulx3s_85f.bit" (
+        set "SOURCE_BITSTREAM=%ROOT_DIR%\bin\fpga_ulx3s_85f.bit"
 
         echo.
         echo WARNING: Using prebuilt FPGA bitstream:
@@ -47,7 +47,7 @@ if exist "%ROOT_DIR%\build\hazard3-boot-monitor.bit" (
         >&2 echo.
         >&2 echo Checked:
         >&2 echo   "%ROOT_DIR%\build\hazard3-boot-monitor.bit"
-        >&2 echo   "%ROOT_DIR%\bin\fpga_ulx3s_hdmi_doom.bit"
+        >&2 echo   "%ROOT_DIR%\bin\fpga_ulx3s_85f.bit"
         >&2 echo.
         goto ERROR_EXIT
     )

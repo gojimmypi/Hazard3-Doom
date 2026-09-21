@@ -10,12 +10,29 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 
 OPENOCD_GDB_HOST = "127.0.0.1"
 OPENOCD_GDB_PORT = 3333
+DEFAULT_OPENOCD_BOARD = "ulx3s-85f"
+OPENOCD_BOARD_CHOICES = (
+    "ulx3s-85f",
+    "ulx3s-12f",
+    "ulx3s",
+    "ulx3s-doom",
+    "ulx4m",
+    "ulx4m-ld",
+    "ulx4m-tigard",
+    "ulx4m-ld-tigard",
+    "icebreaker",
+)
+DOOM_IMAGE_START = 0x20100000
+DOOM_IMAGE_END = 0x20400000
+OPENOCD_START_TIMEOUT_SECONDS = 10.0
+OPENOCD_POLL_INTERVAL_SECONDS = 0.2
 MY_RUFF = os.environ.get("MY_RUFF", "ruff")
 MAX_FIRMWARE_BYTES = 16 * 1024 * 1024
 DEFAULT_ALLOWED_ORIGINS = frozenset(
@@ -221,6 +238,21 @@ class Hazard3DoomRequestHandler(http.server.SimpleHTTPRequestHandler):
             )
             return
 
+        entry_address = int.from_bytes(firmware[24:28], "little")
+        if DOOM_IMAGE_START <= entry_address < DOOM_IMAGE_END:
+            self.send_json(
+                400,
+                {
+                    "ok": False,
+                    "error": (
+                        "Selected ELF is in the Doom application region. "
+                        "Load hazard3-boot-monitor.elf here; use the H3IMG uploader "
+                        "for Doom."
+                    ),
+                },
+            )
+            return
+
         temporary_path: Path | None = None
         try:
             with tempfile.NamedTemporaryFile(
@@ -361,6 +393,133 @@ def openocd_gdb_port_is_ready() -> bool:
         return True
     return _windows_tcp_listener_is_present(OPENOCD_GDB_PORT)
 
+
+def openocd_start_command(repo_root: Path, board: str) -> list[str]:
+    """Return the platform-appropriate OpenOCD launcher command."""
+    scripts_dir = repo_root / "scripts"
+    openocd_override = os.environ.get("OPENOCD")
+
+    if os.name == "nt":
+        launcher = scripts_dir / "start-openocd.bat"
+        if not launcher.is_file():
+            raise FileNotFoundError(f"OpenOCD launcher was not found: {launcher}")
+        command = ["cmd.exe", "/d", "/c", str(launcher), board]
+    else:
+        launcher = scripts_dir / "start-openocd.sh"
+        if not launcher.is_file() or not os.access(launcher, os.X_OK):
+            raise FileNotFoundError(
+                f"OpenOCD launcher was not found or is not executable: {launcher}"
+            )
+        command = [str(launcher), board]
+
+    if openocd_override:
+        command.append(openocd_override)
+    return command
+
+
+def stop_owned_openocd(process: subprocess.Popen[str]) -> None:
+    """Stop the OpenOCD process tree started by this web server."""
+    if process.poll() is not None:
+        print(
+            "OpenOCD started by this web server had already stopped "
+            f"(status {process.returncode})."
+        )
+        return
+
+    print("Stopping OpenOCD started by this web server...")
+
+    if os.name == "nt":
+        try:
+            subprocess.run(
+                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=5,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            process.kill()
+    else:
+        process.terminate()
+
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+
+    print("OpenOCD stopped.")
+
+
+def ensure_openocd_is_running(
+    repo_root: Path,
+    log_path: Path,
+    board: str,
+) -> subprocess.Popen[str] | None:
+    """Reuse OpenOCD when present; otherwise start it and return its process."""
+    if openocd_gdb_port_is_ready():
+        print(
+            "  OpenOCD: reusing GDB server on "
+            f"{OPENOCD_GDB_HOST}:{OPENOCD_GDB_PORT}"
+        )
+        return None
+
+    command = openocd_start_command(repo_root, board)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    print(f"  OpenOCD: starting {board} configuration")
+    print(f"  OpenOCD log: {log_path}")
+
+    with log_path.open("w", encoding="utf-8") as log_file:
+        if os.name == "nt":
+            process = subprocess.Popen(
+                command,
+                cwd=repo_root,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                text=True,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+            )
+        else:
+            process = subprocess.Popen(
+                command,
+                cwd=repo_root,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                text=True,
+                start_new_session=True,
+            )
+
+    deadline = time.monotonic() + OPENOCD_START_TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
+        if openocd_gdb_port_is_ready():
+            print(
+                "  OpenOCD: ready - GDB server detected on "
+                f"{OPENOCD_GDB_HOST}:{OPENOCD_GDB_PORT}"
+            )
+            return process
+        if process.poll() is not None:
+            break
+        time.sleep(OPENOCD_POLL_INTERVAL_SECONDS)
+
+    stop_owned_openocd(process)
+
+    output = ""
+    try:
+        output = log_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        pass
+
+    detail = ""
+    if output:
+        detail = "\nLast OpenOCD log lines:\n" + "\n".join(output.splitlines()[-20:])
+
+    raise RuntimeError(
+        "OpenOCD did not start a GDB server on "
+        f"{OPENOCD_GDB_HOST}:{OPENOCD_GDB_PORT}. "
+        f"See {log_path}.{detail}"
+    )
+
+
 def main() -> None:
     check_python_script()
 
@@ -378,6 +537,17 @@ def main() -> None:
         "--firmware-loader",
         type=Path,
         help="firmware loader script (default: ../scripts/load-firmware.sh)",
+    )
+    parser.add_argument(
+        "--openocd-log",
+        type=Path,
+        help="OpenOCD log file (default: ../build/web/openocd.log)",
+    )
+    parser.add_argument(
+        "--openocd-board",
+        choices=OPENOCD_BOARD_CHOICES,
+        default=DEFAULT_OPENOCD_BOARD,
+        help=f"OpenOCD board selector (default: {DEFAULT_OPENOCD_BOARD})",
     )
     parser.add_argument(
         "--access-key",
@@ -430,6 +600,11 @@ def main() -> None:
         if args.firmware_loader
         else repo_root / "scripts" / "load-firmware.sh"
     )
+    openocd_log = (
+        args.openocd_log.resolve()
+        if args.openocd_log
+        else repo_root / "build" / "web" / "openocd.log"
+    )
     Hazard3DoomRequestHandler.firmware_loader = firmware_loader
     Hazard3DoomRequestHandler.repo_root = repo_root
     Hazard3DoomRequestHandler.allowed_origins = frozenset(allowed_origins)
@@ -449,28 +624,17 @@ def main() -> None:
     print()
     print("Console firmware loader:")
     print(f"  {firmware_loader}")
+    print(f"  OpenOCD board: {args.openocd_board}")
     print(f"  access key: {'required' if access_key is not None else 'disabled, consider using --access-key'}")
 
-    if openocd_gdb_port_is_ready():
-        print(
-            "  OpenOCD: ready - GDB server detected on "
-            f"{OPENOCD_GDB_HOST}:{OPENOCD_GDB_PORT}"
+    try:
+        openocd_process = ensure_openocd_is_running(
+            repo_root, openocd_log, args.openocd_board
         )
-    else:
-        print("")
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        print("")
-        print("  OpenOCD: WARNING - no GDB server detected on "
-             f"{OPENOCD_GDB_HOST}:{OPENOCD_GDB_PORT}"
-        )
-        print("           Web Console ELF loading will not work until OpenOCD is started.")
-        print("")
-        print("           ./scripts/start-openocd.sh # uses ../openocd/ulx3s-openocd-doom.cfg")
-        print("")
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        print("")
+    except (FileNotFoundError, OSError, RuntimeError) as error:
+        print(f"  OpenOCD: ERROR - {error}", file=sys.stderr)
+        server.server_close()
+        raise SystemExit(1) from error
 
     print("  allowed API origins:")
 
@@ -483,9 +647,12 @@ def main() -> None:
         server.serve_forever()
     except KeyboardInterrupt:
         print()
-        print("Server stopped.")
     finally:
         server.server_close()
+        if openocd_process is not None:
+            stop_owned_openocd(openocd_process)
+
+    print("Server stopped.")
 
 
 if __name__ == "__main__":

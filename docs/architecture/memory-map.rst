@@ -6,6 +6,16 @@ to the RISC-V ISA or a fixed Hazard3 processor memory map. Hazard3 issues normal
 instruction/data transactions; the surrounding SoC decodes these physical
 address windows. See :doc:`hazard3/memory-and-bus` for the CPU/bus boundary.
 
+
+APB peripheral space
+--------------------
+
+CPU addresses beginning at ``0x40000000`` are routed through the SoC
+AHB-to-APB bridge. The current integration provides timer, UART, GPIO, SAO,
+micro-SD SPI, and HDMI/video APB slaves. See
+:doc:`../reference/apb-peripherals` for the decoder windows, complete register
+map, bit definitions, and standalone C examples.
+
 Internal SRAM
 -------------
 

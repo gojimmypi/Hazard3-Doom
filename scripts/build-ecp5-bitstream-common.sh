@@ -522,15 +522,15 @@ PNR_TUNING_ARGS=()
 case "${BOARD_ID}" in
 ulx3s-85f)
     DISPLAY_NAME="ULX3S 85F"
-    FPGA_NAME="fpga_ulx3s"
+    FPGA_NAME="fpga_ulx3s_85f"
     MAKEFILE="ULX3S.mk"
     LPF="${HAZARD3_SYNTH}/fpga_ulx3s.lpf"
     IDCODE="0x41113043"
     NEXTPNR_SEED="${NEXTPNR_SEED:-${ULX3S_85F_DEFAULT_NEXTPNR_SEED}}"
     PNR_DEVICE_ARGS=(--um5g-85k --package CABGA381)
     HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
-    SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s.video-profile"
-    SYNTH_DURATION_STAMP="${BUILD_DIR}/fpga_ulx3s.synth-seconds"
+    SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.video-profile"
+    SYNTH_DURATION_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.synth-seconds"
     ;;
 ulx3s-12f)
     DISPLAY_NAME="ULX3S 12F"
