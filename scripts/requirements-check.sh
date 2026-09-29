@@ -32,6 +32,10 @@
 set -u
 set -o pipefail
 
+# Verify this script against the recorded inventory without blocking normal execution.
+"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
+    --check-file "${BASH_SOURCE[0]}" || true
+
 CHECK_PROFILE="full"
 PASS_COUNT=0
 WARN_COUNT=0
@@ -45,6 +49,8 @@ QUALIFIED_YOSYS_VERSION="Yosys 0.67+47"
 QUALIFIED_YOSYS_COMMIT="5f29546d8"
 QUALIFIED_NEXTPNR_VERSION="nextpnr-0.10-95-gddc6c8c8"
 QUALIFIED_TRELLIS_VERSION="Project Trellis ecppack Version 1.4-76-g73bd411"
+QUALIFIED_OSS_CAD_SUITE_VERSION="2026-07-20"
+QUALIFIED_OSS_CAD_TRELLIS_VERSION="Project Trellis ecppack Version 1.4-79-g56bb170"
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 if REPO_ROOT="$(git -C "${SCRIPT_DIR}" rev-parse --show-toplevel 2>/dev/null)"; then
@@ -223,6 +229,43 @@ check_qualified_tool()
     fail "${description} is not the qualified Hazard3-Doom version"
     printf '       Found:    %s (%s)\n' "${display_output:-unknown}" "${path}"
     printf '       Required: %s\n' "${expected_description}"
+    printf '       Install:  %s\n' "${install_hint}"
+}
+
+check_qualified_tool_two_versions()
+{
+    local command_name="$1"
+    local description="$2"
+    local install_hint="$3"
+    local expected_description_1="$4"
+    local expected_fragment_1="$5"
+    local expected_description_2="$6"
+    local expected_fragment_2="$7"
+    shift 7
+
+    local path=""
+    local output=""
+    local display_output=""
+
+    if ! path="$(command -v "${command_name}" 2>/dev/null)"; then
+        fail "Missing required tool: ${command_name} (${description})"
+        printf '       Install: %s\n' "${install_hint}"
+        return 0
+    fi
+
+    output="$("${path}" "$@" 2>&1 || true)"
+    display_output="$(normalize_first_line "${output}")"
+
+    if [[ "${output}" == *"${expected_fragment_1}"* ]] ||
+       [[ "${output}" == *"${expected_fragment_2}"* ]]; then
+        pass "${description}: ${display_output} (${path})"
+        return 0
+    fi
+
+    fail "${description} is not a qualified Hazard3-Doom version"
+    printf '       Found:    %s (%s)\n' "${display_output:-unknown}" "${path}"
+    printf '       Required: %s\n' "${expected_description_1}"
+    printf '             or: %s\n' "${expected_description_2}"
     printf '       Install:  %s\n' "${install_hint}"
 }
 
@@ -850,7 +893,7 @@ section "Required host tools"
 printf 'Profile: %s\n' "${CHECK_PROFILE}"
 check_tool required git        "Git"               "sudo apt-get install git" --version
 check_tool required python3    "Python 3"          "sudo apt-get install python3" --version
-check_tool required shellcheck "ShellCheck"        "sudo apt-get install shellcheck" --version
+check_tool optional shellcheck "ShellCheck"        "sudo apt-get install shellcheck" --version
 check_tool required grep       "Host utility grep" "sudo apt-get install grep" --version
 check_tool required awk        "Host utility awk"  "sudo apt-get install gawk" --version
 for tool in cat cmp diff find mkdir sha256sum sort tail tee; do
@@ -949,16 +992,18 @@ check_qualified_tool \
     "${QUALIFIED_NEXTPNR_VERSION}" \
     "" \
     --version
-check_qualified_tool \
+check_qualified_tool_two_versions \
     ecppack \
     "Project Trellis bitstream packer" \
     "./scripts/install-nextpnr-ecp5.sh" \
+    "${QUALIFIED_TRELLIS_VERSION} (pinned source build)" \
     "${QUALIFIED_TRELLIS_VERSION}" \
-    "${QUALIFIED_TRELLIS_VERSION}" \
-    "" \
+    "${QUALIFIED_OSS_CAD_TRELLIS_VERSION} (OSS CAD Suite ${QUALIFIED_OSS_CAD_SUITE_VERSION})" \
+    "${QUALIFIED_OSS_CAD_TRELLIS_VERSION}" \
     --version
 printf '%s\n' \
-    'INFO: Yosys, nextpnr, and Project Trellis must match the qualified versions above.' \
+    'INFO: Qualified FPGA tools may come from the pinned source builds or' \
+    "      OSS CAD Suite ${QUALIFIED_OSS_CAD_SUITE_VERSION}, matching the main FPGA CI workflows." \
     '      Routing seeds are tool-version-specific; a different nextpnr version may' \
     '      produce different timing results even when the build otherwise succeeds.'
 

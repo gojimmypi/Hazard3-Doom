@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# Build and install the Hazard3-Doom reference Yosys 0.67+47.
+# Install Hazard3-Doom Yosys tools. OSS CAD Suite is the default; the
+# existing pinned source build remains available with --from-source.
 #
 # Intended location:
 #   <workspace>/hazard3-doom/scripts/install-yosys.sh
@@ -15,12 +16,18 @@
 #
 # Usage:
 #   ./scripts/install-yosys.sh
-#   ./scripts/install-yosys.sh --jobs 2
-#   ./scripts/install-yosys.sh --workspace /path/to/workspace
-#   ./scripts/install-yosys.sh --skip-packages
+#   ./scripts/install-yosys.sh --oss-cad-suite-version 2026-09-14
+#   ./scripts/install-yosys.sh --from-source
+#   ./scripts/install-yosys.sh --from-source --jobs 2
+#   ./scripts/install-yosys.sh --from-source --workspace /path/to/workspace
+#   ./scripts/install-yosys.sh --from-source --skip-packages
 #
 
 set -euo pipefail
+
+# Verify this script against the recorded inventory without blocking normal execution.
+"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
+    --check-file "${BASH_SOURCE[0]}" || true
 
 YOSYS_REPOSITORY="https://github.com/YosysHQ/yosys.git"
 YOSYS_COMMIT="5f29546d8"
@@ -29,6 +36,10 @@ EXPECTED_COMMIT_FRAGMENT="5f29546d8"
 
 INSTALL_PREFIX="/usr/local"
 BUILD_DIR_NAME="build-hazard3"
+
+DEFAULT_OSS_CAD_SUITE_VERSION="2026-07-20"
+OSS_CAD_SUITE_VERSION="${OSS_CAD_SUITE_VERSION:-${DEFAULT_OSS_CAD_SUITE_VERSION}}"
+INSTALL_METHOD="release"
 
 WORKSPACE_DIR=""
 JOBS=2
@@ -40,9 +51,12 @@ Usage:
     install-yosys.sh [options]
 
 Options:
-    --workspace DIR    Parent workspace. Default: parent of Hazard3-Doom repo.
-    --jobs N           Parallel build jobs. Default: 2.
-    --skip-packages    Do not install Ubuntu/Debian build dependencies.
+    --oss-cad-suite-version VERSION
+                       OSS CAD Suite release. Default: 2026-07-20.
+    --from-source      Build the existing pinned Yosys source revision instead.
+    --workspace DIR    Source mode only. Parent workspace.
+    --jobs N           Source mode only. Parallel build jobs. Default: 2.
+    --skip-packages    Do not install required Ubuntu/Debian packages.
     -h, --help         Show this help.
 EOF
 }
@@ -58,6 +72,15 @@ version_ge() {
 
 while (($# > 0)); do
     case "$1" in
+        --oss-cad-suite-version)
+            (($# >= 2)) || die "--oss-cad-suite-version requires a release tag"
+            OSS_CAD_SUITE_VERSION="$2"
+            shift 2
+            ;;
+        --from-source)
+            INSTALL_METHOD="source"
+            shift
+            ;;
         --workspace)
             (($# >= 2)) || die "--workspace requires a directory"
             WORKSPACE_DIR="$2"
@@ -84,6 +107,16 @@ while (($# > 0)); do
 done
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+
+if [[ "${INSTALL_METHOD}" == "release" ]]; then
+    args=(--version "${OSS_CAD_SUITE_VERSION}")
+    if ((SKIP_PACKAGES == 1)); then
+        args+=(--skip-packages)
+    fi
+    exec "${SCRIPT_DIR}/install-oss-cad-suite.sh" "${args[@]}"
+fi
+
+printf 'Source build selected for Yosys.\n\n'
 
 if [[ -z "${WORKSPACE_DIR}" ]]; then
     PROJECT_ROOT="$(git -C "${SCRIPT_DIR}" rev-parse --show-toplevel 2>/dev/null)" ||

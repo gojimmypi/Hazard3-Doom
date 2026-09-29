@@ -6,7 +6,7 @@
 # Project:     Hazard3-Doom
 # Purpose:     Install all requirements
 #
-# WARNING:     Existing installs of yoysys and nextpnr may be overwritten by this script.
+# WARNING:     Source-build mode may replace /usr/local Yosys/nextpnr installs.
 #
 # Copyright (c) 2026 gojimmypi
 #
@@ -21,10 +21,60 @@
 
 set -euo pipefail
 
+# Verify this script against the recorded inventory without blocking normal execution.
+"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
+    --check-file "${BASH_SOURCE[0]}" || true
+
 REPO_URL="https://github.com/ulx3s/Hazard3-Doom.git"
 REPO_DIR="${PWD}/Hazard3-Doom"
 EXISTING_REPO_DIR=""
 REUSE_EXISTING_REPO=0
+DEFAULT_OSS_CAD_SUITE_VERSION="2026-07-20"
+OSS_CAD_SUITE_VERSION="${OSS_CAD_SUITE_VERSION:-${DEFAULT_OSS_CAD_SUITE_VERSION}}"
+FPGA_TOOLS_FROM_SOURCE=0
+
+usage()
+{
+    cat <<'USAGE'
+Usage:
+    full-install.sh [options]
+
+Options:
+    --oss-cad-suite-version VERSION
+                       OSS CAD Suite release. Default: 2026-07-20.
+    --fpga-tools-from-source
+                       Build the existing pinned Yosys/nextpnr revisions
+                       instead of installing the OSS CAD Suite release.
+    -h, --help         Show this help.
+USAGE
+}
+
+die()
+{
+    printf 'ERROR: %s\n' "$*" >&2
+    exit 1
+}
+
+while (($# > 0)); do
+    case "$1" in
+        --oss-cad-suite-version)
+            (($# >= 2)) || die "--oss-cad-suite-version requires a release tag"
+            OSS_CAD_SUITE_VERSION="$2"
+            shift 2
+            ;;
+        --fpga-tools-from-source)
+            FPGA_TOOLS_FROM_SOURCE=1
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            die "unknown argument: $1"
+            ;;
+    esac
+done
 
 confirm_full_install()
 {
@@ -40,17 +90,24 @@ confirm_full_install()
         printf '  - clone the Hazard3-Doom repository and initialize its submodules;\n'
     fi
     printf '%s\n' \
-        '  - install the RISC-V toolchain, CMake, and native OpenOCD;' \
-        '  - build and install Yosys and nextpnr-ecp5/Project Trellis;' \
-        '  - run the final requirements check.'
+        '  - install the pinned RISC-V toolchain, CMake, and native OpenOCD;'
+    if ((FPGA_TOOLS_FROM_SOURCE == 1)); then
+        printf '  - build the pinned Yosys and nextpnr/Project Trellis source revisions;\n'
+    else
+        printf '  - install OSS CAD Suite %s, matching the main FPGA CI workflows;\n' \
+            "${OSS_CAD_SUITE_VERSION}"
+    fi
+    printf '%s\n' '  - run the final requirements check.'
 
-    cat <<'EOF_CONFIRM'
+    if ((FPGA_TOOLS_FROM_SOURCE == 1)); then
+        cat <<'EOF_CONFIRM'
 
-WARNING: The Yosys and nextpnr installation steps may overwrite or replace
-existing installations in their target install locations.
+WARNING: Source-build mode installs FPGA tools under /usr/local and may replace
+existing Yosys, nextpnr, or Project Trellis files there.
 
 This can take a long time and use substantial CPU, RAM, disk, and swap.
 EOF_CONFIRM
+    fi
 
     printf '\nContinue with the full install? [y/N] '
     read -r reply
@@ -161,15 +218,18 @@ sudo apt-get update
 
 sudo apt-get install -y \
     git \
-    shellcheck \
     python3-serial \
     usbutils
+
+if ! command -v shellcheck >/dev/null 2>&1; then
+    sudo apt-get install -y shellcheck || true
+fi
 
 MY_SHELLCHECK="shellcheck"
 if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
     "${MY_SHELLCHECK}" -x "${BASH_SOURCE[0]}" >&2 || exit 1
 else
-    echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
+    echo "WARNING: $MY_SHELLCHECK is not installed; continuing without optional shell linting." >&2
 fi
 
 if (( REUSE_EXISTING_REPO == 1 )); then
@@ -203,14 +263,16 @@ hash -r
 
 ./scripts/install-cmake.sh
 
-./scripts/install-yosys.sh
+if ((FPGA_TOOLS_FROM_SOURCE == 1)); then
+    ./scripts/install-yosys.sh --from-source
+    ./scripts/install-nextpnr-ecp5.sh --from-source
+else
+    ./scripts/install-oss-cad-suite.sh --version "${OSS_CAD_SUITE_VERSION}"
+    export PATH="${HOME}/.local/oss-cad-suite/current/oss-cad-suite/bin:${PATH}"
+fi
 
 hash -r
 yosys -V
-
-./scripts/install-nextpnr-ecp5.sh
-
-hash -r
 ecppack --version
 nextpnr-ecp5 --version
 
