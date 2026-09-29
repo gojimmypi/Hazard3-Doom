@@ -69,6 +69,35 @@ Ouvrez ensuite :
 Le navigateur communique directement avec le périphérique USB sélectionné. Les
 données de l'image FPGA et du JTAG ne sont pas téléversées vers un serveur web.
 
+
+Configuration USB selon l'hôte
+------------------------------
+
+Le flux de programmation WebUSB est identique une fois que le navigateur peut
+ouvrir et revendiquer l'interface FT231X de l'ULX3S, mais la configuration du
+système d'exploitation diffère :
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Hôte
+     - Configuration WebUSB
+   * - Windows
+     - Associez l'interface FT231X ULX3S utilisée par ``US1`` à WinUSB. Zadig est
+       un moyen pratique de le faire. L'association FTDI VCP/D2XX normale n'est
+       pas compatible avec ce chemin WebUSB du navigateur.
+   * - Linux
+     - Assurez-vous que l'utilisateur peut ouvrir le périphérique USB brut,
+       normalement avec une règle udev. Si ``ftdi_sio`` possède l'interface
+       FT231X ULX3S, libérez uniquement cette interface pendant l'utilisation de
+       WebUSB.
+   * - macOS
+     - N'installez ni la configuration Windows WinUSB/Zadig ni les règles udev
+       Linux. Utilisez un navigateur Chromium récent, fermez les applications
+       qui peuvent déjà posséder le FT231X et reconnectez ``US1`` si l'interface
+       est occupée.
+
 Propriété WebUSB et OpenOCD
 ---------------------------
 
@@ -185,6 +214,200 @@ pilote FTDI installé, ou réinstallez le paquet FTDI VCP/D2XX approprié.
    Le Gestionnaire de périphériques peut restaurer le pilote FTDI normal
    lorsqu'une application FTDI VCP/D2XX telle que ``fujprog`` sous Windows est
    nécessaire.
+
+
+Accès USB sous Linux et Ubuntu
+------------------------------
+
+Sous Linux, le navigateur doit avoir un accès direct au périphérique USB ULX3S
+pour utiliser l'interface de programmation FPGA WebUSB.
+
+C'est particulièrement important avec Ubuntu dans une machine virtuelle. Par
+exemple, avec VMware Workstation, vérifiez d'abord que le périphérique USB ULX3S
+est connecté au système invité plutôt qu'à l'hôte Windows.
+
+Le périphérique FTDI ULX3S apparaît normalement comme suit::
+
+   0403:6015 Future Technology Devices International, Ltd Bridge(I2C/SPI/UART/FIFO)
+
+Confirmez qu'Ubuntu le voit :
+
+.. code-block:: console
+
+   $ lsusb -d 0403:6015
+   Bus 001 Device 004: ID 0403:6015 Future Technology Devices International, Ltd Bridge(I2C/SPI/UART/FIFO)
+
+Les numéros de bus et de périphérique varient.
+
+WebUSB ``Access denied``
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Si l'outil signale une erreur similaire à::
+
+   Failed to execute 'open' on 'USBDevice': Access denied.
+
+le navigateur voit l'ULX3S, mais l'utilisateur connecté n'a pas les permissions
+suffisantes pour ouvrir le périphérique USB brut.
+
+Avec l'exemple ci-dessus, ``Bus 001 Device 004`` correspond à :
+
+.. code-block:: text
+
+   /dev/bus/usb/001/004
+
+Vérifiez les permissions :
+
+.. code-block:: console
+
+   $ ls -l /dev/bus/usb/001/004
+   $ getfacl /dev/bus/usb/001/004
+
+Une configuration défaillante typique ressemble à::
+
+   crw-rw-r-- 1 root root ... /dev/bus/usb/001/004
+
+Dans ce cas, un utilisateur ordinaire ne dispose que d'un accès en lecture.
+
+Pour un test de diagnostic temporaire, accordez l'accès en lecture/écriture :
+
+.. code-block:: console
+
+   $ sudo chmod 0666 /dev/bus/usb/001/004
+
+Réessayez ensuite ``Connect ULX3S USB`` dans l'outil.
+
+.. warning::
+
+   La commande ``chmod`` ci-dessus sert uniquement de test de diagnostic. Le
+   changement de permission est perdu lorsque le périphérique USB est déconnecté
+   ou réénuméré.
+
+Pour un accès persistant, créez une règle udev :
+
+.. code-block:: console
+
+   $ sudo tee /etc/udev/rules.d/70-ulx3s-webusb.rules >/dev/null <<'EOF'
+   SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6015", TAG+="uaccess"
+   EOF
+
+Rechargez les règles udev :
+
+.. code-block:: console
+
+   $ sudo udevadm control --reload-rules
+
+Déconnectez puis reconnectez le périphérique USB ULX3S. Après reconnexion,
+relancez ``lsusb`` car le numéro de périphérique peut avoir changé.
+
+WebUSB ``Unable to claim interface``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Un second problème propre à Linux peut apparaître après correction des
+permissions USB. L'outil peut signaler::
+
+   Could not claim the ULX3S FT231X interface:
+   Failed to execute 'claimInterface' on 'USBDevice':
+   Unable to claim interface.
+
+Cela signifie normalement que le pilote noyau Linux ``ftdi_sio`` a déjà
+revendiqué l'interface FTDI.
+
+Vérifiez les affectations de pilotes USB :
+
+.. code-block:: console
+
+   $ lsusb -t
+
+Une interface ULX3S en conflit ressemble à::
+
+   Dev 004, If 0, Class=Vendor Specific Class, Driver=ftdi_sio, 12M
+
+Le navigateur ne peut pas revendiquer l'interface tant que ``ftdi_sio`` la
+possède. Déterminez le nom de l'interface FTDI :
+
+.. code-block:: console
+
+   $ ls -l /sys/bus/usb/drivers/ftdi_sio/
+
+Par exemple, elle peut apparaître comme::
+
+   1-2.1:1.0
+
+Le nom exact dépend de la topologie USB de l'ordinateur ou de la VM.
+
+Libérez temporairement uniquement cette interface de ``ftdi_sio`` :
+
+.. code-block:: console
+
+   $ echo '1-2.1:1.0' | sudo tee /sys/bus/usb/drivers/ftdi_sio/unbind
+
+Remplacez ``1-2.1:1.0`` par le nom indiqué sur votre système. Vérifiez ensuite :
+
+.. code-block:: console
+
+   $ lsusb -t
+
+L'interface ULX3S ne doit plus afficher ``Driver=ftdi_sio``. Sans débrancher
+l'ULX3S, revenez à l'outil et sélectionnez de nouveau ``Connect ULX3S USB``.
+
+Après l'utilisation de WebUSB
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+L'interface FTDI peut être rendue au pilote série Linux normal avec :
+
+.. code-block:: console
+
+   $ echo '1-2.1:1.0' | sudo tee /sys/bus/usb/drivers/ftdi_sio/bind
+
+Remplacez encore ``1-2.1:1.0`` par le nom de votre système.
+
+.. note::
+
+   Ne déchargez normalement pas tout le module noyau ``ftdi_sio``. Libérer
+   uniquement l'interface ULX3S évite de perturber les autres périphériques FTDI
+   connectés.
+
+   Évitez aussi de libérer automatiquement tous les périphériques ``0403:6015``
+   avec une règle udev, sauf si la machine est dédiée à la programmation WebUSB.
+   Cela empêcherait Linux d'utiliser l'interface série FTDI normale lorsque le
+   pilote est détaché.
+
+Machines virtuelles Ubuntu
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Avec VMware Workstation, les deux couches doivent être correctes :
+
+#. Le périphérique USB ULX3S doit être connecté à l'invité Ubuntu et non à l'hôte.
+#. Ubuntu doit permettre au navigateur d'ouvrir le périphérique USB brut.
+#. ``ftdi_sio`` ne doit pas posséder l'interface FTDI pendant l'utilisation WebUSB.
+
+Si ``lsusb`` n'affiche pas ``0403:6015``, corrigez d'abord la connexion USB de la
+VM. Les changements du navigateur ou d'udev ne serviront à rien tant que le
+périphérique n'est pas visible dans l'invité.
+
+.. _web-flasher-macos-usb:
+
+Accès USB sous macOS
+--------------------
+
+macOS n'utilise ni la procédure Windows Zadig/WinUSB ni les règles udev Linux.
+Commencez par les prérequis WebUSB normaux : un navigateur Chromium récent et
+l'outil HTTPS hébergé ou ``localhost``.
+
+Avant de sélectionner **Connect ULX3S USB**, fermez ``fujprog``, OpenOCD,
+``openFPGALoader``, les terminaux série ou tout autre logiciel qui pourrait déjà
+posséder l'interface FT231X. Si le navigateur signale un échec d'accès ou de
+revendication, déconnectez et reconnectez ``US1`` puis réessayez le navigateur
+avant de modifier le système.
+
+L'adaptateur USB-UART externe utilisé par la console Web Serial de Hazard3-Doom
+est distinct de l'interface JTAG ``US1`` de l'ULX3S et peut rester connecté.
+
+.. note::
+
+   L'indicateur d'hôte de l'outil repose sur les informations de plate-forme
+   fournies par le navigateur. S'il affiche **Unknown**, utilisez la section du
+   système d'exploitation correspondant à l'hôte réel.
 
 Programmer un fichier ``.bit``
 ------------------------------
@@ -379,11 +602,12 @@ explicite.
 
 Voir :doc:`../getting-started/programming` pour la distinction entre chargement
 FPGA temporaire et configuration de démarrage persistante.
-
-Références d'implémentation
----------------------------
+Références externes
+-------------------
 
 * `Manuel ULX3S <https://github.com/emard/ulx3s/blob/master/doc/MANUAL.md>`_
 * `fujprog <https://github.com/kost/fujprog>`_
 * `Project Trellis <https://github.com/YosysHQ/prjtrellis>`_
 * `API WebUSB <https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API>`_
+
+* `openFPGALoader <https://trabucayre.github.io/openFPGALoader/guide/install.html>`_

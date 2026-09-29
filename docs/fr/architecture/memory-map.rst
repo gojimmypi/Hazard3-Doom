@@ -57,6 +57,8 @@ Utilisé par ULX3S 85F et ULX4M-LD 85F :
    * - ``0x23C00000-0x23FFFFFF``
      - Réservation vidéo non mise en cache.
 
+Pour l'ULX4M-LD, il s'agit d'un **profil de 64 Mio visible par le logiciel**, et non de la capacité physique de la puce DDR3. La population Micron ``MT41K512M16HA`` actuellement qualifiée est un composant x16 de 8 Gbit (1 Gio), et le projet prend aussi en charge la population Alliance ``AS4C256M16D3`` plus petite au moyen d'un profil LiteDRAM généré séparément. Hazard3-Doom n'utilise volontairement que la plage de 64 Mio ci-dessus afin de conserver une carte mémoire logicielle stable entre ces populations de cartes.
+
 Profil SDRAM 32 Mio
 -------------------
 

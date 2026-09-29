@@ -46,6 +46,56 @@ normalnog FTDI VCP/D2XX drivera.
 Pogledajte :doc:`user-guide/web-flasher` za potpuni tijek WebUSB programiranja
 i napomene o vraćanju drivera.
 
+
+Zadig prijavljuje ``Driver Installation: FAILED (Could not allocate resource)``
+-------------------------------------------------------------------------------
+
+Ako Zadig ne uspije zamijeniti ULX3S FTDI upravljački program i prikaže poruku
+poput ``Driver Installation: FAILED (Could not allocate resource)``, prije
+uklanjanja upravljačkih programa ili promjene konfiguracije uređaja provjerite
+je li ostao zaglavljen libwdi/Zadig pomoćni proces.
+
+Zatvaranje Zadiga ne mora nužno ugasiti pomoćni proces. U jednom potvrđenom
+slučaju ``zadig.exe`` više nije radio, ali je ``installer_x64.exe`` ostao
+zaglavljen u pozadini i sprječavao sljedeću instalaciju upravljačkog programa.
+
+U PowerShellu provjerite relevantne instalacijske/pomoćne procese:
+
+.. code-block:: powershell
+
+   Get-Process installer_x64*, wdi*, dpinst*, pnputil* -ErrorAction SilentlyContinue |
+       Select-Object Id, ProcessName, Path
+
+Ako je prisutan zaostali ``installer_x64.exe``, a instalacija upravljačkog
+programa nije namjerno u tijeku, zaustavite ga:
+
+.. code-block:: powershell
+
+   Stop-Process -Name installer_x64 -Force
+
+Zatim potvrdite da ga više nema:
+
+.. code-block:: powershell
+
+   Get-Process installer_x64* -ErrorAction SilentlyContinue
+
+Ako je od napuštene instalacije/uklanjanja uređaja ostao aktivan i stari
+``pnputil.exe``, zaustavite i njega prije ponovnog pokušaja.
+
+Nakon uklanjanja zaostalog pomoćnog procesa:
+
+#. Zatvorite Zadig.
+#. Odspojite ULX3S USB vezu.
+#. Pričekajte nekoliko sekundi i ponovno je spojite.
+#. Pokrenite Zadig kao administrator.
+#. Omogućite **Options -> List All Devices**.
+#. Odaberite željeno ULX3S FTDI sučelje i provjerite USB ID ``0403:6015``.
+#. Ponovno pokušajte instalirati WinUSB/libusb upravljački program.
+
+Nemojte kao prvi korak deinstalirati nepovezane FTDI uređaje. Zaostali
+``installer_x64.exe`` može izazvati ovu pogrešku čak i kada Zadig, OpenOCD,
+``fujprog`` i drugi vidljivi USB alati više ne rade.
+
 WebUSB flasher prijavljuje neprepoznat JTAG ID
 ----------------------------------------------
 
@@ -113,6 +163,30 @@ serijskih drivera provjerite preglednik.
    Ako je Web Serial izbornik prazan dok Chrome prikazuje čekajuće ažuriranje,
    dovršite ažuriranje i ponovno pokrenite preglednik prije promjene serijskih
    drivera.
+
+
+Web Serial izbornik se zatvori, ali se UART ipak ne poveže
+----------------------------------------------------------
+
+Ako odaberete serijski uređaj i izbornik preglednika se zatvori, ali alat ostane
+nepovezan, najprije provjerite posjeduje li port već neka druga aplikacija.
+
+Trenutačni alat koordinira kartice istog izvora pomoću Web Locka preglednika i
+``BroadcastChannel``. Ako druga kopija iste stranice već posjeduje UART, druga
+stranica prijavljuje **UART already in use**. Stranica s drugog izvora, PuTTY,
+terminal IDE-a ili druga aplikacija ne mogu se identificirati po imenu, pa se
+neuspjeli ``SerialPort.open()`` prijavljuje kao vjerojatan sukob vlasništva.
+
+Uobičajeni oporavak:
+
+#. Zatvorite ili odspojite drugu karticu alata ili serijsku aplikaciju.
+#. Vratite se u odjeljak za H3IMG/IWAD ili Serial povezivanje.
+#. Odaberite **Retry UART** ili **Connect UART** i ponovno odaberite port.
+
+Imajte na umu da su ``http://127.0.0.1:8000`` i javna stranica
+``https://ulx3s.github.io`` različiti izvori preglednika. Njihovi Web Lockovi se
+ne koordiniraju, iako operacijski sustav i dalje sprječava da obje stranice
+istodobno posjeduju isti serijski port.
 
 Web Serial odabere Linux TTY, ali ga ne može otvoriti
 -----------------------------------------------------
@@ -206,6 +280,26 @@ Serial kako bi oslobodio port, a zatim izravno testirajte na Linuxu:
 Ako je izlaz pri pokretanju čist, ali ova naredba i dalje ne daje odgovor,
 usredotočite se na TX žicu adaptera, sjedanje konektora, masu i FPGA RX pin
 umjesto mijenjanja OpenOCD-a ili baud ratea.
+
+
+WebUSB ne može otvoriti ili preuzeti ULX3S
+------------------------------------------
+
+Na Linuxu Hazard3-Doom alat može otkriti ULX3S, ali ga ipak ne uspjeti otvoriti.
+
+Dvije su uobičajene pogreške:
+
+``Access denied``
+   Preglednik nema dopuštenje čitanja/pisanja za sirovi USB uređaj.
+
+``Unable to claim interface``
+   Linux upravljački program ``ftdi_sio`` već posjeduje FT231X USB sučelje.
+
+Pogledajte :doc:`user-guide/web-flasher` za Linux udev postavke dopuštenja i
+postupak privremenog oslobađanja ULX3S sučelja od ``ftdi_sio``.
+
+Ako koristite virtualni stroj, provjerite i da je ULX3S USB uređaj spojen na
+gostujući operacijski sustav, a ne na host.
 
 Doom upload istječe
 -------------------
@@ -308,6 +402,72 @@ monitorom i SAO brzinu sabirnice od 100 kHz, ali ne rekonstruira frame koji je
 bio vidljiv prije pokretanja GUI-a. Pokrenite Doom ili prikažite drugi video
 frame monitora kako biste zamijenili zadnju sliku analizatora.
 
+
+``shellcheck`` nije instaliran
+------------------------------
+
+ShellCheck je neobavezan razvojni alat za provjeru shell skripti u repozitoriju.
+Nije potreban za uobičajene Hazard3-Doom izgradnje. Na Ubuntu/WSL sustavima
+razvojni korisnici koji žele pokretati provjeru shell skripti mogu ga instalirati
+ovako:
+
+.. code-block:: bash
+
+   sudo apt-get install shellcheck
+
+Za širu provjeru hosta pokrenite ``./scripts/requirements-check.sh``.
+
+RISC-V GCC lanac alata nije pronađen
+------------------------------------
+
+Izgradnja uobičajeno koristi kompatibilni RISC-V bare-metal prevoditelj dostupan
+u ``PATH``. Alati ``riscv-none-elf-*`` izravno su podržani, dok
+``TOOLCHAIN_PREFIX`` može odabrati drugu instalaciju ili prefiks prevoditelja.
+Povijesna lokacija ``/opt/riscv/bin/riscv32-unknown-elf-*`` ostaje podržana samo
+kao kompatibilna rezervna mogućnost. Primjerice, xPack instalacija često koristi:
+
+.. code-block:: bash
+
+   TOOLCHAIN_PREFIX=riscv-none-elf- ./scripts/build.sh
+
+Pokrenite ``./scripts/requirements-check.sh`` kako biste otkrili uobičajene
+prefikse RISC-V lanca alata i provjerili prihvaća li prevoditelj Hazard3 ISA/ABI
+opcije.
+
+``c++: fatal error: Killed signal terminated program cc1plus``
+--------------------------------------------------------------
+
+To gotovo uvijek znači da je Ubuntu VM ostao bez dostupnog RAM-a pa je kernelov
+OOM killer prekinuo jedan od procesa C++ prevoditelja. To nije C++ pogreška
+prevođenja. Povećajte memoriju ili swap VM-a ili smanjite paralelizam izgradnje
+prije ponovnog pokušaja.
+
+Workflow prijavljuje da je CMake prestar
+----------------------------------------
+
+Provjera zahtjeva računala tretira CMake kao neobavezan razvojni alat. Ako
+određeni workflow zahtijeva noviju verziju, instalirajte ili nadogradite CMake na
+verziju koju taj workflow traži, zatim provjerite s ``cmake --version``.
+
+Za instalaciju CMakea 3.25 ili novijeg pogledajte skriptu ``install-cmake.sh`` u
+direktoriju ``scripts/``.
+
+``ROR: Max frequency for clock '$glbnet$clk_sys': XX.YY MHz (FAIL at 50 MHz)``
+------------------------------------------------------------------------------
+
+Ako je routana frekvencija ispod cilja pri korištenju zadanih seedova, najprije
+potvrdite da Yosys i nextpnr odgovaraju verzijama zabilježenima uz mjerodavne
+zadane postavke routinga u ``scripts/build-ecp5-bitstream-common.sh``. Routing
+seedovi ovise o verziji alata.
+
+Zabilježite lokalne verzije ovako:
+
+.. code-block:: text
+
+   yosys --version
+   nextpnr-ecp5 --version
+   ecppack --version
+
 Uploader firmwarea konzole ostaje na ``Loading...``
 ----------------------------------------------------
 
@@ -366,6 +526,29 @@ Ako H3IMG/H3W kasnije istekne čekajući ``READY``, prvo provjerite radi li
 rezidentni monitor na ``>`` promptu. Ako helper odgovara, ali OpenOCD nije
 prisutan, Device Tool dodatno podsjeća da monitor možda još treba učitati.
 
+
+Zatim možete nastaviti s:
+
+.. code-block:: text
+
+   https://ulx3s.github.io/Hazard3-Doom/
+
+ili otvoriti lokalnu kopiju na ``http://127.0.0.1:8000/``. Za cijeli alat nemojte
+koristiti ``file://`` URL.
+
+Ispravna provjera zdravlja pasivna je i zato **ne** smije stalno stvarati OpenOCD
+poruke poput:
+
+.. code-block:: text
+
+   accepting 'gdb' connection on tcp/3333
+   attempted 'gdb' connection rejected
+
+Korisne JTAG provjere:
+
+* Na ULX4M-LD s Tigardom držite Interface 0 na FTDI VCP driveru za UART, a Interface 1 na libusbK za JTAG. OpenOCD koristi ``ftdi channel 1``.
+* Na ULX4M-LD ispravan LFE5UM-85F IDCODE je ``0x01113043``. Ako OpenOCD očita taj IDCODE, ali prijavi ``dtmcontrol is 0``, fizički JTAG put radi; provjerite je li korisnički bitstream izašao iz DFU-a i stvarno se izvršava prije promjene DTM RTL-a ili ožičenja.
+
 OpenOCD prijavljuje USB timeout ili potpuno nulti JTAG scan u VM-u
 ------------------------------------------------------------------
 
@@ -403,6 +586,26 @@ Ako isti FT231X treba i browser FPGA flasheru, preferirajte WinUSB kako bi i
 OpenOCD/GDB i WebUSB radili bez nove zamjene drivera. Vratite FTDI VCP/D2XX
 driver samo kada ga zahtijeva alat poput Windows ``fujprog``.
 
+
+ULX4M-LD prijavljuje ``TIMEOUT`` vanjske memorije
+-------------------------------------------------
+
+Početno čekanje trenutačnog monitora od 5 sekundi može isteći prije nego LiteDRAM
+završi kalibraciju. Sama poruka ``TIMEOUT`` nije konačan dokaz kvara. Pokrenite
+``s`` i provjerite trenutačno stanje. Upotrebljivo DDR stanje uključuje:
+
+.. code-block:: text
+
+   external_memory_ready=YES
+   init_done=YES
+   init_error=NO
+   pll_locked=YES
+   user_clock_ready=YES
+   ready=YES
+
+Ako su ta polja spremna, pokrenite ``q``. Kvalificirani ULX4M-LD routing 40/60
+MHz više je puta prošao cijeli SDRAM skup testova, kao i ``k``, ``d`` i ``x``.
+
 Build se iznenada mijenja zbog submodula
 ----------------------------------------
 
@@ -418,3 +621,8 @@ Provjerite stanje superprojekta i submodula:
 
 Čist superprojekt ne znači da je submodul na grani ili commitu koji ste
 očekivali.
+
+Povezane poveznice
+------------------
+
+* `RISC-V GCC XPACK <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_

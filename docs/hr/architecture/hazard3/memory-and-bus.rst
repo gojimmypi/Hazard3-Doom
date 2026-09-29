@@ -169,6 +169,105 @@ Nemojte brkati vanjski SDRAM na ULX3S-u s ECP5 EBR-om. EBR je SRAM fizički unut
 FPGA-a; SDR SDRAM čip zasebna je komponenta na pločici. LiteDRAM se ne koristi u
 izvornom SDR putu ULX3S-a.
 
+
+ULX4M-LD DDR3 konfiguracija i kvalifikacija
+-------------------------------------------
+
+Proizvodne ULX4M-LD pločice ne moraju sve sadržavati isti DDR3 uređaj. Projekt je
+namijenjen podršci najmanje sljedećih x16 dijelova kroz zasebne generirane
+LiteDRAM profile:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 22 20 30
+
+   * - Uređaj
+     - Gustoća
+     - Približan kapacitet
+     - Projektna napomena
+   * - Micron ``MT41K512M16HA``
+     - 8 Gbit, x16
+     - 1 GiB
+     - Trenutačno hardverski kvalificirana pločica koristi ovu obitelj. LiteDRAM
+       geometrija ima 16 bitova retka, 10 bitova stupca i 3 bita banke.
+   * - Alliance ``AS4C256M16D3``
+     - 4 Gbit, x16
+     - 512 MiB
+     - Podržan kao alternativna populacija pločice kroz drugi generirani
+       LiteDRAM modul/profil.
+
+Fizički kapacitet čipa veći je od trenutačne Hazard3-Doom softverske mape.
+Hazard3-Doom namjerno izlaže profil vanjske memorije od 64 MiB na
+``0x20000000-0x23ffffff`` uz dijagnostički alias; neiskorišten fizički kapacitet
+nije potreban trenutačnom softveru.
+
+Odabir čipa pripada generiranoj LiteDRAM konfiguraciji, a ne datoteci
+``ahb_litedram.v``. Sučelje AHB-LiteDRAM mosta ostaje isto dok se generirana jezgra
+mijenja prema memorijskom uređaju, inicijalizacijskom CPU-u, frekvenciji i drugim
+postavkama profila izgradnje. Time razlike u populaciji pločice ostaju izvan
+Hazard3 sučelja sistemske sabirnice.
+
+Trenutačno hardverski kvalificirane LiteDRAM postavke su:
+
+.. code-block:: text
+
+   memtype: DDR3
+   phy: ECP5DDRPHY
+   input/reference clock: 25 MHz
+   LiteDRAM user clock: 60 MHz
+   LiteDRAM init clock: 25 MHz
+   Hazard3/AHB system clock: 40 MHz
+   user port: 128-bit Wishbone
+   cmd_buffer_depth: 2
+   cmd_buffer_buffered: true
+   with_auto_precharge: true
+   initialization CPU: SERV for the qualified checkpoint
+
+``cmd_buffer_depth=0`` odbačen je tijekom timing eksperimenata jer je stvarao
+kombinacijske petlje/probleme s timingom. Kvalificirani profil zadržava dubinu 2.
+``with_auto_precharge`` ostaje ``true`` u kvalificiranoj konfiguraciji.
+
+Inicijalizacijski CPU (primjerice SERV ili VexRiscv) dio je generirane LiteDRAM
+jezgre i ne mijenja sučelje sabirnice ``ahb_litedram.v``. Držite odvojene
+generirane profile kako bi se vrsta CPU-a, DDR uređaj i frekvencija korisničkog
+takta mogli programski sweepati bez ručnog uređivanja generiranog Veriloga.
+
+Verzionirani YAML profili izvor su koji se uređuje za te generirane jezgre.
+Odaberite fizički broj RAM dijela; jedna naredba regenerira obje CPU varijante:
+
+.. code-block:: bash
+
+   cd third_party/Hazard3/example_soc/third_party/LiteDRAM
+   ./regenerate-ulx4m.sh MT41K512M16HA
+   ./regenerate-ulx4m.sh AS4C256M16D3
+
+Svako pokretanje zamjenjuje ``generated-serv/`` i ``generated-vexrisc/`` odabranim
+RAM profilom. Prije izgradnje za pločicu potvrdite ``ram_part`` zapisan u
+``LITEDRAM_VERSIONS.txt`` svakog generiranog direktorija.
+
+Hardverska kvalifikacija više je od nextpnr timing PASS-a. Na kvalificiranoj
+Micron pločici monitor je uspješno izvršio sve sljedeće testove na LiteDRAM
+routingu od 60 MHz:
+
+* destruktivni sekvencijalni test od 1 MiB s pristupima bajt/poluriječ/riječ i
+  uzorcima nula, jedinica, adrese i invertirane adrese;
+* rijetko testiranje aliasiranja/adresa kroz cijeli softverski vidljiv prozor od
+  64 MiB;
+* pseudoslučajne testove od 1 MiB u četiri odvojene regije razmaknute 16 MiB;
+* cijeli ``q`` kvalifikacijski skup, ponovljeno;
+* test alokacije/opterećenja hrpe od 40 MiB;
+* brzi test Doom platformske memorije/timera; i
+* izvršavanje kopiranog RV32 koda iz DDR-a, uključujući faze s normalnim i stranim
+  GP-om, prekide timera i zaštitne provjere.
+
+Naredba stanja mjerodavna je nakon pokretanja. Tijekom jednog pokretanja rezidentni
+monitor ispisao je 5-sekundni ``TIMEOUT`` vanjske memorije dok se LiteDRAM još
+kalibrirao, ali kasniji ``s`` pokazao je ``external_memory_ready=YES``,
+``init_done=YES``, ``init_error=NO``, ``pll_locked=YES``,
+``user_clock_ready=YES`` i ``ready=YES``. Svi naknadni kvalifikacijski testovi
+prošli su. Zato početnu poruku o isteku vremena ne treba smatrati konačnim DDR
+kvarom bez provjere trenutačnog stanja.
+
 Redoslijed memorijskih operacija i ``fence.i``
 ----------------------------------------------
 
@@ -205,3 +304,10 @@ Ova konfiguracija je bare-metal ugrađeni sistem. Ne omogućuje MMU za virtualnu
 memoriju niti izolaciju korisničkog načina/PMP-a. Adrese u
 :doc:`../memory-map` zato je najbolje razumjeti kao fizičke adresne prozore
 SoC-a koje izravno koriste firmware u strojnom načinu i Doom aplikacija.
+
+Povezane poveznice
+------------------
+
+* `nextpnr-ecp5 <https://github.com/YosysHQ/nextpnr>`_
+
+* `Yosys <https://github.com/YosysHQ/yosys>`_

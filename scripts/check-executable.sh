@@ -4,8 +4,8 @@
 # Path:        scripts/check-executable.sh
 #
 # Project:     Hazard3-Doom
-# Purpose:     Check recently changed tracked shell scripts for the Git
-#              executable bit.
+# Purpose:     Check tracked shell scripts for the Git executable bit, either
+#              across recent commits or across the full CI scope.
 #
 # Copyright (c) 2026 gojimmypi
 #
@@ -18,15 +18,21 @@
 # See LICENSING.md for project licensing policy and scope.
 # -----------------------------------------------------------------------------
 
+# Verify this script against the recorded inventory without blocking normal execution.
+"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
+    --check-file "${BASH_SOURCE[0]}" || true
+
 #
 # File: scripts/check-executable.sh
 #
-# Ensure shell scripts changed in recent commits are executable when checked into git.
+# Ensure tracked shell scripts are executable when checked into git.
 #
 # Run from the repository root:
 #   ./scripts/check-executable.sh [commit-count]
+#   ./scripts/check-executable.sh --all
 #
 # If commit-count is omitted, the most recent 5 commits are checked.
+# --all checks every tracked scripts/*.sh and doom/*.sh file, matching CI.
 #
 # For example to fix:
 #
@@ -47,14 +53,19 @@ else
 fi
 
 if [[ $# -gt 1 ]]; then
-    echo "Usage: $0 [commit-count]" >&2
+    echo "Usage: $0 [commit-count|--all]" >&2
     exit 1
 fi
 
+CHECK_ALL=0
 COMMIT_COUNT="${1:-5}"
-if [[ ! "${COMMIT_COUNT}" =~ ^[1-9][0-9]*$ ]]; then
-    echo "commit-count must be a positive integer: ${COMMIT_COUNT}" >&2
-    exit 1
+if [[ "${COMMIT_COUNT}" == "--all" ]]; then
+    CHECK_ALL=1
+else
+    if [[ ! "${COMMIT_COUNT}" =~ ^[1-9][0-9]*$ ]]; then
+        echo "commit-count must be a positive integer or --all: ${COMMIT_COUNT}" >&2
+        exit 1
+    fi
 fi
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || {
@@ -63,10 +74,21 @@ REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || {
 }
 cd "${REPO_ROOT}" || exit 1
 
-if ! git rev-parse --verify --quiet "HEAD~${COMMIT_COUNT}" >/dev/null; then
-    echo "Repository does not have ${COMMIT_COUNT} commits before HEAD." >&2
-    exit 1
+if (( CHECK_ALL == 0 )); then
+    if ! git rev-parse --verify --quiet "HEAD~${COMMIT_COUNT}" >/dev/null; then
+        echo "Repository does not have ${COMMIT_COUNT} commits before HEAD." >&2
+        exit 1
+    fi
 fi
+
+list_scripts()
+{
+    if (( CHECK_ALL == 1 )); then
+        git ls-files -z -- 'scripts/*.sh' 'doom/*.sh'
+    else
+        git diff --name-only --diff-filter=ACMRT -z "HEAD~${COMMIT_COUNT}..HEAD"
+    fi
+}
 
 status=0
 while IFS= read -r -d '' script; do
@@ -85,6 +107,6 @@ while IFS= read -r -d '' script; do
         printf '%s  %s\n' "${mode:-untracked}" "${script}"
         status=1
     fi
-done < <(git diff --name-only --diff-filter=ACMRT -z "HEAD~${COMMIT_COUNT}..HEAD")
+done < <(list_scripts)
 
 exit "${status}"

@@ -12,11 +12,13 @@ perdue à la mise hors tension.
 
 .. note::
 
-   Un navigateur récent basé sur Chromium, comme Chrome ou Edge, est requis.
-   Sous Windows, le FT231X du port ``US1`` de l'ULX3S peut devoir utiliser le
-   pilote WinUSB avant que WebUSB puisse y accéder. Il s'agit d'une configuration
-   de pilote USB, et non de l'installation d'une chaîne de développement FPGA ou
-   RISC-V. Voir :doc:`../user-guide/web-flasher`.
+   Ce chemin uniquement dans le navigateur est l'exception à l'exigence WSL du
+   projet : **WSL n'est pas requis** pour utiliser sous Windows l'image ULX3S
+   précompilée. Un navigateur récent basé sur Chromium, comme Chrome ou Edge,
+   est requis. Le FT231X du port ``US1`` de l'ULX3S peut devoir utiliser le
+   pilote WinUSB avant que WebUSB puisse y accéder. Si vous construisez ou
+   modifiez ensuite le projet depuis les sources sous Windows, utilisez
+   WSL/Ubuntu. Voir :doc:`../user-guide/web-flasher`.
 
 Matériel et fichiers nécessaires
 --------------------------------
@@ -61,7 +63,10 @@ Sélectionnez la paire correspondant au FPGA de la carte :
      - Image Doom H3IMG
    * - ULX3S 85F
      - ``fpga_ulx3s_85f.bit``
-     - ``hazard3-doom-ulx3s-85F.h3img``
+     - ``hazard3-doom-ulx3s-85F.h3img`` (à renommer ``DOOM.IMG`` pour l'utilisation sur carte SD)
+   * - ULX3S 12F
+     - ``fpga_ulx3s_12f.bit``
+     - ``hazard3-doom-ulx3s-12F.h3img`` (à renommer ``DOOM.IMG`` pour l'utilisation sur carte SD)
 
 Ne mélangez pas des fichiers provenant de profils de carte différents. Le
 flasher du navigateur sonde l'identifiant JTAG ECP5 physique et refuse un
@@ -206,8 +211,18 @@ Conservez toujours l'image H3IMG du même profil de carte que le fichier ``.bit`
 --------------------------
 
 Développez **Doom IWAD uploader** et sélectionnez votre fichier ``.wad`` obtenu
-légalement. Pour cette procédure ULX3S 85F, choisissez le profil mémoire
-``64m``.
+légalement. Choisissez le profil mémoire correspondant au moniteur résident :
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 25
+
+   * - Carte
+     - Profil mémoire
+   * - ULX3S 85F
+     - ``64m``
+   * - ULX3S 12F
+     - ``32m``
 
 Choisissez **Upload IWAD**. Pour lancer Doom automatiquement après le transfert,
 activez **Launch with ``j`` after upload** avant de démarrer l'upload.

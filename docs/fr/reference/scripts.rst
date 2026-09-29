@@ -192,6 +192,9 @@ et la stratégie d'expériences A/B, voir :doc:`timing-sweeps`.
    Agrégateur CI final. Il combine tous les groupes avec les métadonnées et la
    configuration figées, génère les résumés CSV/Markdown et vérifie que le sweep
    est complet.
+``scripts/generate-ecp5-seed-matrix.py``
+   Génère la matrice groupée de seeds utilisée par GitHub Actions. Garder cette logique dans un script autonome rend la même validation disponible localement et évite d'intégrer du Python dans le YAML du workflow.
+
 
 Exemples :
 
@@ -311,7 +314,7 @@ Programmation et OpenOCD
    reprend l'exécution puis se déconnecte. Sans argument, il utilise la sortie
    autonome ``build/hazard3-boot-monitor.elf``. Les builds complets de carte
    doivent passer explicitement l'ELF propre à la carte ou utiliser le helper
-   ``scripts/gdb/load-*-monitor.gdb`` correspondant.
+   ``scripts/gdb/load-*-monitor.gdb`` correspondant. Le script vérifie ``localhost:3333`` avant de lancer GDB afin qu'un serveur OpenOCD manquant ne puisse pas retomber sur la cible locale ``exec`` de GDB et produire des comparaisons de sections trompeuses.
 
 ``scripts/load-firmware-12f.sh``
    Charge le moniteur ULX3S 12F résident en SDRAM après programmation du
@@ -430,6 +433,20 @@ Hygiène du dépôt et inventaire généré
    sous-modules, fichiers WAD et sources LiteDRAM versionnées sont
    volontairement conservés.
 
+
+``scripts/test-scripts.sh``
+   Exécute la validation syntaxique Bash et ShellCheck, la compilation Python,
+   l'analyse PowerShell facultative, les contrôles de matrices de seeds générées,
+   de distribution des sweeps et des politiques du dépôt. Sans option, il évite
+   les builds et le matériel. ``--integration`` exécute en plus les builds
+   complets et des sweeps routés d'échantillonnage pour les trois cibles ECP5.
+
+.. code-block:: bash
+
+   ./scripts/test-scripts.sh
+   ./scripts/test-scripts.sh --integration --dry-run
+   ./scripts/test-scripts.sh --integration
+
 Validation VisualGDB et chaîne d'outils Windows
 -----------------------------------------------
 
@@ -451,3 +468,8 @@ Validation VisualGDB et chaîne d'outils Windows
    l'architecture. Lorsqu'une option n'est pas documentée ici, utilisez le texte
    usage/help du script checkouté et sa validation des variables d'environnement
    comme source faisant autorité.
+
+Liens associés
+--------------
+
+* `RISC-V GCC XPACK <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_

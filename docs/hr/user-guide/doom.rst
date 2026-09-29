@@ -64,3 +64,10 @@ Zvuk
 ----
 
 Zvuk je trenutačno stubiran u dokumentiranoj razvojnoj prekretnici.
+
+Reference implementacije
+------------------------
+
+* `id Software Doom <https://github.com/id-Software/DOOM>`_
+
+* `Wren6991/DOOMSoC <https://github.com/Wren6991/DOOMSoC>`_

@@ -69,6 +69,33 @@ Zatim otvorite:
 Preglednik komunicira izravno s odabranim USB uređajem. FPGA slika i JTAG
 podaci ne prenose se na web-poslužitelj.
 
+
+USB postavljanje ovisno o hostu
+-------------------------------
+
+WebUSB postupak programiranja isti je nakon što preglednik može otvoriti i
+preuzeti ULX3S FT231X sučelje, ali postavljanje operacijskog sustava razlikuje se:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Host
+     - WebUSB postavljanje
+   * - Windows
+     - Povežite ULX3S FT231X koji koristi ``US1`` s WinUSB upravljačkim programom.
+       Zadig je jedan praktičan način. Uobičajeni FTDI VCP/D2XX upravljački
+       program nije kompatibilan s ovim WebUSB putem preglednika.
+   * - Linux
+     - Osigurajte da korisnik može otvoriti sirovi USB uređaj, uobičajeno udev
+       pravilom. Ako ``ftdi_sio`` posjeduje ULX3S FT231X sučelje, oslobodite samo
+       to sučelje dok ga WebUSB koristi.
+   * - macOS
+     - Nemojte instalirati Windows WinUSB/Zadig postavke ni Linux udev pravila.
+       Koristite aktualan preglednik temeljen na Chromiumu, zatvorite aplikacije
+       koje možda već posjeduju FT231X i ponovno spojite ``US1`` ako je sučelje
+       zauzeto.
+
 Vlasništvo WebUSB-a i OpenOCD-a
 -------------------------------
 
@@ -181,6 +208,198 @@ ponovno instalirajte odgovarajući FTDI VCP/D2XX paket.
 
    Device Manager može vratiti uobičajeni FTDI driver kada je potrebna FTDI
    VCP/D2XX aplikacija poput Windows ``fujprog``.
+
+
+Linux i Ubuntu USB pristup
+--------------------------
+
+Na Linuxu preglednik mora imati izravan pristup ULX3S USB uređaju kako bi mogao
+koristiti WebUSB sučelje za programiranje FPGA-a.
+
+To je osobito važno kada Ubuntu radi u virtualnom stroju. Primjerice, u VMware
+Workstationu najprije provjerite da je ULX3S USB uređaj spojen na gostujući
+sustav, a ne na Windows host.
+
+ULX3S FTDI uređaj uobičajeno izgleda ovako::
+
+   0403:6015 Future Technology Devices International, Ltd Bridge(I2C/SPI/UART/FIFO)
+
+Potvrdite da ga Ubuntu vidi:
+
+.. code-block:: console
+
+   $ lsusb -d 0403:6015
+   Bus 001 Device 004: ID 0403:6015 Future Technology Devices International, Ltd Bridge(I2C/SPI/UART/FIFO)
+
+Brojevi sabirnice i uređaja razlikovat će se.
+
+WebUSB ``Access denied``
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Ako alat prijavi pogrešku sličnu ovoj::
+
+   Failed to execute 'open' on 'USBDevice': Access denied.
+
+preglednik vidi ULX3S, ali prijavljeni korisnik nema dovoljna dopuštenja za
+otvaranje sirovog USB uređaja.
+
+U gornjem primjeru ``Bus 001 Device 004`` odgovara putu:
+
+.. code-block:: text
+
+   /dev/bus/usb/001/004
+
+Provjerite dopuštenja:
+
+.. code-block:: console
+
+   $ ls -l /dev/bus/usb/001/004
+   $ getfacl /dev/bus/usb/001/004
+
+Tipična neispravna konfiguracija izgleda ovako::
+
+   crw-rw-r-- 1 root root ... /dev/bus/usb/001/004
+
+U tom slučaju običan korisnik ima samo pravo čitanja.
+
+Za privremeni dijagnostički test dopustite čitanje/pisanje:
+
+.. code-block:: console
+
+   $ sudo chmod 0666 /dev/bus/usb/001/004
+
+Zatim ponovno pokušajte ``Connect ULX3S USB``.
+
+.. warning::
+
+   Gornja ``chmod`` naredba služi samo kao dijagnostički test. Promjena
+   dopuštenja gubi se kada se USB uređaj odspoji ili ponovno enumerira.
+
+Za trajni pristup izradite udev pravilo:
+
+.. code-block:: console
+
+   $ sudo tee /etc/udev/rules.d/70-ulx3s-webusb.rules >/dev/null <<'EOF'
+   SUBSYSTEM=="usb", ATTR{idVendor}=="0403", ATTR{idProduct}=="6015", TAG+="uaccess"
+   EOF
+
+Ponovno učitajte udev pravila:
+
+.. code-block:: console
+
+   $ sudo udevadm control --reload-rules
+
+Zatim odspojite i ponovno spojite ULX3S USB uređaj. Nakon ponovnog spajanja
+ponovno pokrenite ``lsusb`` jer se broj uređaja mogao promijeniti.
+
+WebUSB ``Unable to claim interface``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Drugi problem specifičan za Linux može se pojaviti nakon što su USB dopuštenja
+ispravljena. Alat može prijaviti::
+
+   Could not claim the ULX3S FT231X interface:
+   Failed to execute 'claimInterface' on 'USBDevice':
+   Unable to claim interface.
+
+To obično znači da je Linux kernel upravljački program ``ftdi_sio`` već preuzeo
+FTDI sučelje.
+
+Provjerite dodjele USB upravljačkih programa:
+
+.. code-block:: console
+
+   $ lsusb -t
+
+Sukobljeno ULX3S sučelje izgleda slično ovome::
+
+   Dev 004, If 0, Class=Vendor Specific Class, Driver=ftdi_sio, 12M
+
+Preglednik ne može preuzeti sučelje dok ga posjeduje ``ftdi_sio``. Odredite naziv
+FTDI sučelja:
+
+.. code-block:: console
+
+   $ ls -l /sys/bus/usb/drivers/ftdi_sio/
+
+Primjerice, ULX3S sučelje može izgledati kao::
+
+   1-2.1:1.0
+
+Točan naziv ovisi o USB topologiji računala ili virtualnog stroja.
+
+Privremeno oslobodite samo to sučelje od ``ftdi_sio``:
+
+.. code-block:: console
+
+   $ echo '1-2.1:1.0' | sudo tee /sys/bus/usb/drivers/ftdi_sio/unbind
+
+Zamijenite ``1-2.1:1.0`` nazivom s vašeg sustava. Provjerite rezultat:
+
+.. code-block:: console
+
+   $ lsusb -t
+
+ULX3S sučelje više ne bi trebalo prikazivati ``Driver=ftdi_sio``. Bez odspajanja
+ULX3S-a vratite se u alat i ponovno odaberite ``Connect ULX3S USB``.
+
+Nakon korištenja WebUSB-a
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+FTDI sučelje možete vratiti uobičajenom Linux serijskom upravljačkom programu:
+
+.. code-block:: console
+
+   $ echo '1-2.1:1.0' | sudo tee /sys/bus/usb/drivers/ftdi_sio/bind
+
+Ponovno zamijenite ``1-2.1:1.0`` nazivom sa svog sustava.
+
+.. note::
+
+   Uobičajeno nemojte uklanjati cijeli kernel modul ``ftdi_sio``. Oslobađanje
+   samo ULX3S sučelja izbjegava ometanje drugih FTDI USB uređaja.
+
+   Također izbjegavajte automatsko oslobađanje svakog ``0403:6015`` uređaja udev
+   pravilom osim ako je računalo namijenjeno isključivo WebUSB programiranju.
+   Inače Linux ne može koristiti normalno FTDI serijsko sučelje dok je upravljački
+   program odspojen.
+
+Ubuntu virtualni strojevi
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+U VMware Workstationu oba sloja moraju biti ispravna:
+
+#. ULX3S USB uređaj mora biti spojen na Ubuntu gosta, a ne na host.
+#. Ubuntu mora dopustiti pregledniku otvaranje sirovog USB uređaja.
+#. ``ftdi_sio`` ne smije posjedovati FTDI sučelje dok ga koristi WebUSB.
+
+Ako ``lsusb`` ne prikazuje ``0403:6015``, prvo riješite USB vezu virtualnog
+stroja. Promjene preglednika ili udeva neće pomoći dok uređaj nije vidljiv u
+gostujućem sustavu.
+
+.. _web-flasher-macos-usb:
+
+macOS USB pristup
+-----------------
+
+macOS ne koristi Windows Zadig/WinUSB postupak niti Linux udev pravila. Počnite s
+uobičajenim WebUSB zahtjevima: aktualnim preglednikom temeljenim na Chromiumu i
+hostanim HTTPS alatom ili ``localhost``.
+
+Prije odabira **Connect ULX3S USB** zatvorite ``fujprog``, OpenOCD,
+``openFPGALoader``, serijske terminale i drugi softver koji možda već posjeduje
+ULX3S FT231X sučelje. Ako preglednik prijavi pogrešku pristupa ili preuzimanja
+sučelja, odspojite i ponovno spojite ``US1`` te pokušajte ponovno prije promjene
+sistemskog softvera.
+
+Vanjski USB-UART adapter koji koristi Hazard3-Doom Web Serial konzola odvojen je
+od ULX3S ``US1`` JTAG sučelja i može ostati spojen.
+
+.. note::
+
+   Indikator hosta u alatu temelji se na informacijama o platformi koje prijavi
+   preglednik. Ako prikazuje **Unknown**, koristite odjeljak za operacijski sustav
+   koji odgovara stvarnom hostu.
 
 Programiranje ``.bit`` datoteke
 -------------------------------
@@ -370,11 +589,12 @@ izričito potvrđen tijek rada.
 
 Pogledajte :doc:`../getting-started/programming` za razliku između privremenog
 učitavanja FPGA-a i trajne konfiguracije pokretanja.
-
-Reference implementacije
--------------------------
+Vanjske reference
+-----------------
 
 * `ULX3S priručnik <https://github.com/emard/ulx3s/blob/master/doc/MANUAL.md>`_
 * `fujprog <https://github.com/kost/fujprog>`_
 * `Project Trellis <https://github.com/YosysHQ/prjtrellis>`_
 * `WebUSB API <https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API>`_
+
+* `openFPGALoader <https://trabucayre.github.io/openFPGALoader/guide/install.html>`_

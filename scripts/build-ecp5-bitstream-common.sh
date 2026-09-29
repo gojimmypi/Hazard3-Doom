@@ -25,6 +25,10 @@
 
 set -euo pipefail
 
+# Verify this script against the recorded inventory without blocking normal execution.
+"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
+    --check-file "${BASH_SOURCE[0]}" || true
+
 # Default nextpnr routing settings. Keep these together so board defaults are
 # easy to find and update after timing sweeps. NEXTPNR_SEED still overrides the
 # selected board seed when provided by the caller. ULX4M-LD also accepts

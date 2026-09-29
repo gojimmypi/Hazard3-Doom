@@ -70,7 +70,9 @@ programmation ESP32 est spécifique à ULX3S et ne doit pas être supposé sur
 ULX4M-LD.
 
 Pour entrer en DFU sur ULX3S, maintenez ``BTN1`` ou placez ``SW1`` sur ON puis
-connectez ``US2``. Vérifiez avec :
+connectez ``US2``.
+
+Si la carte ne s'alimente pas depuis ``US2`` en raison de son état d'alimentation USB/RTC, le README du bootloader amont décrit deux options de récupération : connecter également ``US1``, ou maintenir ``BTN1`` et appuyer brièvement sur ``BTN0`` pour alimenter la carte. Vérifiez avec :
 
 .. code-block:: bash
 
@@ -226,9 +228,160 @@ Pour les commandes exactes de construction, de repacking SRAM, de récupération
 et de validation, consultez ``bootloader/README_ULX4M_BOOTLOADER.md``. Ces étapes
 restent volontairement séparées du chemin normal de programmation.
 
+
+La procédure de récupération ULX4M-LD documentée dans ``bootloader/README_ULX4M_BOOTLOADER.md`` a été validée sur une ULX4M-LD v0.0.3 avec un FPGA LFE5UM-85F et l'IDCODE JTAG ``0x01113043``. N'utilisez pas une image construite pour une autre densité FPGA ou un mappage de carte non vérifié.
+
+Séquence de remplacement sûre
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+La règle essentielle est : **validez le bootloader de remplacement dans la SRAM
+du FPGA avant d'écrire la région persistante du bootloader en flash**.
+
+Une séquence conservatrice est :
+
+#. Construisez le bootloader prévu pour la carte et le FPGA exacts.
+#. Reconditionnez une image de test uniquement SRAM sans le réglage persistant
+   ``--bootaddr``.
+#. Chargez cette image par JTAG et vérifiez le fonctionnement DFU ordinaire.
+#. Vérifiez séparément le mode de mise à niveau du bootloader.
+#. Sauvegardez la région bootloader alt 5 existante avant de l'écraser.
+#. Préparez une image de exactement 2 Mio pour alt 5.
+#. Exécutez depuis la SRAM un bootloader connu comme bon en mode mise à niveau.
+#. Écrivez le remplacement dans alt 5 pendant l'exécution de cette copie SRAM.
+#. Relisez alt 5 avant tout cycle d'alimentation.
+#. Vérifiez la relecture octet par octet ou avec des SHA256 identiques.
+#. Ce n'est qu'après une relecture réussie que vous pouvez couper l'alimentation
+   et effectuer les tests de démarrage à froid.
+
+Cette procédure évite volontairement d'exécuter le bootloader résidant en flash
+pendant le remplacement de cette même région.
+
+Sauvegarder l'alt 5 de l'ULX4M-LD
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Lorsque l'alt 5 a été volontairement exposé par le mode de mise à niveau du
+bootloader, sauvegardez les 2 premiers Mio avant toute écriture :
+
+.. code-block:: bash
+
+   ./bin/dfu-util.exe \
+       -d 1d50:614b \
+       -a 5 \
+       -U bootloader-alt5-before-update.bin
+
+Vérifiez la taille de la sauvegarde et consignez un hash :
+
+.. code-block:: bash
+
+   stat -c '%n: %s bytes' bootloader-alt5-before-update.bin
+   sha256sum bootloader-alt5-before-update.bin
+
+La taille attendue est exactement ``2097152`` octets.
+
+Écrire et vérifier un remplacement
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Avec un bootloader SRAM connu comme bon toujours actif dans le mode de mise à
+niveau volontaire, écrivez une image de exactement 2 Mio dans alt 5 :
+
+.. code-block:: bash
+
+   ./bin/dfu-util.exe \
+       -d 1d50:614b \
+       -a 5 \
+       -D bootloader-alt5-2m.img
+
+Ne redémarrez **pas** immédiatement. Relisez d'abord la région :
+
+.. code-block:: bash
+
+   ./bin/dfu-util.exe \
+       -d 1d50:614b \
+       -a 5 \
+       -U bootloader-alt5-after-update.bin
+
+Vérifiez ensuite que les deux fichiers font exactement 2 Mio et ont le même
+hash :
+
+.. code-block:: bash
+
+   stat -c '%n: %s bytes' \
+       bootloader-alt5-2m.img \
+       bootloader-alt5-after-update.bin
+
+   sha256sum \
+       bootloader-alt5-2m.img \
+       bootloader-alt5-after-update.bin
+
+Ne démarrez pas à froid sur le remplacement si les tailles ou les hashes
+diffèrent.
+
+Vérification du démarrage à froid ULX4M-LD
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Après une relecture alt 5 vérifiée, coupez complètement l'alimentation pour
+perdre l'image de test chargée en SRAM. Vérifiez ensuite les trois chemins de
+démarrage persistants :
+
+#. Aucun bouton : le bitstream utilisateur normal démarre.
+#. ``BTN3`` du PCB : le DFU ordinaire démarre et alt 5 reste masqué.
+#. ``BTN2`` + ``BTN3`` du PCB : le DFU de mise à niveau démarre et alt 5 est visible.
+
+Le remplacement du bootloader n'est terminé qu'après la réussite de ces trois
+tests.
+
+Récupération JTAG lorsque le DFU persistant n'est pas disponible
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Si le bootloader persistant ne s'énumère pas comme ``1d50:614b``, le chemin de
+récupération ULX4M-LD validé utilise Tigard/JTAG pour charger un bootloader
+d'urgence dans la SRAM du FPGA. La source du bootloader fournit
+``EMERGENCY_RESTORE2`` afin de forcer à la fois le maintien en DFU et l'autorisation
+d'écriture du bootloader pour restaurer alt 5.
+
+La chaîne de récupération est :
+
+.. code-block:: text
+
+   Tigard JTAG
+       -> emergency bootloader in FPGA SRAM
+       -> USB DFU 1d50:614b
+       -> alt 5 access
+       -> restore exactly first 2 MiB
+       -> read back exactly first 2 MiB
+       -> SHA256 match
+       -> cold boot from SPI flash
+
+Pour les commandes exactes de build ULX4M-LD, la procédure de reconditionnement
+SRAM, le remappage des boutons, le brochage et les détails du build d'urgence,
+utilisez le document source du dépôt
+``bootloader/README_ULX4M_BOOTLOADER.md``. Ces étapes sont volontairement hors du
+chemin de programmation normal de Hazard3-Doom car elles concernent la
+récupération de la carte et le développement du bootloader, et non la
+programmation ordinaire de l'application.
+
+Note sur la protection en écriture du bootloader ULX3S
+------------------------------------------------------
+
+Le bootloader ULX3S amont peut protéger en écriture les 2 premiers Mio sur les
+flash 16 Mio ISSI IS25LP128 et Winbond W25Q128 prises en charge. Le comportement
+de protection dépend du fabricant de la flash. Le README amont avertit également
+que certaines versions de ``openFPGALoader`` peuvent retirer une protection en
+écriture non OTP lors de l'écriture de la flash.
+
+Traitez toute mise à jour de la région bootloader ULX3S comme une opération de
+maintenance distincte. N'utilisez pas des commandes de flash persistante qui
+écrasent les 2 premiers Mio simplement pour installer une nouvelle image
+utilisateur Hazard3-Doom.
+
 Sources
 -------
 
 * ``bootloader/README.md`` - fonctionnement DFU ULX3S et protection flash.
 * ``bootloader/README_ULX4M_BOOTLOADER.md`` - procédure ULX4M-LD validée de
   construction, test SRAM, sauvegarde, récupération, installation et readback.
+
+Références d'implémentation
+---------------------------
+
+* `openFPGALoader <https://trabucayre.github.io/openFPGALoader/guide/install.html>`_

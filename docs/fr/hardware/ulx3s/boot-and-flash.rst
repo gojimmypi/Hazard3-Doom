@@ -34,6 +34,20 @@ nouveau bitstream Doom.
 Voir :doc:`../../user-guide/bootloader` et
 :doc:`../../getting-started/programming`.
 
+
+Flux d'image utilisateur DFU
+----------------------------
+
+Lorsque le bootloader DFU ULX3S pris en charge est déjà installé, ``US2`` peut
+programmer l'image utilisateur normale dans la flash SPI. La documentation du
+bootloader du projet utilise l'alternative DFU 0 pour l'image utilisateur et
+réserve le remplacement du bootloader aux opérations avancées de récupération
+ou de développement du bootloader.
+
+Consultez :doc:`../../user-guide/bootloader` pour la procédure exacte d'entrée
+et :doc:`../../getting-started/programming` pour les choix de programmation
+normaux.
+
 Chargement logiciel à l'exécution
 ---------------------------------
 

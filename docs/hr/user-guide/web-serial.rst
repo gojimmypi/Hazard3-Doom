@@ -42,6 +42,14 @@ Web Serial zahtijeva preglednik koji izlaže ``navigator.serial`` i siguran
 kontekst. ``localhost`` je prihvatljiv za lokalni razvoj, a HTTPS je prikladan
 za hostanu upotrebu poput GitHub Pagesa.
 
+.. _fig-webserial-connect:
+
+.. figure:: ../images/webserial-connect.png
+   :alt: Dijalog preglednika za odabir Web Serial uređaja
+   :class: screenshot
+
+   **Web Serial veza** - odaberite UART adapter pločice u dijalogu preglednika za dopuštenja.
+
 Jednostavan lokalni poslužitelj može se pokrenuti iz direktorija ``web/``:
 
 .. code-block:: bash

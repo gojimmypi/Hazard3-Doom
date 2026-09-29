@@ -53,6 +53,21 @@ Tako payload na vezi ostaje kompaktan u odnosu na puni RGB framebuffer i isti
 parser u pregledniku može prihvatiti Doom izvore i I2C GUI izvore različitih
 geometrija. Pogledajte :doc:`../user-guide/web-serial` za cijeli protokol.
 
+
+Video testni uzorak
+-------------------
+
+Monitor može generirati deterministički uzorak obojenih traka za provjeru HDMI
+puta neovisno o Doom renderiranju:
+
+.. _fig-hdmi-colorbar-test-pattern:
+
+.. figure:: ../images/hdmi-colorbar-test-pattern.png
+   :alt: Hazard3-Doom HDMI testni uzorak obojenih traka
+
+   **HDMI testni uzorak obojenih traka** - jednostavna vizualna provjera da
+   rade vremenski odnosi, skaliranje, pretvorba palete i fizički put do zaslona.
+
 Korisnici video puta koji nisu Doom
 -----------------------------------
 

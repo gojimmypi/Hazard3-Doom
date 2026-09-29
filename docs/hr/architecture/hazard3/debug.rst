@@ -140,3 +140,8 @@ Korisna laboratorijska vježba je zaustaviti rezidentni monitor u poznatoj
 funkciji, pregledati cjelobrojne registre, pročitati riječ RAM-a kroz debugger,
 izvesti single-step jedne instrukcije i zatim odrediti koje su od tih operacija
 koristile CPU debug stanje, a koje pristup sistemskoj sabirnici.
+
+Reference implementacije
+------------------------
+
+* `Primitivi koje podržavaju yosys/nextpnr <https://github.com/YosysHQ/nextpnr/blob/main/ecp5/docs/primitives.md>`_

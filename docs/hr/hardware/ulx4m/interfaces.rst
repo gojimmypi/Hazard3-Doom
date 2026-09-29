@@ -38,9 +38,12 @@ inicijalizaciju, user clock i aktivnost adaptera. Trenutačni LS top-level izla�
 UART i JTAG
 -----------
 
-UART je najjednostavniji softverski debug put za monitor, logove, prijenos slika
-i Web Serial. JTAG je komplementaran za halt/step, registre, memoriju i source
-level debugging.
+UART je najjednostavniji softverski dijagnostički put za monitor, zapise, prijenos slika
+i Web Serial. ULX4M LPF datoteke mapiraju odabrane UART pinove na FTDI put
+modula/nosive pločice koji koristi podržana konfiguracija. Pogledajte
+:doc:`pinout-and-revisions` za raspored pinova ULX4M-LD nosive pločice i napomene
+o revizijama. JTAG je komplementaran za zaustavljanje i izvođenje korak po korak,
+registre, memoriju i otklanjanje pogrešaka na razini izvornog koda.
 
 Napajanje
 ---------
@@ -50,3 +53,18 @@ napajanja ovisno o carrier pločici. Upute zato trebaju imenovati carrier i
 provjeriti ulazno napajanje, FPGA/memory railove, I/O bank napone i stvarnu
 funkciju svakog pina. Oblik konektora sam po sebi ne jamči električnu
 kompatibilnost.
+
+Pretpostavke o napajanju i nosećoj pločici
+------------------------------------------
+
+Izvorna ULX4M dokumentacija navodi da modul zahtijeva najmanje 500 mA i opisuje
+različite rasporede napajanja na nosećim pločicama. Noseće pločice mogu različito
+voditi USB i 5 V, pa upute za uključivanje moraju navesti konkretnu noseću
+pločicu umjesto pretpostavke da se svaka baza kompatibilna s CM4 ponaša jednako.
+
+Pri radu s hardverom provjerite:
+
+* predviđeno ulazno napajanje i put napajanja na nosećoj pločici;
+* jesu li prisutni svi potrebni naponski vodovi za FPGA i memoriju;
+* napone I/O banaka prije spajanja vanjskog hardvera; i
+* je li pin priključka ulaz, izlaz, zajednički signal ili naponski vod.

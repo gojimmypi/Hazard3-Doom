@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 #
-# Build and install the Hazard3-Doom reference nextpnr-ecp5 toolchain.
+# Install Hazard3-Doom nextpnr-ecp5/Project Trellis tools. OSS CAD Suite is
+# the default; the existing pinned source build remains available with
+# --from-source.
 #
 # Intended location:
 #   <workspace>/hazard3-doom/scripts/install-nextpnr-ecp5.sh
@@ -15,12 +17,18 @@
 #
 # Usage:
 #   ./scripts/install-nextpnr-ecp5.sh
-#   ./scripts/install-nextpnr-ecp5.sh --jobs 2
-#   ./scripts/install-nextpnr-ecp5.sh --workspace /path/to/workspace
-#   ./scripts/install-nextpnr-ecp5.sh --skip-packages
+#   ./scripts/install-nextpnr-ecp5.sh --oss-cad-suite-version 2026-09-14
+#   ./scripts/install-nextpnr-ecp5.sh --from-source
+#   ./scripts/install-nextpnr-ecp5.sh --from-source --jobs 2
+#   ./scripts/install-nextpnr-ecp5.sh --from-source --workspace /path/to/workspace
+#   ./scripts/install-nextpnr-ecp5.sh --from-source --skip-packages
 #
 
 set -euo pipefail
+
+# Verify this script against the recorded inventory without blocking normal execution.
+"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
+    --check-file "${BASH_SOURCE[0]}" || true
 
 NEXTPNR_REPOSITORY="https://github.com/YosysHQ/nextpnr.git"
 NEXTPNR_COMMIT="ddc6c8c8"
@@ -33,6 +41,10 @@ EXPECTED_TRELLIS_VERSION="1.4-76-g73bd411"
 INSTALL_PREFIX="/usr/local"
 NEXTPNR_BUILD_DIR_NAME="build-hazard3-ecp5"
 
+DEFAULT_OSS_CAD_SUITE_VERSION="2026-07-20"
+OSS_CAD_SUITE_VERSION="${OSS_CAD_SUITE_VERSION:-${DEFAULT_OSS_CAD_SUITE_VERSION}}"
+INSTALL_METHOD="release"
+
 WORKSPACE_DIR=""
 JOBS=2
 SKIP_PACKAGES=0
@@ -43,16 +55,15 @@ Usage:
     install-nextpnr-ecp5.sh [options]
 
 Options:
-    --workspace DIR    Parent workspace. Default: parent of Hazard3-Doom repo.
-    --jobs N           Parallel build jobs. Default: 2.
-    --skip-packages    Do not install Ubuntu/Debian build dependencies.
+    --oss-cad-suite-version VERSION
+                       OSS CAD Suite release. Default: 2026-07-20.
+    --from-source      Build the existing pinned nextpnr/Trellis revisions.
+    --workspace DIR    Source mode only. Parent workspace.
+    --jobs N           Source mode only. Parallel build jobs. Default: 2.
+    --skip-packages    Do not install required Ubuntu/Debian packages.
     -h, --help         Show this help.
 
-Installed tools include:
-    /usr/local/bin/nextpnr-ecp5
-    /usr/local/bin/ecppack
-
-Expected versions:
+Source-mode versions:
     Project Trellis 1.4-76-g73bd411
     nextpnr-0.10-95-gddc6c8c8
 USAGE
@@ -69,6 +80,15 @@ version_ge() {
 
 while (($# > 0)); do
     case "$1" in
+        --oss-cad-suite-version)
+            (($# >= 2)) || die "--oss-cad-suite-version requires a release tag"
+            OSS_CAD_SUITE_VERSION="$2"
+            shift 2
+            ;;
+        --from-source)
+            INSTALL_METHOD="source"
+            shift
+            ;;
         --workspace)
             (($# >= 2)) || die "--workspace requires a directory"
             WORKSPACE_DIR="$2"
@@ -95,6 +115,16 @@ while (($# > 0)); do
 done
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+
+if [[ "${INSTALL_METHOD}" == "release" ]]; then
+    args=(--version "${OSS_CAD_SUITE_VERSION}")
+    if ((SKIP_PACKAGES == 1)); then
+        args+=(--skip-packages)
+    fi
+    exec "${SCRIPT_DIR}/install-oss-cad-suite.sh" "${args[@]}"
+fi
+
+printf 'Source build selected for Project Trellis and nextpnr-ecp5.\n\n'
 
 if [[ -z "${WORKSPACE_DIR}" ]]; then
     PROJECT_ROOT="$(git -C "${SCRIPT_DIR}" rev-parse --show-toplevel 2>/dev/null)" ||

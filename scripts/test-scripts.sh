@@ -20,6 +20,10 @@
 
 set -u -o pipefail
 
+# Verify this script against the recorded inventory without blocking normal execution.
+"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
+    --check-file "${BASH_SOURCE[0]}" || true
+
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 TEST_DIR="${REPO_ROOT}/build/script-tests"
@@ -265,6 +269,13 @@ check_shell_scripts()
 {
     local script
     local relative
+    local shellcheck_available=0
+
+    if command -v shellcheck >/dev/null 2>&1; then
+        shellcheck_available=1
+    else
+        warn 'ShellCheck is not installed; shell lint checks will be skipped'
+    fi
 
     while IFS= read -r -d '' script; do
         relative="${script#"${REPO_ROOT}/"}"
@@ -276,14 +287,16 @@ check_shell_scripts()
             cat "${COMMAND_LOG}" >&2
         fi
 
-        if (
-            cd -- "${REPO_ROOT}"
-            shellcheck -x "${relative}"
-        ) > "${COMMAND_LOG}" 2>&1; then
-            pass "${relative}: ShellCheck"
-        else
-            fail "${relative}: ShellCheck"
-            cat "${COMMAND_LOG}" >&2
+        if (( shellcheck_available == 1 )); then
+            if (
+                cd -- "${REPO_ROOT}"
+                shellcheck -x "${relative}"
+            ) > "${COMMAND_LOG}" 2>&1; then
+                pass "${relative}: ShellCheck"
+            else
+                fail "${relative}: ShellCheck"
+                cat "${COMMAND_LOG}" >&2
+            fi
         fi
     done < <(
         find "${SCRIPT_DIR}" -maxdepth 1 -type f -name '*.sh' -print0 |
@@ -406,7 +419,8 @@ check_sweep_dispatcher()
 
     for target in ulx3s-85f ulx3s-12f ulx4m-ld-85f; do
         if netlist="$(
-            "${SCRIPT_DIR}/sweep-ecp5.sh" --print-netlist "${target}"
+            "${SCRIPT_DIR}/sweep-ecp5.sh" --print-netlist "${target}" |
+                tail -n 1
         )" && [[ "${netlist}" == build/* ]]; then
             pass "sweep-ecp5.sh: ${target} netlist path"
         else
@@ -414,7 +428,8 @@ check_sweep_dispatcher()
         fi
 
         if route_constraint="$(
-            "${SCRIPT_DIR}/sweep-ecp5.sh" --print-constraint "${target}"
+            "${SCRIPT_DIR}/sweep-ecp5.sh" --print-constraint "${target}" |
+                tail -n 1
         )" && [[ "${route_constraint}" == third_party/Hazard3/example_soc/synth/*.lpf ]]; then
             pass "sweep-ecp5.sh: ${target} constraint path"
         else
@@ -615,8 +630,8 @@ main()
     check_sweep_dispatcher
 
     if git -C "${REPO_ROOT}" rev-parse --show-toplevel >/dev/null 2>&1; then
-        run_quiet 'check-executable.sh: tracked script permissions' \
-            "${SCRIPT_DIR}/check-executable.sh" 1
+        run_quiet 'check-executable.sh: all tracked shell script permissions' \
+            "${SCRIPT_DIR}/check-executable.sh" --all
         run_quiet 'refresh-version.sh: generated version files' \
             "${SCRIPT_DIR}/refresh-version.sh" --check
         run_quiet 'check-nettype.sh: project RTL policy' \

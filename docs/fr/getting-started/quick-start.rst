@@ -7,6 +7,15 @@ Démarrage rapide depuis les sources
    FPGA et RISC-V, commencez par :doc:`no-install` et les images précompilées
    publiées.
 
+.. important:: Utilisateurs Windows : ouvrez d'abord WSL/Ubuntu
+
+   Cette page de build depuis les sources suppose un shell Linux/Bash. Sous
+   Windows, utilisez **WSL avec Ubuntu** pour cloner le dépôt, installer la
+   chaîne de build et exécuter les scripts ``.sh``. Ne remplacez pas ces
+   commandes de build par PowerShell ou ``cmd.exe``. Windows natif n'est utilisé
+   que pour les étapes explicitement marquées navigateur, pilote USB, port COM
+   ou ``.exe`` Windows.
+
 
 Cible
 -----
@@ -31,10 +40,11 @@ Recommandé pour les compilations depuis les sources :
 * Disque : 60 Gio ou plus
 * Swap : 4 à 8 Gio
 
-La compilation de Yosys et de nextpnr depuis les sources peut utiliser beaucoup
-de mémoire, en particulier avec les compilations parallèles. Sur les systèmes
-disposant de moins que la RAM minimale requise, des processus de compilation
-peuvent être interrompus en raison de la pression mémoire.
+La compilation des outils FPGA depuis les sources peut utiliser beaucoup de
+mémoire, en particulier avec les compilations parallèles. Les paquets OSS CAD
+Suite recommandés évitent cette étape de compilation des outils. Sur les
+systèmes disposant de moins que la RAM minimale requise, les builds du projet
+peuvent néanmoins être interrompus en raison de la pression mémoire.
 
 Le script ``check-system-requirements.sh`` affiche les ressources détectées :
 
@@ -46,8 +56,21 @@ Le script ``check-system-requirements.sh`` affiche les ressources détectées :
 Installation des logiciels requis
 ----------------------------------
 
-Sur un système neuf, tout peut être installé avec un seul script. Ce script est
-également utile pour les mises à jour :
+Pour la chaîne d'outils FPGA, le point de départ multiplate-forme recommandé est
+`OSS CAD Suite <https://github.com/YosysHQ/oss-cad-suite-build>`_, fourni sous
+forme de binaires précompilés. Installez le paquet adapté à votre plate-forme et
+activez son environnement afin que Yosys, nextpnr, Project Trellis/ecppack et
+les outils associés soient disponibles dans ``PATH``. Installez séparément une
+chaîne GCC RISC-V bare-metal compatible et rendez-la disponible dans ``PATH`` ;
+voir :doc:`prerequisites` pour les noms de chaînes pris en charge et les
+options de remplacement.
+
+Pour Ubuntu/WSL, le projet fournit également un installateur pratique. Par
+défaut, il installe et active automatiquement la version précompilée d'OSS CAD
+Suite attendue par le projet, ainsi que les autres logiciels nécessaires à
+l'environnement de développement connu. Des options avancées de compilation
+depuis les sources sont également disponibles lorsque certains outils FPGA
+doivent être construits à partir de commits GitHub amont spécifiques :
 
 .. code-block:: bash
 
@@ -63,15 +86,16 @@ Sur un système neuf, tout peut être installé avec un seul script. Ce script e
 
    ./full-install.sh
 
-.. admonition:: Versions de Yosys et nextpnr
+.. admonition:: Versions reproductibles des outils FPGA
 
-   Les scripts installent des versions précises de Yosys et nextpnr connues pour
-   respecter les contraintes de timing avec les seeds par défaut. Les versions
-   déjà installées sont remplacées silencieusement. Si vous utilisez une autre
-   version de Yosys ou de nextpnr, vous devrez peut-être adapter les scripts de
-   compilation. Voir :doc:`/user-guide/build` pour plus de détails, ainsi que le
-   script
-   `build-ecp5-bitstream-common.sh <https://github.com/ulx3s/Hazard3-Doom/blob/main/scripts/build-ecp5-bitstream-common.sh>`_.
+   Par défaut, l'installateur pratique utilise la version précompilée d'OSS CAD
+   Suite attendue par le projet. Ses options de compilation depuis les sources
+   peuvent à la place construire certains outils FPGA à partir de commits GitHub
+   amont spécifiques lorsqu'une révision exacte est requise. Si vous utilisez
+   une version OSS CAD Suite installée indépendamment, vérifiez le build obtenu
+   et son timing. Voir :doc:`/user-guide/build` et le script
+   `build-ecp5-bitstream-common.sh <https://github.com/ulx3s/Hazard3-Doom/blob/main/scripts/build-ecp5-bitstream-common.sh>`_
+   pour plus de détails.
 
 1. Cloner le dépôt
 ------------------
@@ -129,6 +153,20 @@ D'autres outils de programmation ULX3S peuvent toujours être utilisés si vous
 les préférez. Pour une installation autonome permanente, voir
 :doc:`programming` et :doc:`../user-guide/sd-card`.
 
+
+Depuis WSL/Bash sous Windows, le ``fujprog`` Windows fourni peut être appelé
+directement grâce à l'interopérabilité WSL :
+
+.. code-block:: bash
+
+   ./bin/fujprog-v48-win64.exe ./build/fpga_ulx3s_85f.bit
+
+Sous Linux natif avec ``fujprog`` installé :
+
+.. code-block:: bash
+
+   fujprog ./build/fpga_ulx3s_85f.bit
+
 Optionnel : charger l'ELF actuel du moniteur via OpenOCD
 --------------------------------------------------------
 
@@ -160,6 +198,8 @@ helper loopback :
 .. code-block:: bash
 
    python3 web/web-server.py
+
+Pour une clé d'accès facultative demandée au démarrage, utilisez ``--access-key``. L'assistant n'écoute que sur ``127.0.0.1`` et indique si un service est présent sur le port GDB OpenOCD habituel ``3333``.
 
 Vous pouvez alors continuer avec la page publique
 ``https://ulx3s.github.io/Hazard3-Doom/`` ou ouvrir la copie locale
@@ -197,14 +237,29 @@ Pour le flux complet et la table des profils mémoire, voir
 :doc:`../user-guide/web-tool`.
 
 Les chargeurs en ligne de commande restent disponibles. Fermez d'abord tout
-terminal ou connexion navigateur qui possède le port UART. Sous Windows,
-utilisez la syntaxe du shell réellement ouvert : PowerShell utilise l'accent
-grave (`````) pour continuer une commande sur la ligne suivante, tandis que
-l'invite de commandes Windows (``cmd.exe``, souvent appelée invite DOS) utilise
-l'accent circonflexe (``^``). Ne collez pas les accents graves PowerShell dans
-``cmd.exe``.
+terminal ou connexion navigateur qui possède le port UART. Le shell de
+développement normal est WSL/Linux Bash. Les exemples PowerShell et ``cmd.exe``
+ci-dessous sont uniquement des alternatives natives Windows pour le
+téléversement UART ; ils ne remplacent pas WSL pour le build depuis les sources.
 
-**Windows PowerShell**
+**WSL/Linux Bash**
+
+.. code-block:: bash
+
+   python3 doom/upload-doom-image.py \
+       build/ulx3s-85f/doom-image/hazard3-doom.h3img \
+       --port /dev/ttyS7
+
+   python3 doom/upload-wad.py \
+       /path/to/DOOM.WAD \
+       --port /dev/ttyS7 \
+       --launch
+
+Sous WSL, utilisez le périphérique série exposé pour le port COM Windows
+lorsqu'il est disponible (par exemple COM7 peut apparaître comme
+``/dev/ttyS7``).
+
+**Optionnel : Windows PowerShell**
 
 .. code-block:: powershell
 
@@ -217,7 +272,7 @@ l'accent circonflexe (``^``). Ne collez pas les accents graves PowerShell dans
        --port COM7 `
        --launch
 
-**Invite de commandes Windows (cmd.exe / invite DOS)**
+**Optionnel : invite de commandes Windows (cmd.exe)**
 
 .. code-block:: bat
 
@@ -230,19 +285,6 @@ l'accent circonflexe (``^``). Ne collez pas les accents graves PowerShell dans
        --port COM7 ^
        --launch
 
-**Linux (Bash)**
-
-.. code-block:: bash
-
-   python3 doom/upload-doom-image.py \
-       build/ulx3s-85f/doom-image/hazard3-doom.h3img \
-       --port /dev/ttyUSB0
-
-   python3 doom/upload-wad.py \
-       /path/to/DOOM.WAD \
-       --port /dev/ttyUSB0 \
-       --launch
-
 Le chargeur IWAD en ligne de commande utilise désormais ``--memory-profile auto``
 par défaut. Il interroge le moniteur en cours d'exécution avec la commande ``v``
 et sélectionne la région WAD ``32m`` ou ``64m`` du moniteur avant d'envoyer
@@ -252,9 +294,10 @@ une adresse WAD de 64 Mio. Les options explicites ``--memory-profile 32m`` ou
 signale pas ``memory_profile``. L'image H3IMG doit toujours correspondre au
 build de la carte.
 
-Les noms de ports UART ne sont que des exemples. Sous Windows, utilisez le port
-COM attribué à votre carte. Sous Linux, utilisez le périphérique correspondant,
-souvent ``/dev/ttyUSB0`` ou ``/dev/ttyACM0``.
+Les noms de ports UART ne sont que des exemples. Sous WSL/Linux, utilisez le
+périphérique visible dans cet environnement, par exemple ``/dev/ttyS7`` sous
+WSL ou ``/dev/ttyUSB0``/``/dev/ttyACM0`` sous Linux natif. Les alternatives
+Windows natives utilisent le port COM attribué à la carte.
 
 5. Vérifier le démarrage
 ------------------------

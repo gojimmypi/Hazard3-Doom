@@ -39,3 +39,5 @@ Publication sur Read the Docs
 -----------------------------
 
 Le fichier ``.readthedocs.yaml`` à la racine du dépôt indique à Read the Docs d'utiliser ``docs/conf.py`` et d'installer ``docs/requirements.txt``. Après validation des fichiers, importez le dépôt GitHub dans Read the Docs et sélectionnez la branche/version à publier.
+
+Voir également les notes du `README de la documentation <https://github.com/ulx3s/Hazard3-Doom/blob/main/docs/README.md>`_.

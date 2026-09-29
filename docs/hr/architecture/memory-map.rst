@@ -56,6 +56,8 @@ Koriste ga ULX3S 85F i ULX4M-LD 85F:
    * - ``0x23C00000-0x23FFFFFF``
      - Nekeshirana video rezervacija.
 
+Za ULX4M-LD ovo je **softverski vidljiv profil od 64 MiB**, a ne fizički kapacitet DDR3 čipa. Trenutačno kvalificirana Micron ``MT41K512M16HA`` populacija je x16 uređaj od 8 Gbit (1 GiB), a projekt podržava i manju Alliance ``AS4C256M16D3`` populaciju kroz zasebno generirani LiteDRAM profil. Hazard3-Doom namjerno koristi samo gore navedeni raspon od 64 MiB kako bi softverska memorijska mapa ostala stabilna između tih populacija pločica.
+
 SDRAM profil od 32 MiB
 ----------------------
 

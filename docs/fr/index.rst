@@ -7,16 +7,6 @@ Hazard3-Doom est bien plus que Doom porté sur une carte FPGA supplémentaire.
 C'est un écosystème matériel et logiciel pédagogique construit autour du
 processeur RISC-V open source Hazard3 et des familles FPGA ECP5 ULX3S et ULX4M.
 
-.. important:: État de la traduction
-
-   La documentation anglaise est la référence pour les changements les plus
-   récents de cette version. Les pages françaises suivent la même structure
-   générale, mais certaines pages techniques - notamment JTAG, bootloader,
-   WebUSB, sweeps de timing et ULX4M - peuvent être en retard sur l'anglais.
-   Lorsqu'un détail de câblage, de commande ou de qualification matérielle est
-   critique, vérifiez aussi la page anglaise correspondante.
-
-
 
 .. admonition:: Le même CPU Hazard3 que dans le Raspberry Pi RP2350
    :class: important
@@ -43,6 +33,10 @@ et les framebuffers, des contrôleurs de mémoire externe, l'accès à la carte 
 le débogage UART et JTAG, un moniteur de démarrage résident, des outils de
 téléversement côté hôte et une application DoomGeneric chargeable.
 
+Un outil de diagnostic I2C basé sur l'`I2CDriver <https://i2cdriver.com/>`_
+d'Excamera Labs est également inclus. Le même code fournit en bonus la
+:doc:`fonction SAO Hackaday Supercon <user-guide/sao>`.
+
 Vous pouvez simplement jouer à Doom sur un CPU RISC-V soft, ou descendre plus
 profondément dans le système pour voir comment un ordinateur complet basé sur
 FPGA est construit : intégration du processeur, mémoire, horloges et timing,
@@ -59,6 +53,16 @@ inspecter et modifier de bout en bout, Hazard3-Doom est conçu pour être explor
    détaillées sur l'architecture du processeur sont également rattachées à
    l'instantané exact du code source Hazard3 indiqué dans
    :doc:`architecture/hazard3/index`.
+
+.. important:: Sous Windows, les builds depuis les sources utilisent WSL
+
+   Sous Windows, les instructions de build et de développement depuis les
+   sources exigent **WSL avec Ubuntu et Bash**. PowerShell et ``cmd.exe`` ne
+   sont pas des shells de build pris en charge pour les scripts du dépôt.
+   Windows natif n'est utilisé que lorsqu'une page demande explicitement le
+   Device Tool du navigateur, la gestion des pilotes USB, un téléversement via
+   port COM ou un ``.exe`` Windows fourni. Le chemin
+   :doc:`getting-started/no-install` dans le navigateur ne nécessite pas WSL.
 
 Commencer ici
 -------------
@@ -126,7 +130,6 @@ Liens du projet
 ---------------
 
 * `Dépôt Hazard3-Doom <https://github.com/ulx3s/Hazard3-Doom>`_
-* `Fork matériel Hazard3 pour ULX3S <https://github.com/ulx3s/Hazard3>`_
 * `Projet Hazard3 amont <https://github.com/Wren6991/Hazard3>`_
 * `Guide de conception et manuel de référence Hazard3 <https://wren.wtf/hazard3/doc/>`_
 * `Source de la documentation Hazard3 <https://github.com/Wren6991/Hazard3/tree/stable/doc>`_
@@ -134,3 +137,14 @@ Liens du projet
 * `Sources matérielles ULX4M <https://github.com/intergalaktik/ulx4m>`_
 * `Documentation matérielle ULX4M <https://github.com/intergalaktik/ulx4m-documentation>`_
 * `Page ULX4M Crowd Supply <https://www.crowdsupply.com/intergalaktik/ulx4m>`_
+
+* `Fork matériel Hazard3 pour ULX3S, branche ulx-doom <https://github.com/ulx3s/Hazard3/tree/ulx-doom>`_
+* `Fork Hazard3-libfpga, branche ulx-doom <https://github.com/ulx3s/Hazard3-libfpga/tree/ulx-doom>`_
+* `Hazard3-libfpga amont <https://github.com/Wren6991/libfpga>`_
+* `Outil de brochage ULX3S <https://github.com/ulx3s/ulx3s-pinout>`_
+* `ULX3S ulx3s.github.io <https://github.com/ulx3s/ulx3s.github.io>`_
+* `Template Tiny Tapeout ULX3S <https://github.com/ulx3s/ttsky-verilog-template/tree/ulx3s>`_
+* `Action GitHub Tiny Tapeout ULX3S <https://github.com/ulx3s/tt-gds-action/tree/experimental>`_
+* `Outils de support Tiny Tapeout ULX3S <https://github.com/ulx3s/tt-support-tools/tree/experimental>`_
+* `Extension du langage Verilog pour Visual Studio <https://github.com/gojimmypi/VerilogLanguageExtension>`_
+* `I2CDriver <https://i2cdriver.com/>`_

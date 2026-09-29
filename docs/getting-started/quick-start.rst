@@ -6,6 +6,14 @@ Build-from-source Quick Start
    Want to run Hazard3-Doom before installing the FPGA and RISC-V development
    toolchains? Start with :doc:`no-install` and the published prebuilt images.
 
+.. important:: Windows users: open WSL/Ubuntu first
+
+   This build-from-source page assumes a Linux/Bash shell. On Windows, install
+   and use **WSL with Ubuntu** for cloning, installing the build toolchain, and
+   running the repository ``.sh`` scripts. Do not substitute PowerShell or
+   ``cmd.exe`` for these build commands. Native Windows is used only by the
+   explicitly labeled browser, USB-driver, COM-port, or Windows ``.exe`` steps.
+
 
 Target
 ------
@@ -33,8 +41,9 @@ Recommended for source builds:
 * Disk: 60 GiB or more
 * Swap: 4-8 GiB
 
-Building Yosys and nextpnr from source can use substantial memory, especially
-with parallel builds. Systems below the minimum RAM requirement may terminate
+Building FPGA tools from source can use substantial memory, especially with
+parallel builds. The recommended OSS CAD Suite packages avoid that tool-build
+step. Systems below the minimum RAM requirement may still terminate project
 build processes due to memory pressure.
 
 The ``check-system-requirements.sh`` script reports the detected resources:
@@ -47,7 +56,19 @@ The ``check-system-requirements.sh`` script reports the detected resources:
 Install Software Requirements
 -----------------------------
 
-On a fresh system, everything can be installed with a single script. The script is also useful for updating:
+For the FPGA toolchain, the recommended cross-platform starting point is the
+prebuilt `OSS CAD Suite <https://github.com/YosysHQ/oss-cad-suite-build>`_.
+Install the package for your platform and activate its environment so Yosys,
+nextpnr, Project Trellis/ecppack, and related tools are available on ``PATH``.
+Install a compatible RISC-V bare-metal GCC toolchain separately and make it
+available on ``PATH``; see :doc:`prerequisites` for supported toolchain names
+and overrides.
+
+For Ubuntu/WSL, the project also provides a convenience installer. By default,
+it installs and activates the project's expected prebuilt OSS CAD Suite
+automatically, along with the other software needed for the known-good
+development environment. Advanced source-build options are also available when
+you need selected FPGA tools built from specific upstream GitHub commits:
 
 .. code-block:: bash
 
@@ -63,13 +84,16 @@ On a fresh system, everything can be installed with a single script. The script 
 
    ./full-install.sh
 
-.. admonition:: Yosys and nextpnr versions
+.. admonition:: Reproducible FPGA tool versions
 
-   The scripts install specific versions of Yosys and nextpnr that are known to pass timing with the default seeds.
-   Existing installed versions are quietly overwritten. If you have a different version of yosys or nextpnr installed,
-   you may need to adjust the build scripts to match your installed versions. See the :doc:`/user-guide/build` for details.
-   and the `build-ecp5-bitstream-common.sh <https://github.com/ulx3s/Hazard3-Doom/blob/main/scripts/build-ecp5-bitstream-common.sh>`_
-   script.
+   The convenience installer uses the project's expected prebuilt OSS CAD Suite
+   by default. Its source-build options can instead build selected FPGA tools
+   from specific upstream GitHub commits when an exact tool revision is needed.
+   If you use an independently installed OSS CAD Suite version, verify the
+   resulting build and timing. See
+   :doc:`/user-guide/build` and the
+   `build-ecp5-bitstream-common.sh <https://github.com/ulx3s/Hazard3-Doom/blob/main/scripts/build-ecp5-bitstream-common.sh>`_
+   script for details.
 
 1. Clone the repository
 -----------------------
@@ -112,17 +136,18 @@ Important outputs include (for example this 85f):
 3. Program the FPGA for a test run
 ----------------------------------
 
-From commandline (Linux):
+From WSL/Bash on Windows, the bundled Windows ``fujprog`` can be invoked
+directly through WSL interoperability:
 
-.. code-block:: text
-
-   fujprog  ./build/fpga_ulx3s_85f.bit
-
-From commandline (Windows):
-
-.. code-block:: text
+.. code-block:: bash
 
    ./bin/fujprog-v48-win64.exe ./build/fpga_ulx3s_85f.bit
+
+On native Linux with ``fujprog`` installed:
+
+.. code-block:: bash
+
+   fujprog ./build/fpga_ulx3s_85f.bit
 
 From the web application:
 
@@ -208,13 +233,32 @@ For the complete browser workflow and memory-profile table, see
 :doc:`../user-guide/web-tool`.
 
 The command-line uploaders remain available when preferred. Close any terminal
-or browser connection that owns the UART port first. On Windows, use the syntax
-for the shell that is actually open: PowerShell uses the backtick (`````) for
-line continuation, while Windows Command Prompt (``cmd.exe``, often called the
-DOS prompt) uses the caret (``^``). Do not paste PowerShell backticks into
-``cmd.exe``.
+or browser connection that owns the UART port first. The normal development
+shell is WSL/Linux Bash:
 
-**Windows PowerShell**
+**WSL/Linux Bash**
+
+.. code-block:: bash
+
+   python3 doom/upload-doom-image.py \
+       build/ulx3s-85f/doom-image/hazard3-doom.h3img \
+       --port /dev/ttyS7
+
+   python3 doom/upload-wad.py \
+       /path/to/DOOM.WAD \
+       --port /dev/ttyS7 \
+       --launch
+
+On WSL, use the serial device exposed for the Windows COM port when available
+(for example, a configured COM7 may appear as ``/dev/ttyS7``). The browser
+Device Tool is also a convenient way to keep UART access on the Windows side.
+
+Native Windows command shells are **optional UART-upload alternatives only**;
+they are not the source-build environment. If you intentionally use them, use
+the syntax for the shell that is actually open: PowerShell uses its backtick
+line-continuation character, while ``cmd.exe`` uses the caret (``^``).
+
+**Optional: Windows PowerShell**
 
 .. code-block:: powershell
 
@@ -227,7 +271,7 @@ DOS prompt) uses the caret (``^``). Do not paste PowerShell backticks into
        --port COM7 `
        --launch
 
-**Windows Command Prompt (cmd.exe / DOS prompt)**
+**Optional: Windows Command Prompt (cmd.exe)**
 
 .. code-block:: bat
 
@@ -240,19 +284,6 @@ DOS prompt) uses the caret (``^``). Do not paste PowerShell backticks into
        --port COM7 ^
        --launch
 
-**Linux (Bash)**
-
-.. code-block:: bash
-
-   python3 doom/upload-doom-image.py \
-       build/ulx3s-85f/doom-image/hazard3-doom.h3img \
-       --port /dev/ttyUSB0
-
-   python3 doom/upload-wad.py \
-       /path/to/DOOM.WAD \
-       --port /dev/ttyUSB0 \
-       --launch
-
 The command-line IWAD uploader now defaults to ``--memory-profile auto``. It
 queries the running monitor with the ``v`` command and selects the monitor's
 ``32m`` or ``64m`` WAD region before sending the header. This prevents a 12F
@@ -261,9 +292,9 @@ queries the running monitor with the ``v`` command and selects the monitor's
 older monitor that does not report ``memory_profile``. The H3IMG image must still
 match the board build.
 
-The UART port names are only examples. On Windows use the COM port assigned to
-your board. On Linux use the corresponding device, commonly ``/dev/ttyUSB0`` or
-``/dev/ttyACM0``.
+The UART port names are only examples. In WSL/Linux, use the device visible in
+that environment, such as ``/dev/ttyS7``, ``/dev/ttyUSB0``, or
+``/dev/ttyACM0``. Native Windows uploader examples use the assigned COM port.
 
 5. Verify startup
 -----------------

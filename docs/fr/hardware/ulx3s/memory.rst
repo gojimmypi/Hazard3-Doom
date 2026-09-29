@@ -41,3 +41,14 @@ charger Doom et le WAD.
 La configuration réussie du FPGA ne prouve pas à elle seule que la SDRAM est
 saine ; les tests mémoire du moniteur et les tests Doom font partie de la
 qualification matérielle.
+
+Qualification
+-------------
+
+Ne considérez pas qu'une configuration FPGA réussie prouve que la SDRAM est
+saine. Une qualification utile de la carte doit exercer plusieurs motifs
+d'adresse/de données, les accès octet/demi-mot/mot, les alias d'adresse,
+l'utilisation du tas et le trafic réel de l'application.
+
+Les tests SDRAM du moniteur et les tests rapides de Doom font donc partie de la
+mise au point du matériel, et pas seulement du diagnostic logiciel.

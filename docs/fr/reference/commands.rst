@@ -1,6 +1,56 @@
 Référence des commandes du moniteur
 ===================================
 
+
+Qualification de la mémoire externe
+------------------------------------
+
+Le chemin DDR3 de l'ULX4M-LD a été qualifié sur matériel avec les commandes du
+moniteur ci-dessous. Attendez que ``s`` indique ``external_memory_ready=YES``
+avant d'exécuter des tests mémoire destructifs.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Commande
+     - Description
+   * - ``m``
+     - Test destructif séquentiel sur une fenêtre de diagnostic de 1 Mio.
+       Vérifie les largeurs d'accès ainsi que les motifs zéro, un, adresse et
+       adresse inversée.
+   * - ``a``
+     - Test clairsemé des alias d'adresse/de banque sur toute la fenêtre de
+       mémoire externe de 64 Mio visible par le logiciel.
+   * - ``r``
+     - Test pseudo-aléatoire de 1 Mio dans chacune de quatre régions mémoire
+       distinctes.
+   * - ``q``
+     - Exécute la suite complète de qualification : séquentielle + clairsemée +
+       pseudo-aléatoire.
+   * - ``k``
+     - Test d'allocation/de charge du tas. Le profil ULX4M-LD 64 Mio exerce la
+       fenêtre de tas de 40 Mio.
+   * - ``d``
+     - Test rapide de la mémoire et du timer de la plate-forme Doom.
+   * - ``x``
+     - Copie du code RV32 en mémoire externe puis l'exécute, avec des phases GP
+       normale et étrangère, des interruptions de timer et des contrôles de
+       garde.
+   * - ``z``
+     - Réinitialise le tas ; tous les pointeurs de tas existants deviennent
+       invalides.
+   * - ``s``
+     - Affiche l'état d'exécution, notamment l'état de préparation de la mémoire
+       externe et l'initialisation/PLL/horloge utilisateur LiteDRAM.
+   * - ``v``
+     - Affiche les identifiants de version du firmware, du FPGA, du cœur mémoire
+       et de l'adaptateur.
+
+Un ``TIMEOUT`` au démarrage ne constitue pas, à lui seul, un échec DDR définitif.
+Lors de la mise au point actuelle de l'ULX4M-LD, LiteDRAM a terminé après la
+fenêtre d'attente initiale de 5 secondes du moniteur ; ``s`` a ensuite indiqué
+que la mémoire était prête et la suite complète de qualification a réussi.
+
 Démarrage et Doom
 -----------------
 

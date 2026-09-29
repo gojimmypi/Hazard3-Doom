@@ -50,3 +50,11 @@ infrastrukture. Trenutačna ULX4M-LD 85F meta koristi IDCODE ``0x01113043``.
 
 Za novu rutu ili rizičnu izmjenu poželjno je privremeno učitati bitstream u FPGA
 SRAM kada programator to omogućuje; power cycle tada vraća trajni boot put.
+
+Testiranje u SRAM-u ili flashu
+------------------------------
+
+Pri provjeri novog routinga, memorijskog profila ili rizične FPGA promjene,
+poželjno je učitati bitstream u FPGA SRAM kada to dostupni programator podržava.
+Nakon ciklusa napajanja vraća se trajni konfiguracijski put. Korisničku sliku
+zapišite u flash tek nakon što bitstream prođe predviđene testove pokretanja.

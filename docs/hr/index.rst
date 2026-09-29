@@ -7,16 +7,6 @@ Hazard3-Doom je mnogo više od Dooma pokrenutog na još jednoj FPGA pločici. To
 je obrazovni hardversko-softverski ekosustav izgrađen oko open-source Hazard3
 RISC-V procesora te ULX3S i ULX4M ECP5 FPGA obitelji.
 
-.. important:: Stanje prijevoda
-
-   Engleska dokumentacija je mjerodavna za najnovije promjene u ovom izdanju.
-   Hrvatske stranice prate istu opću strukturu, ali neke tehničke stranice -
-   osobito JTAG, bootloader, WebUSB, timing sweepovi i ULX4M - mogu zaostajati
-   za engleskom verzijom. Kada su detalji o ožičenju, naredbama ili hardverskoj
-   kvalifikaciji kritični, provjerite i odgovarajuću englesku stranicu.
-
-
-
 .. admonition:: Isti Hazard3 CPU koji se koristi u Raspberry Pi RP2350
    :class: important
 
@@ -41,6 +31,10 @@ podršku, kontrolere vanjske memorije, pristup SD kartici, UART i JTAG debug,
 resident boot monitor, host-side alate za prijenos i učitljivu DoomGeneric
 aplikaciju.
 
+Uključen je i I2C dijagnostički alat temeljen na `I2CDriveru <https://i2cdriver.com/>`_
+tvrtke Excamera Labs. Isti kod pruža i dodatnu
+:doc:`Hackaday Supercon SAO značajku <user-guide/sao>`.
+
 Hazard3-Doom možete koristiti jednostavno za igranje Dooma na RISC-V soft CPU-u
 ili dublje istražiti kako se gradi kompletno FPGA računalo: integraciju CPU-a,
 memorijska sučelja, satove i timing, video, periferije, boot i upload mehanizme
@@ -56,6 +50,15 @@ dna, Hazard3-Doom je napravljen za istraživanje.
    razvijaju izričito su označene. Detaljne stranice o arhitekturi procesora
    vezane uz točan snimak izvornog koda Hazard3 naveden u
    :doc:`architecture/hazard3/index`.
+
+.. important:: Windows buildovi iz izvornog koda koriste WSL
+
+   Na Windowsu upute za build i razvoj iz izvornog koda zahtijevaju **WSL s
+   Ubuntuom i Bashom**. PowerShell i ``cmd.exe`` nisu podržane build ljuske za
+   skripte repozitorija. Izvorni Windows koristi se samo kada stranica izričito
+   traži Device Tool u pregledniku, upravljanje USB upravljačkim programima,
+   prijenos preko COM porta ili priloženi Windows ``.exe``. Put
+   :doc:`getting-started/no-install` u pregledniku ne zahtijeva WSL.
 
 Počnite ovdje
 -------------
@@ -123,7 +126,6 @@ Poveznice projekta
 ------------------
 
 * `Hazard3-Doom repozitorij <https://github.com/ulx3s/Hazard3-Doom>`_
-* `ULX3S Hazard3 hardverski fork <https://github.com/ulx3s/Hazard3>`_
 * `Izvorni Hazard3 projekt <https://github.com/Wren6991/Hazard3>`_
 * `Hazard3 vodič za dizajn i referentni priručnik <https://wren.wtf/hazard3/doc/>`_
 * `Izvor Hazard3 dokumentacije <https://github.com/Wren6991/Hazard3/tree/stable/doc>`_
@@ -131,3 +133,14 @@ Poveznice projekta
 * `ULX4M hardverski izvori <https://github.com/intergalaktik/ulx4m>`_
 * `ULX4M hardverska dokumentacija <https://github.com/intergalaktik/ulx4m-documentation>`_
 * `ULX4M Crowd Supply stranica <https://www.crowdsupply.com/intergalaktik/ulx4m>`_
+
+* `ULX3S Hazard3 hardverski fork, grana ulx-doom <https://github.com/ulx3s/Hazard3/tree/ulx-doom>`_
+* `Hazard3-libfpga fork, grana ulx-doom <https://github.com/ulx3s/Hazard3-libfpga/tree/ulx-doom>`_
+* `Izvorni Hazard3-libfpga <https://github.com/Wren6991/libfpga>`_
+* `ULX3S alat za raspored pinova <https://github.com/ulx3s/ulx3s-pinout>`_
+* `ULX3S ulx3s.github.io <https://github.com/ulx3s/ulx3s.github.io>`_
+* `ULX3S Tiny Tapeout predložak <https://github.com/ulx3s/ttsky-verilog-template/tree/ulx3s>`_
+* `ULX3S Tiny Tapeout GitHub akcija <https://github.com/ulx3s/tt-gds-action/tree/experimental>`_
+* `ULX3S Tiny Tapeout pomoćni alati <https://github.com/ulx3s/tt-support-tools/tree/experimental>`_
+* `Verilog Language Extension za Visual Studio <https://github.com/gojimmypi/VerilogLanguageExtension>`_
+* `I2CDriver <https://i2cdriver.com/>`_

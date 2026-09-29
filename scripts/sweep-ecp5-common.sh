@@ -17,6 +17,10 @@
 # See LICENSING.md for project licensing policy and scope.
 # -----------------------------------------------------------------------------
 
+# Verify this script against the recorded inventory without blocking normal execution.
+"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
+    --check-file "${BASH_SOURCE[0]}" || true
+
 # This file is sourced by sweep scripts. Do not enable shell options here.
 
 sweep_ecp5_require_tool()

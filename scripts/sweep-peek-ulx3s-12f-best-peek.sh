@@ -18,6 +18,10 @@
 # See LICENSING.md for project licensing policy and scope.
 # -----------------------------------------------------------------------------
 
+# Verify this script against the recorded inventory without blocking normal execution.
+"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
+    --check-file "${BASH_SOURCE[0]}" || true
+
 # File: scripts/sweep-peek-ulx3s-12f.sh
 #
 # Run placement-only ULX3S 12F nextpnr seed checks against one synthesized

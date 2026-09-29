@@ -6,6 +6,9 @@ See [app.readthedocs.org/dashboard](https://app.readthedocs.org/dashboard/) for 
 
 ## Local build
 
+On Windows, run the documentation build from WSL/Ubuntu. The commands below
+are Bash/Linux commands, not PowerShell or `cmd.exe` commands.
+
 ```bash
 python3 -m venv .venv-docs
 source .venv-docs/bin/activate

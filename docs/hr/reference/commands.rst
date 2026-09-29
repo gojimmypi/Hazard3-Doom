@@ -1,6 +1,53 @@
 Referenca naredbi monitora
 ==========================
 
+
+Kvalifikacija vanjske memorije
+------------------------------
+
+DDR3 put na ULX4M-LD pločici hardverski je kvalificiran sljedećim naredbama
+monitora. Pričekajte da ``s`` prijavi ``external_memory_ready=YES`` prije
+pokretanja destruktivnih testova memorije.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Naredba
+     - Opis
+   * - ``m``
+     - Destruktivni sekvencijalni test dijagnostičkog prozora od 1 MiB.
+       Provjerava širine pristupa te uzorke nula, jedinica, adrese i invertirane
+       adrese.
+   * - ``a``
+     - Rijetki test aliasiranja adresa/banki kroz cijeli softverski vidljiv
+       prozor vanjske memorije od 64 MiB.
+   * - ``r``
+     - Pseudoslučajni test od 1 MiB u svakoj od četiri odvojene memorijske regije.
+   * - ``q``
+     - Pokreće cijeli skup kvalifikacijskih testova: sekvencijalni + rijetki +
+       pseudoslučajni.
+   * - ``k``
+     - Test alokacije i opterećenja hrpe. ULX4M-LD profil od 64 MiB provjerava
+       prozor hrpe od 40 MiB.
+   * - ``d``
+     - Brzi test Doom platformske memorije i timera.
+   * - ``x``
+     - Kopira RV32 kod u vanjsku memoriju i izvršava ga, uključujući faze s
+       normalnim i stranim GP-om, prekide timera i zaštitne provjere.
+   * - ``z``
+     - Resetira hrpu; svi postojeći pokazivači na hrpu postaju nevažeći.
+   * - ``s``
+     - Ispisuje stanje izvođenja, uključujući spremnost vanjske memorije i
+       stanje LiteDRAM inicijalizacije/PLL-a/korisničkog takta.
+   * - ``v``
+     - Ispisuje identifikatore verzija firmwarea, FPGA-a, memorijske jezgre i
+       adaptera.
+
+Početni ``TIMEOUT`` sam po sebi nije konačan dokaz DDR kvara. Tijekom trenutačnog
+ULX4M-LD pokretanja LiteDRAM je završio nakon početnog čekanja monitora od 5
+sekundi; ``s`` je zatim prijavio spremno stanje, a cijeli kvalifikacijski skup
+prošao je uspješno.
+
 Pokretanje i Doom
 -----------------
 

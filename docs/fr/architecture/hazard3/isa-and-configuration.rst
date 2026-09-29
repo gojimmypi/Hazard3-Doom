@@ -229,3 +229,8 @@ Pour l'étude architecturale, utilisez les deux :
 
 * :hazard3-src:`Configuration projet épinglée <hdl/hazard3_config.vh>` - options exactes et valeurs par défaut disponibles dans cet instantané.
 * `Configuration stable amont actuelle <https://github.com/Wren6991/Hazard3/blob/stable/hdl/hazard3_config.vh>`_ - direction actuellement maintenue en amont.
+
+Liens associés
+--------------
+
+* `RISC-V GCC xPack <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_

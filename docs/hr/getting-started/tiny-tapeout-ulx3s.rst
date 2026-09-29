@@ -364,3 +364,5 @@ Povezane poveznice
 * `ULX3S tt-support-tools experimental grana <https://github.com/ulx3s/tt-support-tools/tree/experimental>`_
 * `Hazard3-Doom ULX3S TT workflow <https://github.com/ulx3s/Hazard3-Doom/blob/main/.github/workflows/tt-fpga-ulx.yaml>`_
 * `ULX3S Tiny Tapeout predložak <https://github.com/ulx3s/ttsky-verilog-template/tree/ulx3s>`_
+
+* `Tiny Tapeout GDS akcija za ULX3S/ULX4M ECP5 <https://github.com/marketplace/actions/tiny-tapeout-gds-action-for-the-ulx3s-and-ulx4m-ecp5-fpga>`_

@@ -2,7 +2,13 @@
 
 set -euo pipefail
 
+# Verify this script against the recorded inventory without blocking normal execution.
+"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
+    --check-file "${BASH_SOURCE[0]}" || true
+
+# Keep this package release aligned with the FPGA GitHub workflows.
 XPACK_VERSION="15.2.0-1"
+EXPECTED_GCC_VERSION="15.2.0"
 XPACK_BASE_URL="https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v${XPACK_VERSION}"
 
 INSTALL_ROOT="${HOME}/.local/xPacks/riscv-none-elf-gcc"
@@ -27,26 +33,91 @@ esac
 ARCHIVE="xpack-riscv-none-elf-gcc-${XPACK_VERSION}-${PLATFORM}.tar.gz"
 URL="${XPACK_BASE_URL}/${ARCHIVE}"
 
+compiler_version()
+{
+    local gcc="$1"
+    "${gcc}" -dumpfullversion -dumpversion 2>/dev/null || true
+}
+
+CURRENT_GCC="$(command -v riscv-none-elf-gcc 2>/dev/null || true)"
+CURRENT_GCC_VERSION=""
+if [[ -n "${CURRENT_GCC}" ]]; then
+    CURRENT_GCC_VERSION="$(compiler_version "${CURRENT_GCC}")"
+fi
+
 printf '\n'
 printf 'RISC-V toolchain installer\n'
 printf '%s\n' '--------------------------'
-printf 'Version:      %s\n' "${XPACK_VERSION}"
-printf 'Platform:     %s\n' "${PLATFORM}"
-printf 'Install path: %s\n' "${INSTALL_DIR}"
+printf 'Desired xPack: %s\n' "${XPACK_VERSION}"
+printf 'Desired GCC:   %s\n' "${EXPECTED_GCC_VERSION}"
+printf 'Platform:      %s\n' "${PLATFORM}"
+printf 'Install path:  %s\n' "${INSTALL_DIR}"
 printf '\n'
 
-if [[ -x "${INSTALL_DIR}/bin/riscv-none-elf-gcc" ]]; then
-    printf 'Toolchain is already installed.\n'
+if [[ -n "${CURRENT_GCC}" ]]; then
+    printf 'Current PATH compiler:\n'
+    printf '  Binary:  %s\n' "${CURRENT_GCC}"
+    printf '  GCC:     %s\n' "${CURRENT_GCC_VERSION:-unknown}"
+    "${CURRENT_GCC}" --version | head -n 1 || true
+    printf '\n'
 else
-    printf 'Installing required Ubuntu packages...\n'
-    sudo apt-get update
-    sudo apt-get install -y \
-        ca-certificates \
-        curl
+    printf 'Current PATH compiler: not found\n\n'
+fi
+
+MANAGED_GCC="${INSTALL_DIR}/bin/riscv-none-elf-gcc"
+MANAGED_GCC_VERSION=""
+if [[ -x "${MANAGED_GCC}" ]]; then
+    MANAGED_GCC_VERSION="$(compiler_version "${MANAGED_GCC}")"
+fi
+
+if [[ "${MANAGED_GCC_VERSION}" == "${EXPECTED_GCC_VERSION}" ]]; then
+    printf 'Exact xPack package directory is already installed; reusing it.\n'
+elif [[ -e "${INSTALL_DIR}" ]]; then
+    printf 'Existing managed xPack directory is incomplete or has the wrong GCC version.\n'
+    printf 'Found GCC: %s; expected: %s. Reinstalling.\n\n' \
+        "${MANAGED_GCC_VERSION:-unknown}" "${EXPECTED_GCC_VERSION}"
+    rm -rf -- "${INSTALL_DIR}"
+fi
+
+if [[ ! -x "${MANAGED_GCC}" ]]; then
+    if [[ -n "${CURRENT_GCC}" && "${CURRENT_GCC_VERSION}" == "${EXPECTED_GCC_VERSION}" ]]; then
+        printf '%s\n' \
+            'The compiler on PATH has the desired GCC version, but its exact xPack' \
+            "package release cannot be verified as ${XPACK_VERSION}. Installing the" \
+            'managed pinned xPack release so the local toolchain exactly matches CI.'
+        printf '\n'
+    elif [[ -n "${CURRENT_GCC}" ]]; then
+        printf 'PATH compiler does not match desired GCC %s; installing pinned xPack.\n\n' \
+            "${EXPECTED_GCC_VERSION}"
+    fi
+
+    missing_download_tools=0
+    for command_name in curl sha256sum tar; do
+        if ! command -v "${command_name}" >/dev/null 2>&1; then
+            missing_download_tools=1
+        fi
+    done
+
+    if ((missing_download_tools == 1)); then
+        if ! command -v apt-get >/dev/null 2>&1; then
+            printf 'ERROR: curl, sha256sum, and tar are required.\n' >&2
+            exit 1
+        fi
+        printf 'Installing required Ubuntu packages...\n'
+        sudo apt-get update
+        sudo apt-get install -y \
+            ca-certificates \
+            coreutils \
+            curl \
+            tar
+    fi
 
     mkdir -p "${INSTALL_ROOT}"
 
-    TMP_DIR="$(mktemp -d)"
+    # Keep the download on the same filesystem as the managed installation.
+    # Some Linux systems mount /tmp as a small tmpfs, which is too small for
+    # large toolchain archives even when the home filesystem has ample space.
+    TMP_DIR="$(mktemp -d "${INSTALL_ROOT}/.install-tmp.XXXXXX")"
     trap 'rm -rf "${TMP_DIR}"' EXIT
 
     printf '\nDownloading:\n  %s\n\n' "${URL}"
@@ -71,8 +142,15 @@ else
         --file "${TMP_DIR}/${ARCHIVE}" \
         --directory "${INSTALL_ROOT}"
 
-    if [[ ! -x "${INSTALL_DIR}/bin/riscv-none-elf-gcc" ]]; then
+    if [[ ! -x "${MANAGED_GCC}" ]]; then
         printf 'ERROR: Toolchain installation failed.\n' >&2
+        exit 1
+    fi
+
+    MANAGED_GCC_VERSION="$(compiler_version "${MANAGED_GCC}")"
+    if [[ "${MANAGED_GCC_VERSION}" != "${EXPECTED_GCC_VERSION}" ]]; then
+        printf 'ERROR: Installed GCC reports %s; expected %s.\n' \
+            "${MANAGED_GCC_VERSION:-unknown}" "${EXPECTED_GCC_VERSION}" >&2
         exit 1
     fi
 fi
@@ -91,12 +169,21 @@ if ! grep -Fqx "${PATH_LINE}" "${HOME}/.bashrc" 2>/dev/null; then
 fi
 
 export PATH="${CURRENT_LINK}/bin:${PATH}"
+hash -r
+
+ACTIVE_GCC_VERSION="$(compiler_version "$(command -v riscv-none-elf-gcc)")"
+if [[ "${ACTIVE_GCC_VERSION}" != "${EXPECTED_GCC_VERSION}" ]]; then
+    printf 'ERROR: Active RISC-V GCC reports %s; expected %s.\n' \
+        "${ACTIVE_GCC_VERSION:-unknown}" "${EXPECTED_GCC_VERSION}" >&2
+    exit 1
+fi
 
 printf '\nInstalled successfully:\n\n'
 riscv-none-elf-gcc --version
 printf '\n'
 riscv-none-elf-gdb --version | head -n 1
 printf '\n'
+printf 'xPack release:  %s\n' "${XPACK_VERSION}"
 printf 'Toolchain path:\n  %s\n' "${CURRENT_LINK}/bin"
 printf '\n'
 printf 'For new terminals, PATH is configured automatically.\n'

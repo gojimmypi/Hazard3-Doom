@@ -44,6 +44,14 @@ Web Serial nécessite un navigateur exposant ``navigator.serial`` et un contexte
 sécurisé. ``localhost`` est accepté pour le développement local, et HTTPS
 convient à l'hébergement comme GitHub Pages.
 
+.. _fig-webserial-connect:
+
+.. figure:: ../images/webserial-connect.png
+   :alt: Boîte de dialogue de sélection du périphérique Web Serial du navigateur
+   :class: screenshot
+
+   **Connexion Web Serial** - sélectionnez l'adaptateur UART de la carte dans la boîte de dialogue d'autorisation du navigateur.
+
 Un serveur local simple peut être lancé depuis le répertoire ``web/`` avec :
 
 .. code-block:: bash

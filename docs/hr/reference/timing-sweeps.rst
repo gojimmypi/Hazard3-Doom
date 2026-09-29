@@ -64,6 +64,103 @@ Route proces može završiti uspješno, a timing status ipak biti ``FAIL``. Swee
 namjerno koristi nextpnr način ``timing-allow-fail`` kako bi sačuvao mjerenja i
 za routove koji ne zatvaraju timing.
 
+
+Kvalificirana ULX4M-LD kontrolna točka 40/60 MHz
+------------------------------------------------
+
+Trenutačna hardverski kvalificirana ULX4M-LD kontrolna točka koristi:
+
+.. code-block:: text
+
+   Hazard3/AHB:          40 MHz
+   LiteDRAM user:        60 MHz
+   LiteDRAM reference:   25 MHz
+   LiteDRAM init:        25 MHz
+   LiteDRAM init CPU:    SERV
+   nextpnr placer:       heap
+   timingweight:         30
+   critexp:              3
+   timing-driven rip-up: enabled
+   seed:                 2
+
+SHA256 zamrznute sintetizirane netliste je:
+
+.. code-block:: text
+
+   160c536b12e46667990c887571da6f443ccc6c5a2ba644033db43fc783ea9453
+
+Za tu točnu netlistu seed 2 dosegnuo je 43,94 MHz za ``clk_sys`` i 67,81 MHz za
+LiteDRAM korisnički takt, čime je zadovoljio zahtjeve 40/60 MHz. Točan SHA256
+lokalno hardverski testiranog bitstreama je:
+
+.. code-block:: text
+
+   294602982dfc4a9906961f2e8b6f43de925d8c11a7e5e6bb0f5e392965a868de
+
+Ista netlista i seedovi **nisu** pouzdano zatvarali timing s ranijim HeAP
+postavkama ``timingweight=10``, ``critexp=2`` bez rip-upa. Zato metapodaci sweepa
+moraju bilježiti podešavanje place/route alata uz seed i hash netliste.
+
+Nakon statičkog timinga provedena je stvarna DDR kvalifikacija na pločici s
+Micron memorijom. Routing je prošao sekvencijalni test 1 MiB, puni rijetki test
+aliasiranja 64 MiB, pseudoslučajni test u četiri regije, ponovljeni ``q``, stres
+hrpe 40 MiB, Doom test memorije/timera i izvršavanje kopiranog RV32 koda iz DDR-a.
+Nemojte novi routing označiti hardverski kvalificiranim samo na temelju nextpnr
+timinga.
+
+Za ponavljanje poznatog dobrog eksperimenta routinga nad već zamrznutom
+odgovarajućom netlistom:
+
+.. code-block:: bash
+
+   SWEEP_SKIP_SYNTH=1 \
+   SWEEP_JOBS=1 \
+   SWEEP_ROUTE_TIMEOUT_SECONDS=1200 \
+   SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT=30 \
+   SWEEP_NEXTPNR_HEAP_CRITEXP=3 \
+   SWEEP_NEXTPNR_TMG_RIPUP=1 \
+       ./scripts/sweep-ecp5.sh ulx4m-ld-85f 2
+
+``SWEEP_SKIP_SYNTH=1`` koristite tek nakon provjere hasha zamrznute netliste i
+svih metapodataka profila. Ponovna izgradnja preload monitora, profil DDR uređaja,
+generirana LiteDRAM jezgra, takt, RTL promjena ili promjena alata za sintezu
+poništava usporedbu sa zamrznutom netlistom i zahtijeva novu sintezu pa novi sweep.
+
+Čuvanje ULX4M-LD bitstreama za hardverski test
+----------------------------------------------
+
+ULX4M-LD sweep uobičajeno sprema timing dnevnike/rezultate i ne mora pakirati
+svaki istraživački routing. Kada seed vrijedi odnijeti na hardver, izričito
+sačuvajte nextpnr tekstualnu konfiguraciju. Za kvalificirani seed-2 eksperiment:
+
+.. code-block:: bash
+
+   SWEEP_SKIP_SYNTH=1 \
+   SWEEP_JOBS=1 \
+   SWEEP_ROUTE_TIMEOUT_SECONDS=1200 \
+   SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT=30 \
+   SWEEP_NEXTPNR_HEAP_CRITEXP=3 \
+   SWEEP_NEXTPNR_TMG_RIPUP=1 \
+   SWEEP_NEXTPNR_EXTRA_ARGS="--textcfg build/ulx4m-ld-test/fpga_ulx4m_ld-seed2.config" \
+       ./scripts/sweep-ecp5.sh ulx4m-ld-85f 2
+
+Zatim zapakirajte tu **već routanu** konfiguraciju bez ponovnog pokretanja
+nextpnr-a:
+
+.. code-block:: bash
+
+   ecppack \
+       --compress \
+       --svf build/ulx4m-ld-test/fpga_ulx4m_ld-seed2.svf \
+       --idcode 0x01113043 \
+       build/ulx4m-ld-test/fpga_ulx4m_ld-seed2.config \
+       build/ulx4m-ld-test/fpga_ulx4m_ld-seed2.bit
+
+Nemojte koristiti praktičnu skriptu za bitstream koja potajno ponovno pokreće
+nextpnr s drugačijim/zadanim postavkama place alata; time bi nastao drugačiji
+routing od timing rezultata koji se kvalificira. Prije hardverskog testa
+provjerite hash netliste, routing postavke, seed i završni SHA256 bitstreama.
+
 Lokalni sweep
 -------------
 
@@ -191,6 +288,20 @@ Parametri workflowa
 workflow stvara približno ``ceil(N / seeds_per_job)`` route jobova. Najviše
 ``max_parallel`` jobova radi istodobno, a seedovi unutar svakog joba obrađuju se
 serijski. Raspon 1-260 s dva seeda po jobu daje 130 route jobova.
+
+
+Zašto dva seeda po GitHub jobu
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Pojedini seed ponekad traje dramatično dulje od susjednih. Velike grupe seedova
+omogućuju takvom sporom seedu da zadrži runner i odgodi više seedova iza sebe.
+Vrlo male grupe povećavaju trošak checkouta, artefakata i pokretanja runnera.
+Zadana vrijednost od dva seeda po jobu praktičan je kompromis koji ograničava
+posljedice kvara.
+
+Matrica koristi ``fail-fast: false`` pa jedna routing grupa ne otkazuje sve
+ostale. To je važno za karakterizaciju: loš seed ne smije sakriti korisne
+rezultate nepovezanih seedova.
 
 Arhitektura jobova
 ------------------
@@ -357,21 +468,51 @@ postavke i isti skup seedova.
 Nakon promjene generirane jezgre, primjerice promjene LiteDRAM geometrije
 memorije, ponovno sintetizirajte i uspostavite novi seed baseline.
 
-Česte zamke
------------
 
-* ``--timing-allow-fail`` samo omogućuje prikupljanje mjerenja; FAIL ne postaje
-  PASS.
-* Najbolji rezultat jedne domene nije nužno najbolji ukupni seed.
-* Ne koristite ``SWEEP_SKIP_SYNTH=1`` nakon promjena RTL-a, ograničenja, taktova
-  ili generirane jezgre bez odgovarajućeg novog netlista.
-* Držite ``seeds_per_job`` malim ako postoje seedovi s vrlo dugim routeom.
-* ``max_parallel`` određuje broj GitHub runnera, ne broj nextpnr procesa u jednom
-  route jobu.
-* Prevelik lokalni ``SWEEP_JOBS`` može iscrpiti RAM prije nego što CPU izgleda
-  potpuno zauzet.
-* Bitstreamove čuvajte samo kada su potrebni za hardversko testiranje.
-* Kandidat za produkcijsku referencu treba i test na stvarnoj pločici.
+Kontrolni popis reproducibilnosti
+---------------------------------
+
+Prije usporedbe dva sweepa provjerite sve sljedeće:
+
+* isti SHA256 sintetizirane netliste, osim ako je sinteza varijabla koja se ispituje;
+* isti cilj i profil značajki specifičan za cilj;
+* iste zahtjeve za taktovima;
+* isti LiteDRAM CPU/generiranu jezgru kada se koristi ULX4M-LD;
+* isti LPF/ograničenja;
+* istu nextpnr verziju za routing;
+* iste postavke place/route alata i dodatne argumente; i
+* isti podskup seedova za kontrolirane A/B usporedbe.
+
+Nakon promjene generirane jezgre, primjerice promjene LiteDRAM memorijskog
+uređaja/geometrije, ponovno sintetizirajte i uspostavite novu referentnu liniju
+seedova. Stari poredak seedova nije prenosiv na novu netlistu.
+
+Savjeti za razvoj i česte zamke
+-------------------------------
+
+* Nemojte tumačiti ``--timing-allow-fail`` kao dopuštenje ili PASS timinga. Ono
+  samo dopušta da routing završi kako bi sweep mogao prikupiti neuspjele timing
+  vrijednosti.
+* Nemojte birati seed prema maksimumu jedne taktne domene osim ako isti seed
+  zadovoljava sve potrebne domene.
+* Nemojte koristiti ``SWEEP_SKIP_SYNTH=1`` nakon promjene RTL-a, generirane
+  jezgre, takta ili ograničenja osim ako je odgovarajuća netlista namjerno
+  regenerirana.
+* Držite ``seeds_per_job`` malim kada seedovi pokazuju dugačke repove trajanja.
+  Velika serijska grupa može jedan patološki seed pretvoriti u višesatno
+  kašnjenje.
+* ``max_parallel`` je GitHub ograničenje konkurentnosti runnera, a ne broj
+  nextpnr procesa unutar routing joba. Svaki routing job namjerno obrađuje jedan
+  seed odjednom.
+* Visoke lokalne vrijednosti ``SWEEP_JOBS`` mogu iscrpiti memoriju prije nego što
+  iskorištenost CPU-a izgleda zasićeno.
+* Bitstreamove čuvajte samo kada su potrebni. Timing dnevnici i CSV datoteke puno
+  su manji i dovoljni za većinu istraživanja.
+* Odabrani proizvodni kandidat testirajte na hardveru. Statičko zatvaranje
+  timinga nužan je dokaz, ali kvalifikacija na razini pločice i dalje je važna.
+* Sačuvajte završne artefakte sweepa kada rezultat postane projektna kontrolna
+  točka; sadrže hashove, konfiguraciju, verzije alata i dokaze po seedu potrebne
+  za kasniju reprodukciju ili reviziju rezultata.
 
 Povezane datoteke
 -----------------
@@ -388,3 +529,13 @@ Povezane datoteke
    scripts/summarize-ecp5-sweep.py
 
 Vidi i :doc:`scripts` te :doc:`board-profiles`.
+
+``WHOLE_SEED_TIMEOUT`` ili drugi timeout status
+   Watchdog je zaustavio routing koji je prekoračio dopušteno vrijeme. To nije timing mjerenje i ne treba ga rangirati zajedno s dovršenim routinzima.
+
+Vanjske reference
+-----------------
+
+* `RISC-V GCC XPACK <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_
+
+* `nextpnr-ecp5 <https://github.com/YosysHQ/nextpnr>`_

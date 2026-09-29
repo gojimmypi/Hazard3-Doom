@@ -56,6 +56,9 @@ Il faut identifier le matériel réel avant de sélectionner le profil de build.
 Résumé des cibles Hazard3-Doom
 ------------------------------
 
+Les profils de carte actuels du projet sont résumés ci-dessous. Consultez
+:doc:`../../reference/board-profiles` pour l'enregistrement de qualification de la version.
+
 .. list-table::
    :header-rows: 1
    :widths: 20 20 24 18 18

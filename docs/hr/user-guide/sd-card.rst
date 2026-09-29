@@ -3,13 +3,6 @@ Hladno pokretanje s micro-SD kartice
 
 Put pokretanja sa SD kartice omogućuje programiranom ULX3S-u da se oporavi nakon potpunog prekida napajanja i pokrene Doom bez povezanog razvojnog računala.
 
-.. important::
-
-   Pokretanje s micro-SD kartice trenutačno je podržano samo na ULX3S ciljevima.
-   Na ULX4M-LD inicijalizacija ne prolazi CMD0 i monitorova naredba za pokretanje
-   sa SD kartice je onemogućena; ULX4M također nema ESP32 koji postoji na
-   ULX3S-u.
-
 Sadržaj kartice
 ---------------
 
@@ -21,6 +14,24 @@ Postavite ove datoteke u korijenski direktorij micro-SD kartice formatirane kao 
    DOOM.WAD
 
 ``DOOM.WAD`` je kanonski naziv IWAD datoteke koji trenutačni postupak hladnog pokretanja koristi.
+
+.. _fig-hazard3-sd-contents:
+
+.. figure:: ../images/HAZARD3-SD-Contents.png
+   :alt: Hazard3-Doom datoteke na HAZARD3-SD volumenu
+   :class: screenshot
+
+   **Sadržaj HAZARD3-SD** - Doom aplikacijska slika i IWAD u korijenu kartice.
+
+Na Windowsu pripremljena kartica može se pojaviti kao volumen poput ``HAZARD3-SD``:
+
+.. _fig-windows-hazard3-sd-volume:
+
+.. figure:: ../images/Windows-HAZARD3-SD-volume.png
+   :alt: HAZARD3-SD volumen u Windows File Exploreru
+   :class: screenshot
+
+   **Windows HAZARD3-SD volumen** - provjerite očekivanu karticu prije kopiranja ili zamjene datoteka.
 
 Podrška datotečnom sustavu
 --------------------------
@@ -53,6 +64,18 @@ Ispravno izvješće stanja sadrži podatke poput:
    fat_type=FAT32
    mounted=YES
    wad=DOOM.WAD
+
+
+Referenca micro-SD priključka
+-----------------------------
+
+.. _fig-microsd-pinout:
+
+.. figure:: ../images/sd-card-pinout.png
+   :alt: Raspored kontakata micro-SD kartice
+
+   **Referenca micro-SD kontakata** - korisna pri praćenju zajedničkih
+   ESP32/FPGA signala ili pri korištenju adaptera tijekom otklanjanja pogrešaka.
 
 Dijeljeni ESP32/FPGA SD pinovi
 ------------------------------

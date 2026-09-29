@@ -58,6 +58,9 @@ profil.
 Sažetak Hazard3-Doom meta
 -------------------------
 
+Trenutačni profili pločica projekta sažeti su u nastavku. Pogledajte
+:doc:`../../reference/board-profiles` za zapis kvalifikacije izdanja.
+
 .. list-table::
    :header-rows: 1
    :widths: 20 20 24 18 18

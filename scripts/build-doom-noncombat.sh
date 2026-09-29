@@ -20,6 +20,10 @@
 
 set -euo pipefail
 
+# Verify this script against the recorded inventory without blocking normal execution.
+"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
+    --check-file "${BASH_SOURCE[0]}" || true
+
 # Run shellcheck to ensure this is a good script.
 # Specify the executable shell checker you want to use:
 MY_SHELLCHECK="shellcheck"

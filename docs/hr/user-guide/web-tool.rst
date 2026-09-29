@@ -6,6 +6,14 @@ stranici objedinjuje uobičajene postupke pokretanja i rada s pločicom. Time za
 većinu interaktivnog rada nisu potrebni zaseban terminal i više naredbenih
 alata za prijenos.
 
+.. _fig-hazard3-doom-web-console:
+
+.. figure:: ../images/Hazard3-Doom-Web-Console.png
+   :alt: Hazard3-Doom Device Tool i UART konzola u pregledniku
+   :class: screenshot
+
+   **Hazard3-Doom Device Tool** - Web Serial konzola, kontrole monitora i radnje uređaja u jednom sučelju preglednika.
+
 Trenutačna stranica ima četiri glavna područja:
 
 * **Device uploading** - programiranje FPGA SRAM-a, učitavanje firmwarea
@@ -59,11 +67,7 @@ Koristite aktualni preglednik temeljen na Chromiumu, primjerice Chrome ili
 Edge. Web Serial i WebUSB zahtijevaju siguran kontekst. ``localhost`` je
 prihvatljiv lokalno, a HTTPS za hostani alat.
 
-Javna stranica dostupna je na:
-
-.. code-block:: text
-
-   https://ulx3s.github.io/Hazard3-Doom/
+Javna stranica dostupna je na ``https://ulx3s.github.io/Hazard3-Doom/``.
 
 UART terminal, H3IMG/IWAD prijenos, screen snip i WebUSB programiranje FPGA-a ne
 zahtijevaju lokalni web server.
@@ -151,6 +155,12 @@ postavka.
 
 **Connect** otvara browser picker. **Reconnect** otvara već autorizirani port i
 onemogućen je dok je UART već spojen; hover tekst objašnjava razlog.
+
+.. figure:: ../images/webserial-connect.png
+   :alt: Odabir Hazard3-Doom Web Serial uređaja
+   :class: screenshot
+
+   **Web Serial veza** - odaberite UART pločice prije korištenja terminala ili H3IMG/IWAD alata za prijenos.
 
 Serijski port može imati samo jednog vlasnika. Device Tool koristi Web Lock i
 ``BroadcastChannel`` između tabova iste origine, pa drugi tab može prijaviti
@@ -331,6 +341,13 @@ pregovaranje, protokol, rekonstrukciju i firmware detalje.
 Preporučeni slijed za pokretanje
 --------------------------------
 
+.. note::
+
+   Lokalni pomoćni program i OpenOCD potrebni su samo pri učitavanju firmwarea
+   konzole. Nisu preduvjet za uobičajeni UART rad, H3IMG/IWAD prijenos, snimku
+   zaslona ni programiranje FPGA SRAM-a putem WebUSB programatora.
+
+
 Za tipičnu ULX3S razvojnu sesiju:
 
 #. Otvorite ``https://ulx3s.github.io/Hazard3-Doom/`` ili lokalnu stranicu.
@@ -396,3 +413,13 @@ Povezana dokumentacija
 * :doc:`doom` - Doom slika i rad programa.
 * :doc:`sd-card` - samostalno H3IMG/IWAD učitavanje s micro-SD kartice.
 * :doc:`jtag-debugging` - OpenOCD/GDB postavljanje.
+
+Vanjske reference
+-----------------
+
+* `Hazard3-Doom alat za uređaj <https://ulx3s.github.io/Hazard3-Doom/>`_ -
+  hostana HTTPS verzija alata u pregledniku.
+* `Web Serial API <https://developer.mozilla.org/en-US/docs/Web/API/Web_Serial_API>`_
+  - API preglednika koji se koristi za UART pristup.
+* `WebUSB API <https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API>`_ -
+  API preglednika koji koristi ULX3S FPGA programator za SRAM.

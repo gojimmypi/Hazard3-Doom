@@ -93,6 +93,32 @@ Doom test i RV32 izvođenje iz DDR-a. Novi netlist mora se ponovno routati i
 hardverski kvalificirati; sam timing PASS nije dovoljan. Pogledajte
 :doc:`timing-sweeps` za provenance sweepa i pravila usporedbe.
 
+Hardverski kvalificirana ULX4M-LD kontrolna točka znatno je jača od starog
+razvojnog stanja ``ALLOW_TIMING_FAILURE``. Točna zamrznuta netlista bila je:
+
+.. code-block:: text
+
+   160c536b12e46667990c887571da6f443ccc6c5a2ba644033db43fc783ea9453
+
+Timing-prolazan hardverski kvalificiran routing koristio je nextpnr seed 2 s HeAP
+``timingweight=30``. Točno lokalno testirani bitstream imao je SHA256:
+
+.. code-block:: text
+
+   294602982dfc4a9906961f2e8b6f43de925d8c11a7e5e6bb0f5e392965a868de
+
+Ista zamrznuta netlista nije prolazila s ranijom HeAP postavkom
+``timingweight=10``, što pokazuje da su place-and-route postavke dio zapisa
+kvalifikacije, a ne usputni detalj.
+
+Hardverska provjera na Micron pločici zatim je prošla cijeli ``q`` SDRAM skup,
+stres hrpe 40 MiB, Doom brzi test platforme i izvršavanje kopiranog RV32 koda iz
+DDR-a. Sam timing PASS nije dovoljan za tvrdnju o DDR kvalifikaciji.
+
+Nova predučitana slika rezidentnog monitora ili bilo koja druga promjena vidljiva
+sintezi stvara novu netlistu. Sačuvajte kvalificirani seed-2 artefakt kao
+referencu, zatim ponovno provedite routing i kvalifikaciju.
+
 Glavne baze ULX3S periferije
 ----------------------------
 

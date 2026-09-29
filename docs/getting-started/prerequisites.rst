@@ -4,7 +4,15 @@ Prerequisites
 Host environment
 ----------------
 
-The project is designed to build reproducibly from a Bash environment. On Windows, WSL is the recommended command-line build environment; PowerShell remains convenient for the UART uploader scripts.
+The project build and development scripts require a Linux/Bash environment.
+On native Linux, use the normal Bash shell. On Windows, use **WSL with Ubuntu**:
+WSL is required for build-from-source work and for the repository's shell
+scripts. Do not run the build scripts from PowerShell or ``cmd.exe``.
+
+Native Windows is still appropriate where the documentation explicitly calls
+for the browser Device Tool, USB driver management, a COM-port UART uploader,
+or a bundled Windows ``.exe``. Unless a command block is explicitly labeled
+PowerShell or ``cmd.exe``, Windows users should run it in WSL/Bash.
 
 Machine requirements check
 --------------------------
@@ -29,24 +37,51 @@ At minimum, install:
 * Git with recursive submodule support.
 * Python 3.
 * ``pyserial`` for UART uploads.
-* A RISC-V bare-metal GCC/GDB toolchain.
+* A RISC-V bare-metal GCC/GDB toolchain available on ``PATH``.
 * Yosys, nextpnr-ecp5, Project Trellis/ecppack, and the normal ULX3S FPGA tooling for bitstream builds.
 * OpenOCD when using JTAG debugging.
-* shellcheck for validating shell scripts.
+* ``shellcheck`` for validating shell scripts (optional, but recommended).
 
-The monitor build currently defaults to this RISC-V toolchain prefix:
+FPGA toolchain
+--------------
 
-.. code-block:: text
+The recommended FPGA toolchain is the prebuilt `OSS CAD Suite
+<https://github.com/YosysHQ/oss-cad-suite-build>`_. It provides Yosys,
+nextpnr, Project Trellis/ecppack, and related tools for Linux, macOS, and
+Windows. On Ubuntu/WSL, ``full-install.sh`` installs and activates the project's
+expected OSS CAD Suite automatically. You may instead install an OSS CAD Suite
+release yourself and activate its environment so its tools are available on
+``PATH``.
 
-   /opt/riscv/bin/riscv32-unknown-elf-
+For advanced development or reproducibility work, the installation scripts also
+provide source-build options that build selected FPGA tools from specific
+upstream GitHub commits. Building the FPGA tools from source is not required for
+the normal installation path.
 
-The machine checker also recognizes common alternatives such as
-``riscv-none-elf-`` and xPack installations. Override the build prefix when
-your compiler is installed elsewhere. For example:
+On Windows, the OSS CAD Suite project recommends WSL with its Linux-x64 package
+for the best experience; this also matches the Bash/WSL environment used by
+Hazard3-Doom.
+
+RISC-V GCC toolchain
+--------------------
+
+The build uses a compatible RISC-V bare-metal GCC toolchain found on ``PATH``.
+``riscv-none-elf-*`` is supported directly, and xPack RISC-V GCC installations
+are also recognized. On Ubuntu/WSL, macOS, or another Linux distribution, use
+a suitable bare-metal RISC-V GCC package for that platform or install xPack,
+then ensure the compiler is available on ``PATH``. Package names vary by
+distribution.
+
+Use ``TOOLCHAIN_PREFIX`` when you need to select a specific installation. For
+example:
 
 .. code-block:: bash
 
    TOOLCHAIN_PREFIX=riscv-none-elf- ./scripts/build.sh
+
+The historical ``/opt/riscv/bin/riscv32-unknown-elf-`` prefix remains
+supported for compatibility, but installing the toolchain under ``/opt`` is
+not required.
 
 Python uploader dependency
 --------------------------
@@ -108,6 +143,7 @@ The repository does not distribute a commercial Doom IWAD. Keep a legally obtain
 Related links
 -------------
 
-* `RISC-V GCC XPACK <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_
-* `yosys <https://github.com/YosysHQ/yosys>`_
-* `nextpnr-ecp5 <https://github.com/YosysHQ/nextpnr>`_
+* `OSS CAD Suite <https://github.com/YosysHQ/oss-cad-suite-build>`_
+* `RISC-V GCC xPack <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_
+* `Yosys <https://github.com/YosysHQ/yosys>`_
+* `nextpnr <https://github.com/YosysHQ/nextpnr>`_

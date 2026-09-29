@@ -39,3 +39,14 @@ učitati Doom i WAD.
 
 Uspješna FPGA konfiguracija sama ne dokazuje ispravan SDRAM; monitorovi memory
 testovi i Doom smoke testovi dio su hardverske kvalifikacije.
+
+Kvalifikacija
+-------------
+
+Uspješna konfiguracija FPGA-a nije dokaz da SDRAM radi ispravno. Korisna
+kvalifikacija pločice treba provjeriti više uzoraka adresa/podataka, pristupe
+bajtu/poluriječi/riječi, aliasiranje adresa, uporabu hrpe i stvarni aplikacijski
+promet.
+
+Zato su SDRAM testovi monitora i Doom brzi testovi dio hardverskog pokretanja, a
+ne samo softverske dijagnostike.

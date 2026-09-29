@@ -6,6 +6,14 @@ sur le navigateur. Il regroupe dans une seule page les opérations courantes de
 mise en route et d'interaction avec la carte, au lieu d'exiger un terminal et
 plusieurs outils de téléversement en ligne de commande.
 
+.. _fig-hazard3-doom-web-console:
+
+.. figure:: ../images/Hazard3-Doom-Web-Console.png
+   :alt: Device Tool et console UART Hazard3-Doom dans le navigateur
+   :class: screenshot
+
+   **Hazard3-Doom Device Tool** - console Web Serial, commandes du moniteur et actions sur le périphérique dans une même interface du navigateur.
+
 La page actuelle comporte quatre zones principales :
 
 * **Device uploading** - programmation de la SRAM FPGA, chargement du firmware
@@ -63,11 +71,7 @@ Utilisez un navigateur récent basé sur Chromium, comme Chrome ou Edge. Web
 Serial et WebUSB exigent un contexte sécurisé. ``localhost`` convient en local
 et HTTPS à l'outil hébergé.
 
-La page publique est disponible ici :
-
-.. code-block:: text
-
-   https://ulx3s.github.io/Hazard3-Doom/
+La page publique est disponible à ``https://ulx3s.github.io/Hazard3-Doom/``.
 
 Le terminal UART, les téléversements H3IMG/IWAD, la capture d'écran et la
 programmation FPGA WebUSB n'ont besoin d'aucun serveur local.
@@ -159,6 +163,12 @@ paramètres Hazard3-Doom normaux sont :
 
 La terminaison de ligne est réglable séparément. ``CR + LF`` est le réglage
 interactif habituel.
+
+.. figure:: ../images/webserial-connect.png
+   :alt: Sélection du périphérique Web Serial Hazard3-Doom
+   :class: screenshot
+
+   **Connexion Web Serial** - sélectionnez l'UART de la carte avant d'utiliser le terminal ou les téléverseurs H3IMG/IWAD.
 
 **Connect** ouvre le sélecteur série du navigateur. **Reconnect** ouvre un port
 déjà autorisé pour l'origine courante et reste désactivé tant que l'UART est
@@ -357,6 +367,14 @@ d'implémentation firmware.
 Flux de mise en route conseillé
 -------------------------------
 
+.. note::
+
+   L'assistant local et OpenOCD ne sont nécessaires que pour charger le firmware
+   de la console. Ils ne sont pas requis pour l'utilisation UART normale, les
+   téléversements H3IMG/IWAD, la capture d'écran ou la programmation de la SRAM
+   FPGA avec le flasher WebUSB.
+
+
 Pour une session ULX3S typique :
 
 #. Ouvrez ``https://ulx3s.github.io/Hazard3-Doom/`` ou la page locale.
@@ -423,3 +441,13 @@ Documentation associée
 * :doc:`doom` - image Doom et fonctionnement à l'exécution.
 * :doc:`sd-card` - chargement autonome H3IMG/IWAD depuis micro-SD.
 * :doc:`jtag-debugging` - configuration OpenOCD/GDB.
+
+Références externes
+-------------------
+
+* `Outil Hazard3-Doom pour les périphériques <https://ulx3s.github.io/Hazard3-Doom/>`_ -
+  version HTTPS hébergée de l'outil pour navigateur.
+* `API Web Serial <https://developer.mozilla.org/en-US/docs/Web/API/Web_Serial_API>`_
+  - API du navigateur utilisée pour l'accès UART.
+* `API WebUSB <https://developer.mozilla.org/en-US/docs/Web/API/WebUSB_API>`_ -
+  API du navigateur utilisée par le flasher SRAM FPGA ULX3S.

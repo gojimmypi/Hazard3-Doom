@@ -52,6 +52,18 @@ učitati ``DOOM.IMG`` i ``DOOM.WAD``.
 * SDRAM je volatilna radna memorija;
 * micro-SD čuva izmjenjive datoteke.
 
+
+Samostalno ULX3S Doom pokretanje zato prolazi kroz više slojeva:
+
+.. code-block:: text
+
+   SPI flash -> ECP5 configuration
+       -> resident monitor in EBR
+       -> SDRAM initialization
+       -> micro-SD/FAT file reads
+       -> DOOM.IMG + DOOM.WAD
+       -> execution from the Hazard3 memory map
+
 Dijeljeni SD s ESP32
 --------------------
 
@@ -68,3 +80,11 @@ Vidi :doc:`../../user-guide/sd-card` i :doc:`../../user-guide/sao`.
 
 Pločica ima i audio te priključak za mali zaslon; korisni su za eksperimente,
 ali nisu potrebni za uobičajeni Hazard3-Doom video/storage put.
+
+Proširenja za zvuk i zaslon
+---------------------------
+
+Izvorna pločica ima i 3,5 mm audio priključak te mali priključak za zaslon. To su
+korisni ULX3S resursi, ali nisu potrebni za uobičajeni Hazard3-Doom video/pohrana
+put. Njihova prisutnost ne znači da trenutačni Doom SoC upravlja svim perifernim
+sklopovima pločice.

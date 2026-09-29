@@ -119,6 +119,8 @@ il n'est pas encore qualifié par le projet sur ULX3S.
    utilisez une image FPGA vérifiée qui laisse ``SD_D2``, ``SD_D3``, ``SD_CLK``
    et ``SD_CMD`` en haute impédance.
 
+L'ESP32 ``EN`` est l'entrée de reset active à l'état bas. ULX3S l'expose via le cavalier J3 ``WIFI_OFF`` ; le signal ``SRST`` de Tigard peut donc être relié facultativement au côté WIFI_OFF/EN de J3 pour un reset matériel. Une connexion JTAG de base ne nécessite pas ce fil. Identifiez le côté EN de J3 avant le câblage ; ne connectez pas ``SRST`` au côté masse de J3.
+
 ULX4M-LD sur le carrier Waveshare CM4
 -------------------------------------
 

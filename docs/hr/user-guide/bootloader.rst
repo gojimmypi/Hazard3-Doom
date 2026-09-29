@@ -67,7 +67,9 @@ ULX3S bootloader pruža DFU na ``US2``. ``US1`` passthrough za programiranje
 ESP32-a specifičan je za ULX3S i ne treba ga pretpostaviti na ULX4M-LD.
 
 Za ulazak u DFU na ULX3S-u držite ``BTN1`` ili uključite ``SW1`` te spojite
-``US2``. Provjerite enumeraciju:
+``US2``.
+
+Ako se pločica ne napaja preko ``US2`` zbog USB/RTC stanja napajanja, upstream README bootloadera opisuje dvije mogućnosti oporavka: spojite i ``US1`` ili držite ``BTN1`` i kratko pritisnite ``BTN0`` kako biste uključili pločicu. Provjerite enumeraciju:
 
 .. code-block:: bash
 
@@ -219,9 +221,151 @@ Za točne naredbe izgradnje, SRAM repacking, oporavak i provjeru pogledajte
 ``bootloader/README_ULX4M_BOOTLOADER.md``. Ti su koraci namjerno odvojeni od
 normalnog programiranja.
 
+
+Postupak oporavka ULX4M-LD dokumentiran u ``bootloader/README_ULX4M_BOOTLOADER.md`` provjeren je na ULX4M-LD v0.0.3 s LFE5UM-85F FPGA-om i JTAG IDCODE-om ``0x01113043``. Nemojte koristiti sliku izgrađenu za drugu gustoću FPGA-a ili neprovjereno mapiranje pločice.
+
+Siguran slijed zamjene
+~~~~~~~~~~~~~~~~~~~~~~
+
+Najvažnije pravilo glasi: **zamjenski bootloader provjerite u FPGA SRAM-u prije
+pisanja trajne bootloader regije u flashu**.
+
+Konzervativni slijed zamjene:
+
+#. Izgradite namijenjeni bootloader za točnu pločicu i FPGA.
+#. Prepakirajte testnu sliku samo za SRAM bez trajne postavke ``--bootaddr``.
+#. Učitajte je preko JTAG-a i provjerite uobičajeni DFU rad.
+#. Zasebno provjerite način nadogradnje bootloadera.
+#. Prije prepisivanja spremite postojeću alt-5 bootloader regiju.
+#. Pripremite sliku veličine točno 2 MiB za alt 5.
+#. Pokrenite poznato ispravan bootloader iz FPGA SRAM-a u načinu nadogradnje.
+#. Dok ta SRAM kopija radi, zapišite zamjenu u alt 5.
+#. Pročitajte alt 5 natrag prije ciklusa napajanja.
+#. Provjerite očitano bajt-po-bajt ili usporedbom SHA256 hashova.
+#. Tek nakon uspješnog očitanja isključite napajanje i provedite testove hladnog
+   pokretanja.
+
+Postupak namjerno izbjegava izvršavanje bootloadera iz flasha dok se ta ista
+flash regija zamjenjuje.
+
+Sigurnosna kopija ULX4M-LD alt 5
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Kada je alt 5 namjerno izložen načinom nadogradnje bootloadera, spremite postojeća
+prva 2 MiB prije bilo kakvog pisanja:
+
+.. code-block:: bash
+
+   ./bin/dfu-util.exe \
+       -d 1d50:614b \
+       -a 5 \
+       -U bootloader-alt5-before-update.bin
+
+Provjerite veličinu kopije i zabilježite hash:
+
+.. code-block:: bash
+
+   stat -c '%n: %s bytes' bootloader-alt5-before-update.bin
+   sha256sum bootloader-alt5-before-update.bin
+
+Očekivana veličina je točno ``2097152`` bajtova.
+
+Pisanje i provjera zamjene
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Dok poznato ispravan SRAM bootloader i dalje radi u namjernom načinu nadogradnje,
+zapišite sliku veličine točno 2 MiB u alt 5:
+
+.. code-block:: bash
+
+   ./bin/dfu-util.exe \
+       -d 1d50:614b \
+       -a 5 \
+       -D bootloader-alt5-2m.img
+
+Nemojte odmah napraviti ciklus napajanja. Najprije ponovno pročitajte regiju:
+
+.. code-block:: bash
+
+   ./bin/dfu-util.exe \
+       -d 1d50:614b \
+       -a 5 \
+       -U bootloader-alt5-after-update.bin
+
+Zatim provjerite da obje datoteke imaju točno 2 MiB i jednake hashove:
+
+.. code-block:: bash
+
+   stat -c '%n: %s bytes' \
+       bootloader-alt5-2m.img \
+       bootloader-alt5-after-update.bin
+
+   sha256sum \
+       bootloader-alt5-2m.img \
+       bootloader-alt5-after-update.bin
+
+Ne pokrećite zamjenski bootloader hladnim pokretanjem ako se veličine ili hashovi
+razlikuju.
+
+ULX4M-LD provjera hladnog pokretanja
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Nakon provjerenog očitanja alt 5 potpuno uklonite napajanje kako bi se SRAM testna
+slika izgubila. Zatim provjerite sva tri trajna puta pokretanja:
+
+#. Bez tipki: pokreće se normalni korisnički bitstream.
+#. PCB ``BTN3``: pokreće se obični DFU, a alt 5 ostaje skriven.
+#. PCB ``BTN2`` + ``BTN3``: pokreće se DFU za nadogradnju i alt 5 je vidljiv.
+
+Tek nakon uspjeha sva tri testa zamjena bootloadera može se smatrati dovršenom.
+
+JTAG oporavak kada trajni DFU nije dostupan
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Ako se trajni bootloader ne enumerira kao ``1d50:614b``, provjereni ULX4M-LD
+oporavak koristi Tigard/JTAG za učitavanje hitnog bootloadera u FPGA SRAM. Izvor
+bootloadera pruža ``EMERGENCY_RESTORE2`` koji prisilno uključuje i "ostani u DFU"
+i dopuštenje pisanja bootloadera kako bi se alt 5 mogao obnoviti.
+
+Lanac oporavka je:
+
+.. code-block:: text
+
+   Tigard JTAG
+       -> emergency bootloader in FPGA SRAM
+       -> USB DFU 1d50:614b
+       -> alt 5 access
+       -> restore exactly first 2 MiB
+       -> read back exactly first 2 MiB
+       -> SHA256 match
+       -> cold boot from SPI flash
+
+Za točne ULX4M-LD naredbe izgradnje, postupak SRAM prepakiranja, remaper tipki,
+mapiranje pinova i detalje hitne izgradnje koristite izvorni dokument
+``bootloader/README_ULX4M_BOOTLOADER.md``. Ti su koraci namjerno izvan uobičajenog
+Hazard3-Doom puta programiranja jer pripadaju oporavku pločice i razvoju
+bootloadera, a ne rutinskom programiranju aplikacije.
+
+Napomena o zaštiti bootloadera ULX3S od pisanja
+-----------------------------------------------
+
+Izvorni ULX3S bootloader može zaštititi od pisanja prva 2 MiB na podržanim 16 MiB
+ISSI IS25LP128 i Winbond W25Q128 flash uređajima. Ponašanje zaštite ovisi o
+proizvođaču flasha. Izvorni README također upozorava da neke verzije
+``openFPGALoader`` mogu ukloniti zaštitu koja nije OTP tijekom pisanja flasha.
+
+Svako ažuriranje ULX3S bootloader regije tretirajte kao zaseban zahvat održavanja.
+Nemojte koristiti naredbe za trajni flash koje prepisuju prva 2 MiB samo da biste
+instalirali novu Hazard3-Doom korisničku sliku.
+
 Izvori
 ------
 
 * ``bootloader/README.md`` - ULX3S DFU rad i zaštita flash memorije.
 * ``bootloader/README_ULX4M_BOOTLOADER.md`` - provjereni ULX4M-LD postupak
   izgradnje, SRAM testa, sigurnosne kopije, oporavka, instalacije i readbacka.
+
+Reference implementacije
+------------------------
+
+* `openFPGALoader <https://trabucayre.github.io/openFPGALoader/guide/install.html>`_

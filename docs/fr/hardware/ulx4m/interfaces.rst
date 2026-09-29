@@ -41,8 +41,11 @@ UART et JTAG
 ------------
 
 UART reste le chemin de diagnostic logiciel le plus simple : moniteur résident,
-logs, transfert d'images et Web Serial. JTAG est complémentaire pour arrêt,
-pas-à-pas, registres, mémoire et débogage source.
+logs, transfert d'images et Web Serial. Les LPF ULX4M mappent les broches UART
+sélectionnées vers le chemin FTDI du module/de la carte porteuse utilisé par la
+configuration prise en charge. Consultez :doc:`pinout-and-revisions` pour le
+brochage de la carte porteuse ULX4M-LD et les remarques sur les révisions. JTAG
+est complémentaire pour arrêt, pas-à-pas, registres, mémoire et débogage source.
 
 Alimentation
 ------------
@@ -52,3 +55,20 @@ d'alimentation différents selon la carte porteuse. Il faut donc nommer la carte
 porteuse dans les instructions et vérifier l'entrée d'alimentation, les rails
 FPGA/mémoire, les tensions des banques d'E/S et la fonction exacte des broches.
 La forme d'un connecteur ne garantit jamais la compatibilité électrique.
+
+Hypothèses d'alimentation et de carte porteuse
+----------------------------------------------
+
+La documentation ULX4M amont indique que le module nécessite au moins 500 mA et
+décrit plusieurs configurations d'alimentation selon la carte porteuse. Les
+cartes porteuses peuvent acheminer différemment l'USB et le 5 V ; les
+instructions de mise sous tension doivent donc nommer la carte porteuse au lieu
+de supposer que toutes les bases compatibles CM4 se comportent de la même façon.
+
+Pour les travaux matériels, vérifiez :
+
+* l'alimentation d'entrée prévue et le chemin d'alimentation de la carte porteuse ;
+* la présence de tous les rails nécessaires au FPGA et à la mémoire ;
+* les tensions des banques d'E/S avant de connecter du matériel externe ; et
+* si une broche de connecteur est une entrée, une sortie, un signal partagé ou
+  un rail d'alimentation.

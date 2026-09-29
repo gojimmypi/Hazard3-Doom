@@ -3,13 +3,6 @@ Démarrage à froid depuis micro-SD
 
 Le démarrage depuis SD permet à une ULX3S programmée de repartir après une coupure complète d'alimentation et de lancer Doom sans PC de développement connecté.
 
-.. important::
-
-   Le démarrage micro-SD n'est actuellement pris en charge que sur les cibles
-   ULX3S. Sur ULX4M-LD, l'initialisation échoue à CMD0 et la commande de
-   démarrage SD du moniteur est désactivée ; l'ULX4M ne dispose pas non plus de
-   l'ESP32 présent sur l'ULX3S.
-
 Contenu de la carte
 -------------------
 
@@ -21,6 +14,24 @@ Placez ces fichiers dans le répertoire racine d'une carte micro-SD formatée en
    DOOM.WAD
 
 ``DOOM.WAD`` est le nom de fichier IWAD canonique utilisé par le flux de démarrage à froid actuel.
+
+.. _fig-hazard3-sd-contents:
+
+.. figure:: ../images/HAZARD3-SD-Contents.png
+   :alt: Fichiers Hazard3-Doom sur le volume HAZARD3-SD
+   :class: screenshot
+
+   **Contenu HAZARD3-SD** - l'image de l'application Doom et l'IWAD à la racine de la carte.
+
+Sous Windows, la carte préparée peut apparaître comme un volume tel que ``HAZARD3-SD`` :
+
+.. _fig-windows-hazard3-sd-volume:
+
+.. figure:: ../images/Windows-HAZARD3-SD-volume.png
+   :alt: Volume HAZARD3-SD dans l'Explorateur de fichiers Windows
+   :class: screenshot
+
+   **Volume Windows HAZARD3-SD** - vérifiez la carte attendue avant de copier ou remplacer des fichiers.
 
 Prise en charge du système de fichiers
 --------------------------------------
@@ -53,6 +64,18 @@ Un rapport d'état sain contient notamment des informations comme :
    fat_type=FAT32
    mounted=YES
    wad=DOOM.WAD
+
+
+Référence du connecteur micro-SD
+--------------------------------
+
+.. _fig-microsd-pinout:
+
+.. figure:: ../images/sd-card-pinout.png
+   :alt: Brochage des contacts d'une carte micro-SD
+
+   **Référence des contacts micro-SD** - utile pour suivre les signaux partagés
+   ESP32/FPGA ou utiliser une carte d'adaptation pendant le débogage.
 
 Broches SD partagées ESP32/FPGA
 -------------------------------

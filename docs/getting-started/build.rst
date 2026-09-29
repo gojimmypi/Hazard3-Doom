@@ -1,6 +1,12 @@
 Building Hazard3-Doom
 =====================
 
+.. important:: Bash/WSL build environment
+
+   These build commands are Linux/Bash commands. On Windows, run them from
+   **WSL with Ubuntu**. PowerShell and ``cmd.exe`` are not supported build
+   shells for the repository ``.sh`` scripts.
+
 Complete board builds
 ---------------------
 

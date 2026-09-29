@@ -55,6 +55,18 @@ peut y lire ``DOOM.IMG`` et ``DOOM.WAD``.
 * la SDRAM est la mémoire de travail volatile ;
 * la micro-SD stocke les fichiers amovibles.
 
+
+Un démarrage autonome de Doom sur ULX3S traverse donc plusieurs couches :
+
+.. code-block:: text
+
+   SPI flash -> ECP5 configuration
+       -> resident monitor in EBR
+       -> SDRAM initialization
+       -> micro-SD/FAT file reads
+       -> DOOM.IMG + DOOM.WAD
+       -> execution from the Hazard3 memory map
+
 Partage SD avec l'ESP32
 -----------------------
 
@@ -73,3 +85,12 @@ Voir :doc:`../../user-guide/sd-card` et :doc:`../../user-guide/sao`.
 La carte propose aussi audio et connecteur d'affichage ; ces ressources restent
 utiles pour l'expérimentation mais ne sont pas requises par le chemin
 vidéo/stockage Doom normal.
+
+Extension audio et affichage
+----------------------------
+
+La carte amont possède également un connecteur audio 3,5 mm et un petit
+connecteur d'affichage. Ce sont des ressources ULX3S utiles, mais elles ne sont
+pas nécessaires au chemin vidéo/stockage normal de Hazard3-Doom. Leur présence
+ne signifie pas que le SoC Doom actuel commande tous les périphériques de la
+carte.
