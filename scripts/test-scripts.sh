@@ -419,7 +419,8 @@ check_sweep_dispatcher()
 
     for target in ulx3s-85f ulx3s-12f ulx4m-ld-85f; do
         if netlist="$(
-            "${SCRIPT_DIR}/sweep-ecp5.sh" --print-netlist "${target}"
+            "${SCRIPT_DIR}/sweep-ecp5.sh" --print-netlist "${target}" |
+                tail -n 1
         )" && [[ "${netlist}" == build/* ]]; then
             pass "sweep-ecp5.sh: ${target} netlist path"
         else
@@ -427,7 +428,8 @@ check_sweep_dispatcher()
         fi
 
         if route_constraint="$(
-            "${SCRIPT_DIR}/sweep-ecp5.sh" --print-constraint "${target}"
+            "${SCRIPT_DIR}/sweep-ecp5.sh" --print-constraint "${target}" |
+                tail -n 1
         )" && [[ "${route_constraint}" == third_party/Hazard3/example_soc/synth/*.lpf ]]; then
             pass "sweep-ecp5.sh: ${target} constraint path"
         else
@@ -628,8 +630,8 @@ main()
     check_sweep_dispatcher
 
     if git -C "${REPO_ROOT}" rev-parse --show-toplevel >/dev/null 2>&1; then
-        run_quiet 'check-executable.sh: tracked script permissions' \
-            "${SCRIPT_DIR}/check-executable.sh" 1
+        run_quiet 'check-executable.sh: all tracked shell script permissions' \
+            "${SCRIPT_DIR}/check-executable.sh" --all
         run_quiet 'refresh-version.sh: generated version files' \
             "${SCRIPT_DIR}/refresh-version.sh" --check
         run_quiet 'check-nettype.sh: project RTL policy' \

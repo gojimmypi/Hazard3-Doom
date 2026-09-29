@@ -265,5 +265,5 @@ yosys -V
 nextpnr-ecp5 --version
 ecppack --version
 printf '\nFor the current terminal after this script finishes, run:\n\n'
-printf '  export PATH=%q:"$PATH"\n' "${MANAGED_BIN}"
+printf '  export PATH=%q:%s\n' "${MANAGED_BIN}" "\"\$PATH\""
 printf '  hash -r\n\n'
