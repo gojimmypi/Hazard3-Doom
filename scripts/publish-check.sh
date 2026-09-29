@@ -19,6 +19,10 @@
 
 set -euo pipefail
 
+# Verify this script against the recorded inventory without blocking normal execution.
+"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
+    --check-file "${BASH_SOURCE[0]}" || true
+
 printf '\n=== Project version ===\n'
 ./scripts/refresh-version.sh --check
 

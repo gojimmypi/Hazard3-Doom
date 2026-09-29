@@ -17,6 +17,10 @@
 # See LICENSING.md for project licensing policy and scope.
 # -----------------------------------------------------------------------------
 
+# Verify this script against the recorded inventory without blocking normal execution.
+"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
+    --check-file "${BASH_SOURCE[0]}" || true
+
 # Keep the thresholds and resource detection in one place. This file may be
 # executed directly or sourced by other Hazard3-Doom scripts.
 # /proc/meminfo reports guest-visible RAM, which may be less than the amount

@@ -20,6 +20,10 @@
 
 set -euo pipefail
 
+# Verify this script against the recorded inventory without blocking normal execution.
+"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
+    --check-file "${BASH_SOURCE[0]}" || true
+
 if [[ $# -ne 1 ]]; then
     echo "Usage: $(basename "$0") <full-path-to-file>" >&2
     exit 2

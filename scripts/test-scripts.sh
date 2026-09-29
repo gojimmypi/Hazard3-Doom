@@ -20,6 +20,10 @@
 
 set -u -o pipefail
 
+# Verify this script against the recorded inventory without blocking normal execution.
+"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
+    --check-file "${BASH_SOURCE[0]}" || true
+
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 TEST_DIR="${REPO_ROOT}/build/script-tests"
@@ -265,6 +269,13 @@ check_shell_scripts()
 {
     local script
     local relative
+    local shellcheck_available=0
+
+    if command -v shellcheck >/dev/null 2>&1; then
+        shellcheck_available=1
+    else
+        warn 'ShellCheck is not installed; shell lint checks will be skipped'
+    fi
 
     while IFS= read -r -d '' script; do
         relative="${script#"${REPO_ROOT}/"}"
@@ -276,14 +287,16 @@ check_shell_scripts()
             cat "${COMMAND_LOG}" >&2
         fi
 
-        if (
-            cd -- "${REPO_ROOT}"
-            shellcheck -x "${relative}"
-        ) > "${COMMAND_LOG}" 2>&1; then
-            pass "${relative}: ShellCheck"
-        else
-            fail "${relative}: ShellCheck"
-            cat "${COMMAND_LOG}" >&2
+        if (( shellcheck_available == 1 )); then
+            if (
+                cd -- "${REPO_ROOT}"
+                shellcheck -x "${relative}"
+            ) > "${COMMAND_LOG}" 2>&1; then
+                pass "${relative}: ShellCheck"
+            else
+                fail "${relative}: ShellCheck"
+                cat "${COMMAND_LOG}" >&2
+            fi
         fi
     done < <(
         find "${SCRIPT_DIR}" -maxdepth 1 -type f -name '*.sh' -print0 |

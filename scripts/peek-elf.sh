@@ -47,6 +47,10 @@
 
 set -euo pipefail
 
+# Verify this script against the recorded inventory without blocking normal execution.
+"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
+    --check-file "${BASH_SOURCE[0]}" || true
+
 if [[ -z "${CC:-}" ]]; then
     if [[ -x /opt/riscv/bin/riscv32-unknown-elf-gcc ]]; then
         CC="/opt/riscv/bin/riscv32-unknown-elf-gcc"

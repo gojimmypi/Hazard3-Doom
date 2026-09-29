@@ -20,6 +20,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+SELF_PATH="${SCRIPT_DIR}/$(basename -- "${BASH_SOURCE[0]}")"
+SELF_NAME="${SELF_PATH##*/}"
+
 # Inventory Git-tracked files under a selected directory and generate stable SHA-256
 # identification manifests for integrity verification, reproducibility, and release auditing.
 #
@@ -32,18 +36,24 @@ set -euo pipefail
 # Specify the executable shell checker you want to use:
 MY_SHELLCHECK="shellcheck"
 
-# Check if the executable is available in the PATH
-if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
-    # Run your command here
-    shellcheck "$0" || exit 1
-else
-    echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
+# Check if the executable is available in the PATH. Skip this lint pass for
+# lightweight --check-file calls made automatically by the other scripts.
+if [[ "${1:-}" != "--check-file" ]]; then
+    if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
+        # Run your command here
+        shellcheck "$0" || exit 1
+    else
+        echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
+    fi
 fi
 
 usage()
 {
     cat <<'USAGE'
-Usage: ./scripts/inventory.sh [--check] DIRECTORY
+Usage:
+  ./scripts/inventory.sh DIRECTORY
+  ./scripts/inventory.sh --check DIRECTORY
+  ./scripts/inventory.sh --check-file FILE
 
 Inventory Git-tracked files under DIRECTORY and write the generated manifests
 into that same directory:
@@ -60,24 +70,49 @@ Only files present in the current Git index are inventoried. Ignored and
 untracked files under DIRECTORY are not read or hashed.
 
 Options:
-  --check    Regenerate temporary manifests and verify they exactly match the
-             existing INVENTORY files. No manifest files are changed.
-  -h, --help Show this help text.
+  --check       Regenerate temporary manifests and verify they exactly match the
+                existing INVENTORY files. No manifest files are changed.
+  --check-file  Compare FILE with its entry in the nearest applicable
+                INVENTORY.sha256. No manifest files are changed.
+  -h, --help    Show this help text.
 
 Examples:
   ./scripts/inventory.sh bin
   ./scripts/inventory.sh third_party/Hazard3
   ./scripts/inventory.sh --check bin
+  ./scripts/inventory.sh --check-file scripts/build-ulx3s-12f-doom.sh
 USAGE
 }
 
 mode="write"
 target_arg=""
+check_file_arg=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
     --check)
+        if [[ "${mode}" != "write" ]]; then
+            echo "Only one mode option may be specified." >&2
+            usage >&2
+            exit 2
+        fi
         mode="check"
+        shift
+        ;;
+    --check-file)
+        if [[ "${mode}" != "write" ]]; then
+            echo "Only one mode option may be specified." >&2
+            usage >&2
+            exit 2
+        fi
+        mode="check-file"
+        shift
+        if [[ $# -eq 0 ]]; then
+            echo "Missing file argument for --check-file." >&2
+            usage >&2
+            exit 2
+        fi
+        check_file_arg="$1"
         shift
         ;;
     -h|--help)
@@ -115,10 +150,18 @@ if [[ $# -gt 0 ]]; then
     exit 2
 fi
 
-if [[ -z "${target_arg}" ]]; then
-    echo "Missing target directory." >&2
-    usage >&2
-    exit 2
+if [[ "${mode}" == "check-file" ]]; then
+    if [[ -n "${target_arg}" ]]; then
+        echo "A directory argument cannot be used with --check-file." >&2
+        usage >&2
+        exit 2
+    fi
+else
+    if [[ -z "${target_arg}" ]]; then
+        echo "Missing target directory." >&2
+        usage >&2
+        exit 2
+    fi
 fi
 
 if ! command -v git >/dev/null 2>&1; then
@@ -126,40 +169,78 @@ if ! command -v git >/dev/null 2>&1; then
     exit 1
 fi
 
-if [[ "${target_arg}" = /* ]]; then
-    TARGET_DIR="${target_arg}"
-else
-    TARGET_DIR="${PWD}/${target_arg}"
-fi
+if [[ "${mode}" == "check-file" ]]; then
+    if [[ "${check_file_arg}" = /* ]]; then
+        CHECK_FILE_PATH="${check_file_arg}"
+    else
+        CHECK_FILE_PATH="${PWD}/${check_file_arg}"
+    fi
 
-if ! TARGET_DIR="$(cd -- "${TARGET_DIR}" 2>/dev/null && pwd -P)"; then
-    echo "Target directory does not exist: ${target_arg}" >&2
-    exit 1
+    check_file_dir="$(dirname -- "${CHECK_FILE_PATH}")"
+    check_file_name="$(basename -- "${CHECK_FILE_PATH}")"
+    if ! check_file_dir="$(cd -- "${check_file_dir}" 2>/dev/null && pwd -P)"; then
+        echo "File directory does not exist: ${check_file_arg}" >&2
+        exit 1
+    fi
+    CHECK_FILE_PATH="${check_file_dir}/${check_file_name}"
+
+    if [[ ! -f "${CHECK_FILE_PATH}" ]]; then
+        echo "File does not exist or is not a regular file: ${check_file_arg}" >&2
+        exit 1
+    fi
+
+    TARGET_DIR="${check_file_dir}"
+else
+    if [[ "${target_arg}" = /* ]]; then
+        TARGET_DIR="${target_arg}"
+    else
+        TARGET_DIR="${PWD}/${target_arg}"
+    fi
+
+    if ! TARGET_DIR="$(cd -- "${TARGET_DIR}" 2>/dev/null && pwd -P)"; then
+        echo "Target directory does not exist: ${target_arg}" >&2
+        exit 1
+    fi
 fi
 
 if ! REPO_ROOT="$(git -C "${TARGET_DIR}" rev-parse --show-toplevel 2>/dev/null)"; then
-    echo "Target directory must be inside a Git checkout: ${target_arg}" >&2
+    if [[ "${mode}" == "check-file" ]]; then
+        echo "File must be inside a Git checkout: ${check_file_arg}" >&2
+    else
+        echo "Target directory must be inside a Git checkout: ${target_arg}" >&2
+    fi
     exit 1
 fi
 
-VERSION_FILE="${REPO_ROOT}/VERSION"
-if [[ ! -r "${VERSION_FILE}" ]]; then
-    echo "Missing Hazard3-Doom VERSION file: ${VERSION_FILE}" >&2
-    exit 1
-fi
-PROJECT_VERSION="$(tr -d '\r\n' < "${VERSION_FILE}")"
-if [[ ! "${PROJECT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
-    echo "Invalid Hazard3-Doom VERSION value: ${PROJECT_VERSION}" >&2
-    exit 1
-fi
+if [[ "${mode}" == "check-file" ]]; then
+    case "${CHECK_FILE_PATH}" in
+    "${REPO_ROOT}"/*)
+        ;;
+    *)
+        echo "File must be inside the current Git checkout: ${check_file_arg}" >&2
+        exit 1
+        ;;
+    esac
+else
+    VERSION_FILE="${REPO_ROOT}/VERSION"
+    if [[ ! -r "${VERSION_FILE}" ]]; then
+        echo "Missing Hazard3-Doom VERSION file: ${VERSION_FILE}" >&2
+        exit 1
+    fi
+    PROJECT_VERSION="$(tr -d '\r\n' < "${VERSION_FILE}")"
+    if [[ ! "${PROJECT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+        echo "Invalid Hazard3-Doom VERSION value: ${PROJECT_VERSION}" >&2
+        exit 1
+    fi
 
-TARGET_PREFIX="$(git -C "${TARGET_DIR}" rev-parse --show-prefix)"
+    TARGET_PREFIX="$(git -C "${TARGET_DIR}" rev-parse --show-prefix)"
 
-OUTPUT_PREFIX="${TARGET_DIR}/INVENTORY"
-TSV_OUT="${OUTPUT_PREFIX}.tsv"
-SHA_OUT="${OUTPUT_PREFIX}.sha256"
-MD_OUT="${OUTPUT_PREFIX}.md"
-TEMP_DIR="${REPO_ROOT}/build/inventory-tmp"
+    OUTPUT_PREFIX="${TARGET_DIR}/INVENTORY"
+    TSV_OUT="${OUTPUT_PREFIX}.tsv"
+    SHA_OUT="${OUTPUT_PREFIX}.sha256"
+    MD_OUT="${OUTPUT_PREFIX}.md"
+    TEMP_DIR="${REPO_ROOT}/build/inventory-tmp"
+fi
 
 find_sha256_tool()
 {
@@ -194,6 +275,128 @@ sha256_file()
         exit 1
         ;;
     esac
+}
+
+check_self_inventory_signature()
+{
+    local inventory_file="${SCRIPT_DIR}/INVENTORY.sha256"
+    local recorded_hash=""
+    local self_hash=""
+
+    if [[ ! -r "${inventory_file}" ]]; then
+        printf 'Self SHA-256: inventory unavailable (%s)\n' "${inventory_file}"
+        return 0
+    fi
+
+    if ! recorded_hash="$(
+        awk -v name="${SELF_NAME}" '
+            $2 == name {
+                hash = $1
+                matches++
+            }
+            END {
+                if (matches != 1) {
+                    exit 1
+                }
+                print hash
+            }
+        ' "${inventory_file}"
+    )"; then
+        printf 'Self SHA-256: signature unavailable for %s in %s\n' \
+            "${SELF_NAME}" "${inventory_file}"
+        return 0
+    fi
+
+    self_hash="$(sha256_file "${SELF_PATH}")"
+
+    if [[ "${self_hash}" == "${recorded_hash}" ]]; then
+        printf 'Self SHA-256: SAME (%s matches INVENTORY.sha256)\n' "${SELF_NAME}"
+    else
+        printf 'Self SHA-256: DIFFERENT (%s does not match INVENTORY.sha256)\n' "${SELF_NAME}"
+        printf '  inventory: %s\n' "${recorded_hash}"
+        printf '  current:   %s\n' "${self_hash}"
+    fi
+}
+
+check_file_inventory_signature()
+{
+    local file_path="$1"
+    local inventory_dir
+    local inventory_file
+    local relative_path
+    local line
+    local line_hash
+    local line_path
+    local recorded_hash=""
+    local current_hash
+    local matches
+    local parent_dir
+    local repo_relative_path
+
+    inventory_dir="$(dirname -- "${file_path}")"
+
+    while :; do
+        inventory_file="${inventory_dir}/INVENTORY.sha256"
+
+        if [[ -r "${inventory_file}" ]]; then
+            relative_path="${file_path#"${inventory_dir}/"}"
+            recorded_hash=""
+            matches=0
+
+            while IFS= read -r line || [[ -n "${line}" ]]; do
+                if [[ "${line}" != *"  "* ]]; then
+                    continue
+                fi
+
+                line_hash="${line%%  *}"
+                line_path="${line#*  }"
+
+                if [[ "${line_path}" == "${relative_path}" ]]; then
+                    recorded_hash="${line_hash}"
+                    matches=$((matches + 1))
+                fi
+            done < "${inventory_file}"
+
+            if [[ ${matches} -gt 1 ]]; then
+                printf 'File SHA-256: signature is ambiguous for %s in %s\n' \
+                    "${relative_path}" "${inventory_file}" >&2
+                return 1
+            fi
+
+            if [[ ${matches} -eq 1 ]]; then
+                break
+            fi
+        fi
+
+        if [[ "${inventory_dir}" == "${REPO_ROOT}" ]]; then
+            printf 'File SHA-256: signature unavailable for %s\n' \
+                "${file_path#"${REPO_ROOT}/"}" >&2
+            return 1
+        fi
+
+        parent_dir="$(dirname -- "${inventory_dir}")"
+        if [[ "${parent_dir}" == "${inventory_dir}" ]]; then
+            printf 'File SHA-256: signature unavailable for %s\n' \
+                "${file_path#"${REPO_ROOT}/"}" >&2
+            return 1
+        fi
+        inventory_dir="${parent_dir}"
+    done
+
+    current_hash="$(sha256_file "${file_path}")"
+    repo_relative_path="${file_path#"${REPO_ROOT}/"}"
+
+    if [[ "${current_hash}" == "${recorded_hash}" ]]; then
+        printf 'File SHA-256: SAME (%s matches %s)\n' \
+            "${repo_relative_path}" "${inventory_file#"${REPO_ROOT}/"}"
+        return 0
+    fi
+
+    printf 'File SHA-256: DIFFERENT (%s does not match %s)\n' \
+        "${repo_relative_path}" "${inventory_file#"${REPO_ROOT}/"}"
+    printf '  inventory: %s\n' "${recorded_hash}"
+    printf '  current:   %s\n' "${current_hash}"
+    return 1
 }
 
 component_for_path()
@@ -300,6 +503,13 @@ make_temp_file()
     mktemp "${TEMP_DIR}/inventory.XXXXXX"
 }
 
+SHA256_TOOL="$(find_sha256_tool)"
+
+if [[ "${mode}" == "check-file" ]]; then
+    check_file_inventory_signature "${CHECK_FILE_PATH}"
+    exit $?
+fi
+
 TSV_TMP="$(make_temp_file)"
 SHA_TMP="$(make_temp_file)"
 MD_TMP="$(make_temp_file)"
@@ -311,7 +521,7 @@ cleanup()
 }
 trap cleanup EXIT
 
-SHA256_TOOL="$(find_sha256_tool)"
+check_self_inventory_signature
 
 # Ask Git for the current index instead of walking the filesystem. This keeps
 # large ignored/untracked local toolchains out of the inventory automatically.
