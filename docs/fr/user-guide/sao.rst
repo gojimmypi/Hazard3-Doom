@@ -22,6 +22,12 @@ Les signaux SAO ULX3S documentés sont :
    * - GPIO2
      - C10
 
+.. figure:: ../images/ulx3s-pinout.png
+   :alt: Brochage ULX3S
+
+   **Brochage ULX3S** - les signaux SAO utilisent les positions GPIO J1 illustrées
+   ci-dessus. Consultez :doc:`pinouts` pour la référence générale de câblage de la carte.
+
 Base APB Hazard3
 ----------------
 

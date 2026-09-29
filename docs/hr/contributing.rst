@@ -42,3 +42,5 @@ Datoteka ``.readthedocs.yaml`` u korijenu repozitorija usmjerava Read the Docs
 na ``docs/conf.py`` i instalira ``docs/requirements.txt``. Nakon commita
 datoteka uvezite GitHub repozitorij u Read the Docs i odaberite granu/verziju
 koju želite objaviti.
+
+Dodatne napomene pogledajte u `README-u dokumentacije <https://github.com/ulx3s/Hazard3-Doom/blob/main/docs/README.md>`_.

@@ -27,26 +27,62 @@ adaptateur externe.
 UART Hazard3-Doom
 -----------------
 
-Le câblage UART externe testé utilise :
+L'UART est le chemin logiciel le plus simple vers le moniteur. Le câblage UART
+externe Hazard3-Doom testé utilise le connecteur J1 de l'ULX3S comme suit :
 
-.. code-block:: text
+.. list-table::
+   :header-rows: 1
+   :widths: 24 30 46
 
-   RxD -> J1 broche 8 / GP1  (vers TX de l'adaptateur)
-   TxD -> J1 broche 6 / GP0  (vers RX de l'adaptateur)
-   GND -> masse adjacente
+   * - Fonction côté FPGA
+     - Emplacement sur le connecteur ULX3S
+     - Connexion de l'adaptateur externe
+   * - ``RxD``
+     - J1 broche 8 / ``GP1``
+     - Vers le TX de l'adaptateur
+   * - ``TxD``
+     - J1 broche 6 / ``GP0``
+     - Vers le RX de l'adaptateur
+   * - ``GND``
+     - Masse adjacente
+     - Vers la masse de l'adaptateur
 
-Ce câblage est une référence de laboratoire du projet ; confirmez toujours le
-LPF actif si les broches UART ont changé.
+Ce câblage est une référence de laboratoire du projet, et non un substitut à la
+vérification du LPF et du top-level actifs. Vérifiez toujours le build si les
+broches UART changent. Consultez :doc:`pinout-and-revisions` pour le brochage
+ULX3S complet et les remarques sur les révisions.
 
-GPIO et ESP32
--------------
+GPIO J1/J2
+----------
 
-J1/J2 exposent 56 signaux FPGA sous forme de paires ``GP``/``GN``. Certaines
-broches sont simples, d'autres différentielles et certaines sont partagées avec
-l'ESP32 ou l'ADC selon la révision PCB. La documentation amont signale aussi une
-différence de numérotation physique entre connecteurs femelles coudés et mâles
-verticaux.
+Les deux connecteurs 40 broches exposent 56 signaux GPIO FPGA nommés en paires
+``GP``/``GN`` dans la documentation amont. Certains sont des signaux asymétriques
+ordinaires, certains correspondent à de vraies paires FPGA capables de
+fonctionner en différentiel et certains sont partagés avec des fonctions ESP32
+ou ADC selon la révision du PCB.
 
-L'ESP32 peut participer à la programmation et à des services de carte. Les
-interfaces partagées, notamment SD et certains signaux JTAG/GPIO, doivent être
-gérées comme des problèmes de propriété électrique.
+Le manuel amont signale également un détail mécanique important :
+l'interprétation des broches physiques impaires/paires diffère entre les
+connecteurs femelles coudés et les connecteurs mâles verticaux. Utilisez le
+schéma et les commentaires des contraintes plutôt que de déduire les numéros de
+broche à partir d'une photographie.
+
+Partage avec l'ESP32
+--------------------
+
+ULX3S peut inclure un ESP32 fournissant Wi-Fi/Bluetooth et participant à la
+programmation FPGA ou à des services côté carte. Plusieurs ressources orientées
+FPGA sont partagées, notamment micro-SD et certains signaux GPIO/JTAG sur les
+révisions de PCB documentées.
+
+Hazard3-Doom traite donc les interfaces partagées comme des problèmes de
+propriété. Le côté qui ne possède pas le bus doit le libérer électriquement.
+C'est particulièrement important pour la SD et pour toute expérience utilisant
+simultanément les chemins JTAG ESP32 et FPGA.
+
+Autres interfaces de la carte
+------------------------------
+
+Boutons, LED, ADC, RTC, audio, OLED/LCD et GPIO capables de fournir une horloge
+sont disponibles pour l'expérimentation. Ce sont des ressources pédagogiques
+utiles même lorsque le SoC Hazard3-Doom actuel ne les utilise pas toutes.

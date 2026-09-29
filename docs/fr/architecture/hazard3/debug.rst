@@ -136,3 +136,8 @@ une fonction connue, inspecter les registres entiers, lire un mot RAM via le
 débogueur, exécuter une instruction en single-step, puis identifier lesquelles
 de ces opérations ont utilisé l'état debug du CPU et lesquelles ont utilisé
 l'accès au bus système.
+
+Références d'implémentation
+---------------------------
+
+* `Primitives prises en charge par yosys/nextpnr <https://github.com/YosysHQ/nextpnr/blob/main/ecp5/docs/primitives.md>`_

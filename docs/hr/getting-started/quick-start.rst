@@ -6,6 +6,15 @@ Brzi početak iz izvornog koda
    Ako želite pokrenuti Hazard3-Doom prije instalacije FPGA i RISC-V razvojnih
    alata, počnite s :doc:`no-install` i objavljenim unaprijed izgrađenim slikama.
 
+.. important:: Korisnici Windowsa: najprije otvorite WSL/Ubuntu
+
+   Ova stranica za build iz izvornog koda pretpostavlja Linux/Bash ljusku. Na
+   Windowsu koristite **WSL s Ubuntuom** za kloniranje repozitorija, instalaciju
+   build alata i pokretanje ``.sh`` skripti. Nemojte zamijeniti te build naredbe
+   PowerShellom ili ``cmd.exe``. Izvorni Windows koristi se samo za izričito
+   označene korake preglednika, USB upravljačkog programa, COM porta ili Windows
+   ``.exe`` alata.
+
 
 Cilj
 ----
@@ -30,10 +39,10 @@ Preporučeno za izgradnju iz izvornog koda:
 * Disk: 60 GiB ili više
 * Swap: 4-8 GiB
 
-Izgradnja Yosysa i nextpnr-a iz izvornog koda može koristiti znatnu količinu
-memorije, osobito pri paralelnim izgradnjama. Sustavi s manje od minimalno
-potrebne količine RAM-a mogu prekinuti procese izgradnje zbog nedostatka
-memorije.
+Izgradnja FPGA alata iz izvornog koda može koristiti znatnu količinu memorije,
+osobito pri paralelnim izgradnjama. Preporučeni OSS CAD Suite paketi izbjegavaju
+taj korak izgradnje alata. Sustavi s manje od minimalno potrebne količine RAM-a
+i dalje mogu prekinuti izgradnju projekta zbog nedostatka memorije.
 
 Skripta ``check-system-requirements.sh`` prikazuje otkrivene resurse:
 
@@ -45,8 +54,20 @@ Skripta ``check-system-requirements.sh`` prikazuje otkrivene resurse:
 Instalacija potrebnog softvera
 ------------------------------
 
-Na svježem sustavu sve se može instalirati jednom skriptom. Skripta je korisna
-i za ažuriranja:
+Za FPGA alatni lanac preporučeni početni izbor za više platformi je unaprijed
+izgrađeni `OSS CAD Suite <https://github.com/YosysHQ/oss-cad-suite-build>`_.
+Instalirajte paket za svoju platformu i aktivirajte njegovo okruženje kako bi
+Yosys, nextpnr, Project Trellis/ecppack i povezani alati bili dostupni u
+``PATH``. Zasebno instalirajte kompatibilan RISC-V GCC alatni lanac za bare-metal
+sustave i učinite ga dostupnim u ``PATH``; pogledajte :doc:`prerequisites` za
+podržane nazive alatnih lanaca i mogućnosti odabira.
+
+Za Ubuntu/WSL projekt također nudi praktičnu instalacijsku skriptu. Prema
+zadanim postavkama ona automatski instalira i aktivira unaprijed izgrađenu OSS
+CAD Suite verziju koju projekt očekuje, zajedno s ostalim softverom potrebnim
+za poznato dobro razvojno okruženje. Dostupne su i napredne opcije izgradnje iz
+izvornog koda kada odabrane FPGA alate treba izgraditi iz određenih revizija (commitova) u izvornim GitHub
+repozitorijima:
 
 .. code-block:: bash
 
@@ -62,13 +83,14 @@ i za ažuriranja:
 
    ./full-install.sh
 
-.. admonition:: Verzije Yosysa i nextpnr-a
+.. admonition:: Reproducibilne verzije FPGA alata
 
-   Skripte instaliraju određene verzije Yosysa i nextpnr-a za koje je poznato
-   da prolaze vremenska ograničenja sa zadanim seedovima. Već instalirane
-   verzije tiho se prepisuju. Ako imate instaliranu drugu verziju Yosysa ili
-   nextpnr-a, možda ćete morati prilagoditi skripte za izgradnju. Za detalje
-   pogledajte :doc:`/user-guide/build` i skriptu
+   Praktična instalacijska skripta prema zadanim postavkama koristi unaprijed
+   izgrađenu OSS CAD Suite verziju koju projekt očekuje. Opcije izgradnje iz
+   izvornog koda mogu umjesto toga izgraditi odabrane FPGA alate iz određenih
+   revizija (commitova) u izvornim GitHub repozitorijima kada je potrebna točna revizija alata. Ako koristite
+   neovisno instaliranu verziju OSS CAD Suitea, provjerite rezultat builda i
+   timing. Za detalje pogledajte :doc:`/user-guide/build` i skriptu
    `build-ecp5-bitstream-common.sh <https://github.com/ulx3s/Hazard3-Doom/blob/main/scripts/build-ecp5-bitstream-common.sh>`_.
 
 1. Klonirajte repozitorij
@@ -124,6 +146,20 @@ Nestabilno učitavanje FPGA-a **ne** preživljava prekid napajanja. Po želji se
 dalje mogu koristiti drugi ULX3S alati za programiranje. Za trajnu samostalnu
 instalaciju pogledajte :doc:`programming` i :doc:`../user-guide/sd-card`.
 
+
+Iz WSL/Basha na Windowsu priloženi Windows ``fujprog`` može se pozvati izravno
+kroz WSL interoperabilnost:
+
+.. code-block:: bash
+
+   ./bin/fujprog-v48-win64.exe ./build/fpga_ulx3s_85f.bit
+
+Na izvornom Linuxu s instaliranim ``fujprog`` alatom:
+
+.. code-block:: bash
+
+   fujprog ./build/fpga_ulx3s_85f.bit
+
 Neobavezno: učitajte trenutačni monitor ELF kroz OpenOCD
 --------------------------------------------------------
 
@@ -154,6 +190,8 @@ Ostavite OpenOCD pokrenut. U drugom terminalu pokrenite loopback helper:
 .. code-block:: bash
 
    python3 web/web-server.py
+
+Za opcionalni pristupni ključ koji se zadaje pri pokretanju koristite ``--access-key``. Pomoćni poslužitelj sluša samo na ``127.0.0.1`` i prijavljuje postoji li slušatelj na uobičajenom OpenOCD GDB portu ``3333``.
 
 Zatim možete nastaviti s javnom stranicom
 ``https://ulx3s.github.io/Hazard3-Doom/`` ili otvoriti lokalnu kopiju
@@ -190,13 +228,28 @@ Za cijeli web postupak i tablicu memorijskih profila pogledajte
 :doc:`../user-guide/web-tool`.
 
 Naredbeni uploaderi i dalje su dostupni. Najprije zatvorite terminal ili
-pregledničku vezu koja koristi UART port. U sustavu Windows upotrijebite sintaksu
-ljuske koja je stvarno otvorena: PowerShell koristi obrnuti apostrof (`````)
-za nastavak naredbe u sljedećem retku, dok Windows Command Prompt (``cmd.exe``,
-često nazivan DOS prompt) koristi znak ``^``. Nemojte lijepiti PowerShellove
-obrnute apostrofe u ``cmd.exe``.
+pregledničku vezu koja koristi UART port. Uobičajena razvojna ljuska je
+WSL/Linux Bash. Primjeri PowerShella i ``cmd.exe`` niže samo su neobavezne
+Windows alternative za UART prijenos; ne zamjenjuju WSL za build iz izvornog
+koda.
 
-**Windows PowerShell**
+**WSL/Linux Bash**
+
+.. code-block:: bash
+
+   python3 doom/upload-doom-image.py \
+       build/ulx3s-85f/doom-image/hazard3-doom.h3img \
+       --port /dev/ttyS7
+
+   python3 doom/upload-wad.py \
+       /path/to/DOOM.WAD \
+       --port /dev/ttyS7 \
+       --launch
+
+U WSL-u koristite serijski uređaj izložen za Windows COM port kada je dostupan
+(na primjer, COM7 se može pojaviti kao ``/dev/ttyS7``).
+
+**Neobavezno: Windows PowerShell**
 
 .. code-block:: powershell
 
@@ -209,7 +262,7 @@ obrnute apostrofe u ``cmd.exe``.
        --port COM7 `
        --launch
 
-**Windows Command Prompt (cmd.exe / DOS prompt)**
+**Neobavezno: Windows Command Prompt (cmd.exe)**
 
 .. code-block:: bat
 
@@ -222,19 +275,6 @@ obrnute apostrofe u ``cmd.exe``.
        --port COM7 ^
        --launch
 
-**Linux (Bash)**
-
-.. code-block:: bash
-
-   python3 doom/upload-doom-image.py \
-       build/ulx3s-85f/doom-image/hazard3-doom.h3img \
-       --port /dev/ttyUSB0
-
-   python3 doom/upload-wad.py \
-       /path/to/DOOM.WAD \
-       --port /dev/ttyUSB0 \
-       --launch
-
 Naredbeni IWAD uploader sada zadano koristi ``--memory-profile auto``. Naredbom
 ``v`` ispituje pokrenuti monitor i prije slanja zaglavlja odabire njegovu WAD
 regiju ``32m`` ili ``64m``. Time se sprječava da 12F monitor s 32 MiB
@@ -243,9 +283,10 @@ slučajno primi WAD adresu za 64 MiB. Izričite opcije
 monitor koji ne prijavljuje ``memory_profile``. H3IMG slika i dalje mora
 odgovarati buildu pločice.
 
-Nazivi UART portova samo su primjeri. U sustavu Windows upotrijebite COM port
-dodijeljen pločici. U Linuxu upotrijebite odgovarajući uređaj, najčešće
-``/dev/ttyUSB0`` ili ``/dev/ttyACM0``.
+Nazivi UART portova samo su primjeri. U WSL/Linux okruženju koristite uređaj
+vidljiv u tom okruženju, primjerice ``/dev/ttyS7`` u WSL-u ili
+``/dev/ttyUSB0``/``/dev/ttyACM0`` na izvornom Linuxu. Neobavezne izvorne
+Windows naredbe koriste COM port dodijeljen pločici.
 
 5. Provjerite pokretanje
 ------------------------

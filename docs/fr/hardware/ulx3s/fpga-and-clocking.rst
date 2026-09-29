@@ -14,12 +14,30 @@ n'identifie pas la révision PCB.
 Oscillateur 25 MHz
 ------------------
 
-La carte fournit un oscillateur 25 MHz. Hazard3-Doom s'en sert pour générer les
-horloges nécessaires au processeur, à la SDRAM et à la vidéo.
+La conception ULX3S amont fournit un oscillateur embarqué de 25 MHz.
+Hazard3-Doom utilise cette référence pour générer les horloges nécessaires au
+processeur, à la SDRAM et à la logique vidéo.
 
-Les profils actuels utilisent 50 MHz pour ULX3S 85F et 40 MHz pour ULX3S 12F.
-La vidéo possède ses propres horloges dérivées ; une fermeture de timing doit
-donc vérifier plus que la seule horloge CPU.
+Les références actuelles des profils de carte sont :
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 20 56
+
+   * - Cible
+     - Horloge Hazard3
+     - Rôle
+   * - ULX3S 85F
+     - 50 MHz
+     - CPU, logique AHB/SoC, côté contrôleur SDRAM, moniteur et logique de plate-forme.
+   * - ULX3S 12F
+     - 40 MHz
+     - Cible CPU/SoC et SDRAM à ressources réduites.
+
+La vidéo utilise ses propres horloges dérivées ; le travail de fermeture de
+timing doit donc prendre en compte plus que la seule horloge CPU. Les valeurs
+d'horloge réellement routées sont des résultats du build, pas des
+spécifications permanentes de la carte.
 
 SDRAM et timing
 ---------------
@@ -34,6 +52,20 @@ Les valeurs nextpnr par défaut sont centralisées dans
 :doc:`../../reference/board-profiles`. Un seed valide pour 85F ne constitue pas
 une preuve pour 12F et doit être requalifié après une modification visible par
 la synthèse. Voir :doc:`../../reference/timing-sweeps`.
+
+
+La fermeture du timing dépend de la cible
+-----------------------------------------
+
+Hazard3-Doom centralise les réglages de routage nextpnr par défaut dans
+``scripts/build-ecp5-bitstream-common.sh``. Les références actuelles des
+versions sont également résumées dans :doc:`../../reference/board-profiles`.
+
+Un seed qui réussit sur ULX3S 85F ne prouve pas qu'il réussira sur 12F, et un seed
+précédemment valide ne doit pas être supposé toujours valide après une
+modification du RTL visible par la synthèse, du préchargement du moniteur, de la
+chaîne d'outils ou des contraintes. Consultez :doc:`../../reference/timing-sweeps`
+pour le workflow de sweep du projet.
 
 Normes d'E/S
 ------------

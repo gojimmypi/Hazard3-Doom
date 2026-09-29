@@ -54,6 +54,15 @@ you plenty to explore.
    architecture pages are additionally anchored to the exact Hazard3 source
    snapshot named in :doc:`architecture/hazard3/index`.
 
+.. important:: Windows source builds use WSL
+
+   On Windows, the build-from-source and development instructions require
+   **WSL with Ubuntu and Bash**. PowerShell and ``cmd.exe`` are not supported
+   build shells for the repository scripts. Native Windows is used only where
+   a page explicitly calls for the browser Device Tool, USB driver management,
+   a COM-port uploader, or a bundled Windows ``.exe``. The browser-only
+   :doc:`getting-started/no-install` path does not require WSL.
+
 Start here
 ----------
 

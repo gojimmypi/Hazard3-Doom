@@ -12,10 +12,14 @@ when power is removed.
 
 .. note::
 
-   A current Chromium-based browser such as Chrome or Edge is required. On
-   Windows, the ULX3S ``US1`` FT231X may need to use the WinUSB driver before
-   WebUSB can access it. This is a USB-driver configuration step, not an FPGA or
-   RISC-V development-toolchain installation. See :doc:`../user-guide/web-flasher`.
+   This browser-only path is the exception to the project's WSL requirement:
+   **WSL is not required** to use the prebuilt ULX3S image from Windows. A
+   current Chromium-based browser such as Chrome or Edge is required. The ULX3S
+   ``US1`` FT231X may need to use the WinUSB driver before WebUSB can access it.
+   This is a USB-driver configuration step, not an FPGA or RISC-V
+   development-toolchain installation. If you later build or modify the project
+   from source on Windows, use WSL/Ubuntu. See
+   :doc:`../user-guide/web-flasher`.
 
 What you need
 -------------

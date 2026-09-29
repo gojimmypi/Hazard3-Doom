@@ -98,6 +98,11 @@ cartes porteuses Raspberry Pi Compute Module 4 (CM4), ce qui permet d'utiliser
 le module FPGA sur des cartes de base de type CM4 ou sur une carte porteuse
 conçue spécifiquement.
 
+.. figure:: ../images/ulx4m_ld-pinout.png
+   :alt: Brochage ULX4M-LD
+
+   **Brochage ULX4M-LD** - affectations des broches FPGA sur la `carte porteuse Waveshare CM4 <https://www.waveshare.com/wiki/CM4-IO-BASE-A#Dimension>`_.
+
 Cette séparation modulaire est utile aussi bien pour l'enseignement que pour
 l'exploration d'un produit : le FPGA et la mémoire restent sur l'ULX4M tandis
 que la carte porteuse peut fournir les connecteurs, l'alimentation, les caméras,
@@ -137,3 +142,8 @@ Ressources ULX4M externes
 * `Projet ULX4M et notes de compatibilité des cartes porteuses <https://www.crowdsupply.com/intergalaktik/ulx4m/updates/pre-launch-progress>`_
 * `Documentation Raspberry Pi Compute Module <https://www.raspberrypi.com/documentation/computers/compute-module.html>`_
 * `Certification Open Source Hardware ULX4M <https://certification.oshwa.org/hr000013.html>`_
+
+* `Schéma Waveshare CM4-IO-BASE-A <https://files.waveshare.com/upload/a/aa/CM4-IO-BASE-A_V4_SchDoc.pdf>`_
+* `Brochage de la carte porteuse Waveshare CM4 <https://www.waveshare.com/wiki/CM4-IO-BASE-A#Dimension>`_
+* `yosys <https://github.com/YosysHQ/yosys>`_
+* `nextpnr-ecp5 <https://github.com/YosysHQ/nextpnr>`_

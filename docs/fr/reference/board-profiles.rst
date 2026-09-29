@@ -95,6 +95,35 @@ nouveau netlist doit être routé puis qualifié à nouveau ; un PASS de timing 
 ne suffit pas. Voir :doc:`timing-sweeps` pour la provenance et les règles de
 comparaison.
 
+Le point de contrôle ULX4M-LD qualifié sur matériel est nettement plus robuste
+que l'ancien état de développement ``ALLOW_TIMING_FAILURE``. La netlist figée
+exacte était :
+
+.. code-block:: text
+
+   160c536b12e46667990c887571da6f443ccc6c5a2ba644033db43fc783ea9453
+
+Le routage qualifié sur matériel et conforme au timing utilisait le seed 2 de
+nextpnr avec HeAP ``timingweight=30``. Le bitstream exact testé localement avait
+pour SHA256 :
+
+.. code-block:: text
+
+   294602982dfc4a9906961f2e8b6f43de925d8c11a7e5e6bb0f5e392965a868de
+
+La même netlist figée échouait avec l'ancien réglage HeAP ``timingweight=10``, ce
+qui montre que les paramètres de placement/routage font partie du dossier de
+qualification et ne sont pas un détail accessoire.
+
+La validation matérielle sur la carte Micron a ensuite réussi la suite complète
+``q`` de qualification SDRAM, le stress du tas de 40 Mio, le test rapide de la
+plate-forme Doom et l'exécution RV32 copiée depuis la DDR. Un PASS de timing seul
+ne suffit pas pour revendiquer une qualification DDR.
+
+Une nouvelle précharge du moniteur résident ou toute autre modification visible
+par la synthèse crée une nouvelle netlist. Conservez l'artefact seed 2 qualifié
+comme référence, puis relancez le routage et la qualification.
+
 Bases principales des périphériques ULX3S
 -----------------------------------------
 

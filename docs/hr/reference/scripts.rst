@@ -182,6 +182,9 @@ live timing monitor, watchdog limite, artifacts i A/B strategiju pogledajte
 ``scripts/summarize-ecp5-sweep.py``
    Završni CI agregator. Spaja sve seed grupe sa zamrznutim metapodacima i
    konfiguracijom, generira CSV/Markdown sažetke i provjerava potpunost sweepa.
+``scripts/generate-ecp5-seed-matrix.py``
+   Generira grupiranu matricu seedova koju koristi GitHub Actions. Samostalni script omogućuje istu provjeru lokalno i izbjegava ugrađivanje Pythona u workflow YAML.
+
 
 Primjeri:
 
@@ -298,7 +301,7 @@ Programiranje i OpenOCD
    vezu. Bez argumenta koristi samostalni izlaz
    ``build/hazard3-boot-monitor.elf``. Potpuni board buildovi trebaju izričito
    proslijediti board-specific ELF ili koristiti odgovarajući
-   ``scripts/gdb/load-*-monitor.gdb`` helper.
+   ``scripts/gdb/load-*-monitor.gdb`` helper. Script provjerava ``localhost:3333`` prije pokretanja GDB-a kako nedostajući OpenOCD poslužitelj ne bi prešao na lokalni GDB ``exec`` target i dao zavaravajuće usporedbe sekcija.
 
 ``scripts/load-firmware-12f.sh``
    Učitava ULX3S 12F monitor smješten u SDRAM-u nakon što je kompaktni FPGA
@@ -412,6 +415,20 @@ Higijena repozitorija i generirani inventar
    stablo. ``--dry-run`` prikazuje čišćenje bez izvođenja. Submoduli, WAD
    datoteke i uključeni LiteDRAM izvori namjerno se čuvaju.
 
+
+``scripts/test-scripts.sh``
+   Pokreće Bash sintaksu i ShellCheck, Python kompilaciju, neobavezno PowerShell
+   parsiranje, provjere generiranih seed matrica, sweep-dispatch provjere i
+   pravila repozitorija. Bez opcija izbjegava izgradnje i hardver.
+   ``--integration`` dodatno pokreće potpune izgradnje i rutane uzorke sweepova
+   za sve tri ECP5 mete.
+
+.. code-block:: bash
+
+   ./scripts/test-scripts.sh
+   ./scripts/test-scripts.sh --integration --dry-run
+   ./scripts/test-scripts.sh --integration
+
 VisualGDB i provjera Windows toolchaina
 ---------------------------------------
 
@@ -432,3 +449,8 @@ VisualGDB i provjera Windows toolchaina
    Ponašanje skripti razvija se brže od arhitekturne dokumentacije. Kada neka
    opcija ovdje nije dokumentirana, kao autoritativni izvor koristite
    usage/help tekst checkoutane skripte i provjeru varijabli okruženja.
+
+Povezane poveznice
+------------------
+
+* `RISC-V GCC XPACK <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_

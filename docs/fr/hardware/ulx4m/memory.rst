@@ -60,13 +60,34 @@ Profil généré actuel
 --------------------
 
 Les métadonnées SERV et VexRisc incluses dans cette version correspondent à la
-famille Micron ``MT41K512M16HA`` et enregistrent LiteDRAM/LiteX 2024.12, une
-référence 25 MHz, Hazard3 à 40 MHz, un port LiteDRAM à 60 MHz, une horloge DDR à
-120 MHz, un port Wishbone 128 bits, une profondeur de tampon de commandes 2 et
-l'auto-précharge activée.
+famille Micron ``MT41K512M16HA``. Les deux enregistrent :
 
-SERV ou VexRiscv minimal sert de CPU d'initialisation LiteX dans le coeur généré.
-Ce n'est pas le processeur Hazard3 qui exécute Doom.
+.. code-block:: text
+
+   FPGA: LFE5UM-85F-8BG381C
+   LiteDRAM: 2024.12
+   LiteX: 2024.12
+   input/init clock: 25 MHz
+   Hazard3 system clock: 40 MHz
+   LiteDRAM user clock: 60 MHz
+   DDR clock: 120 MHz
+   user port: 128-bit Wishbone
+   command buffer depth: 2
+   command buffer buffered: true
+   auto precharge: true
+
+Le cœur généré peut utiliser SERV ou un VexRiscv minimal comme CPU
+d'initialisation LiteX. Ce CPU appartient à l'environnement d'initialisation
+DDR ; ce n'est pas le processeur Hazard3 qui exécute ensuite Doom.
+
+.. _fig-alliance-ddr3-variants:
+
+.. figure:: ../../images/as4c256m16d3-flavors.png
+   :alt: Variantes de codes de commande Alliance Memory AS4C256M16D3
+
+   **Variantes de la famille Alliance AS4C256M16D3** - les détails du code de
+   commande sont importants pour identifier la DDR3 montée ; relevez le marquage
+   complet du boîtier et pas seulement le nom de famille de base.
 
 Régénération pour la RAM montée
 -------------------------------
@@ -94,15 +115,60 @@ Le générateur produit les variantes ``generated-serv/`` et
    campagne, un vieux schéma ou la carte d'un autre utilisateur ne suffit pas à
    identifier votre composant.
 
-Qualification
--------------
+Géométrie et identification
+---------------------------
 
-Une calibration LiteDRAM ou un PASS de timing ne suffit pas. Le chemin Micron
-qualifié a été testé avec motifs destructifs, tests d'alias/adresse, séquences
-pseudo-aléatoires, suite de qualification du moniteur, stress du tas, test de la
-plate-forme Doom et exécution de code RV32 copié dans la DDR.
+Pour une DDR3 x16, la géométrie d'adressage fournit un indice visible par le
+logiciel. Les deux familles actuellement prises en charge diffèrent par le
+nombre de lignes et la classe de capacité. Hazard3-Doom peut utiliser un sondage
+mémoire destructif pendant les diagnostics pour distinguer un motif d'alias de
+classe 512 Mio d'un motif de classe 1 Gio, mais il faut le considérer comme un
+contrôle de géométrie/probabilité et non comme un lecteur électronique de
+référence JEDEC.
 
-L'interface physique LD comprend adresse, banques, RAS/CAS/WE, CKE, CS, ODT,
-reset, deux masques, seize DQ bidirectionnels, deux voies DQS et une horloge
-différentielle. Le LPF et le YAML LiteDRAM sont tous deux indispensables à une
-conception correcte.
+Lorsque vous documentez une carte, consignez si possible :
+
+* le marquage du boîtier mémoire monté ;
+* la référence complète du fabricant si elle est connue ;
+* la révision du PCB ;
+* la source de schéma/assemblage utilisée pour la comparaison ;
+* le nom du profil LiteDRAM généré ; et
+* le résultat de qualification matérielle.
+
+Qualification DDR3
+------------------
+
+La fermeture du timing ne suffit pas. Le chemin Micron qualifié pour la version
+a été testé avec des motifs séquentiels destructifs, des contrôles clairsemés
+d'alias/adresse, des tests pseudo-aléatoires dans des régions mémoire séparées,
+la suite complète de qualification du moniteur, un test de charge du tas, un
+test rapide de la plate-forme Doom et l'exécution depuis la DDR de code RV32
+copié.
+
+Cette séquence est volontairement plus stricte que « LiteDRAM s'est calibrée ».
+La calibration prouve que la PHY a terminé son initialisation ; elle ne prouve
+pas que chaque ligne d'adresse, voie de données, interaction de cache ou accès
+logiciel de longue durée est correct.
+
+Interface électrique
+---------------------
+
+Le niveau supérieur LD expose une interface DDR3 x16 classique : adresse, trois
+bits de banque, RAS/CAS/WE, CKE, CS, ODT, reset, deux voies de masque de données,
+seize bits DQ bidirectionnels, deux voies d'octet DQS et une horloge
+différentielle. Le LPF associe ces signaux aux broches du boîtier ECP5 et applique
+des contraintes d'E/S SSTL/différentielles adaptées à la DDR3.
+
+Ces contraintes font partie du contrôleur mémoire. Un YAML LiteDRAM correct avec
+un LPF incorrect ne constitue pas une conception DDR3 valide.
+
+Références externes
+-------------------
+
+* `LiteDRAM <https://github.com/enjoy-digital/litedram>`_ - générateur
+  configurable de contrôleur/PHY DRAM utilisé par le chemin ULX4M-LD.
+* `Page produit Alliance Memory AS4C256M16D3 <https://www.alliancememory.com/as4c256m16d3/>`_ -
+  famille de composants actuelle et liens vers les fiches techniques.
+* `Ressources Lattice ECP5 / ECP5-5G <https://www.latticesemi.com/ecp5>`_ -
+  fiches techniques de la famille FPGA et documentation liée à la DDR.
+* :doc:`sources` - schémas ULX4M, dépôts des cartes et hiérarchie des sources du projet.

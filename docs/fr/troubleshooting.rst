@@ -47,6 +47,59 @@ que le pilote FTDI VCP/D2XX normal.
 Voir :doc:`user-guide/web-flasher` pour le flux complet de programmation WebUSB
 et les remarques concernant la restauration du pilote.
 
+
+Zadig signale ``Driver Installation: FAILED (Could not allocate resource)``
+----------------------------------------------------------------------------
+
+Si Zadig échoue lors du remplacement du pilote FTDI ULX3S avec un message tel
+que ``Driver Installation: FAILED (Could not allocate resource)``, recherchez un
+processus auxiliaire libwdi/Zadig resté bloqué avant de supprimer des pilotes ou
+de modifier la configuration du périphérique.
+
+Fermer Zadig ne termine pas nécessairement son auxiliaire. Lors d'un échec
+confirmé, ``zadig.exe`` n'était plus en cours d'exécution mais
+``installer_x64.exe`` restait bloqué en arrière-plan et empêchait l'installation
+du pilote suivant.
+
+Dans PowerShell, recherchez les processus d'installation/auxiliaires concernés :
+
+.. code-block:: powershell
+
+   Get-Process installer_x64*, wdi*, dpinst*, pnputil* -ErrorAction SilentlyContinue |
+       Select-Object Id, ProcessName, Path
+
+Si un ancien ``installer_x64.exe`` est présent et qu'aucune installation de
+pilote n'est volontairement en cours, arrêtez-le :
+
+.. code-block:: powershell
+
+   Stop-Process -Name installer_x64 -Force
+
+Puis confirmez qu'il a disparu :
+
+.. code-block:: powershell
+
+   Get-Process installer_x64* -ErrorAction SilentlyContinue
+
+Si un ancien ``pnputil.exe`` provenant d'une opération abandonnée
+d'installation/suppression de périphérique est également encore actif,
+arrêtez-le avant de réessayer.
+
+Après avoir supprimé l'auxiliaire bloqué :
+
+#. Fermez Zadig.
+#. Débranchez la connexion USB de l'ULX3S.
+#. Attendez quelques secondes puis reconnectez-la.
+#. Démarrez Zadig en tant qu'administrateur.
+#. Activez **Options -> List All Devices**.
+#. Sélectionnez l'interface FTDI ULX3S voulue et vérifiez l'ID USB ``0403:6015``.
+#. Réessayez l'installation du pilote WinUSB/libusb.
+
+Ne désinstallez pas d'autres périphériques FTDI en première intention. Un
+``installer_x64.exe`` résiduel peut provoquer cette erreur même lorsque Zadig,
+OpenOCD, ``fujprog`` et les autres outils USB visibles ne sont plus en cours
+d'exécution.
+
 Le flasher WebUSB signale un identifiant JTAG non reconnu
 ---------------------------------------------------------
 
@@ -118,6 +171,32 @@ avant de modifier le matériel ou les pilotes série USB.
    Si le sélecteur Web Serial est vide alors que Chrome affiche une mise à jour
    en attente, terminez la mise à jour et relancez le navigateur avant de
    modifier les pilotes série.
+
+
+Le sélecteur Web Serial se ferme mais l'UART ne se connecte pas
+----------------------------------------------------------------
+
+Si un périphérique série est sélectionné et que le sélecteur du navigateur se
+ferme mais que l'outil reste déconnecté, vérifiez d'abord si le port appartient
+déjà à une autre application.
+
+L'outil actuel coordonne les onglets d'une même origine avec un Web Lock du
+navigateur et ``BroadcastChannel``. Si une autre copie de la même page possède
+déjà l'UART, la seconde indique **UART already in use**. Une page d'une autre
+origine, PuTTY, un terminal d'IDE ou une autre application ne peut pas être
+identifié par son nom ; un échec de ``SerialPort.open()`` est donc signalé comme
+un probable conflit de propriété.
+
+Récupération typique :
+
+#. Fermez ou déconnectez l'autre onglet de l'outil ou l'application série.
+#. Revenez à la section de connexion H3IMG/IWAD ou Serial.
+#. Utilisez **Retry UART** ou **Connect UART** et sélectionnez de nouveau le port.
+
+N'oubliez pas que ``http://127.0.0.1:8000`` et la page publique
+``https://ulx3s.github.io`` sont deux origines différentes pour le navigateur.
+Leurs Web Locks ne se coordonnent pas, même si le système d'exploitation empêche
+toujours les deux pages de posséder simultanément le même port série.
 
 Web Serial sélectionne un TTY Linux mais ne parvient pas à l'ouvrir
 -------------------------------------------------------------------
@@ -219,6 +298,29 @@ aucune réponse, concentrez-vous sur le fil TX de l'adaptateur, l'enfichage du
 connecteur, la masse et la broche RX du FPGA plutôt que de modifier OpenOCD ou
 le débit.
 
+
+WebUSB ne peut pas ouvrir ou revendiquer l'ULX3S
+------------------------------------------------
+
+Sous Linux, l'outil Hazard3-Doom peut détecter l'ULX3S tout en échouant à
+l'ouvrir.
+
+Deux erreurs sont courantes :
+
+``Access denied``
+   Le navigateur ne dispose pas des droits de lecture/écriture sur le
+   périphérique USB brut.
+
+``Unable to claim interface``
+   Le pilote Linux ``ftdi_sio`` possède déjà l'interface USB FT231X.
+
+Consultez :doc:`user-guide/web-flasher` pour la configuration des permissions
+udev sous Linux et la procédure permettant de libérer temporairement
+l'interface ULX3S de ``ftdi_sio``.
+
+Dans une machine virtuelle, vérifiez également que le périphérique USB ULX3S est
+connecté au système invité et non à l'hôte.
+
 Le téléversement de Doom expire
 -------------------------------
 
@@ -316,6 +418,77 @@ contrôle UART du moniteur et le débit SAO 100 kHz, mais ne reconstruit pas
 l'image visible avant le démarrage de l'interface. Lancez Doom ou présentez une
 autre image vidéo du moniteur pour remplacer la dernière image de l'analyseur.
 
+
+``shellcheck`` n'est pas installé
+---------------------------------
+
+ShellCheck est un outil de développement facultatif utilisé pour valider les
+scripts shell du dépôt. Il n'est pas nécessaire pour les builds Hazard3-Doom
+normaux. Sous Ubuntu/WSL, les développeurs qui souhaitent exécuter la validation
+des scripts shell peuvent l'installer avec :
+
+.. code-block:: bash
+
+   sudo apt-get install shellcheck
+
+Pour un contrôle plus général de l'hôte, exécutez
+``./scripts/requirements-check.sh``.
+
+La chaîne d'outils GCC RISC-V est introuvable
+---------------------------------------------
+
+Le build utilise normalement un compilateur RISC-V bare-metal compatible
+disponible dans ``PATH``. Les outils ``riscv-none-elf-*`` sont pris en charge
+directement, tandis que ``TOOLCHAIN_PREFIX`` peut sélectionner une autre
+installation ou un autre préfixe de compilateur. L'emplacement historique
+``/opt/riscv/bin/riscv32-unknown-elf-*`` reste pris en charge uniquement comme
+solution de compatibilité. Par exemple, une installation xPack utilise
+couramment :
+
+.. code-block:: bash
+
+   TOOLCHAIN_PREFIX=riscv-none-elf- ./scripts/build.sh
+
+Exécutez ``./scripts/requirements-check.sh`` pour détecter les préfixes courants
+de chaînes d'outils RISC-V et vérifier que le compilateur accepte les options
+ISA/ABI de Hazard3.
+
+``c++: fatal error: Killed signal terminated program cc1plus``
+--------------------------------------------------------------
+
+Cela signifie presque toujours que la VM Ubuntu a manqué de RAM disponible et
+que l'OOM killer du noyau a arrêté l'un des processus du compilateur C++. Ce
+n'est pas une erreur de compilation C++. Augmentez la mémoire ou le swap de la
+VM, ou réduisez le parallélisme du build avant de réessayer.
+
+Le workflow indique que CMake est trop ancien
+---------------------------------------------
+
+Le vérificateur des prérequis de la machine traite CMake comme un outil de
+développement facultatif. Si un workflow particulier exige une version plus
+récente, installez ou mettez à niveau CMake vers la version demandée par ce
+workflow, puis vérifiez avec ``cmake --version``.
+
+Consultez le script ``install-cmake.sh`` du répertoire ``scripts/`` pour
+installer CMake 3.25 ou une version ultérieure.
+
+``ROR: Max frequency for clock '$glbnet$clk_sys': XX.YY MHz (FAIL at 50 MHz)``
+------------------------------------------------------------------------------
+
+Si la fréquence routée est inférieure à la cible avec les seeds par défaut,
+confirmez d'abord que Yosys et nextpnr correspondent aux versions enregistrées
+avec les paramètres de routage de référence dans
+``scripts/build-ecp5-bitstream-common.sh``. Les seeds de routage dépendent de la
+version des outils.
+
+Consignez les versions locales avec :
+
+.. code-block:: text
+
+   yosys --version
+   nextpnr-ecp5 --version
+   ecppack --version
+
 Le chargeur du firmware console reste sur ``Loading...``
 --------------------------------------------------------
 
@@ -379,6 +552,29 @@ moniteur résident est réellement à l'invite ``>``. Lorsque le helper répond
 mais qu'OpenOCD est absent, le Device Tool rappelle également que le moniteur
 doit peut-être encore être chargé.
 
+
+Vous pouvez ensuite continuer avec :
+
+.. code-block:: text
+
+   https://ulx3s.github.io/Hazard3-Doom/
+
+ou ouvrir la copie locale à ``http://127.0.0.1:8000/``. N'utilisez pas une URL
+``file://`` pour l'outil complet.
+
+Une vérification de santé correcte est passive et ne doit donc **pas** créer en
+boucle des messages OpenOCD tels que :
+
+.. code-block:: text
+
+   accepting 'gdb' connection on tcp/3333
+   attempted 'gdb' connection rejected
+
+Points de contrôle JTAG utiles :
+
+* Sur ULX4M-LD avec Tigard, gardez l'interface 0 sur le pilote FTDI VCP pour l'UART et l'interface 1 sur libusbK pour JTAG. OpenOCD utilise ``ftdi channel 1``.
+* Sur ULX4M-LD, l'IDCODE LFE5UM-85F correct est ``0x01113043``. Si OpenOCD lit cet IDCODE mais indique ``dtmcontrol is 0``, le chemin JTAG physique fonctionne ; vérifiez que le bitstream utilisateur a quitté DFU et s'exécute réellement avant de modifier le RTL DTM ou le câblage.
+
 OpenOCD signale un délai USB ou un scan JTAG entièrement nul dans une VM
 ------------------------------------------------------------------------
 
@@ -414,6 +610,28 @@ WinUSB afin qu'OpenOCD/GDB et WebUSB fonctionnent sans nouveau changement de
 pilote. Ne restaurez le pilote FTDI VCP/D2XX que lorsqu'un outil comme
 ``fujprog`` sous Windows en a besoin.
 
+
+ULX4M-LD signale un ``TIMEOUT`` de mémoire externe
+--------------------------------------------------
+
+L'attente initiale de 5 secondes du moniteur actuel peut expirer avant la fin de
+la calibration LiteDRAM. Ne considérez pas la bannière ``TIMEOUT`` comme un
+échec définitif à elle seule. Exécutez ``s`` et vérifiez l'état courant. Un état
+DDR utilisable comprend :
+
+.. code-block:: text
+
+   external_memory_ready=YES
+   init_done=YES
+   init_error=NO
+   pll_locked=YES
+   user_clock_ready=YES
+   ready=YES
+
+Si ces champs sont prêts, exécutez ``q``. Le routage ULX4M-LD qualifié 40/60 MHz
+a réussi à plusieurs reprises la suite SDRAM complète ainsi que ``k``, ``d`` et
+``x``.
+
 Le build change soudainement à cause des sous-modules
 -----------------------------------------------------
 
@@ -428,3 +646,8 @@ Vérifiez à la fois l'état du superprojet et des sous-modules :
    git -C third_party/doomgeneric branch --show-current
 
 Un superprojet propre ne signifie pas qu'un sous-module se trouve sur la branche ou le commit que vous attendiez.
+
+Liens associés
+--------------
+
+* `RISC-V GCC XPACK <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_

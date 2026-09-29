@@ -119,6 +119,8 @@ projektno kvalificirano na ULX3S pločici.
    koristite provjerenu FPGA sliku koja ostavlja ``SD_D2``, ``SD_D3``,
    ``SD_CLK`` i ``SD_CMD`` u high-impedance stanju.
 
+ESP32 ``EN`` je aktivno-niski ulaz za reset. ULX3S ga izlaže preko J3 ``WIFI_OFF`` jumpera, pa se Tigard ``SRST`` po želji može spojiti na WIFI_OFF/EN stranu J3 za hardverski reset. Osnovno JTAG spajanje ne zahtijeva tu vezu. Prije ožičenja identificirajte EN stranu J3; nemojte spojiti ``SRST`` na masu J3.
+
 ULX4M-LD na Waveshare CM4 carrieru
 ----------------------------------
 

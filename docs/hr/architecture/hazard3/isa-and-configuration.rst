@@ -227,3 +227,8 @@ Za arhitekturno proučavanje koristite oba:
   zadane vrijednosti dostupne ovom snimku.
 * `Trenutačna upstream stable konfiguracija <https://github.com/Wren6991/Hazard3/blob/stable/hdl/hazard3_config.vh>`_
   - trenutačni održavani smjer upstreama.
+
+Povezane poveznice
+------------------
+
+* `RISC-V GCC xPack <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_

@@ -65,3 +65,10 @@ Son
 ---
 
 Le son est actuellement simulé par des stubs dans l'étape documentée.
+
+Références d'implémentation
+---------------------------
+
+* `Doom d'id Software <https://github.com/id-Software/DOOM>`_
+
+* `Wren6991/DOOMSoC <https://github.com/Wren6991/DOOMSoC>`_

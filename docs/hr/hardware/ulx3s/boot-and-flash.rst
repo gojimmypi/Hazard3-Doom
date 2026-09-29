@@ -32,6 +32,18 @@ zaseban mehanizam i ne treba ga zamjenjivati samo radi nove Doom FPGA slike.
 Vidi :doc:`../../user-guide/bootloader` i
 :doc:`../../getting-started/programming`.
 
+
+DFU tok korisničke slike
+------------------------
+
+Kada je podržani ULX3S DFU bootloader već prisutan, ``US2`` može programirati
+normalnu korisničku sliku u SPI flash. Projektna dokumentacija bootloadera
+koristi DFU alternativu 0 za korisničku sliku, dok je zamjena bootloadera
+rezervirana za napredni oporavak ili razvoj bootloadera.
+
+Točan postupak ulaska opisan je u :doc:`../../user-guide/bootloader`, a uobičajene
+mogućnosti programiranja u :doc:`../../getting-started/programming`.
+
 Runtime učitavanje firmwarea
 ----------------------------
 

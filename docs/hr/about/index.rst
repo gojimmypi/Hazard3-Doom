@@ -93,6 +93,11 @@ opisuje ga kao kompatibilnog s rasporedom pinova nosivih pločica Raspberry Pi
 Compute Module 4 (CM4), pa se FPGA modul može koristiti na baznim pločicama tipa
 CM4 ili na posebno dizajniranoj nosivoj pločici.
 
+.. figure:: ../images/ulx4m_ld-pinout.png
+   :alt: ULX4M-LD raspored pinova
+
+   **ULX4M-LD raspored pinova** - dodjela FPGA pinova na `Waveshare CM4 nosivoj pločici <https://www.waveshare.com/wiki/CM4-IO-BASE-A#Dimension>`_.
+
 Takva modularna podjela korisna je i u nastavi i pri istraživanju proizvoda:
 FPGA i memorija ostaju na ULX4M-u, dok nosiva pločica može osigurati konektore,
 napajanje, kamere, zaslone, mrežu, pohranu ili drugi I/O specifičan za
@@ -128,3 +133,8 @@ Vanjski ULX4M resursi
 * `ULX4M projekt i bilješke o kompatibilnosti nosivih pločica <https://www.crowdsupply.com/intergalaktik/ulx4m/updates/pre-launch-progress>`_
 * `Raspberry Pi Compute Module dokumentacija <https://www.raspberrypi.com/documentation/computers/compute-module.html>`_
 * `ULX4M Open Source Hardware certifikat <https://certification.oshwa.org/hr000013.html>`_
+
+* `Waveshare CM4-IO-BASE-A shema <https://files.waveshare.com/upload/a/aa/CM4-IO-BASE-A_V4_SchDoc.pdf>`_
+* `Raspored pinova Waveshare CM4 noseće pločice <https://www.waveshare.com/wiki/CM4-IO-BASE-A#Dimension>`_
+* `yosys <https://github.com/YosysHQ/yosys>`_
+* `nextpnr-ecp5 <https://github.com/YosysHQ/nextpnr>`_

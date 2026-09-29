@@ -64,10 +64,110 @@ dans le même routage.
      - 250 MHz
      - 25 MHz
 
-Un processus de routage peut se terminer avec succès tout en donnant un statut
+Une ligne telle que ``1 warning, 0 errors`` ne suffit pas pour déterminer l'état du timing. Un processus de routage peut se terminer avec succès tout en donnant un statut
 ``FAIL`` de timing. Le sweep utilise volontairement le mode
 ``timing-allow-fail`` de nextpnr pour conserver les mesures des routages qui ne
 ferment pas le timing.
+
+
+Point de contrôle ULX4M-LD qualifié à 40/60 MHz
+-----------------------------------------------
+
+Le point de contrôle ULX4M-LD actuellement qualifié sur matériel utilise :
+
+.. code-block:: text
+
+   Hazard3/AHB:          40 MHz
+   LiteDRAM user:        60 MHz
+   LiteDRAM reference:   25 MHz
+   LiteDRAM init:        25 MHz
+   LiteDRAM init CPU:    SERV
+   nextpnr placer:       heap
+   timingweight:         30
+   critexp:              3
+   timing-driven rip-up: enabled
+   seed:                 2
+
+Le SHA256 de la netlist synthétisée et figée est :
+
+.. code-block:: text
+
+   160c536b12e46667990c887571da6f443ccc6c5a2ba644033db43fc783ea9453
+
+Pour cette netlist exacte, le seed 2 a atteint 43,94 MHz pour ``clk_sys`` et
+67,81 MHz pour l'horloge utilisateur LiteDRAM, satisfaisant les exigences 40/60
+MHz. Le SHA256 exact du bitstream testé localement sur matériel est :
+
+.. code-block:: text
+
+   294602982dfc4a9906961f2e8b6f43de925d8c11a7e5e6bb0f5e392965a868de
+
+La même netlist et les mêmes seeds ne fermaient **pas** de façon fiable avec les
+anciens paramètres HeAP ``timingweight=10``, ``critexp=2`` et sans rip-up. C'est
+pourquoi les métadonnées du sweep doivent enregistrer le réglage du
+placeur/routeur en plus du seed et du hash de la netlist.
+
+Le timing statique a été suivi d'une vraie qualification DDR sur la carte équipée
+de Micron. Le routage a réussi le test séquentiel 1 Mio, le test clairsemé
+complet d'alias sur 64 Mio, le test pseudo-aléatoire sur quatre régions, les
+qualifications ``q`` répétées, le stress du tas 40 Mio, le test rapide
+mémoire/timer de Doom et l'exécution RV32 copiée depuis la DDR. Ne qualifiez pas
+un nouveau routage sur matériel uniquement à partir du timing nextpnr.
+
+Pour reproduire l'expérience de routage connue comme bonne sur une netlist déjà
+figée et correspondante :
+
+.. code-block:: bash
+
+   SWEEP_SKIP_SYNTH=1 \
+   SWEEP_JOBS=1 \
+   SWEEP_ROUTE_TIMEOUT_SECONDS=1200 \
+   SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT=30 \
+   SWEEP_NEXTPNR_HEAP_CRITEXP=3 \
+   SWEEP_NEXTPNR_TMG_RIPUP=1 \
+       ./scripts/sweep-ecp5.sh ulx4m-ld-85f 2
+
+N'utilisez ``SWEEP_SKIP_SYNTH=1`` qu'après avoir vérifié le hash de la netlist
+figée et toutes les métadonnées du profil. Une reconstruction du préchargement du
+moniteur, un profil de périphérique DDR, un cœur LiteDRAM généré, une horloge,
+une modification RTL ou un changement d'outil de synthèse invalide la comparaison
+avec la netlist figée et exige une nouvelle synthèse puis un nouveau sweep.
+
+Conserver un bitstream ULX4M-LD pour test matériel
+--------------------------------------------------
+
+Le sweep ULX4M-LD enregistre normalement les journaux/résultats de timing et n'a
+pas besoin d'empaqueter chaque routage exploratoire. Lorsqu'un seed mérite un
+test matériel, conservez explicitement une configuration texte nextpnr. Pour
+l'expérience seed 2 qualifiée :
+
+.. code-block:: bash
+
+   SWEEP_SKIP_SYNTH=1 \
+   SWEEP_JOBS=1 \
+   SWEEP_ROUTE_TIMEOUT_SECONDS=1200 \
+   SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT=30 \
+   SWEEP_NEXTPNR_HEAP_CRITEXP=3 \
+   SWEEP_NEXTPNR_TMG_RIPUP=1 \
+   SWEEP_NEXTPNR_EXTRA_ARGS="--textcfg build/ulx4m-ld-test/fpga_ulx4m_ld-seed2.config" \
+       ./scripts/sweep-ecp5.sh ulx4m-ld-85f 2
+
+Empaquetez ensuite cette configuration **déjà routée** sans relancer nextpnr :
+
+.. code-block:: bash
+
+   ecppack \
+       --compress \
+       --svf build/ulx4m-ld-test/fpga_ulx4m_ld-seed2.svf \
+       --idcode 0x01113043 \
+       build/ulx4m-ld-test/fpga_ulx4m_ld-seed2.config \
+       build/ulx4m-ld-test/fpga_ulx4m_ld-seed2.bit
+
+N'utilisez pas un script pratique de génération de bitstream qui relance
+silencieusement nextpnr avec des paramètres de placement différents/par défaut ;
+il créerait un autre routage que celui du résultat de timing en cours de
+qualification. Vérifiez le hash de la netlist, les réglages de routage, le seed
+et le SHA256 final du bitstream avant le test matériel.
 
 Sweep local
 -----------
@@ -199,6 +299,20 @@ workflow crée environ ``ceil(N / seeds_per_job)`` jobs. Au plus
 ``max_parallel`` jobs s'exécutent simultanément, tandis que les seeds d'un même
 job sont routés en série. Avec 260 seeds et deux seeds par job, le workflow crée
 130 jobs de routage.
+
+
+Pourquoi deux seeds par job GitHub
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Un seed peut parfois prendre beaucoup plus de temps que ses voisins. De grands
+groupes de seeds permettent à un tel retardataire de monopoliser un runner et
+de retarder plusieurs seeds derrière lui. De très petits groupes augmentent le
+coût du checkout, des artefacts et du démarrage des runners. La valeur par défaut
+de deux seeds par job est un compromis pratique qui localise les échecs.
+
+La matrice utilise ``fail-fast: false`` afin qu'un groupe de routage défaillant
+n'annule pas tous les autres groupes. C'est important pour la caractérisation :
+un mauvais seed ne doit pas masquer les résultats utiles de seeds indépendants.
 
 Architecture des jobs
 ---------------------
@@ -369,21 +483,54 @@ version de nextpnr, les paramètres du placer/router et l'ensemble de seeds.
 Après une modification d'un coeur généré, par exemple une nouvelle géométrie de
 mémoire LiteDRAM, resynthétisez et établissez une nouvelle base de seeds.
 
-Pièges courants
----------------
 
-* ``--timing-allow-fail`` permet de collecter les mesures ; il ne transforme pas
-  un FAIL en PASS.
-* Le meilleur seed d'une seule horloge n'est pas forcément le meilleur seed
-  global.
-* N'utilisez pas ``SWEEP_SKIP_SYNTH=1`` après une modification du RTL, des
-  contraintes, des horloges ou d'un coeur généré sans netlist correspondant.
-* Gardez ``seeds_per_job`` petit lorsqu'il existe des seeds très lents.
-* ``max_parallel`` contrôle les runners GitHub, pas plusieurs nextpnr dans un
-  même job de routage.
-* Un ``SWEEP_JOBS`` local trop élevé peut épuiser la RAM.
-* Conservez les bitstreams seulement si vous comptez les tester sur le matériel.
-* Qualifiez sur carte le candidat destiné à devenir une référence de production.
+Liste de contrôle de reproductibilité
+-------------------------------------
+
+Avant de comparer deux sweeps, vérifiez tous les éléments suivants :
+
+* même SHA256 de la netlist synthétisée, sauf si la synthèse est la variable testée ;
+* même cible et même profil de fonctions propre à la cible ;
+* mêmes exigences d'horloge ;
+* même CPU/cœur LiteDRAM généré pour ULX4M-LD ;
+* même LPF/contraintes ;
+* même version de nextpnr utilisée pour le routage ;
+* mêmes réglages du placeur/routeur et mêmes arguments supplémentaires ; et
+* même sous-ensemble de seeds pour les comparaisons A/B contrôlées.
+
+Après un changement de cœur généré, tel qu'une modification de
+périphérique/géométrie LiteDRAM, resynthétisez et établissez une nouvelle
+référence de seeds. Le classement des anciens seeds n'est pas transférable à la
+nouvelle netlist.
+
+Conseils développeur et pièges courants
+---------------------------------------
+
+* N'interprétez pas ``--timing-allow-fail`` comme une dérogation ou un PASS de
+  timing. Cette option permet seulement au routage de se terminer afin que le
+  sweep collecte les valeurs de timing en échec.
+* Ne choisissez pas un seed à partir du maximum d'une seule horloge sauf si ce
+  même seed satisfait tous les domaines requis.
+* N'utilisez pas ``SWEEP_SKIP_SYNTH=1`` après un changement de RTL, de cœur
+  généré, d'horloge ou de contraintes sauf si la netlist correspondante a été
+  volontairement régénérée.
+* Gardez ``seeds_per_job`` faible lorsque certains seeds présentent de longues
+  durées extrêmes. Un grand groupe série peut transformer un seed pathologique
+  en retard de plusieurs heures.
+* ``max_parallel`` est une limite de concurrence des runners GitHub, pas le
+  nombre de processus nextpnr à l'intérieur d'un job de routage. Chaque job
+  route intentionnellement un seed à la fois.
+* Des valeurs locales élevées de ``SWEEP_JOBS`` peuvent épuiser la mémoire avant
+  que l'utilisation CPU paraisse saturée.
+* Ne conservez les bitstreams que lorsque cela est utile. Les journaux de timing
+  et CSV sont bien plus petits et suffisent pour la plupart des explorations.
+* Testez sur matériel le candidat de production choisi. La fermeture du timing
+  statique est une preuve nécessaire, mais la qualification au niveau de la
+  carte reste indispensable.
+* Conservez les artefacts finaux du sweep lorsqu'un résultat devient un point de
+  contrôle du projet ; ils contiennent les hashes, la configuration, les
+  versions d'outils et les preuves par seed nécessaires pour reproduire ou
+  auditer le résultat plus tard.
 
 Fichiers associés
 -----------------
@@ -400,3 +547,13 @@ Fichiers associés
    scripts/summarize-ecp5-sweep.py
 
 Voir aussi :doc:`scripts` et :doc:`board-profiles`.
+
+``WHOLE_SEED_TIMEOUT`` ou un autre état de timeout
+   Le watchdog a arrêté un routage qui a dépassé le temps autorisé. Ce n'est pas une mesure de timing et ce résultat ne doit pas être classé avec les routages terminés.
+
+Références externes
+-------------------
+
+* `RISC-V GCC XPACK <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_
+
+* `nextpnr-ecp5 <https://github.com/YosysHQ/nextpnr>`_

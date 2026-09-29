@@ -6,6 +6,11 @@ test session, or arrange for the board bootloader/configuration flash to load a
 validated image later. The ULX3S and ULX4M-LD paths are different and should
 not be mixed.
 
+On Windows, run the command-line steps on this page from **WSL/Ubuntu Bash**
+unless a step explicitly says otherwise. Browser and Windows USB-driver setup
+still happen on the Windows side; invoking a bundled Windows ``.exe`` from WSL
+does not make PowerShell or ``cmd.exe`` the project build shell.
+
 ULX3S temporary FPGA load
 -------------------------
 

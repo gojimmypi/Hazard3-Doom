@@ -1,6 +1,12 @@
 Izgradnja Hazard3-Dooma
 =======================
 
+.. important:: Bash/WSL build okruženje
+
+   Ove build naredbe su Linux/Bash naredbe. Na Windowsu ih pokrenite iz
+   **WSL s Ubuntuom**. PowerShell i ``cmd.exe`` nisu podržane build ljuske za
+   ``.sh`` skripte repozitorija.
+
 Potpune izgradnje za pločice
 ----------------------------
 

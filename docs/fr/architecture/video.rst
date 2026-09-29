@@ -51,6 +51,22 @@ RGB complet et permet au même parseur du navigateur d'accepter des sources Doom
 et I2C GUI de géométries différentes. Voir :doc:`../user-guide/web-serial` pour
 le protocole complet.
 
+
+Motif de test vidéo
+-------------------
+
+Le moniteur peut générer un motif de barres de couleur déterministe afin de
+valider le chemin HDMI indépendamment du rendu de Doom :
+
+.. _fig-hdmi-colorbar-test-pattern:
+
+.. figure:: ../images/hdmi-colorbar-test-pattern.png
+   :alt: Motif de test de barres de couleur HDMI de Hazard3-Doom
+
+   **Motif de test HDMI à barres de couleur** - un contrôle visuel simple pour
+   vérifier que le timing, la mise à l'échelle, la conversion de palette et le
+   chemin physique vers l'écran fonctionnent.
+
 Utilisateurs non-Doom du chemin vidéo
 -------------------------------------
 

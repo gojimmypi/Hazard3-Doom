@@ -12,10 +12,12 @@ napajanja.
 
 .. note::
 
-   Potreban je noviji preglednik temeljen na Chromiumu, primjerice Chrome ili
-   Edge. Na Windowsu ULX3S ``US1`` FT231X možda treba koristiti WinUSB upravljački
-   program kako bi mu WebUSB mogao pristupiti. To je podešavanje USB upravljačkog
-   programa, a ne instalacija FPGA ili RISC-V razvojnog alata. Pogledajte
+   Ovaj put samo kroz preglednik iznimka je od projektnog WSL zahtjeva:
+   **WSL nije potreban** za korištenje unaprijed izgrađene ULX3S slike na
+   Windowsu. Potreban je noviji preglednik temeljen na Chromiumu, primjerice
+   Chrome ili Edge. ULX3S ``US1`` FT231X možda treba koristiti WinUSB upravljački
+   program kako bi mu WebUSB mogao pristupiti. Ako kasnije gradite ili mijenjate
+   projekt iz izvornog koda na Windowsu, koristite WSL/Ubuntu. Pogledajte
    :doc:`../user-guide/web-flasher`.
 
 Što je potrebno
@@ -61,7 +63,10 @@ Odaberite par koji odgovara FPGA-u na pločici:
      - Doom H3IMG slika
    * - ULX3S 85F
      - ``fpga_ulx3s_85f.bit``
-     - ``hazard3-doom-ulx3s-85F.h3img``
+     - ``hazard3-doom-ulx3s-85F.h3img`` (preimenujte u ``DOOM.IMG`` za uporabu sa SD kartice)
+   * - ULX3S 12F
+     - ``fpga_ulx3s_12f.bit``
+     - ``hazard3-doom-ulx3s-12F.h3img`` (preimenujte u ``DOOM.IMG`` za uporabu sa SD kartice)
 
 Nemojte miješati datoteke različitih profila pločica. Programator u pregledniku
 provjerava fizički ECP5 JTAG ID i odbija ``.bit`` datoteku čiji ugrađeni cilj ne
@@ -203,7 +208,18 @@ H3IMG slika mora odgovarati istom profilu pločice kao i ``.bit`` datoteka.
 ---------------------------
 
 Otvorite **Doom IWAD uploader** i odaberite legalno nabavljenu ``.wad`` datoteku.
-Za ovaj ULX3S 85F postupak odaberite memorijski profil ``64m``.
+Odaberite memorijski profil koji odgovara rezidentnom monitoru:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 25
+
+   * - Pločica
+     - Memorijski profil
+   * - ULX3S 85F
+     - ``64m``
+   * - ULX3S 12F
+     - ``32m``
 
 Odaberite **Upload IWAD**. Za automatsko pokretanje Dooma nakon prijenosa prije
 uploada uključite **Launch with ``j`` after upload**.

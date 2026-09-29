@@ -22,6 +22,12 @@ Dokumentirani ULX3S SAO signali su:
    * - GPIO2
      - C10
 
+.. figure:: ../images/ulx3s-pinout.png
+   :alt: ULX3S raspored pinova
+
+   **ULX3S raspored pinova** - SAO signali koriste gore prikazane J1 GPIO položaje.
+   Pogledajte :doc:`pinouts` za opću referencu ožičenja pločice.
+
 Hazard3 APB baza
 ----------------
 

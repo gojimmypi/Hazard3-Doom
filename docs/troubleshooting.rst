@@ -395,7 +395,9 @@ video frame to replace the last analyzer image.
 ``shellcheck`` is not installed
 -------------------------------
 
-Project shell scripts are expected to pass ShellCheck. On Ubuntu/WSL, install it with:
+ShellCheck is an optional development tool used to validate repository shell scripts.
+It is not required for normal Hazard3-Doom builds. On Ubuntu/WSL, developers who
+want to run shell-script validation can install it with:
 
 .. code-block:: bash
 
@@ -404,12 +406,14 @@ Project shell scripts are expected to pass ShellCheck. On Ubuntu/WSL, install it
 For a broader host check, run ``./scripts/requirements-check.sh``.
 
 
-Missing required executable: /opt/riscv/bin/riscv32-unknown-elf-gcc
--------------------------------------------------------------------
+RISC-V GCC toolchain not found
+------------------------------
 
-The monitor build defaults to the ``/opt/riscv/bin/riscv32-unknown-elf-`` prefix.
-If your RISC-V toolchain uses another prefix, set ``TOOLCHAIN_PREFIX`` explicitly.
-For example, an xPack installation commonly uses:
+The build normally uses a compatible RISC-V bare-metal compiler available on
+``PATH``. The ``riscv-none-elf-*`` tools are supported directly, while
+``TOOLCHAIN_PREFIX`` can select another installation or compiler prefix. The
+historical ``/opt/riscv/bin/riscv32-unknown-elf-*`` location remains supported
+as a compatibility fallback. For example, an xPack installation commonly uses:
 
 .. code-block:: bash
 

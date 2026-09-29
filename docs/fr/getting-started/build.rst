@@ -1,6 +1,12 @@
 Construire Hazard3-Doom
 =======================
 
+.. important:: Environnement de build Bash/WSL
+
+   Ces commandes de build sont des commandes Linux/Bash. Sous Windows,
+   exécutez-les depuis **WSL avec Ubuntu**. PowerShell et ``cmd.exe`` ne sont
+   pas des shells de build pris en charge pour les scripts ``.sh`` du dépôt.
+
 Builds complets des cartes
 --------------------------
 

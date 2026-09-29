@@ -54,3 +54,12 @@ utilise l'IDCODE ``0x01113043``.
 Pour une nouvelle route ou un changement risqué, un chargement temporaire en
 SRAM FPGA est préférable lorsque le programmateur le permet. Une coupure
 d'alimentation restaure alors le chemin persistant.
+
+Tests en SRAM ou en flash
+-------------------------
+
+Pour valider un nouveau routage, un profil mémoire ou une modification FPGA à
+risque, il est préférable de charger le bitstream dans la SRAM du FPGA lorsque
+le programmateur disponible le permet. Un cycle d'alimentation restaure alors
+le chemin de configuration persistant. Ne flashez l'image utilisateur qu'après
+que le bitstream a réussi les tests de mise au point prévus.

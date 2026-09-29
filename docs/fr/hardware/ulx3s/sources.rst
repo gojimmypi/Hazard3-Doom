@@ -45,3 +45,43 @@ Voir aussi :doc:`../../reference/board-profiles`,
 :doc:`../../getting-started/programming`, :doc:`../../user-guide/bootloader`,
 :doc:`../../user-guide/sd-card`, :doc:`../../user-guide/web-flasher` et
 :doc:`../../user-guide/jtag-debugging`.
+
+
+.. code-block:: text
+
+   third_party/Hazard3/example_soc/fpga/
+
+Les concepts importants à suivre dans ces sources comprennent le wrapper ULX3S de niveau supérieur, le LPF, ``ahb_sdram.v``, ``ulx3s_sdram_controller.v``, l'intégration SD/SAO, le préchargement du moniteur résident, les wrappers de build de carte, la configuration OpenOCD et le flasher WebUSB.
+
+Comment traiter des sources contradictoires
+-------------------------------------------
+
+Utilisez une hiérarchie de sources plutôt que de supposer que la page qui paraît
+la plus récente est correcte pour la carte devant vous :
+
+#. **Marquages de la carte physique et comportement mesuré**.
+#. **Révision correspondante du schéma/PCB/BOM**.
+#. **Fichier de contraintes et wrapper de niveau supérieur utilisés par le build exact**.
+#. **Fiche technique du fabricant pour le composant monté**.
+#. **README général, page de campagne, exemples et discussions de forum**.
+
+Une différence entre sources est une information utile. Elle peut révéler une
+révision du PCB, une population alternative, une modification de connecteur ou
+une hypothèse logicielle obsolète. Documentez la différence au lieu de choisir
+silencieusement une source.
+
+Documentation Hazard3-Doom associée
+-----------------------------------
+
+* :doc:`../../reference/board-profiles` - profils mémoire/horloge ULX3S actuels
+  et points de contrôle de timing.
+* :doc:`../../architecture/hazard3/memory-and-bus` - vue processeur et
+  contrôleur SDRAM.
+* :doc:`../../architecture/video` - framebuffer indexé et chemin vidéo GPDI.
+* :doc:`../../getting-started/programming` - workflows normaux de programmation
+  depuis l'hôte.
+* :doc:`../../user-guide/bootloader` - chemin DFU optionnel et précautions de
+  récupération.
+* :doc:`../../user-guide/sd-card` - démarrage SD autonome et contraintes du bus
+  partagé.
+* :doc:`../../user-guide/web-flasher` - programmation WebUSB/JTAG ``US1`` ULX3S.

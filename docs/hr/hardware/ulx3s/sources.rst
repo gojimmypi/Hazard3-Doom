@@ -45,3 +45,40 @@ Vidi i :doc:`../../reference/board-profiles`,
 :doc:`../../getting-started/programming`, :doc:`../../user-guide/bootloader`,
 :doc:`../../user-guide/sd-card`, :doc:`../../user-guide/web-flasher` i
 :doc:`../../user-guide/jtag-debugging`.
+
+
+.. code-block:: text
+
+   third_party/Hazard3/example_soc/fpga/
+
+Važni elementi koje treba pratiti u tim izvorima uključuju ULX3S top-level wrapper, LPF, ``ahb_sdram.v``, ``ulx3s_sdram_controller.v``, SD/SAO integraciju, predučitavanje rezidentnog monitora, build wrappere pločice, OpenOCD konfiguraciju i WebUSB programator.
+
+Kako postupati s proturječnim izvorima
+--------------------------------------
+
+Koristite hijerarhiju izvora umjesto pretpostavke da je stranica koja izgleda
+najnovije ispravna za pločicu pred vama:
+
+#. **Oznake na fizičkoj pločici i izmjereno ponašanje**.
+#. **Odgovarajuća revizija sheme/PCB-a/BOM-a**.
+#. **Datoteka ograničenja i omotač najviše razine koje koristi točna izgradnja**.
+#. **Podatkovni list proizvođača za ugrađenu komponentu**.
+#. **Opći README, stranica kampanje, primjeri i forumske rasprave**.
+
+Razlika među izvorima korisna je informacija. Može otkriti reviziju PCB-a,
+alternativnu populaciju, promjenu priključka ili zastarjelu softversku
+pretpostavku. Dokumentirajte razliku umjesto da prešutno odaberete jedan izvor.
+
+Povezana Hazard3-Doom dokumentacija
+-----------------------------------
+
+* :doc:`../../reference/board-profiles` - trenutačni ULX3S memorijski/taktni
+  profili i timing kontrolne točke.
+* :doc:`../../architecture/hazard3/memory-and-bus` - pogled procesora i SDRAM
+  kontrolera.
+* :doc:`../../architecture/video` - indeksirani framebuffer i GPDI video put.
+* :doc:`../../getting-started/programming` - uobičajeni postupci programiranja s
+  hosta.
+* :doc:`../../user-guide/bootloader` - neobavezni DFU put i upozorenja za oporavak.
+* :doc:`../../user-guide/sd-card` - samostalno SD pokretanje i zahtjevi zajedničke sabirnice.
+* :doc:`../../user-guide/web-flasher` - ULX3S ``US1`` WebUSB/JTAG programiranje.

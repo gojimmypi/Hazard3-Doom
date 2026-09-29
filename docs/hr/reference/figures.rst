@@ -16,6 +16,13 @@ FPGA izgradnja
 
 * :ref:`Paralelni nextpnr-ecp5 procesi <fig-concurrent-nextpnr-ecp5>`
 
+
+SD kartica
+----------
+
+* :ref:`Sadržaj HAZARD3-SD kartice <fig-hazard3-sd-contents>`
+* :ref:`HAZARD3-SD volumen u Windowsima <fig-windows-hazard3-sd-volume>`
+
 JTAG
 ----
 

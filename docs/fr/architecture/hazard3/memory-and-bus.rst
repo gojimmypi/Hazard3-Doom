@@ -166,6 +166,110 @@ Ne confondez pas la SDRAM externe de l'ULX3S avec l'EBR ECP5. L'EBR est une SRAM
 physiquement intégrée au FPGA ; le composant SDR SDRAM est un circuit séparé sur
 la carte. LiteDRAM n'est pas utilisé dans le chemin SDR natif de l'ULX3S.
 
+
+Configuration et qualification DDR3 ULX4M-LD
+--------------------------------------------
+
+Toutes les cartes de production ULX4M-LD ne contiennent pas nécessairement le
+même composant DDR3. Le projet vise à prendre en charge au moins les composants
+x16 suivants au moyen de profils LiteDRAM générés séparément :
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 22 20 30
+
+   * - Composant
+     - Densité
+     - Capacité approximative
+     - Note du projet
+   * - Micron ``MT41K512M16HA``
+     - 8 Gbit, x16
+     - 1 Gio
+     - La carte actuellement qualifiée sur matériel utilise cette famille. Sa
+       géométrie LiteDRAM est de 16 bits de ligne, 10 bits de colonne et 3 bits
+       de banque.
+   * - Alliance ``AS4C256M16D3``
+     - 4 Gbit, x16
+     - 512 Mio
+     - Pris en charge comme population alternative de carte au moyen d'un
+       module/profil LiteDRAM généré différent.
+
+La capacité physique de la puce est supérieure à la carte mémoire logicielle
+actuelle de Hazard3-Doom. Le projet expose volontairement un profil de mémoire
+externe de 64 Mio à ``0x20000000-0x23ffffff`` ainsi que l'alias de diagnostic ;
+la capacité physique inutilisée n'est pas nécessaire au logiciel actuel.
+
+Le choix de la puce appartient à la configuration LiteDRAM générée, et non à
+``ahb_litedram.v``. L'interface du pont AHB vers LiteDRAM reste identique tandis
+que le cœur généré change selon le composant mémoire, le CPU d'initialisation, la
+fréquence et d'autres paramètres du profil de build. Les différences de
+population de carte restent ainsi hors de l'interface du bus système Hazard3.
+
+Les réglages LiteDRAM actuellement qualifiés sur matériel sont :
+
+.. code-block:: text
+
+   memtype: DDR3
+   phy: ECP5DDRPHY
+   input/reference clock: 25 MHz
+   LiteDRAM user clock: 60 MHz
+   LiteDRAM init clock: 25 MHz
+   Hazard3/AHB system clock: 40 MHz
+   user port: 128-bit Wishbone
+   cmd_buffer_depth: 2
+   cmd_buffer_buffered: true
+   with_auto_precharge: true
+   initialization CPU: SERV for the qualified checkpoint
+
+``cmd_buffer_depth=0`` a été rejeté pendant les expériences de timing car il
+créait des boucles combinatoires/problèmes de timing. Le profil qualifié conserve
+une profondeur de 2. ``with_auto_precharge`` reste ``true`` dans la configuration
+qualifiée.
+
+Le CPU d'initialisation (SERV ou VexRiscv, par exemple) fait partie du cœur
+LiteDRAM généré et ne modifie pas l'interface de bus ``ahb_litedram.v``. Conservez
+des profils générés séparés afin que le type de CPU, le composant DDR et la
+fréquence d'horloge utilisateur puissent être balayés par programme sans modifier
+manuellement le Verilog généré.
+
+Les profils YAML versionnés sont la source modifiable de ces cœurs générés.
+Sélectionnez la référence physique de la RAM ; une commande régénère les deux
+variantes de CPU :
+
+.. code-block:: bash
+
+   cd third_party/Hazard3/example_soc/third_party/LiteDRAM
+   ./regenerate-ulx4m.sh MT41K512M16HA
+   ./regenerate-ulx4m.sh AS4C256M16D3
+
+Chaque invocation remplace ``generated-serv/`` et ``generated-vexrisc/`` par le
+profil RAM choisi. Confirmez le ``ram_part`` enregistré dans
+``LITEDRAM_VERSIONS.txt`` de chaque répertoire généré avant de construire pour
+une carte.
+
+La qualification matérielle ne se limite pas à un PASS de timing nextpnr. Sur la
+carte Micron qualifiée, le moniteur a réussi tous les tests suivants avec le
+routage LiteDRAM à 60 MHz :
+
+* test séquentiel destructif de 1 Mio avec accès octet/demi-mot/mot et motifs
+  zéro, un, adresse et adresse inversée ;
+* test clairsemé d'alias/adresse sur toute la fenêtre logicielle de 64 Mio ;
+* tests pseudo-aléatoires de 1 Mio dans quatre régions espacées de 16 Mio ;
+* suite complète de qualification ``q``, répétée ;
+* test d'allocation/de charge du tas de 40 Mio ;
+* test rapide mémoire/timer de la plate-forme Doom ; et
+* exécution depuis la DDR de code RV32 copié, avec phases GP normale et étrangère,
+  interruptions de timer et contrôles de garde.
+
+La commande d'état fait autorité après le démarrage. Lors d'une mise au point,
+le moniteur résident a affiché un ``TIMEOUT`` de mémoire externe de 5 secondes
+alors que LiteDRAM se calibrait encore, mais un ``s`` ultérieur indiquait
+``external_memory_ready=YES``, ``init_done=YES``, ``init_error=NO``,
+``pll_locked=YES``, ``user_clock_ready=YES`` et ``ready=YES``. Tous les tests de
+qualification qui ont suivi ont réussi. Un message de timeout au démarrage ne
+doit donc pas être considéré comme un échec DDR définitif sans vérifier l'état
+actuel.
+
 Ordonnancement mémoire et ``fence.i``
 -------------------------------------
 
@@ -205,3 +309,10 @@ MMU de mémoire virtuelle et n'active pas l'isolation mode utilisateur/PMP. Les
 adresses de :doc:`../memory-map` sont donc à comprendre comme des fenêtres
 d'adresses physiques du SoC utilisées directement par le firmware en mode
 machine et l'application Doom.
+
+Liens associés
+--------------
+
+* `nextpnr-ecp5 <https://github.com/YosysHQ/nextpnr>`_
+
+* `Yosys <https://github.com/YosysHQ/yosys>`_

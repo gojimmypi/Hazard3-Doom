@@ -4,7 +4,16 @@ Prérequis
 Environnement hôte
 ------------------
 
-Le projet est conçu pour être construit de manière reproductible dans un environnement Bash. Sous Windows, WSL est l'environnement en ligne de commande recommandé pour le build ; PowerShell reste pratique pour les scripts de téléversement UART.
+Les scripts de build et de développement du projet nécessitent un environnement
+Linux/Bash. Sous Linux natif, utilisez le shell Bash normal. Sous Windows,
+utilisez **WSL avec Ubuntu** : WSL est requis pour les builds depuis les sources
+et pour les scripts shell du dépôt. N'exécutez pas les scripts de build depuis
+PowerShell ou ``cmd.exe``.
+
+Windows natif reste approprié lorsque la documentation demande explicitement le
+Device Tool du navigateur, la gestion des pilotes USB, un téléversement UART via
+port COM ou un ``.exe`` Windows fourni. Sauf mention explicite PowerShell ou
+``cmd.exe``, exécutez les blocs de commandes sous WSL/Bash.
 
 Vérification des prérequis de la machine
 ----------------------------------------
@@ -30,24 +39,52 @@ Installez au minimum :
 * Git avec prise en charge des sous-modules récursifs.
 * Python 3.
 * ``pyserial`` pour les téléversements UART.
-* Une chaîne d'outils GCC/GDB RISC-V bare-metal.
+* Une chaîne d'outils GCC/GDB RISC-V bare-metal disponible dans ``PATH``.
 * Yosys, nextpnr-ecp5, Project Trellis/ecppack et les outils FPGA ULX3S habituels pour construire les bitstreams.
 * OpenOCD pour le débogage JTAG.
-* ``shellcheck`` pour valider les scripts shell.
+* ``shellcheck`` pour valider les scripts shell (optionnel, mais recommandé).
 
-Le build du moniteur utilise actuellement ce préfixe RISC-V par défaut :
+Chaîne d'outils FPGA
+--------------------
 
-.. code-block:: text
+La chaîne d'outils FPGA recommandée est `OSS CAD Suite
+<https://github.com/YosysHQ/oss-cad-suite-build>`_, fournie sous forme de
+binaires précompilés. Elle comprend Yosys, nextpnr, Project Trellis/ecppack et
+des outils associés pour Linux, macOS et Windows. Sous Ubuntu/WSL,
+``full-install.sh`` installe et active automatiquement la version OSS CAD Suite
+attendue par le projet. Vous pouvez également installer vous-même une version
+d'OSS CAD Suite et activer son environnement afin que ses outils soient
+disponibles dans ``PATH``.
 
-   /opt/riscv/bin/riscv32-unknown-elf-
+Pour les travaux avancés de développement ou de reproductibilité, les scripts
+d'installation proposent également des options de compilation depuis les
+sources qui construisent certains outils FPGA à partir de commits GitHub amont
+spécifiques. La compilation des outils FPGA depuis les sources n'est pas
+nécessaire pour l'installation normale.
 
-Le vérificateur de machine reconnaît également des alternatives courantes
-comme ``riscv-none-elf-`` ainsi que les installations xPack. Remplacez le
-préfixe du build lorsque votre compilateur est installé ailleurs. Par exemple :
+Sous Windows, OSS CAD Suite recommande WSL avec le paquet Linux-x64 pour la
+meilleure expérience, ce qui correspond également à l'environnement Bash/WSL
+utilisé par Hazard3-Doom.
+
+Chaîne d'outils GCC RISC-V
+--------------------------
+
+Le build utilise une chaîne d'outils GCC RISC-V bare-metal compatible trouvée
+dans ``PATH``. ``riscv-none-elf-*`` est directement pris en charge et les
+installations RISC-V GCC xPack sont également reconnues. Sous Ubuntu/WSL,
+macOS ou une autre distribution Linux, utilisez un paquet GCC RISC-V bare-metal
+adapté à la plate-forme ou installez xPack, puis vérifiez que le compilateur est
+disponible dans ``PATH``. Les noms des paquets varient selon la distribution.
+
+Utilisez ``TOOLCHAIN_PREFIX`` pour sélectionner explicitement une installation.
+Par exemple :
 
 .. code-block:: bash
 
    TOOLCHAIN_PREFIX=riscv-none-elf- ./scripts/build.sh
+
+L'ancien préfixe ``/opt/riscv/bin/riscv32-unknown-elf-`` reste pris en charge
+pour compatibilité, mais l'installation sous ``/opt`` n'est pas requise.
 
 Dépendance Python de l'outil de téléversement
 ---------------------------------------------
@@ -110,4 +147,8 @@ Le dépôt ne distribue pas d'IWAD Doom commercial. Conservez un ``DOOM.WAD`` ob
 Liens associés
 --------------
 
+* `OSS CAD Suite <https://github.com/YosysHQ/oss-cad-suite-build>`_
 * `RISC-V GCC xPack <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_
+
+* `Yosys <https://github.com/YosysHQ/yosys>`_
+* `nextpnr <https://github.com/YosysHQ/nextpnr>`_
