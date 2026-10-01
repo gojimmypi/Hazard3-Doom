@@ -279,7 +279,7 @@ jobs:
 
       - name: Restore synthesis OSS CAD Suite cache
         id: synth-oss-cad-cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: ${{ runner.temp }}/oss-cad-suite
           key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.OSS_CAD_SUITE_VERSION }}-v1
@@ -302,7 +302,7 @@ jobs:
 
       - name: Save synthesis OSS CAD Suite cache
         if: steps.synth-oss-cad-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: ${{ runner.temp }}/oss-cad-suite
           key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.OSS_CAD_SUITE_VERSION }}-v1
@@ -481,7 +481,7 @@ jobs:
       - name: Restore route OSS CAD Suite cache
         if: env.ROUTE_OSS_CAD_SUITE_VERSION != env.OSS_CAD_SUITE_VERSION
         id: route-oss-cad-cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: ${{ runner.temp }}/oss-cad-suite
           key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.ROUTE_OSS_CAD_SUITE_VERSION }}-v1
@@ -495,7 +495,7 @@ jobs:
 
       - name: Save route OSS CAD Suite cache
         if: env.ROUTE_OSS_CAD_SUITE_VERSION != env.OSS_CAD_SUITE_VERSION && steps.route-oss-cad-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: ${{ runner.temp }}/oss-cad-suite
           key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.ROUTE_OSS_CAD_SUITE_VERSION }}-v1
@@ -602,7 +602,7 @@ jobs:
 
       - name: Restore route OSS CAD Suite cache
         id: route-oss-cad-cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: ${{ runner.temp }}/oss-cad-suite
           key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.ROUTE_OSS_CAD_SUITE_VERSION }}-v1
