@@ -32,6 +32,7 @@ REUSE_EXISTING_REPO=0
 DEFAULT_OSS_CAD_SUITE_VERSION="2026-07-20"
 OSS_CAD_SUITE_VERSION="${OSS_CAD_SUITE_VERSION:-${DEFAULT_OSS_CAD_SUITE_VERSION}}"
 FPGA_TOOLS_FROM_SOURCE=0
+FORCE_OSS_CAD_SUITE=0
 
 usage()
 {
@@ -41,10 +42,14 @@ Usage:
 
 Options:
     --oss-cad-suite-version VERSION
-                       OSS CAD Suite release. Default: 2026-07-20.
+                       OSS CAD Suite release used when the managed suite is
+                       needed. Default: 2026-07-20.
+    --install-oss-cad-suite
+                       Force installation/selection of the managed OSS CAD
+                       Suite even when qualified FPGA tools are already on PATH.
     --fpga-tools-from-source
-                       Build the existing pinned Yosys/nextpnr revisions
-                       instead of installing the OSS CAD Suite release.
+                       Force rebuilding the pinned Yosys/nextpnr revisions
+                       instead of reusing qualified tools already on PATH.
     -h, --help         Show this help.
 USAGE
 }
@@ -62,6 +67,10 @@ while (($# > 0)); do
             OSS_CAD_SUITE_VERSION="$2"
             shift 2
             ;;
+        --install-oss-cad-suite)
+            FORCE_OSS_CAD_SUITE=1
+            shift
+            ;;
         --fpga-tools-from-source)
             FPGA_TOOLS_FROM_SOURCE=1
             shift
@@ -76,13 +85,92 @@ while (($# > 0)); do
     esac
 done
 
+if (( FPGA_TOOLS_FROM_SOURCE == 1 && FORCE_OSS_CAD_SUITE == 1 )); then
+    die "--fpga-tools-from-source and --install-oss-cad-suite cannot be used together"
+fi
+
+version_ge()
+{
+    printf '%s\n%s\n' "$2" "$1" | sort -V -C
+}
+
+cmake_is_compatible()
+{
+    local output=""
+    local version=""
+
+    if ! command -v cmake >/dev/null 2>&1; then
+        return 1
+    fi
+
+    if output="$(cmake --version 2>&1)"; then
+        output="${output%%$'\n'*}"
+    else
+        return 1
+    fi
+
+    if [[ "${output}" =~ ^cmake[[:space:]]version[[:space:]]([0-9]+(\.[0-9]+)+) ]]; then
+        version="${BASH_REMATCH[1]}"
+    fi
+
+    if [[ -z "${version}" ]]; then
+        return 1
+    fi
+
+    if version_ge "${version}" "3.28"; then
+        return 0
+    fi
+
+    return 1
+}
+
+fpga_tools_are_qualified()
+{
+    local yosys_output=""
+    local nextpnr_output=""
+    local ecppack_output=""
+
+    if ! command -v yosys >/dev/null 2>&1; then
+        return 1
+    fi
+    if ! command -v nextpnr-ecp5 >/dev/null 2>&1; then
+        return 1
+    fi
+    if ! command -v ecppack >/dev/null 2>&1; then
+        return 1
+    fi
+
+    if ! yosys_output="$(yosys -V 2>&1)"; then
+        return 1
+    fi
+    if ! nextpnr_output="$(nextpnr-ecp5 --version 2>&1)"; then
+        return 1
+    fi
+    if ! ecppack_output="$(ecppack --version 2>&1)"; then
+        return 1
+    fi
+
+    if [[ "${yosys_output}" != *"Yosys 0.67+47"* ]]; then
+        return 1
+    fi
+    if [[ "${nextpnr_output}" != *"nextpnr-0.10-95-gddc6c8c8"* ]]; then
+        return 1
+    fi
+    if [[ "${ecppack_output}" != *"Project Trellis ecppack Version 1.4-76-g73bd411"* ]] &&
+       [[ "${ecppack_output}" != *"Project Trellis ecppack Version 1.4-79-g56bb170"* ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
 confirm_full_install()
 {
     local reply=""
 
     printf '\nHazard3-Doom full development environment installer\n\n'
     printf 'This script will:\n'
-    printf '  - install/update required Ubuntu packages using sudo;\n'
+    printf '  - reuse compatible installed tools and install only missing requirements;\n'
     if (( REUSE_EXISTING_REPO == 1 )); then
         printf '  - use the existing Hazard3-Doom repository at %s;\n' "${REPO_DIR}"
         printf '  - initialize/update its pinned submodules;\n'
@@ -90,11 +178,14 @@ confirm_full_install()
         printf '  - clone the Hazard3-Doom repository and initialize its submodules;\n'
     fi
     printf '%s\n' \
-        '  - install the pinned RISC-V toolchain, CMake, and native OpenOCD;'
-    if ((FPGA_TOOLS_FROM_SOURCE == 1)); then
-        printf '  - build the pinned Yosys and nextpnr/Project Trellis source revisions;\n'
+        '  - reuse a compatible RISC-V toolchain or install the pinned xPack fallback;' \
+        '  - reuse CMake 3.28+ and an available OpenOCD installation;'
+    if (( FPGA_TOOLS_FROM_SOURCE == 1 )); then
+        printf '  - force-build the pinned Yosys and nextpnr/Project Trellis source revisions;\n'
+    elif (( FORCE_OSS_CAD_SUITE == 1 )); then
+        printf '  - force-install OSS CAD Suite %s;\n' "${OSS_CAD_SUITE_VERSION}"
     else
-        printf '  - install OSS CAD Suite %s, matching the main FPGA CI workflows;\n' \
+        printf '  - reuse qualified FPGA tools already on PATH, otherwise install OSS CAD Suite %s;\n' \
             "${OSS_CAD_SUITE_VERSION}"
     fi
     printf '%s\n' '  - run the final requirements check.'
@@ -193,43 +284,75 @@ if [[ -n "${WSL_DISTRO_NAME:-}" || -n "${WSL_INTEROP:-}" ]] ||
     IS_WSL=1
 fi
 
-# This can be a long-running script. Keep sudo alive for the duration of the script.
-sudo -v
-
-## begin sudo keepalive
-# Without this section, an unattended install may fail with "sudo: timed out".
-while true; do
-    sudo -n true
-    sleep 60
-done 2>/dev/null &
-# Keep track of the PID so the sudo keepalive can be stopped when the script exits.
-sudo_keepalive_pid=$!
+# Keep sudo authentication alive only after a step actually needs sudo.
+sudo_keepalive_pid=""
 
 cleanup()
 {
-    kill "${sudo_keepalive_pid}" 2>/dev/null || true
-    wait "${sudo_keepalive_pid}" 2>/dev/null || true
+    if [[ -n "${sudo_keepalive_pid}" ]]; then
+        kill "${sudo_keepalive_pid}" 2>/dev/null || true
+        wait "${sudo_keepalive_pid}" 2>/dev/null || true
+    fi
 }
 
 trap cleanup EXIT
-## end sudo keepalive
 
-sudo apt-get update
+ensure_sudo_keepalive()
+{
+    if [[ -n "${sudo_keepalive_pid}" ]]; then
+        return 0
+    fi
 
-sudo apt-get install -y \
-    git \
-    python3-serial \
-    usbutils
+    sudo -v
+    while true; do
+        sudo -n true
+        sleep 60
+    done 2>/dev/null &
+    sudo_keepalive_pid=$!
+}
 
-if ! command -v shellcheck >/dev/null 2>&1; then
-    sudo apt-get install -y shellcheck || true
-fi
+apt_get()
+{
+    # Disable dpkg's PTY progress output. It can leave copied WSL terminal
+    # output looking like a staircase because carriage-return progress updates
+    # are preserved by some Windows terminal paths.
+    sudo apt-get -o Dpkg::Use-Pty=0 "$@"
+}
 
-MY_SHELLCHECK="shellcheck"
-if command -v "$MY_SHELLCHECK" >/dev/null 2>&1; then
-    "${MY_SHELLCHECK}" -x "${BASH_SOURCE[0]}" >&2 || exit 1
+install_missing_base_packages()
+{
+    local packages=()
+
+    if ! command -v git >/dev/null 2>&1; then
+        packages+=(git)
+    fi
+    if ! command -v python3 >/dev/null 2>&1; then
+        packages+=(python3 python3-serial)
+    elif ! python3 -c 'import serial' >/dev/null 2>&1; then
+        packages+=(python3-serial)
+    fi
+    if (( IS_WSL == 0 )) && ! command -v lsusb >/dev/null 2>&1; then
+        packages+=(usbutils)
+    fi
+
+    if (( ${#packages[@]} == 0 )); then
+        printf '\nRequired base packages are already available; no apt installation needed.\n'
+        return 0
+    fi
+
+    printf '\nInstalling missing base packages: %s\n' "${packages[*]}"
+    ensure_sudo_keepalive
+    apt_get update
+    apt_get install -y "${packages[@]}"
+}
+
+install_missing_base_packages
+
+if command -v shellcheck >/dev/null 2>&1; then
+    shellcheck -x "${BASH_SOURCE[0]}" >&2 || exit 1
 else
-    echo "WARNING: $MY_SHELLCHECK is not installed; continuing without optional shell linting." >&2
+    printf '%s\n' \
+        'WARNING: ShellCheck is not installed; continuing without optional shell linting.' >&2
 fi
 
 if (( REUSE_EXISTING_REPO == 1 )); then
@@ -254,19 +377,81 @@ git submodule sync --recursive
 
 git submodule update --init --recursive
 
+RISCV_DOOM_RUNTIME_SCRIPT="./scripts/riscv-doom-runtime.sh"
+if [[ ! -r "${RISCV_DOOM_RUNTIME_SCRIPT}" ]]; then
+    printf 'ERROR: Missing required helper: %s\n' "${RISCV_DOOM_RUNTIME_SCRIPT}" >&2
+    exit 1
+fi
+
+# shellcheck disable=SC1090
+. "${RISCV_DOOM_RUNTIME_SCRIPT}"
+
+RISCV_XPACK_BIN="${HOME}/.local/xPacks/riscv-none-elf-gcc/current/bin"
+RISCV_XPACK_WAS_NEEDED=0
+
+compatible_riscv_toolchain_exists()
+{
+    hazard3_find_compatible_riscv_prefix >/dev/null 2>&1
+}
+
+DISTRO_RISCV_GCC="$(command -v riscv64-unknown-elf-gcc 2>/dev/null || true)"
+if [[ "${DISTRO_RISCV_GCC}" == "/usr/bin/riscv64-unknown-elf-gcc" ]]; then
+    if hazard3_riscv_prefix_is_complete riscv64-unknown-elf- && \
+        hazard3_riscv_compiler_accepts_hazard3 riscv64-unknown-elf- && \
+        ! hazard3_configure_doom_runtime riscv64-unknown-elf-; then
+        printf '%s\n' \
+            'Ubuntu/Debian RISC-V GCC detected without a usable Doom target C runtime.' \
+            'Installing picolibc-riscv64-unknown-elf and using its picolibc.specs file.'
+        ensure_sudo_keepalive
+        apt_get update
+        apt_get install -y picolibc-riscv64-unknown-elf
+        hash -r
+    fi
+fi
+
+if compatible_riscv_toolchain_exists; then
+    RISCV_XPACK_WAS_NEEDED=0
+else
+    RISCV_XPACK_WAS_NEEDED=1
+fi
+
 ./scripts/install-riscv-toolchain.sh
 
-# install-riscv-toolchain.sh updates ~/.bashrc for future shells. Add the same
-# location here so the rest of this installer can use it immediately.
-export PATH="${HOME}/.local/xPacks/riscv-none-elf-gcc/current/bin:${PATH}"
-hash -r
+if ! compatible_riscv_toolchain_exists; then
+    if [[ -x "${RISCV_XPACK_BIN}/riscv-none-elf-gcc" ]]; then
+        export PATH="${RISCV_XPACK_BIN}:${PATH}"
+        hash -r
+    fi
+fi
 
-./scripts/install-cmake.sh
+if ! compatible_riscv_toolchain_exists; then
+    printf 'ERROR: No complete compatible RISC-V toolchain is available after installation.\n' >&2
+    exit 1
+fi
 
-if ((FPGA_TOOLS_FROM_SOURCE == 1)); then
+if cmake_is_compatible; then
+    printf '\nCompatible CMake already available; reusing it:\n'
+    cmake --version | head -n 1
+else
+    printf '\nCMake 3.28+ is unavailable; installing/updating CMake.\n'
+    ensure_sudo_keepalive
+    ./scripts/install-cmake.sh
+fi
+
+if (( FPGA_TOOLS_FROM_SOURCE == 1 )); then
+    printf '\nSource FPGA tool build explicitly requested.\n'
+    ensure_sudo_keepalive
     ./scripts/install-yosys.sh --from-source
     ./scripts/install-nextpnr-ecp5.sh --from-source
+elif (( FORCE_OSS_CAD_SUITE == 1 )); then
+    printf '\nManaged OSS CAD Suite explicitly requested.\n'
+    ./scripts/install-oss-cad-suite.sh --version "${OSS_CAD_SUITE_VERSION}"
+    export PATH="${HOME}/.local/oss-cad-suite/current/oss-cad-suite/bin:${PATH}"
+elif fpga_tools_are_qualified; then
+    printf '\nQualified FPGA tools already available on PATH; reusing them.\n'
 else
+    printf '\nQualified FPGA tools are missing or incompatible; installing OSS CAD Suite %s.\n' \
+        "${OSS_CAD_SUITE_VERSION}"
     ./scripts/install-oss-cad-suite.sh --version "${OSS_CAD_SUITE_VERSION}"
     export PATH="${HOME}/.local/oss-cad-suite/current/oss-cad-suite/bin:${PATH}"
 fi
@@ -276,11 +461,22 @@ yosys -V
 ecppack --version
 nextpnr-ecp5 --version
 
-sudo apt-get install -y openocd
-hash -r
+OPENOCD_INSTALLED_NOW=0
+if command -v openocd >/dev/null 2>&1; then
+    printf '\nExisting native OpenOCD found; reusing it:\n'
+    openocd --version
+elif (( IS_WSL == 1 )) && [[ -f ./bin/openocd.exe ]]; then
+    printf '\nBundled Windows OpenOCD is available for WSL; native OpenOCD installation skipped.\n'
+else
+    printf '\nOpenOCD is unavailable; installing the Ubuntu package.\n'
+    ensure_sudo_keepalive
+    apt_get update
+    apt_get install -y openocd
+    OPENOCD_INSTALLED_NOW=1
+    hash -r
+    openocd --version
+fi
 
-printf '\nNative OpenOCD installed:\n'
-openocd --version
 printf '\nUse ./scripts/start-openocd.sh to select the supported OpenOCD/config path.\n'
 
 if (( IS_WSL == 1 )); then
@@ -288,7 +484,7 @@ if (( IS_WSL == 1 )); then
         printf '%s\n' \
             'Bundled Windows xPack OpenOCD is also available in ./bin/openocd.exe.'
     fi
-else
+elif (( OPENOCD_INSTALLED_NOW == 1 )); then
     if command -v udevadm >/dev/null 2>&1; then
         if sudo udevadm control --reload-rules; then
             printf '%s\n' \
@@ -305,10 +501,14 @@ fi
 ./scripts/requirements-check.sh
 
 printf '\nFull install complete.\n\n'
-printf '%s\n' \
-    'The xPack installer updated ~/.bashrc, but this script cannot change the' \
-    'environment of the shell that launched it.' \
-    'Before building from that existing shell, run:' \
-    '' \
-    '    source ~/.bashrc' \
-    '    hash -r'
+if (( RISCV_XPACK_WAS_NEEDED == 1 )); then
+    printf '%s\n' \
+        'The xPack fallback installer updated ~/.bashrc, but this script cannot change the' \
+        'environment of the shell that launched it.' \
+        'Before building from that existing shell, run:' \
+        '' \
+        '    source ~/.bashrc' \
+        '    hash -r'
+else
+    printf '%s\n' 'Existing compatible RISC-V toolchain was reused; no xPack PATH change is needed.'
+fi

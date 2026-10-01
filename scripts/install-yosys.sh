@@ -161,8 +161,8 @@ if [[ -n "${INSTALLED_BINARY}" ]]; then
 fi
 
 if ((SKIP_PACKAGES == 0)) && command -v apt-get >/dev/null 2>&1; then
-    sudo apt-get update
-    sudo apt-get install -y \
+    sudo apt-get -o Dpkg::Use-Pty=0 update
+    sudo apt-get -o Dpkg::Use-Pty=0 install -y \
         bison \
         flex \
         gawk \

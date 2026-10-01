@@ -253,11 +253,11 @@ U WSL-u koristite serijski uređaj izložen za Windows COM port kada je dostupan
 
 .. code-block:: powershell
 
-   py .\doom\upload-doom-image.py `
+   python.exe .\doom\upload-doom-image.py `
        .\build\ulx3s-85f\doom-image\hazard3-doom.h3img `
        --port COM7
 
-   py .\doom\upload-wad.py `
+   python.exe .\doom\upload-wad.py `
        C:\path\to\DOOM.WAD `
        --port COM7 `
        --launch
@@ -266,11 +266,11 @@ U WSL-u koristite serijski uređaj izložen za Windows COM port kada je dostupan
 
 .. code-block:: bat
 
-   py .\doom\upload-doom-image.py ^
+   python.exe .\doom\upload-doom-image.py ^
        .\build\ulx3s-85f\doom-image\hazard3-doom.h3img ^
        --port COM7
 
-   py .\doom\upload-wad.py ^
+   python.exe .\doom\upload-wad.py ^
        C:\path\to\DOOM.WAD ^
        --port COM7 ^
        --launch

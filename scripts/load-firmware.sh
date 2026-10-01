@@ -25,14 +25,27 @@ set -euo pipefail
     --check-file "${BASH_SOURCE[0]}" || true
 
 if [[ -z "${GDB:-}" ]]; then
+    for candidate in \
+        riscv-none-elf-gdb \
+        riscv32-unknown-elf-gdb \
+        riscv64-unknown-elf-gdb
+    do
+        if command -v "${candidate}" >/dev/null 2>&1; then
+            GDB="${candidate}"
+            break
+        fi
+    done
+fi
+
+if [[ -z "${GDB:-}" ]]; then
     if [[ -x /opt/riscv/bin/riscv32-unknown-elf-gdb ]]; then
         GDB="/opt/riscv/bin/riscv32-unknown-elf-gdb"
-    elif command -v riscv-none-elf-gdb >/dev/null 2>&1; then
-        GDB="riscv-none-elf-gdb"
-    else
-        echo "ERROR: RISC-V GDB not found" >&2
-        exit 1
     fi
+fi
+
+if [[ -z "${GDB:-}" ]]; then
+    echo "ERROR: RISC-V GDB not found on PATH" >&2
+    exit 1
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

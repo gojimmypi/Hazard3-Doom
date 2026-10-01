@@ -207,8 +207,8 @@ else
         if ! command -v apt-get >/dev/null 2>&1; then
             die "curl/tar are missing and apt-get is unavailable"
         fi
-        sudo apt-get update
-        sudo apt-get install -y ca-certificates curl tar
+        sudo apt-get -o Dpkg::Use-Pty=0 update
+        sudo apt-get -o Dpkg::Use-Pty=0 install -y ca-certificates curl tar
     fi
 
     mkdir -p -- "${INSTALL_ROOT}"

@@ -323,7 +323,7 @@ Doom upload istječe
 
   .. code-block:: bash
 
-     cmd.exe /c "py doom/upload-doom-image.py build/ulx4m-ld/doom-image/hazard3-doom.h3img --port COM8 --baud 92160"
+     cmd.exe /c "python.exe doom/upload-doom-image.py build/ulx4m-ld/doom-image/hazard3-doom.h3img --port COM8 --baud 92160"
 * Ako cilj dosegne ``H3L READY`` pa prijavi ``H3L ERROR invalid header``, UART
   handshake radi. Provjerite jesu li rezidentni monitor i ``.h3img`` nastali iz
   međusobno kompatibilnog builda/profila prije promjene serijskih drivera ili

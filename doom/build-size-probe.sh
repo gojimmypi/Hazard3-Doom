@@ -24,23 +24,41 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DOOMGENERIC_ROOT="${DOOMGENERIC_ROOT:-${ROOT_DIR}/third_party/doomgeneric}"
 PREPARE_DOOMGENERIC="${SCRIPT_DIR}/prepare-doomgeneric.sh"
-TOOLCHAIN_PREFIX="${TOOLCHAIN_PREFIX:-/opt/riscv/bin/riscv32-unknown-elf-}"
+RISCV_DOOM_RUNTIME_SCRIPT="${ROOT_DIR}/scripts/riscv-doom-runtime.sh"
+if [[ ! -r "${RISCV_DOOM_RUNTIME_SCRIPT}" ]]; then
+    printf 'ERROR: Missing required helper: %s\n' "${RISCV_DOOM_RUNTIME_SCRIPT}" >&2
+    exit 1
+fi
+
+# shellcheck disable=SC1090
+source "${RISCV_DOOM_RUNTIME_SCRIPT}"
+
+requested_toolchain_prefix="${TOOLCHAIN_PREFIX:-}"
+selected_toolchain_prefix=""
+if selected_toolchain_prefix="$(hazard3_find_compatible_riscv_prefix)"; then
+    TOOLCHAIN_PREFIX="${selected_toolchain_prefix}"
+else
+    discovery_status=$?
+    if (( discovery_status == 2 )); then
+        printf 'ERROR: TOOLCHAIN_PREFIX is set but is not compatible with Hazard3-Doom: %s\n' \
+            "${requested_toolchain_prefix}" >&2
+    else
+        printf '%s\n' \
+            'ERROR: No compatible RISC-V GCC toolchain was found.' \
+            'Install a supported toolchain or set TOOLCHAIN_PREFIX explicitly.' >&2
+    fi
+    exit 1
+fi
+export TOOLCHAIN_PREFIX
+
+if ! hazard3_configure_doom_runtime "${TOOLCHAIN_PREFIX}"; then
+    printf 'ERROR: %s\n' "${HAZARD3_DOOM_RUNTIME_ERROR}" >&2
+    exit 1
+fi
+
 CC="${TOOLCHAIN_PREFIX}gcc"
 SIZE="${TOOLCHAIN_PREFIX}size"
 BUILD_DIR="${HAZARD3_SIZE_BUILD_DIR:-${ROOT_DIR}/build/doom-size-probe}"
-
-# Run ShellCheck to ensure this is a good script.
-# Specify the executable shell checker you want to use:
-MY_SHELLCHECK="shellcheck"
-
-# Check if the executable is available in the PATH.
-if command -v "${MY_SHELLCHECK}" >/dev/null 2>&1; then
-    "${MY_SHELLCHECK}" -x "${BASH_SOURCE[0]}" >&2 || exit 1
-else
-    printf '%s\n' \
-        "${MY_SHELLCHECK} is not installed. Please install it if changes to this script have been made." \
-        >&2
-fi
 
 require_tool()
 {
@@ -86,6 +104,7 @@ PORT_SOURCES=(
     hazard3_newlib.c
     hazard3_platform_image.c
     doom_image_main.c
+    "${HAZARD3_DOOM_RUNTIME_PORT_SOURCES[@]}"
 )
 
 for source in "${PORT_SOURCES[@]}"; do
@@ -116,6 +135,10 @@ source "${SCRIPT_DIR}/doom_build_flags.sh"
 
 GCC_VERSION="$("${CC}" -dumpfullversion -dumpversion)"
 printf 'RISC-V GCC: %s\n' "${GCC_VERSION}"
+printf 'Target C runtime: %s\n' "${HAZARD3_DOOM_RUNTIME_MODE}"
+if [[ "${HAZARD3_DOOM_RUNTIME_MODE}" == "picolibc" ]]; then
+    printf 'Picolibc specs: %s\n' "${HAZARD3_DOOM_RUNTIME_SPECS}"
+fi
 printf 'Code generation: %s, %s\n' \
     "${DOOM_ARCH_FLAGS[0]}" "-O2 (same flags as loadable image)"
 

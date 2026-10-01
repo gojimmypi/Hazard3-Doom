@@ -64,6 +64,20 @@ DOOM_ARCH_FLAGS=(
     -mabi=ilp32
 )
 
+if [[ -z "${HAZARD3_DOOM_RUNTIME_MODE:-}" ]]; then
+    if [[ -z "${ROOT_DIR:-}" || -z "${TOOLCHAIN_PREFIX:-}" ]]; then
+        echo "Doom runtime selection requires ROOT_DIR and TOOLCHAIN_PREFIX" >&2
+        return 1
+    fi
+
+    # shellcheck disable=SC1091
+    source "${ROOT_DIR}/scripts/riscv-doom-runtime.sh"
+    if ! hazard3_configure_doom_runtime "${TOOLCHAIN_PREFIX}"; then
+        printf 'ERROR: %s\n' "${HAZARD3_DOOM_RUNTIME_ERROR}" >&2
+        return 1
+    fi
+fi
+
 # Select the Doom renderer and HDMI source resolution together. The standard
 # mode keeps the existing 320x200 on-chip working screen. The experimental
 # high-resolution mode renders and presents a native 400x240 indexed frame.
@@ -94,6 +108,7 @@ esac
 # This array is consumed by scripts that source this file.
 # shellcheck disable=SC2034
 DOOM_COMMON_COMPILE_FLAGS=(
+    "${HAZARD3_DOOM_RUNTIME_COMPILE_FLAGS[@]}"
     "${DOOM_ARCH_FLAGS[@]}"
     "${DOOM_MEMORY_PROFILE_FLAGS[@]}"
     -mcmodel=medany
@@ -147,6 +162,7 @@ DOOM_PORT_WARNING_FLAGS=(
 # This array is consumed by scripts that source this file.
 # shellcheck disable=SC2034
 DOOM_LINK_FLAGS=(
+    "${HAZARD3_DOOM_RUNTIME_LINK_FLAGS[@]}"
     "${DOOM_ARCH_FLAGS[@]}"
     -mcmodel=medany
     -mno-relax

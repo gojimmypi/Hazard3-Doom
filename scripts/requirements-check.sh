@@ -70,6 +70,15 @@ fi
 # shellcheck disable=SC1090
 . "${SYSTEM_REQUIREMENTS_SCRIPT}"
 
+RISCV_DOOM_RUNTIME_SCRIPT="${SCRIPT_DIR}/riscv-doom-runtime.sh"
+if [[ ! -r "${RISCV_DOOM_RUNTIME_SCRIPT}" ]]; then
+    printf '[FAIL] Missing required helper: %s\n' "${RISCV_DOOM_RUNTIME_SCRIPT}" >&2
+    exit 1
+fi
+
+# shellcheck disable=SC1090
+. "${RISCV_DOOM_RUNTIME_SCRIPT}"
+
 usage()
 {
     cat <<EOF_USAGE
@@ -544,10 +553,10 @@ find_riscv_prefix()
     fi
 
     for candidate in \
-        /opt/riscv/bin/riscv32-unknown-elf- \
         riscv-none-elf- \
         riscv32-unknown-elf- \
-        riscv64-unknown-elf-
+        riscv64-unknown-elf- \
+        /opt/riscv/bin/riscv32-unknown-elf-
     do
         if resolve_executable "${candidate}gcc" >/dev/null 2>&1; then
             printf '%s' "${candidate}"
@@ -615,6 +624,33 @@ check_riscv_isa()
         while IFS= read -r line; do
             printf '       %s\n' "${line}" >&2
         done <<< "${output}"
+    fi
+}
+
+check_riscv_doom_runtime()
+{
+    local prefix="$1"
+
+    if hazard3_configure_doom_runtime "${prefix}"; then
+        if [[ "${HAZARD3_DOOM_RUNTIME_MODE}" == "picolibc" ]]; then
+            pass "RISC-V target C runtime: Picolibc (${HAZARD3_DOOM_RUNTIME_SPECS})"
+        else
+            pass "RISC-V target C runtime: Newlib-compatible"
+        fi
+        return 0
+    fi
+
+    fail "RISC-V target C runtime is incomplete for Doom"
+    printf '       %s\n' "${HAZARD3_DOOM_RUNTIME_ERROR}" >&2
+
+    if [[ "${prefix}" == "riscv64-unknown-elf-" ]]; then
+        printf '%s\n' \
+            '       Ubuntu/Debian fix: sudo apt-get install picolibc-riscv64-unknown-elf' \
+            '       Doom will use that package through its picolibc.specs file.'
+    else
+        printf '%s\n' \
+            '       Install a complete target C runtime or use:' \
+            '         ./scripts/install-riscv-toolchain.sh'
     fi
 }
 
@@ -946,6 +982,7 @@ if RISCV_PREFIX="$(find_riscv_prefix)"; then
         warn "RISC-V GDB is unavailable; source-level JTAG debugging will be limited"
     fi
     check_riscv_isa "${RISCV_PREFIX}"
+    check_riscv_doom_runtime "${RISCV_PREFIX}"
 else
     fail "No supported native Linux/WSL RISC-V bare-metal GCC toolchain was found"
     if [[ -n "${TOOLCHAIN_PREFIX:-}" ]]; then
@@ -959,10 +996,11 @@ else
             '         ./scripts/requirements-check.sh'
     else
         printf '%s\n' \
-            '       Project reference: /opt/riscv/bin/riscv32-unknown-elf-' \
+            '       Supported PATH prefixes include: riscv-none-elf-, riscv32-unknown-elf-, riscv64-unknown-elf-' \
+            '       Legacy fallback: /opt/riscv/bin/riscv32-unknown-elf-' \
             '       Linux xPack installations commonly use: riscv-none-elf-' \
             '         use: ./scripts/install-riscv-toolchain.sh' \
-            '       Ubuntu alternative: sudo apt-get install gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf'
+            '       Ubuntu alternative: sudo apt-get install gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf picolibc-riscv64-unknown-elf'
     fi
 fi
 

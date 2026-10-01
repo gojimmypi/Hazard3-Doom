@@ -38,15 +38,31 @@ else
     echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
 fi
 
+# Prefer a compatible RISC-V toolchain already available on PATH. Keep the
+# historical /opt installation only as a compatibility fallback.
+if [[ -z "${TOOLCHAIN_PREFIX:-}" ]]; then
+    for candidate in \
+        riscv-none-elf- \
+        riscv32-unknown-elf- \
+        riscv64-unknown-elf-
+    do
+        if command -v "${candidate}gcc" >/dev/null 2>&1; then
+            TOOLCHAIN_PREFIX="${candidate}"
+            break
+        fi
+    done
+fi
+
 if [[ -z "${TOOLCHAIN_PREFIX:-}" ]]; then
     if [[ -x /opt/riscv/bin/riscv32-unknown-elf-gcc ]]; then
         TOOLCHAIN_PREFIX="/opt/riscv/bin/riscv32-unknown-elf-"
-    elif command -v riscv-none-elf-gcc >/dev/null 2>&1; then
-        TOOLCHAIN_PREFIX="riscv-none-elf-"
-    else
-        echo "ERROR: RISC-V GCC toolchain not found" >&2
-        exit 1
     fi
+fi
+
+if [[ -z "${TOOLCHAIN_PREFIX:-}" ]]; then
+    echo "ERROR: RISC-V GCC toolchain not found on PATH" >&2
+    echo "Set TOOLCHAIN_PREFIX to select another compatible installation." >&2
+    exit 1
 fi
 export TOOLCHAIN_PREFIX
 

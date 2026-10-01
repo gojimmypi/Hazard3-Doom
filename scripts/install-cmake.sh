@@ -26,8 +26,8 @@ if [[ -z "${KITWARE_CODENAME}" ]]; then
     exit 1
 fi
 
-sudo apt-get update
-sudo apt-get install -y ca-certificates gpg wget
+sudo apt-get -o Dpkg::Use-Pty=0 update
+sudo apt-get -o Dpkg::Use-Pty=0 install -y ca-certificates gpg wget
 
 test -f /usr/share/doc/kitware-archive-keyring/copyright ||
 wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null |
@@ -38,12 +38,12 @@ printf 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://
     "${KITWARE_CODENAME}" |
     sudo tee /etc/apt/sources.list.d/kitware.list >/dev/null
 
-sudo apt-get update
+sudo apt-get -o Dpkg::Use-Pty=0 update
 
 test -f /usr/share/doc/kitware-archive-keyring/copyright ||
     sudo rm /usr/share/keyrings/kitware-archive-keyring.gpg
 
-sudo apt-get install -y kitware-archive-keyring cmake
+sudo apt-get -o Dpkg::Use-Pty=0 install -y kitware-archive-keyring cmake
 
 hash -r
 cmake --version

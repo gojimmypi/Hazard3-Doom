@@ -177,8 +177,8 @@ fi
 
 if ((SKIP_PACKAGES == 0)) && command -v apt-get >/dev/null 2>&1; then
     printf 'Installing build dependencies...\n'
-    sudo apt-get update
-    sudo apt-get install -y \
+    sudo apt-get -o Dpkg::Use-Pty=0 update
+    sudo apt-get -o Dpkg::Use-Pty=0 install -y \
         build-essential \
         cmake \
         git \

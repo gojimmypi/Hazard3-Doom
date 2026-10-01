@@ -64,11 +64,14 @@ Install a compatible RISC-V bare-metal GCC toolchain separately and make it
 available on ``PATH``; see :doc:`prerequisites` for supported toolchain names
 and overrides.
 
-For Ubuntu/WSL, the project also provides a convenience installer. By default,
-it installs and activates the project's expected prebuilt OSS CAD Suite
-automatically, along with the other software needed for the known-good
-development environment. Advanced source-build options are also available when
-you need selected FPGA tools built from specific upstream GitHub commits:
+For Ubuntu/WSL, the project also provides a convenience installer. The
+``full-install.sh`` script is Ubuntu/WSL-specific; on macOS or another Linux
+distribution, install the prerequisites for that platform and place the tools on
+``PATH`` instead of running this installer. By default, it installs and activates
+the project's expected prebuilt OSS CAD Suite automatically, along with the
+other software needed for the known-good development environment. Advanced
+source-build options are also available when you need selected FPGA tools built
+from specific upstream GitHub commits:
 
 .. code-block:: bash
 
@@ -262,11 +265,11 @@ line-continuation character, while ``cmd.exe`` uses the caret (``^``).
 
 .. code-block:: powershell
 
-   py .\doom\upload-doom-image.py `
+   python.exe .\doom\upload-doom-image.py `
        .\build\ulx3s-85f\doom-image\hazard3-doom.h3img `
        --port COM7
 
-   py .\doom\upload-wad.py `
+   python.exe .\doom\upload-wad.py `
        C:\path\to\DOOM.WAD `
        --port COM7 `
        --launch
@@ -275,11 +278,11 @@ line-continuation character, while ``cmd.exe`` uses the caret (``^``).
 
 .. code-block:: bat
 
-   py .\doom\upload-doom-image.py ^
+   python.exe .\doom\upload-doom-image.py ^
        .\build\ulx3s-85f\doom-image\hazard3-doom.h3img ^
        --port COM7
 
-   py .\doom\upload-wad.py ^
+   python.exe .\doom\upload-wad.py ^
        C:\path\to\DOOM.WAD ^
        --port COM7 ^
        --launch

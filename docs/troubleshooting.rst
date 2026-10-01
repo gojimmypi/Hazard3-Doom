@@ -319,7 +319,7 @@ Doom upload times out
 
   .. code-block:: bash
 
-     cmd.exe /c "py doom/upload-doom-image.py build/ulx4m-ld/doom-image/hazard3-doom.h3img --port COM8 --baud 92160"
+     cmd.exe /c "python.exe doom/upload-doom-image.py build/ulx4m-ld/doom-image/hazard3-doom.h3img --port COM8 --baud 92160"
 * If the target reaches ``H3L READY`` and then reports ``H3L ERROR invalid
   header``, the UART handshake is working. Verify that the resident monitor and
   ``.h3img`` were produced by the same compatible build/profile before changing
