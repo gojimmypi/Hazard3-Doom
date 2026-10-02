@@ -21,9 +21,14 @@
 
 set -euo pipefail
 
-# Verify this script against the recorded inventory without blocking normal execution.
-"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
-    --check-file "${BASH_SOURCE[0]}" || true
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+INVENTORY_SCRIPT="${SCRIPT_DIR}/inventory.sh"
+
+# Verify this script against the recorded inventory when running from a full
+# repository checkout. The standalone bootstrap intentionally omits inventory.sh.
+if [[ -x "${INVENTORY_SCRIPT}" ]]; then
+    "${INVENTORY_SCRIPT}" --check-file "${BASH_SOURCE[0]}" || true
+fi
 
 REPO_URL="https://github.com/ulx3s/Hazard3-Doom.git"
 REPO_DIR="${PWD}/Hazard3-Doom"
