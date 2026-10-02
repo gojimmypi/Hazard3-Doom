@@ -227,9 +227,19 @@ if [[ -r "${SYSTEM_REQUIREMENTS_SCRIPT}" ]]; then
     # shellcheck disable=SC1090
     . "${SYSTEM_REQUIREMENTS_SCRIPT}"
 
-    if ! check_system_requirements "${PWD}"; then
-        printf '\nSystem does not meet the minimum Hazard3-Doom development requirements.\n' >&2
-        printf 'Increase system resources before continuing the full install.\n' >&2
+    if ! check_system_requirements \
+        "${PWD}" \
+        system_requirements_pass \
+        system_requirements_warn \
+        system_requirements_fail \
+        "${FPGA_TOOLS_FROM_SOURCE}"; then
+        if (( FPGA_TOOLS_FROM_SOURCE == 1 )); then
+            printf '\nSystem does not meet the Hazard3-Doom source-build requirements.\n' >&2
+            printf 'Increase system resources before using --fpga-tools-from-source.\n' >&2
+        else
+            printf '\nSystem does not meet the minimum Hazard3-Doom installation requirements.\n' >&2
+            printf 'Increase system resources before continuing the full install.\n' >&2
+        fi
         exit 1
     fi
 else
@@ -289,7 +299,8 @@ if [[ -n "${WSL_DISTRO_NAME:-}" || -n "${WSL_INTEROP:-}" ]] ||
     IS_WSL=1
 fi
 
-# Keep sudo authentication alive only after a step actually needs sudo.
+# Authenticate sudo before long clone/submodule downloads, then keep the
+# credential alive for later package installation steps.
 sudo_keepalive_pid=""
 
 cleanup()
@@ -315,6 +326,9 @@ ensure_sudo_keepalive()
     done 2>/dev/null &
     sudo_keepalive_pid=$!
 }
+
+printf '\nAuthenticating sudo before download/install work.\n'
+ensure_sudo_keepalive
 
 apt_get()
 {
@@ -503,7 +517,11 @@ elif (( OPENOCD_INSTALLED_NOW == 1 )); then
     fi
 fi
 
-./scripts/requirements-check.sh
+if (( FPGA_TOOLS_FROM_SOURCE == 1 )); then
+    ./scripts/requirements-check.sh --fpga-tools-from-source
+else
+    ./scripts/requirements-check.sh
+fi
 
 printf '\nFull install complete.\n\n'
 if (( RISCV_XPACK_WAS_NEEDED == 1 )); then

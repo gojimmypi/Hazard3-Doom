@@ -14,7 +14,7 @@ Git source: current index (`git ls-files --cached`)
 
 Files inventoried: 80
 
-Total bytes: 690219
+Total bytes: 692145
 
 ## Verification
 
@@ -46,7 +46,7 @@ should be identified before a public release.
 | `build.sh` | 6049 | `6bbc54624d33449aa073227dcf7599f544b8ee307b7ef9d8961f1fcea6dbcff1` | REVIEW | Shell script |
 | `check-executable.sh` | 3297 | `1317c862f081f22633d205ba10f3249e15810e3489c6948a8bb8761ca9ffae8b` | REVIEW | Shell script |
 | `check-nettype.sh` | 4540 | `f20f1011753d02d0c618baab5998c4ae6c4403cc7b2df46177ff6c5584468ef2` | REVIEW | Shell script |
-| `check-system-requirements.sh` | 6102 | `56da72e7f61a3d82711aa27fa9bda8d481ae8c90cdf72a3cd410e6ad7bc5ba45` | REVIEW | Shell script |
+| `check-system-requirements.sh` | 6780 | `5152c41106826bff882b4e1d34e3787499eb507531cfda602559004ff0016705` | REVIEW | Shell script |
 | `check-windows-visualgdb.ps1` | 8640 | `ff4326dbf7d9e4399b46dd8e981476a3ed3e6ce489eadeb239ae77c0f2b93d28` | REVIEW | File |
 | `check-wsl-visualgdb.ps1` | 8483 | `45c44a693c87952b3a1cc2859804eb08b74ee6b34ded685c99f0aedaee062a1b` | REVIEW | File |
 | `check_submodules.bat` | 10617 | `8f05a6d9f9738ddea8ebc84f4b4cdef7df848824a0b5d971e0a9a5f4675cc98b` | REVIEW | File |
@@ -54,7 +54,7 @@ should be identified before a public release.
 | `doomgeneric-version.sh` | 1591 | `e461166288862ba39a5d5bbd4237b696ccb11153038ba3011665ad636c917971` | REVIEW | Shell script |
 | `flash-ulx3s-persistent.sh` | 1812 | `ca065c362fb91afc4c981810c3d06d83c90cc8b899216d2988560961e824bf20` | REVIEW | Shell script |
 | `full-clean.sh` | 6201 | `2e167df0d07e94a30dbb12b489ed27154f17f6117e67352ff62b18559c9fef8e` | REVIEW | Shell script |
-| `full-install.sh` | 15507 | `f58641e847ef9a54369dd8e7b21637f3cf1e5f4dc0c6e981513eb4c811dd93ca` | REVIEW | Shell script |
+| `full-install.sh` | 16370 | `4068d6544094439e6e5724768dedbc5addaeaf355ba1071887bc3cf78662622f` | REVIEW | Shell script |
 | `gdb/load-ulx3s-12f-monitor.gdb` | 1166 | `3688da0d54a699aada2fd37ace0d6480232d7c1adec7d26e841847c88b9a6d3a` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `gdb/load-ulx3s-85f-monitor.gdb` | 1086 | `dc1647c8a34c072b6d0367ae13ae7ca3acdf9d4e14bfaffa2326f42a697bd249` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `gdb/load-ulx4m-ld-85f-monitor.gdb` | 1238 | `670bea99fe8f94ec55d669ff1580b3c3d84f3abd607d92aa4fb842d162f27f73` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
@@ -83,7 +83,7 @@ should be identified before a public release.
 | `peek-elf.sh` | 25041 | `d6893ccbb714025037dd4f416f455e9d49cd94d8732b6fec6eb82736b6223113` | REVIEW | Shell script |
 | `publish-check.sh` | 3069 | `917f7ad508e708a54a886b7599f26d54436d20501194de122f4e235090876178` | REVIEW | Shell script |
 | `refresh-version.sh` | 4480 | `18418ed6f45af6bef901313e6a2dfbc51c8b6ff59a1038d4a9a793ece455e875` | REVIEW | Shell script |
-| `requirements-check.sh` | 37562 | `d6b2ac04c534f3cd2c748a90df832fcd61d2096888bfa3ca14f6f5c07a589507` | REVIEW | Shell script |
+| `requirements-check.sh` | 37947 | `2668d0746edabf7a3c0f22d6f27b150554cd43f62aa2b33e9d98d489e37dae03` | REVIEW | Shell script |
 | `restart-from-monitor.py` | 2180 | `62fafcba0da53b21b5704f221c655c63eb5520f2def0fbe7312005a65c59dd2d` | REVIEW | File |
 | `return-to-monitor.py` | 2144 | `0214047d05bf37b06453388892bc8c5a13a49af1154f962e1680eaa644316ceb` | REVIEW | File |
 | `riscv-doom-runtime.sh` | 9656 | `d4cd4f8b28e07bc93e6225772831906e2745e7017361cffd942a8a6382cdd961` | REVIEW | Shell script |
