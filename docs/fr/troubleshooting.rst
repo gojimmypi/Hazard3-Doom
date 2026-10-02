@@ -343,7 +343,7 @@ Le téléversement de Doom expire
 
   .. code-block:: bash
 
-     cmd.exe /c "py doom/upload-doom-image.py build/ulx4m-ld/doom-image/hazard3-doom.h3img --port COM8 --baud 92160"
+     cmd.exe /c "python.exe doom/upload-doom-image.py build/ulx4m-ld/doom-image/hazard3-doom.h3img --port COM8 --baud 92160"
 * Si la cible atteint ``H3L READY`` puis signale ``H3L ERROR invalid header``,
   le handshake UART fonctionne. Vérifiez que le moniteur résident et le fichier
   ``.h3img`` proviennent d'un build/profil compatible avant de modifier les

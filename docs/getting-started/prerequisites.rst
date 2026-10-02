@@ -4,10 +4,16 @@ Prerequisites
 Host environment
 ----------------
 
-The project build and development scripts require a Linux/Bash environment.
-On native Linux, use the normal Bash shell. On Windows, use **WSL with Ubuntu**:
-WSL is required for build-from-source work and for the repository's shell
-scripts. Do not run the build scripts from PowerShell or ``cmd.exe``.
+The documented and tested build-from-source environment is Ubuntu Linux,
+either natively or through **WSL with Ubuntu** on Windows. The repository build
+and development scripts use Bash. On Windows, WSL is required for the source
+build and the repository's ``.sh`` scripts; do not run those build scripts from
+PowerShell or ``cmd.exe``.
+
+macOS and other Linux distributions can use the same project when the required
+FPGA and RISC-V tools are installed and available on ``PATH``, but package-manager
+commands and some host setup steps may need to be adapted for that platform.
+The convenience ``full-install.sh`` script is specifically for Ubuntu/WSL.
 
 Native Windows is still appropriate where the documentation explicitly calls
 for the browser Device Tool, USB driver management, a COM-port UART uploader,
@@ -40,7 +46,9 @@ At minimum, install:
 * A RISC-V bare-metal GCC/GDB toolchain available on ``PATH``.
 * Yosys, nextpnr-ecp5, Project Trellis/ecppack, and the normal ULX3S FPGA tooling for bitstream builds.
 * OpenOCD when using JTAG debugging.
-* ``shellcheck`` for validating shell scripts (optional, but recommended).
+
+Optional development tools include ``shellcheck`` for repository shell-script
+validation. ShellCheck is not required for normal builds.
 
 FPGA toolchain
 --------------
@@ -66,11 +74,22 @@ RISC-V GCC toolchain
 --------------------
 
 The build uses a compatible RISC-V bare-metal GCC toolchain found on ``PATH``.
-``riscv-none-elf-*`` is supported directly, and xPack RISC-V GCC installations
-are also recognized. On Ubuntu/WSL, macOS, or another Linux distribution, use
-a suitable bare-metal RISC-V GCC package for that platform or install xPack,
-then ensure the compiler is available on ``PATH``. Package names vary by
-distribution.
+The normal discovery accepts ``riscv-none-elf-*``, ``riscv32-unknown-elf-*``,
+and ``riscv64-unknown-elf-*`` tool names. xPack RISC-V GCC installations work
+when their ``bin`` directory is on ``PATH``.
+
+On Ubuntu/WSL, one distribution-provided option is:
+
+.. code-block:: bash
+
+   sudo apt-get update
+   sudo apt-get install gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf
+
+On macOS or another Linux distribution, install an equivalent bare-metal RISC-V
+GCC package for that platform or use xPack. Package names vary, so a search for
+``RISC-V bare-metal GCC install <distribution name or macOS>`` is often the
+simplest way to find current platform-specific instructions. After installation,
+confirm that the compiler is available on ``PATH``.
 
 Use ``TOOLCHAIN_PREFIX`` when you need to select a specific installation. For
 example:
@@ -145,5 +164,6 @@ Related links
 
 * `OSS CAD Suite <https://github.com/YosysHQ/oss-cad-suite-build>`_
 * `RISC-V GCC xPack <https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases>`_
+* `Ubuntu RISC-V GCC package <https://packages.ubuntu.com/search?keywords=gcc-riscv64-unknown-elf>`_
 * `Yosys <https://github.com/YosysHQ/yosys>`_
 * `nextpnr <https://github.com/YosysHQ/nextpnr>`_

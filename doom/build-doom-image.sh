@@ -25,7 +25,38 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DOOMGENERIC_ROOT="${DOOMGENERIC_ROOT:-${ROOT_DIR}/third_party/doomgeneric}"
 PREPARE_DOOMGENERIC="${SCRIPT_DIR}/prepare-doomgeneric.sh"
 SETUP_DOOMGENERIC="${ROOT_DIR}/scripts/setup-doomgeneric.sh"
-TOOLCHAIN_PREFIX="${TOOLCHAIN_PREFIX:-/opt/riscv/bin/riscv32-unknown-elf-}"
+RISCV_DOOM_RUNTIME_SCRIPT="${ROOT_DIR}/scripts/riscv-doom-runtime.sh"
+if [[ ! -r "${RISCV_DOOM_RUNTIME_SCRIPT}" ]]; then
+    printf 'ERROR: Missing required helper: %s\n' "${RISCV_DOOM_RUNTIME_SCRIPT}" >&2
+    exit 1
+fi
+
+# shellcheck disable=SC1090
+source "${RISCV_DOOM_RUNTIME_SCRIPT}"
+
+requested_toolchain_prefix="${TOOLCHAIN_PREFIX:-}"
+selected_toolchain_prefix=""
+if selected_toolchain_prefix="$(hazard3_find_compatible_riscv_prefix)"; then
+    TOOLCHAIN_PREFIX="${selected_toolchain_prefix}"
+else
+    discovery_status=$?
+    if (( discovery_status == 2 )); then
+        printf 'ERROR: TOOLCHAIN_PREFIX is set but is not compatible with Hazard3-Doom: %s\n' \
+            "${requested_toolchain_prefix}" >&2
+    else
+        printf '%s\n' \
+            'ERROR: No compatible RISC-V GCC toolchain was found.' \
+            'Install a supported toolchain or set TOOLCHAIN_PREFIX explicitly.' >&2
+    fi
+    exit 1
+fi
+export TOOLCHAIN_PREFIX
+
+if ! hazard3_configure_doom_runtime "${TOOLCHAIN_PREFIX}"; then
+    printf 'ERROR: %s\n' "${HAZARD3_DOOM_RUNTIME_ERROR}" >&2
+    exit 1
+fi
+
 CC="${TOOLCHAIN_PREFIX}gcc"
 OBJCOPY="${TOOLCHAIN_PREFIX}objcopy"
 NM="${TOOLCHAIN_PREFIX}nm"
@@ -102,6 +133,7 @@ PORT_SOURCES=(
     hazard3_newlib.c
     hazard3_platform_image.c
     doom_image_main.c
+    "${HAZARD3_DOOM_RUNTIME_PORT_SOURCES[@]}"
 )
 for source in "${PORT_SOURCES[@]}"; do
     require_file "${SCRIPT_DIR}/${source}"
@@ -147,6 +179,10 @@ source "${SCRIPT_DIR}/doom_build_flags.sh"
 
 GCC_VERSION="$("${CC}" -dumpfullversion -dumpversion)"
 printf 'RISC-V GCC: %s\n' "${GCC_VERSION}"
+printf 'Target C runtime: %s\n' "${HAZARD3_DOOM_RUNTIME_MODE}"
+if [[ "${HAZARD3_DOOM_RUNTIME_MODE}" == "picolibc" ]]; then
+    printf 'Picolibc specs: %s\n' "${HAZARD3_DOOM_RUNTIME_SPECS}"
+fi
 printf 'Code generation: %s, %s\n' \
     "${DOOM_ARCH_FLAGS[0]}" "-O2 (Performance-R5)"
 
@@ -178,12 +214,12 @@ objects+=("${entry_object}")
 
 echo "[LD] ${OUTPUT_ELF}"
 "${CC}" "${DOOM_LINK_FLAGS[@]}" \
-    -Wl,-T,"${SCRIPT_DIR}/doom_image_link.ld" \
+    -T"${SCRIPT_DIR}/doom_image_link.ld" \
     -Wl,-Map,"${BUILD_DIR}/hazard3-doom.map" \
     -Wl,--cref \
     -o "${OUTPUT_ELF}" \
     "${objects[@]}" \
-    -Wl,--start-group -lc -lm -lgcc -lnosys -Wl,--end-group
+    -Wl,--start-group "${HAZARD3_DOOM_RUNTIME_LIBRARIES[@]}" -Wl,--end-group
 
 echo "[OBJCOPY] ${OUTPUT_BIN}"
 "${OBJCOPY}" -O binary "${OUTPUT_ELF}" "${OUTPUT_BIN}"

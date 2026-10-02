@@ -6,6 +6,16 @@ set -euo pipefail
 "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
     --check-file "${BASH_SOURCE[0]}" || true
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+RISCV_DOOM_RUNTIME_SCRIPT="${SCRIPT_DIR}/riscv-doom-runtime.sh"
+if [[ ! -r "${RISCV_DOOM_RUNTIME_SCRIPT}" ]]; then
+    printf 'ERROR: Missing required helper: %s\n' "${RISCV_DOOM_RUNTIME_SCRIPT}" >&2
+    exit 1
+fi
+
+# shellcheck disable=SC1090
+. "${RISCV_DOOM_RUNTIME_SCRIPT}"
+
 # Keep this package release aligned with the FPGA GitHub workflows.
 XPACK_VERSION="15.2.0-1"
 EXPECTED_GCC_VERSION="15.2.0"
@@ -39,30 +49,47 @@ compiler_version()
     "${gcc}" -dumpfullversion -dumpversion 2>/dev/null || true
 }
 
-CURRENT_GCC="$(command -v riscv-none-elf-gcc 2>/dev/null || true)"
-CURRENT_GCC_VERSION=""
-if [[ -n "${CURRENT_GCC}" ]]; then
-    CURRENT_GCC_VERSION="$(compiler_version "${CURRENT_GCC}")"
-fi
-
 printf '\n'
 printf 'RISC-V toolchain installer\n'
 printf '%s\n' '--------------------------'
-printf 'Desired xPack: %s\n' "${XPACK_VERSION}"
-printf 'Desired GCC:   %s\n' "${EXPECTED_GCC_VERSION}"
-printf 'Platform:      %s\n' "${PLATFORM}"
-printf 'Install path:  %s\n' "${INSTALL_DIR}"
+printf 'Pinned fallback xPack: %s\n' "${XPACK_VERSION}"
+printf 'Pinned fallback GCC:   %s\n' "${EXPECTED_GCC_VERSION}"
+printf 'Platform:              %s\n' "${PLATFORM}"
+printf 'Fallback install path: %s\n' "${INSTALL_DIR}"
 printf '\n'
 
-if [[ -n "${CURRENT_GCC}" ]]; then
-    printf 'Current PATH compiler:\n'
-    printf '  Binary:  %s\n' "${CURRENT_GCC}"
-    printf '  GCC:     %s\n' "${CURRENT_GCC_VERSION:-unknown}"
-    "${CURRENT_GCC}" --version | head -n 1 || true
-    printf '\n'
+EXISTING_PREFIX=""
+if EXISTING_PREFIX="$(hazard3_find_compatible_riscv_prefix)"; then
+    EXISTING_GCC="$(hazard3_resolve_riscv_tool "${EXISTING_PREFIX}gcc")"
+    EXISTING_GCC_VERSION="$(compiler_version "${EXISTING_GCC}")"
+    printf 'Existing compatible RISC-V toolchain found; xPack installation skipped.\n'
+    printf '  Prefix: %s\n' "${EXISTING_PREFIX}"
+    printf '  GCC:    %s\n' "${EXISTING_GCC}"
+    printf '  Version: %s\n' "${EXISTING_GCC_VERSION:-unknown}"
+    exit 0
 else
-    printf 'Current PATH compiler: not found\n\n'
+    existing_status=$?
+    if (( existing_status == 2 )); then
+        printf 'ERROR: TOOLCHAIN_PREFIX is set but does not provide a complete compatible toolchain: %s\n' \
+            "${TOOLCHAIN_PREFIX}" >&2
+        exit 1
+    fi
 fi
+
+if command -v riscv64-unknown-elf-gcc >/dev/null 2>&1; then
+    if hazard3_riscv_prefix_is_complete riscv64-unknown-elf- && \
+        hazard3_riscv_compiler_accepts_hazard3 riscv64-unknown-elf- && \
+        ! hazard3_configure_doom_runtime riscv64-unknown-elf-; then
+        printf '%s\n' \
+            'Found riscv64-unknown-elf-gcc, but its target C runtime is incomplete for Doom.' \
+            'On Ubuntu/Debian, install: sudo apt-get install picolibc-riscv64-unknown-elf' \
+            'Hazard3-Doom will use that package through picolibc.specs.' \
+            'The pinned xPack fallback will be used instead for this installer run.'
+        printf '\n'
+    fi
+fi
+
+printf 'No compatible RISC-V toolchain was found; installing pinned xPack fallback.\n\n'
 
 MANAGED_GCC="${INSTALL_DIR}/bin/riscv-none-elf-gcc"
 MANAGED_GCC_VERSION=""
@@ -80,17 +107,6 @@ elif [[ -e "${INSTALL_DIR}" ]]; then
 fi
 
 if [[ ! -x "${MANAGED_GCC}" ]]; then
-    if [[ -n "${CURRENT_GCC}" && "${CURRENT_GCC_VERSION}" == "${EXPECTED_GCC_VERSION}" ]]; then
-        printf '%s\n' \
-            'The compiler on PATH has the desired GCC version, but its exact xPack' \
-            "package release cannot be verified as ${XPACK_VERSION}. Installing the" \
-            'managed pinned xPack release so the local toolchain exactly matches CI.'
-        printf '\n'
-    elif [[ -n "${CURRENT_GCC}" ]]; then
-        printf 'PATH compiler does not match desired GCC %s; installing pinned xPack.\n\n' \
-            "${EXPECTED_GCC_VERSION}"
-    fi
-
     missing_download_tools=0
     for command_name in curl sha256sum tar; do
         if ! command -v "${command_name}" >/dev/null 2>&1; then
@@ -104,8 +120,8 @@ if [[ ! -x "${MANAGED_GCC}" ]]; then
             exit 1
         fi
         printf 'Installing required Ubuntu packages...\n'
-        sudo apt-get update
-        sudo apt-get install -y \
+        sudo apt-get -o Dpkg::Use-Pty=0 update
+        sudo apt-get -o Dpkg::Use-Pty=0 install -y \
             ca-certificates \
             coreutils \
             curl \

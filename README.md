@@ -74,23 +74,63 @@ Hazard3-Doom/
 
 ## Prerequisites
 
-The known working RISC-V toolchain prefix is:
+The documented and tested build-from-source environment is Ubuntu Linux, either
+natively or through **WSL with Ubuntu** on Windows. The repository build and
+development scripts use Bash. On Windows, run the repository `.sh` scripts from
+WSL/Bash rather than PowerShell or `cmd.exe`. Native Windows is used only where
+a step is explicitly labeled for PowerShell, `cmd.exe`, a COM port, or a bundled
+Windows `.exe`.
 
-```text
-/opt/riscv/bin/riscv32-unknown-elf-
-```
+For FPGA builds, the recommended toolchain is the prebuilt
+[OSS CAD Suite](https://github.com/YosysHQ/oss-cad-suite-build). It provides
+Yosys, nextpnr, Project Trellis/ecppack, and related tools for Linux, macOS, and
+Windows. On Ubuntu/WSL, `./scripts/full-install.sh` installs the project's
+expected OSS CAD Suite and other known-good dependencies. That convenience
+installer is Ubuntu/WSL-specific; on macOS or another Linux distribution,
+install the equivalent tools for that platform and make them available on
+`PATH`.
 
-Override it when needed:
+Install a compatible RISC-V bare-metal GCC/GDB toolchain on `PATH`. Normal
+discovery accepts `riscv-none-elf-*`, `riscv32-unknown-elf-*`, and
+`riscv64-unknown-elf-*` tool names. xPack RISC-V GCC also works when its `bin`
+directory is on `PATH`.
+
+On Ubuntu/WSL, one distribution-provided option is:
 
 ```bash
-TOOLCHAIN_PREFIX=/path/to/riscv32-unknown-elf- ./scripts/build.sh
+sudo apt-get update
+sudo apt-get install gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf
 ```
+
+On macOS or another Linux distribution, install an equivalent bare-metal RISC-V
+GCC package for that platform or use xPack. Package names vary, so searching for
+`RISC-V bare-metal GCC install <distribution name or macOS>` is a practical way
+to find current platform-specific instructions.
+
+Use `TOOLCHAIN_PREFIX` only when you need to select a specific installation:
+
+```bash
+TOOLCHAIN_PREFIX=riscv-none-elf- ./scripts/build.sh
+```
+
+The historical `/opt/riscv/bin/riscv32-unknown-elf-` prefix remains supported
+for compatibility, but installing the toolchain under `/opt` is not required.
 
 Python 3 and `pyserial` are required for UART uploads:
 
 ```bash
 python3 -m pip install pyserial
 ```
+
+For an optional native-Windows UART upload environment, use the Windows Python
+executable explicitly:
+
+```powershell
+python.exe -m pip install pyserial
+```
+
+ShellCheck is optional and is used only for repository shell-script validation;
+it is not required for normal builds.
 
 ## Clone and initialize submodules
 
@@ -389,7 +429,7 @@ python3 doom/upload-doom-image.py \
 PowerShell:
 
 ```powershell
-py .\doom\upload-doom-image.py `
+python.exe .\doom\upload-doom-image.py `
     .\build\doom-image\hazard3-doom.h3img `
     --port COM7
 ```
@@ -397,7 +437,7 @@ py .\doom\upload-doom-image.py `
 Then upload a legally obtained IWAD and launch:
 
 ```powershell
-py .\doom\upload-wad.py `
+python.exe .\doom\upload-wad.py `
     C:\path\to\doom1.wad `
     --port COM7 `
     --memory-profile 64m `

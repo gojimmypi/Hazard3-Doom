@@ -66,7 +66,7 @@ placement-sensitive RTL, memory, video, clock, or toolchain changes.
 
 ## Build Scripts
 
-- `build.sh` - Builds the shared Hazard3 monitor firmware. Defaults to the 64 MiB map at 50 MHz. Unless `TOOLCHAIN_PREFIX` is set, it prefers `/opt/riscv/bin/riscv32-unknown-elf-*` when installed and otherwise uses `riscv-none-elf-*` from `PATH`; accepts `HAZARD3_MEMORY_PROFILE`, `HAZARD3_SYS_CLK_HZ`, `HAZARD3_BUILD_DIR`, `TOOLCHAIN_PREFIX`, and `HAZARD3_MONITOR_LINKER_SCRIPT` overrides.
+- `build.sh` - Builds the shared Hazard3 monitor firmware. Defaults to the 64 MiB map at 50 MHz. Unless `TOOLCHAIN_PREFIX` is set, it searches `PATH` for supported RISC-V bare-metal prefixes (`riscv-none-elf-*`, `riscv32-unknown-elf-*`, or `riscv64-unknown-elf-*`) and uses the historical `/opt/riscv/bin/riscv32-unknown-elf-*` location only as a compatibility fallback; accepts `HAZARD3_MEMORY_PROFILE`, `HAZARD3_SYS_CLK_HZ`, `HAZARD3_BUILD_DIR`, `TOOLCHAIN_PREFIX`, and `HAZARD3_MONITOR_LINKER_SCRIPT` overrides.
 - `build-ecp5-bitstream-common.sh` - Internal shared ECP5 synthesis/place-and-route implementation used by the board-specific bitstream wrappers. Normally do not invoke it directly.
 - `build-ulx3s-85f-bitstream.sh` - ULX3S 85F entry point for the shared ECP5 flow.
 - `build-ulx3s-85f-doom.sh` - Complete ULX3S 85F build: monitor, boot image, FPGA bitstream, Doom image, and SD-card staging files under `build/ulx3s-85f/`.
@@ -324,8 +324,39 @@ test run.
 
 ## Setup and Toolchain Helpers
 
-- `install-riscv-toolchain.sh` - Installs xPack `riscv-none-elf-gcc` under `~/.local/xPacks` and adds its `current/bin` directory to `PATH` for Linux/WSL builds. Build scripts automatically use the historical `/opt/riscv/bin/riscv32-unknown-elf-*` toolchain when present, otherwise `riscv-none-elf-*` from `PATH`; an explicit `TOOLCHAIN_PREFIX` takes precedence.
+- `full-install.sh` - Ensures the development environment is usable without replacing compatible tools unnecessarily. It reuses a supported RISC-V toolchain, CMake 3.28 or newer, qualified Yosys/nextpnr/Project Trellis tools, and an available OpenOCD installation. OSS CAD Suite is installed only when qualified FPGA tools are missing or incompatible. Use `--install-oss-cad-suite` to force the managed OSS CAD Suite release, or `--fpga-tools-from-source` to force the pinned source builds.
+- `install-riscv-toolchain.sh` - Reuses a compatible RISC-V bare-metal toolchain when one is already available and otherwise installs xPack `riscv-none-elf-gcc` under `~/.local/xPacks`. Build scripts prefer supported prefixes on `PATH`, retain the historical `/opt/riscv/bin/riscv32-unknown-elf-*` location as a compatibility fallback, and let an explicit `TOOLCHAIN_PREFIX` take precedence. Ubuntu/Debian `riscv64-unknown-elf-*` toolchains use Picolibc when the matching package/specs are installed.
 - `setup-xpack-riscv-gcc.cmd` - Installs/configures the xPack GNU RISC-V Embedded GCC toolchain under `bin/riscv-gcc` for native Windows builds.
+
+### Safe validation after toolchain changes
+
+Do not use `full-install.sh` as the first regression test on an established machine. Start with the non-mutating requirements check and the real Doom build.
+
+For native Ubuntu/Debian Linux using the distro RISC-V toolchain:
+
+```bash
+command -v riscv64-unknown-elf-gcc
+dpkg -s picolibc-riscv64-unknown-elf | grep '^Status:'
+./scripts/requirements-check.sh
+./scripts/install-riscv-toolchain.sh
+./scripts/build-doom-noncombat.sh
+./scripts/test-scripts.sh
+```
+
+The installer check should report that the existing `riscv64-unknown-elf-` toolchain is reused and xPack is skipped. The Doom build should report `Target C runtime: picolibc` and produce `build/doom-image-noncombat/hazard3-doom.h3img`.
+
+For WSL systems that already use the historical `/opt/riscv` Newlib toolchain, test the toolchain actually present instead of assuming a distro prefix:
+
+```bash
+command -v /opt/riscv/bin/riscv32-unknown-elf-gcc
+/opt/riscv/bin/riscv32-unknown-elf-gcc --version
+./scripts/requirements-check.sh
+./scripts/install-riscv-toolchain.sh
+./scripts/build-doom-noncombat.sh
+./scripts/test-scripts.sh
+```
+
+Run `./scripts/full-install.sh` afterward only when testing installer idempotence or setting up a machine. On an already-qualified environment it should report that compatible CMake, FPGA tools, OpenOCD, and the RISC-V toolchain are being reused.
 
 ## Supercon Helpers
 

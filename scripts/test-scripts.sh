@@ -407,6 +407,201 @@ check_seed_matrix()
     fi
 }
 
+check_riscv_runtime_detection()
+{
+    local mock_root="${TEST_DIR}/riscv-runtime-mock"
+    local mock_bin="${mock_root}/bin"
+    local mock_specs="${mock_root}/picolibc/picolibc.specs"
+    local tool=""
+
+    rm -rf -- "${mock_root}"
+    mkdir -p -- "${mock_bin}" "${mock_root}/picolibc"
+    : > "${mock_specs}"
+
+    cat > "${mock_bin}/riscv64-unknown-elf-gcc" <<'EOF_MOCK_GCC'
+#!/bin/bash
+set -u
+specs=""
+
+for arg in "$@"; do
+    case "${arg}" in
+    -dumpmachine)
+        printf '%s\n' riscv64-unknown-elf
+        exit 0
+        ;;
+    -print-file-name=picolibc.specs)
+        printf '%s\n' "${MOCK_PICOLIBC_SPECS}"
+        exit 0
+        ;;
+    -print-file-name=libc.a|-print-file-name=libm.a|-print-file-name=libgcc.a|-print-file-name=libnosys.a)
+        # Emulate GCC returning the unresolved filename. Picolibc detection must
+        # not treat this query as authoritative because specs can add link paths.
+        printf '%s\n' "${arg#-print-file-name=}"
+        exit 0
+        ;;
+    --specs=*)
+        specs="${arg#--specs=}"
+        ;;
+    esac
+done
+
+for arg in "$@"; do
+    if [[ "${arg}" == "-c" ]]; then
+        exit 0
+    fi
+done
+
+if [[ -z "${specs}" ]]; then
+    exit 1
+fi
+
+saw_linker_script=0
+saw_libc=0
+saw_libm=0
+saw_libgcc=0
+for arg in "$@"; do
+    case "${arg}" in
+    -T*)
+        saw_linker_script=1
+        ;;
+    -lc)
+        saw_libc=1
+        ;;
+    -lm)
+        saw_libm=1
+        ;;
+    -lgcc)
+        saw_libgcc=1
+        ;;
+    esac
+done
+
+if (( saw_linker_script == 1 && saw_libc == 1 && saw_libm == 1 && saw_libgcc == 1 )); then
+    exit 0
+fi
+
+exit 1
+EOF_MOCK_GCC
+    chmod +x -- "${mock_bin}/riscv64-unknown-elf-gcc"
+
+    cat > "${mock_bin}/riscv-none-elf-gcc" <<'EOF_BAD_GCC'
+#!/bin/bash
+exit 1
+EOF_BAD_GCC
+    chmod +x -- "${mock_bin}/riscv-none-elf-gcc"
+
+    for tool in objcopy objdump size ar nm; do
+        cat > "${mock_bin}/riscv-none-elf-${tool}" <<'EOF_MOCK_TOOL'
+#!/bin/bash
+exit 0
+EOF_MOCK_TOOL
+        chmod +x -- "${mock_bin}/riscv-none-elf-${tool}"
+    done
+
+    for tool in objcopy objdump size ar nm; do
+        cat > "${mock_bin}/riscv64-unknown-elf-${tool}" <<'EOF_MOCK_TOOL'
+#!/bin/bash
+exit 0
+EOF_MOCK_TOOL
+        chmod +x -- "${mock_bin}/riscv64-unknown-elf-${tool}"
+    done
+
+    # Each probe intentionally runs in a subshell so its temporary environment
+    # cannot leak into the following test. ShellCheck cannot infer that intent.
+    # shellcheck disable=SC2030,SC2031
+    if (
+        export MOCK_PICOLIBC_SPECS="${mock_specs}"
+        export HAZARD3_DOOM_PICOLIBC_SPECS="${mock_specs}"
+        export PATH="${mock_bin}:${PATH}"
+        # shellcheck disable=SC1091
+        source "${SCRIPT_DIR}/riscv-doom-runtime.sh"
+        hazard3_configure_doom_runtime riscv64-unknown-elf-
+        [[ "${HAZARD3_DOOM_RUNTIME_MODE}" == "picolibc" ]]
+        [[ "${HAZARD3_DOOM_RUNTIME_SPECS}" == "${mock_specs}" ]]
+        [[ "${HAZARD3_DOOM_RUNTIME_LIBRARIES[*]}" == "-lc -lm -lgcc" ]]
+    ); then
+        pass 'riscv-doom-runtime.sh: Picolibc specs compile/link detection'
+    else
+        fail 'riscv-doom-runtime.sh: Picolibc specs compile/link detection'
+    fi
+
+    # Each probe intentionally runs in a subshell so its temporary environment
+    # cannot leak into the following test. ShellCheck cannot infer that intent.
+    # shellcheck disable=SC2030,SC2031
+    if (
+        export MOCK_PICOLIBC_SPECS="${mock_specs}"
+        export HAZARD3_DOOM_PICOLIBC_SPECS="${mock_specs}"
+        export PATH="${mock_bin}:${PATH}"
+        unset TOOLCHAIN_PREFIX
+        # shellcheck disable=SC1091
+        source "${SCRIPT_DIR}/riscv-doom-runtime.sh"
+        selected_prefix="$(hazard3_find_compatible_riscv_prefix)"
+        [[ "${selected_prefix}" == "riscv64-unknown-elf-" ]]
+    ); then
+        pass 'riscv-doom-runtime.sh: skips incompatible earlier toolchain'
+    else
+        fail 'riscv-doom-runtime.sh: skips incompatible earlier toolchain'
+    fi
+
+    # Each probe intentionally runs in a subshell so its temporary environment
+    # cannot leak into the following test. ShellCheck cannot infer that intent.
+    # shellcheck disable=SC2030,SC2031
+    if (
+        export MOCK_PICOLIBC_SPECS="${mock_specs}"
+        export HAZARD3_DOOM_PICOLIBC_SPECS="${mock_specs}"
+        export PATH="${mock_bin}:${PATH}"
+        export TOOLCHAIN_PREFIX=riscv-none-elf-
+        # shellcheck disable=SC1091
+        source "${SCRIPT_DIR}/riscv-doom-runtime.sh"
+        discovery_status=0
+        if hazard3_find_compatible_riscv_prefix >/dev/null; then
+            discovery_status=0
+        else
+            discovery_status=$?
+        fi
+        [[ "${discovery_status}" -eq 2 ]]
+    ); then
+        pass 'riscv-doom-runtime.sh: explicit TOOLCHAIN_PREFIX is authoritative'
+    else
+        fail 'riscv-doom-runtime.sh: explicit TOOLCHAIN_PREFIX is authoritative'
+    fi
+
+    rm -rf -- "${mock_root}"
+}
+
+check_picolibc_adapter_contract()
+{
+    local source="${REPO_ROOT}/doom/hazard3_picolibc.c"
+    local pattern=""
+    local missing=0
+    local -a required_patterns=(
+        'FDEV_SETUP_STREAM('
+        'FILE *const stdin ='
+        'FILE *const stdout ='
+        'FILE *const stderr ='
+        'int rename(const char* old_path, const char* new_path)'
+    )
+
+    if [[ ! -f "${source}" ]]; then
+        fail 'hazard3_picolibc.c: stdio/rename adapter contract'
+        printf '      missing source: %s\n' "${source}" >&2
+        return
+    fi
+
+    for pattern in "${required_patterns[@]}"; do
+        if ! grep -Fq -- "${pattern}" "${source}"; then
+            missing=1
+            printf '      missing adapter contract: %s\n' "${pattern}" >&2
+        fi
+    done
+
+    if (( missing == 0 )); then
+        pass 'hazard3_picolibc.c: stdio/rename adapter contract'
+    else
+        fail 'hazard3_picolibc.c: stdio/rename adapter contract'
+    fi
+}
+
 check_sweep_dispatcher()
 {
     local target
@@ -628,6 +823,8 @@ main()
     report_target_specific_scripts
     check_seed_matrix
     check_sweep_dispatcher
+    check_riscv_runtime_detection
+    check_picolibc_adapter_contract
 
     if git -C "${REPO_ROOT}" rev-parse --show-toplevel >/dev/null 2>&1; then
         run_quiet 'check-executable.sh: all tracked shell script permissions' \

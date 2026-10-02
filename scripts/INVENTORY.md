@@ -12,9 +12,9 @@ Project version: v0.2.0
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 79
+Files inventoried: 80
 
-Total bytes: 660291
+Total bytes: 690219
 
 ## Verification
 
@@ -27,23 +27,23 @@ should be identified before a public release.
 
 | Path | Bytes | SHA-256 | Component | Kind |
 |---|---:|---|---|---|
-| `README.md` | 21171 | `83341832702de1f3d936559f8ca7f494985f26fcda1c86904a051a54e11642cf` | REVIEW | Markdown documentation |
+| `README.md` | 23336 | `141a5bf9189bedec3cc044004a96f5ead0514bf006471d32478e82732aca9a4c` | REVIEW | Markdown documentation |
 | `apply-doom-noncombat.py` | 6775 | `3a8062684727b572d903c3a53ef729d64438b6f3c2bdfdd5c426bfe5bec08658` | REVIEW | File |
-| `build-coremark.sh` | 7238 | `7e531275b0d8d19818227bb1462c3e82b6b8cb0a1776b52095f0b2e9b870e6a9` | REVIEW | Shell script |
-| `build-doom-noncombat.sh` | 4859 | `b939eff401516c7f85bf32d8d16e939c846f8afbd5e979bed983c0bc5d755762` | REVIEW | Shell script |
+| `build-coremark.sh` | 7696 | `bf3456ab3951439cde96e6301f961526893f80e51e02ca5d19f0de933008e2f6` | REVIEW | Shell script |
+| `build-doom-noncombat.sh` | 5708 | `1a904b485825762b1502ede99245f64db1121e3d8a3d2fee944fad9a08218b23` | REVIEW | Shell script |
 | `build-ecp5-bitstream-common.sh` | 27214 | `6f59d138fd59ac1fe6cb21267847d5eb0bce98b79a10f6c892f23059aa467d10` | REVIEW | Shell script |
 | `build-supercon10-wad.py` | 6988 | `9d69e095203df153dad20f839f8ce049ef62b4433521f4c1804938043c751da6` | REVIEW | File |
 | `build-ulx3s-12f-bitstream.sh` | 1611 | `c3ca7d2f9538a5f3daf10f7e8ad67a3d5c3032e5922ad95876b9522edf2d5bdd` | REVIEW | Shell script |
-| `build-ulx3s-12f-doom.sh` | 10509 | `4ab24646f1d311b1357e67498fec3b6c704ebd89df8f8bc12bb5afee68cf215f` | REVIEW | Shell script |
+| `build-ulx3s-12f-doom.sh` | 10967 | `4d571997082c8d249c1861db46b547aa3352f0129a9a0a5fd8de979d84f48ddd` | REVIEW | Shell script |
 | `build-ulx3s-12f-sweep_summary.md` | 7158 | `40260f011c5421d2e8c2b345416ba16495c193993ee9fdd36323bd029f6b83c6` | REVIEW | Markdown documentation |
 | `build-ulx3s-85f-bitstream.sh` | 1538 | `9b5586386fa461ed236a18e6ebee549d91b70bc44fdcdac8176eec655cc21a5c` | REVIEW | Shell script |
-| `build-ulx3s-85f-doom.sh` | 8490 | `5cd7a8dfd7ddbb4c47654cb55cb915adc35c9726141c00ac5312d2c006c146a8` | REVIEW | Shell script |
+| `build-ulx3s-85f-doom.sh` | 8948 | `8b118d0dde9bdc5eb91e1b9199a47fd40df89211e61805e39b3ba8940a51c01f` | REVIEW | Shell script |
 | `build-ulx3s-85f-sweep_summary.md` | 6794 | `2cfdbef52e72ccfc15efffe07105c067fd1ab32a54c3382094c5f9a3d31e4eb2` | REVIEW | Markdown documentation |
 | `build-ulx4m-ld-bitstream.sh` | 1544 | `79f607d5031939d1bc08374ce26b7cc5d14aba6eac19459e76bbd622a5a03305` | REVIEW | Shell script |
-| `build-ulx4m-ld-doom.sh` | 8714 | `9a48fff933acff7b42d08186e9200b53c6d6308fbe1f8ca3ca550c9ca4a173c4` | REVIEW | Shell script |
+| `build-ulx4m-ld-doom.sh` | 9172 | `7b0e548a1e337b0c3b58422df593d246a17d5321dcf7c5a355f2cb8886ae1001` | REVIEW | Shell script |
 | `build-ulx4m-ld-sweep_summary.md` | 8517 | `f92171f9f40d55d815d39a85336320089a93bd6b8f1ef1a4aab620a220d68ac2` | REVIEW | Markdown documentation |
 | `build-xpack.cmd` | 9704 | `8672fbf2aab466a9478fdc2cc93f01604659d1ad302243d82307204db43a66b3` | REVIEW | File |
-| `build.sh` | 5591 | `797c993325ae5a902c4317e24e0c21e71391755401ebdccac49c76db0d7ed1b5` | REVIEW | Shell script |
+| `build.sh` | 6049 | `6bbc54624d33449aa073227dcf7599f544b8ee307b7ef9d8961f1fcea6dbcff1` | REVIEW | Shell script |
 | `check-executable.sh` | 3297 | `1317c862f081f22633d205ba10f3249e15810e3489c6948a8bb8761ca9ffae8b` | REVIEW | Shell script |
 | `check-nettype.sh` | 4540 | `f20f1011753d02d0c618baab5998c4ae6c4403cc7b2df46177ff6c5584468ef2` | REVIEW | Shell script |
 | `check-system-requirements.sh` | 6102 | `56da72e7f61a3d82711aa27fa9bda8d481ae8c90cdf72a3cd410e6ad7bc5ba45` | REVIEW | Shell script |
@@ -54,7 +54,7 @@ should be identified before a public release.
 | `doomgeneric-version.sh` | 1591 | `e461166288862ba39a5d5bbd4237b696ccb11153038ba3011665ad636c917971` | REVIEW | Shell script |
 | `flash-ulx3s-persistent.sh` | 1812 | `ca065c362fb91afc4c981810c3d06d83c90cc8b899216d2988560961e824bf20` | REVIEW | Shell script |
 | `full-clean.sh` | 6201 | `2e167df0d07e94a30dbb12b489ed27154f17f6117e67352ff62b18559c9fef8e` | REVIEW | Shell script |
-| `full-install.sh` | 9448 | `0cea81d0e9fb3b33d52076881d494066950c01b1506bcff842132b20cb4a0fc4` | REVIEW | Shell script |
+| `full-install.sh` | 15507 | `f58641e847ef9a54369dd8e7b21637f3cf1e5f4dc0c6e981513eb4c811dd93ca` | REVIEW | Shell script |
 | `gdb/load-ulx3s-12f-monitor.gdb` | 1166 | `3688da0d54a699aada2fd37ace0d6480232d7c1adec7d26e841847c88b9a6d3a` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `gdb/load-ulx3s-85f-monitor.gdb` | 1086 | `dc1647c8a34c072b6d0367ae13ae7ca3acdf9d4e14bfaffa2326f42a697bd249` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
 | `gdb/load-ulx4m-ld-85f-monitor.gdb` | 1238 | `670bea99fe8f94ec55d669ff1580b3c3d84f3abd607d92aa4fb842d162f27f73` | xPack GNU RISC-V Embedded GCC/GDB runtime | File |
@@ -68,24 +68,25 @@ should be identified before a public release.
 | `hazard3-debug.gdb` | 1181 | `38a49cf5e41db070c8c21402e7b797c0d0e56f7d50d15de0dfdfbef39a4ac4a3` | REVIEW | File |
 | `hazard3-doom-source-status.sh` | 22308 | `c6703e4db0945c13f3d9aa8846ec710c25787608cd6f5610e617a070404daef7` | REVIEW | Shell script |
 | `hazard3-submodule.sh` | 8734 | `c090ec89d12d69360dd26592c6baf913279a15718c852747254f3dae0eb0d3bd` | REVIEW | Shell script |
-| `install-cmake.sh` | 1531 | `7b5879f991b5320e95d2f83e86b9a7376b52dee2310ed05aec57235bb06e6872` | REVIEW | Shell script |
-| `install-nextpnr-ecp5.sh` | 12496 | `63df620ac5f5cd7e452f4507f9e2d61c7d46fa39ec8573fe5e7c807bb8688db1` | REVIEW | Shell script |
-| `install-oss-cad-suite.sh` | 8173 | `6e2cbbc56ddc5e43a232726af1bab03250b704cb5ce5ceaf55e6a87969f3432e` | REVIEW | Shell script |
-| `install-riscv-toolchain.sh` | 6470 | `bf5d276e202a955cbf365d06af62c54ee336ecd6a1090a0f4f78e4ffcbbb6e37` | REVIEW | Shell script |
-| `install-yosys.sh` | 8778 | `237947361bd84fd3ced6b57d2ef886d06de5e104f2a88f42a2a257d0af9d21cd` | REVIEW | Shell script |
+| `install-cmake.sh` | 1607 | `7105517e156b7338d3e6a7a930866794084e18e67d706ab11c2731da63ba34f0` | REVIEW | Shell script |
+| `install-nextpnr-ecp5.sh` | 12534 | `d81421e2da0b082e277bc1bb5241dacf13fb6148e9511810681c412f803d8d32` | REVIEW | Shell script |
+| `install-oss-cad-suite.sh` | 8211 | `4d19a2992c4a23eee95f9c0dfa920de28770804497226b035b8db741d0b98698` | REVIEW | Shell script |
+| `install-riscv-toolchain.sh` | 7289 | `23aa7c22b9298fd52ad9db6c7697bf73adfb56aa1a7cefc71c7c3b4f36ea90ec` | REVIEW | Shell script |
+| `install-yosys.sh` | 8816 | `f7fd39609e7f597f7a2e13cd36b440719fb9204994b4798a4d84a8def6799aa5` | REVIEW | Shell script |
 | `inventory.sh` | 18753 | `e9aebd39fbce7b9072abd6d6c7bb3f41f0e24e5b5b0585709e2bf5077536e66b` | Hazard3-Doom repository | Shell script |
 | `load-firmware-12f.sh` | 5005 | `cb8b0ec2524e760b63656af0cd894459ec5015b37f14d88f4eba4283da87cc66` | REVIEW | Shell script |
 | `load-firmware-direct-verify.py` | 6691 | `3092a9b9a8447ba83ea325863e1d6b8ac4583b7580aef24465de1934d0af48f5` | REVIEW | File |
 | `load-firmware.bat` | 3233 | `3a8f6a2cb06ae93ae85db245320b9834547d96dc33c3967fe4106e0d524e5de5` | REVIEW | File |
-| `load-firmware.sh` | 6247 | `f5c51daf74976dbf1228bec5ede0667833ff62463ea3d9dd5f3900760de5a4d1` | REVIEW | Shell script |
+| `load-firmware.sh` | 6463 | `ca9f902c8dce1e20d089a66b4328e0c10d0446d0c9d137a12310fcc701cbfefb` | REVIEW | Shell script |
 | `load-fpga-bitstream.bat` | 2682 | `b353e67ed74dcaf90b2edb349ab58dfcb5e9ee484b28f3ca031c8cf5599ed957` | REVIEW | File |
 | `make-boot-hex.py` | 2775 | `1f0eb80ad684ed1303fca182eec9b0160c8e20cd165dc8cf710a5c38ec2696f2` | REVIEW | File |
-| `peek-elf.sh` | 24599 | `a200b1dcd4512ade210dc6b773a0425f0c868ee06221e8dc1d08c8ad971d91bb` | REVIEW | Shell script |
+| `peek-elf.sh` | 25041 | `d6893ccbb714025037dd4f416f455e9d49cd94d8732b6fec6eb82736b6223113` | REVIEW | Shell script |
 | `publish-check.sh` | 3069 | `917f7ad508e708a54a886b7599f26d54436d20501194de122f4e235090876178` | REVIEW | Shell script |
 | `refresh-version.sh` | 4480 | `18418ed6f45af6bef901313e6a2dfbc51c8b6ff59a1038d4a9a793ece455e875` | REVIEW | Shell script |
-| `requirements-check.sh` | 36179 | `5fb9ac233cdf59e81cbcfd978c767d31c723a834a477b12a51675e4988a559f5` | REVIEW | Shell script |
+| `requirements-check.sh` | 37562 | `d6b2ac04c534f3cd2c748a90df832fcd61d2096888bfa3ca14f6f5c07a589507` | REVIEW | Shell script |
 | `restart-from-monitor.py` | 2180 | `62fafcba0da53b21b5704f221c655c63eb5520f2def0fbe7312005a65c59dd2d` | REVIEW | File |
 | `return-to-monitor.py` | 2144 | `0214047d05bf37b06453388892bc8c5a13a49af1154f962e1680eaa644316ceb` | REVIEW | File |
+| `riscv-doom-runtime.sh` | 9656 | `d4cd4f8b28e07bc93e6225772831906e2745e7017361cffd942a8a6382cdd961` | REVIEW | Shell script |
 | `run-coremark.sh` | 5353 | `beeafffbc6ae911170dfcf44a5bc12796da180780ae1cb9b37e283017ac3d366` | REVIEW | Shell script |
 | `setup-doomgeneric.sh` | 3963 | `1006e21f497f6553eb8bf30009cf0c75b57dd54f4720c7b6d172a874b6236560` | REVIEW | Shell script |
 | `setup-submodules.sh` | 2697 | `50ab220e349763a8af70edc8228832d2f49ce39645e61a1ac4eb69142f3b8023` | REVIEW | Shell script |
@@ -103,6 +104,6 @@ should be identified before a public release.
 | `sweep-ulx4m-ld.sh` | 16767 | `b6cee368fee2ba1a8f1bd4905bea0ad2c667c00f60366d5692e0ea0330ed20d6` | REVIEW | Shell script |
 | `sweep.sh` | 980 | `0ea3290a5ef9f6fe7a386d46add42cf7bb0e217023beb2b79713a463aa92f9d6` | REVIEW | Shell script |
 | `test-readthedocs.sh` | 11128 | `cb4c49cf3e3065fdc851d66c193b23966d615c10721cdb889e7ae4cdd0d70f4b` | REVIEW | Shell script |
-| `test-scripts.sh` | 21188 | `9b35352c929634dfb206bfa0db7c972d46c97c5cbe73c6f27e5d9bdaa34a2c21` | REVIEW | Shell script |
+| `test-scripts.sh` | 27047 | `af41d69e75ac45ff332f8171f44f5f315b86f5fcb009542803a984751081892c` | REVIEW | Shell script |
 | `ulx4m-bootloader.sh` | 30139 | `70842c33881cf42c62d4a290084effed82128d686c71ae957f56347a5e92a8f1` | REVIEW | Shell script |
 | `watch-ecp5-sweep-results.sh` | 18404 | `112a79ced79b6f66daf1673274482298a2b283f5eb77dd0dd6309eec93b89754` | REVIEW | Shell script |

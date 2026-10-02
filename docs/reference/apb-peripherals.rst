@@ -540,11 +540,12 @@ profile:
    make -C examples SYS_CLK_HZ=40000000
 
 The makefiles follow the same toolchain conventions as the main project. They
-honor ``TOOLCHAIN_PREFIX`` first, also accept ``CROSS_COMPILE``, recognize the
-legacy ``/opt/riscv/bin/riscv32-unknown-elf-`` location, and otherwise use
-``riscv-none-elf-*`` from ``PATH``. The normal full installer places the xPack
-compiler on ``PATH``. A repo-local ``bin/riscv-gcc`` installation is retained
-as a compatibility fallback. Windows ``.exe`` tools are detected automatically
+honor ``TOOLCHAIN_PREFIX`` first, also accept ``CROSS_COMPILE``, prefer a
+supported RISC-V bare-metal toolchain from ``PATH``, and retain the legacy
+``/opt/riscv/bin/riscv32-unknown-elf-`` location only as a compatibility
+fallback. The normal full installer places the xPack compiler on ``PATH``. A
+repo-local ``bin/riscv-gcc`` installation is retained as a compatibility
+fallback. Windows ``.exe`` tools are detected automatically
 when their path is visible from Bash/WSL; ``EXEEXT=.exe`` can also be set
 explicitly.
 

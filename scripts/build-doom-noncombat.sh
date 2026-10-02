@@ -35,19 +35,42 @@ else
     echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
 fi
 
-if [[ -z "${TOOLCHAIN_PREFIX:-}" ]]; then
-    if [[ -x /opt/riscv/bin/riscv32-unknown-elf-gcc ]]; then
-        TOOLCHAIN_PREFIX="/opt/riscv/bin/riscv32-unknown-elf-"
-    elif command -v riscv-none-elf-gcc >/dev/null 2>&1; then
-        TOOLCHAIN_PREFIX="riscv-none-elf-"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RISCV_DOOM_RUNTIME_SCRIPT="${SCRIPT_DIR}/riscv-doom-runtime.sh"
+if [[ ! -r "${RISCV_DOOM_RUNTIME_SCRIPT}" ]]; then
+    printf 'Missing required helper: %s\n' "${RISCV_DOOM_RUNTIME_SCRIPT}" >&2
+    exit 1
+fi
+
+# shellcheck disable=SC1090
+source "${RISCV_DOOM_RUNTIME_SCRIPT}"
+
+requested_toolchain_prefix="${TOOLCHAIN_PREFIX:-}"
+selected_toolchain_prefix=""
+if selected_toolchain_prefix="$(hazard3_find_compatible_riscv_prefix)"; then
+    TOOLCHAIN_PREFIX="${selected_toolchain_prefix}"
+else
+    discovery_status=$?
+    if (( discovery_status == 2 )); then
+        printf 'ERROR: TOOLCHAIN_PREFIX is set but is not compatible with Hazard3-Doom: %s\n' \
+            "${requested_toolchain_prefix}" >&2
     else
-        echo "ERROR: RISC-V GCC toolchain not found" >&2
-        exit 1
+        printf '%s\n' \
+            'ERROR: No compatible RISC-V GCC toolchain was found.' \
+            'Install one with: ./scripts/install-riscv-toolchain.sh' >&2
     fi
+    exit 1
 fi
 export TOOLCHAIN_PREFIX
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if ! hazard3_configure_doom_runtime "${TOOLCHAIN_PREFIX}"; then
+    printf '%s\n' \
+        'ERROR: Selected RISC-V toolchain lacks the target C runtime required by Doom.' \
+        "Compiler prefix: ${TOOLCHAIN_PREFIX}" \
+        "${HAZARD3_DOOM_RUNTIME_ERROR}" >&2
+    exit 1
+fi
+
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PREPARE="${ROOT_DIR}/doom/prepare-doomgeneric.sh"
 BUILD="${ROOT_DIR}/doom/build-doom-image.sh"
@@ -129,14 +152,14 @@ require_file "${G_OBJECT}"
 require_file "${R_OBJECT}"
 require_file "${OUTPUT}"
 
-"${NM}" "${G_OBJECT}" | grep -Fq 'hazard3_noncombat_g_game_enabled' || {
+if ! "${NM}" "${G_OBJECT}" | grep -F 'hazard3_noncombat_g_game_enabled' >/dev/null; then
     echo 'ERROR: compiled g_game.o lacks the noncombat verification symbol.' >&2
     exit 1
-}
-"${NM}" "${R_OBJECT}" | grep -Fq 'hazard3_noncombat_r_things_enabled' || {
+fi
+if ! "${NM}" "${R_OBJECT}" | grep -F 'hazard3_noncombat_r_things_enabled' >/dev/null; then
     echo 'ERROR: compiled r_things.o lacks the noncombat verification symbol.' >&2
     exit 1
-}
+fi
 
 printf '\nNONCOMBAT BUILD VERIFIED\n'
 printf '  armor:          200%% (type 2)\n'

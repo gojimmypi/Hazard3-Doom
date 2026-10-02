@@ -17,10 +17,10 @@ Sous PowerShell :
 
 .. code-block:: powershell
 
-   py -m venv .venv-docs
+   python.exe -m venv .venv-docs
    .\.venv-docs\Scripts\Activate.ps1
-   py -m pip install -r .\docs\requirements.txt
-   py -m sphinx -W --keep-going -b html .\docs .\docs\_build\html
+   python.exe -m pip install -r .\docs\requirements.txt
+   python.exe -m sphinx -W --keep-going -b html .\docs .\docs\_build\html
 
 Ouvrez ``docs/_build/html/index.html`` après un build réussi.
 

@@ -52,26 +52,52 @@ set -euo pipefail
     --check-file "${BASH_SOURCE[0]}" || true
 
 if [[ -z "${CC:-}" ]]; then
+    for candidate in \
+        riscv-none-elf-gcc \
+        riscv32-unknown-elf-gcc \
+        riscv64-unknown-elf-gcc
+    do
+        if command -v "${candidate}" >/dev/null 2>&1; then
+            CC="${candidate}"
+            break
+        fi
+    done
+fi
+
+if [[ -z "${CC:-}" ]]; then
     if [[ -x /opt/riscv/bin/riscv32-unknown-elf-gcc ]]; then
         CC="/opt/riscv/bin/riscv32-unknown-elf-gcc"
-    elif command -v riscv-none-elf-gcc >/dev/null 2>&1; then
-        CC="riscv-none-elf-gcc"
-    else
-        echo "ERROR: RISC-V GCC not found" >&2
-        exit 1
     fi
+fi
+
+if [[ -z "${CC:-}" ]]; then
+    echo "ERROR: RISC-V GCC not found on PATH" >&2
+    exit 1
 fi
 readonly CC
 
 if [[ -z "${READELF:-}" ]]; then
+    for candidate in \
+        riscv-none-elf-readelf \
+        riscv32-unknown-elf-readelf \
+        riscv64-unknown-elf-readelf
+    do
+        if command -v "${candidate}" >/dev/null 2>&1; then
+            READELF="${candidate}"
+            break
+        fi
+    done
+fi
+
+if [[ -z "${READELF:-}" ]]; then
     if [[ -x /opt/riscv/bin/riscv32-unknown-elf-readelf ]]; then
         READELF="/opt/riscv/bin/riscv32-unknown-elf-readelf"
-    elif command -v riscv-none-elf-readelf >/dev/null 2>&1; then
-        READELF="riscv-none-elf-readelf"
-    else
-        echo "ERROR: RISC-V readelf not found" >&2
-        exit 1
     fi
+fi
+
+if [[ -z "${READELF:-}" ]]; then
+    echo "ERROR: RISC-V readelf not found on PATH" >&2
+    exit 1
 fi
 readonly READELF
 
