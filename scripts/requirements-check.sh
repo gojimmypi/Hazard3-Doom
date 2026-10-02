@@ -37,6 +37,7 @@ set -o pipefail
     --check-file "${BASH_SOURCE[0]}" || true
 
 CHECK_PROFILE="full"
+REQUIRE_SOURCE_BUILD_RESOURCES=0
 PASS_COUNT=0
 WARN_COUNT=0
 FAIL_COUNT=0
@@ -82,12 +83,14 @@ fi
 usage()
 {
     cat <<EOF_USAGE
-Usage: ${0##*/} [--test-scripts]
+Usage: ${0##*/} [--test-scripts] [--fpga-tools-from-source]
 
 With no options, check the full Hazard3-Doom development environment.
+Source-build RAM is advisory unless --fpga-tools-from-source is specified.
 
-  --test-scripts  Check only prerequisites needed by scripts/test-scripts.sh.
-  -h, --help      Show this help text.
+  --test-scripts            Check only prerequisites needed by scripts/test-scripts.sh.
+  --fpga-tools-from-source  Require the RAM target for local Yosys/nextpnr source builds.
+  -h, --help                Show this help text.
 EOF_USAGE
 }
 
@@ -97,6 +100,9 @@ parse_args()
         case "$1" in
         --test-scripts)
             CHECK_PROFILE="test-scripts"
+            ;;
+        --fpga-tools-from-source)
+            REQUIRE_SOURCE_BUILD_RESOURCES=1
             ;;
         -h|--help)
             usage
@@ -918,7 +924,8 @@ else
 fi
 
 if [[ "${CHECK_PROFILE}" == "full" ]]; then
-    if ! check_system_requirements "${REPO_ROOT:-.}" pass warn fail; then
+    if ! check_system_requirements \
+        "${REPO_ROOT:-.}" pass warn fail "${REQUIRE_SOURCE_BUILD_RESOURCES}"; then
         :
     fi
 fi

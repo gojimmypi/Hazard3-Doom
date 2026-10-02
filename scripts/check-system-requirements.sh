@@ -18,14 +18,20 @@
 # -----------------------------------------------------------------------------
 
 # Verify this script against the recorded inventory without blocking normal execution.
-"$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
-    --check-file "${BASH_SOURCE[0]}" || true
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+INVENTORY_SCRIPT="${SCRIPT_DIR}/inventory.sh"
+
+# Verify this script against the recorded inventory when running from a full
+# repository checkout. The standalone bootstrap intentionally omits inventory.sh.
+if [[ -x "${INVENTORY_SCRIPT}" ]]; then
+    "${INVENTORY_SCRIPT}" --check-file "${BASH_SOURCE[0]}" || true
+fi
 
 # Keep the thresholds and resource detection in one place. This file may be
 # executed directly or sourced by other Hazard3-Doom scripts.
 # /proc/meminfo reports guest-visible RAM, which may be less than the amount
 # configured in a VM or physical host. Treat 7168 MiB guest-visible RAM as
-# satisfying the documented 8 GiB configured-memory minimum.
+# satisfying the documented 8 GiB source-build RAM target.
 H3_MIN_CONFIGURED_RAM_GIB=8
 H3_MIN_RAM_MIB=7168
 H3_MIN_CPU_COUNT=2
@@ -53,6 +59,7 @@ check_system_requirements()
     local pass_callback="${2:-system_requirements_pass}"
     local warn_callback="${3:-system_requirements_warn}"
     local fail_callback="${4:-system_requirements_fail}"
+    local require_source_build_resources="${5:-1}"
     local ram_kib=0
     local ram_mib=0
     local cpu_count=0
@@ -90,10 +97,11 @@ check_system_requirements()
     disk_avail_gib=$((disk_avail_kib / 1024 / 1024))
 
     printf '\n=== System resources ===\n'
-    printf 'Minimum: %d GiB configured RAM (%d MiB guest-visible), %d CPUs, %d GiB filesystem capacity\n' \
-        "${H3_MIN_CONFIGURED_RAM_GIB}" "${H3_MIN_RAM_MIB}" \
+    printf 'Install minimum: %d CPUs, %d GiB filesystem capacity\n' \
         "${H3_MIN_CPU_COUNT}" "${H3_MIN_DISK_GIB}"
-    printf 'Swap: %d MiB recommended for source builds\n' \
+    printf 'Source-build RAM: %d GiB configured (%d MiB guest-visible)\n' \
+        "${H3_MIN_CONFIGURED_RAM_GIB}" "${H3_MIN_RAM_MIB}"
+    printf 'Source-build swap: %d MiB recommended\n' \
         "${H3_RECOMMENDED_SWAP_MIB}"
     printf 'Filesystem checked: %s\n' "${disk_path}"
     printf 'Detected: %d MiB guest-visible RAM, %d CPUs, %d GiB filesystem capacity, %d GiB free, %d MiB swap\n' \
@@ -101,12 +109,16 @@ check_system_requirements()
 
     if (( ram_mib >= H3_MIN_RAM_MIB )); then
         "${pass_callback}" \
-            "RAM meets the ${H3_MIN_CONFIGURED_RAM_GIB} GiB configured-memory minimum (${H3_MIN_RAM_MIB} MiB guest-visible threshold)"
-    else
+            "RAM meets the ${H3_MIN_CONFIGURED_RAM_GIB} GiB source-build target (${H3_MIN_RAM_MIB} MiB guest-visible threshold)"
+    elif (( require_source_build_resources == 1 )); then
         "${fail_callback}" \
-            "RAM is below the ${H3_MIN_CONFIGURED_RAM_GIB} GiB configured-memory minimum (${H3_MIN_RAM_MIB} MiB guest-visible threshold)"
-        printf '%s\n' '       Increase VM memory before long Yosys/nextpnr source builds.'
+            "RAM is below the ${H3_MIN_CONFIGURED_RAM_GIB} GiB source-build requirement (${H3_MIN_RAM_MIB} MiB guest-visible threshold)"
+        printf '%s\n' '       Increase VM memory before Yosys/nextpnr source builds.'
         failures=$((failures + 1))
+    else
+        "${warn_callback}" \
+            "RAM is below the ${H3_MIN_CONFIGURED_RAM_GIB} GiB source-build target (${H3_MIN_RAM_MIB} MiB guest-visible threshold)"
+        printf '%s\n' '       Normal installs can continue because prebuilt FPGA tools do not require a local source build.'
     fi
 
     if (( cpu_count >= H3_MIN_CPU_COUNT )); then
