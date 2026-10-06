@@ -435,7 +435,7 @@ The project configuration is:
 .. code-block:: bash
 
    ./bin/openocd.exe -d2 \
-       -f ./third_party/Hazard3/example_soc/ulx4m-openocd-tigard.cfg
+       -f ./openocd/ulx4m-openocd-tigard.cfg
 
 The important configuration values are equivalent to:
 
@@ -463,7 +463,12 @@ The important configuration values are equivalent to:
    riscv set_ir dtmcs 0x32
    riscv set_ir dmi 0x38
 
-   gdb_report_data_abort enable
+   # OpenOCD 0.12.0 uses the legacy underscore command. Newer builds use the
+   # namespaced form. Feature-detect rather than relying on the version string.
+   if {[catch {gdb report_data_abort enable}]} {
+       gdb_report_data_abort enable
+   }
+
    init
    halt
 

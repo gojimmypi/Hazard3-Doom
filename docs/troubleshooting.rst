@@ -583,6 +583,101 @@ If the same ULX3S FT231X also needs the browser FPGA flasher, prefer WinUSB so
 both OpenOCD/GDB and WebUSB work without another driver swap. Restore the FTDI
 VCP/D2XX driver only when a tool such as Windows ``fujprog`` requires it.
 
+
+No cable or board specified: using direct ft2232 interface
+----------------------------------------------------------
+
+Check whether this is followed by ``failed to open file``. Confirm that the
+bitfile was generated successfully, or use a file from the ``bin`` directory.
+
+.. code-block:: text
+
+   Cable VID overridden
+   Cable PID overridden
+   Open file : FAIL
+   DFU init failed with: Error: Fail to open file
+
+Once the bitfile is loaded, exit DFU mode on the ULX4M-LD:
+
+.. code-block:: bash
+
+   ./bin/dfu-util.exe -a 0 -e
+
+Target lfe5um85.hazard3: Failed to read memory
+----------------------------------------------
+
+Confirm that the Hazard3 RISC-V bitstream is loaded on the target FPGA.
+
+For Windows:
+
+.. code-block:: bash
+
+   ./bin/openFPGALoader.exe --dfu --vid 0x1d50 --pid 0x614b --altsetting 0 ./build/fpga_ulx4m_ld.bit
+
+See also :doc:`user-guide/web-flasher` for the ULX4M-LD DFU programming flow.
+
+Cannot stop OpenOCD with Ctrl-C
+-------------------------------
+
+Sometimes OpenOCD might get stuck:
+
+.. code-block:: text
+
+   Warn : Failed to read memory via program buffer.
+   Warn : Failed to read memory via abstract access.
+   Error: Target lfe5um85.hazard3: Failed to read memory (addr=0xffc0)
+   Error:   progbuf=failed, sysbus=skipped (unsupported size), abstract=failed
+   Error: error when writing memory, abstractcs=0x004003a2
+   Error: Target lfe5um85.hazard3: Failed to write memory (addr=0x78)
+   Error:   progbuf=failed, sysbus=skipped (unsupported size), abstract=failed
+   Warn : Haven't made progress in mpsse_flush() for 2040ms.
+   Warn : Haven't made progress in mpsse_flush() for 4080ms.
+   Warn : Haven't made progress in mpsse_flush() for 8160ms.
+
+Force the process closed in Task Manager on Windows, or run:
+
+.. code-block:: text
+
+   taskkill /F /IM openocd.exe
+
+There should be output like:
+
+.. code-block:: text
+
+   SUCCESS: The process "openocd.exe" with PID 34172 has been terminated.
+   SUCCESS: The process "openocd.exe" with PID 33768 has been terminated.
+
+Ensure nothing else is listening on the OpenOCD port:
+
+.. code-block:: text
+
+   netstat -ano | findstr :3333
+
+Error: OpenOCD only supports Debug Module version 2 (0.13) and 3 (1.0), not 0
+-----------------------------------------------------------------------------
+
+This normally does not mean that Hazard3 implements Debug Module version 0.
+It means OpenOCD was unable to read the RISC-V Debug Module reliably and
+received a zero or invalid ``dmstatus`` value.
+
+For a working Hazard3 target, ``dmstatus.version`` should report ``2``
+(RISC-V Debug Specification 0.13).
+
+For the ULX4M-LD, check the following:
+
+* Confirm that the Hazard3 FPGA bitstream is loaded and the board has exited
+  DFU mode.
+* Use ``openocd/ulx4m-openocd-tigard.cfg`` with the Tigard connected in JTAG
+  mode.
+* Ensure that only one OpenOCD instance is using the JTAG adapter and port
+  3333.
+* Restart OpenOCD after reprogramming or power-cycling the FPGA.
+* If the error persists, temporarily lower the JTAG adapter speed to determine
+  whether the problem is an unreliable JTAG/DMI connection.
+
+A healthy connection should allow OpenOCD to examine the Hazard3 hart and
+start the GDB server normally.
+
 ULX4M-LD reports external-memory TIMEOUT
 ----------------------------------------
 

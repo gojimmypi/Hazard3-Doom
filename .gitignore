@@ -21,6 +21,11 @@ __pycache__/
 
 /**/.visualgdb/
 
+# When Regular VC++ IntelliSense (and not nmake) is used, VisualGDB generates a Debug folder in the project root.
+# This folder contains a .sln file and a .vcxproj file that are not needed for building the project and should not be committed to the repository.
+# The "**" in ".**/Debug" will typically be the first section of the project GUID.
+/**/VisualGDB/Hazard3-.**/Debug
+
 /**/*.bak
 /**/*.zip
 

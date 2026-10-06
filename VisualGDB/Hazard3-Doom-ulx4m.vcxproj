@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>18.0</VCProjectVersion>
+    <ProjectGuid>{90EFC02A-C7D7-4219-AED4-C214EB35310E}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <NMakeBuildCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /build "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeBuildCommandLine>
+    <NMakeCleanCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /clean "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /rebuild "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeReBuildCommandLine>
+    <NMakeOutput>$(ProjectDir)Hazard3-Doom-ulx4m-Debug.vgdbsettings</NMakeOutput>
+    <NMakeIncludeSearchPath>$(ProjectDir)..;$(ProjectDir)..\src;$(ProjectDir)..\doom;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakePreprocessorDefinitions>HAZARD3_SYS_CLK_HZ=40000000u;__riscv=1;__riscv_xlen=32;__riscv_float_abi_soft=1;__riscv_compressed=1;__VisualGDB_CFG_Debug;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakeForcedIncludes>$(ProjectDir)intellisense-riscv.h;$(NMakeForcedIncludes)</NMakeForcedIncludes>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <NMakeBuildCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /build "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeBuildCommandLine>
+    <NMakeCleanCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /clean "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>"$(VISUALGDB_DIR)\VisualGDB.exe" /rebuild "$(ProjectPath)" "/solution:$(SolutionPath)" "/config:$(Configuration)" "/platform:$(Platform)"</NMakeReBuildCommandLine>
+    <NMakeOutput>$(ProjectDir)Hazard3-Doom-ulx4m-Release.vgdbsettings</NMakeOutput>
+    <NMakeIncludeSearchPath>$(ProjectDir)..;$(ProjectDir)..\src;$(ProjectDir)..\doom;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <NMakePreprocessorDefinitions>HAZARD3_SYS_CLK_HZ=40000000u;__riscv=1;__riscv_xlen=32;__riscv_float_abi_soft=1;__riscv_compressed=1;__VisualGDB_CFG_Release;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakeForcedIncludes>$(ProjectDir)intellisense-riscv.h;$(NMakeForcedIncludes)</NMakeForcedIncludes>
+  </PropertyGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\fat_ro.c" />
+    <ClCompile Include="..\src\i2cdriver_hdmi.c" />
+    <ClCompile Include="..\src\main.c" />
+    <ClCompile Include="..\doom\doom_image_loader.c" />
+    <ClCompile Include="..\doom\doom_wad_loader.c" />
+    <ClCompile Include="..\doom\doom_port_smoke.c" />
+    <ClCompile Include="..\doom\sdram_exec_test.c" />
+    <ClCompile Include="..\src\sao_console.c" />
+    <ClCompile Include="..\src\sd_boot.c" />
+    <ClCompile Include="..\src\sd_spi.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\start.S" />
+    <None Include="..\doom\sdram_exec_payload.S" />
+    <None Include="..\src\link.ld" />
+    <None Include="..\scripts\build-xpack.cmd" />
+    <None Include="Hazard3-Doom-ulx4m-Debug.vgdbsettings" />
+    <None Include="Hazard3-Doom-ulx4m-Release.vgdbsettings" />
+    <None Include="intellisense-riscv.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\fat_ro.h" />
+    <ClInclude Include="..\src\i2cdriver_hdmi.h" />
+    <ClInclude Include="..\src\sao_console.h" />
+    <ClInclude Include="..\src\sd_boot.h" />
+    <ClInclude Include="..\src\sd_spi.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
