@@ -1360,7 +1360,8 @@ static int sdram_run_qualification(void)
         sdram_last_qualification_pass_mask |= 1u << 2;
     }
 
-    passed = sequential_passed && sparse_passed && random_passed;
+    /* Use explicit Boolean comparisons for static analysis MISRA C:2012 Rule 10.1. */
+    passed = (sequential_passed != 0) && (sparse_passed != 0) && (random_passed != 0);
     sdram_last_qualification_passed = passed != 0;
     if (!passed) {
         ++sdram_qualification_failures;
@@ -1561,9 +1562,11 @@ static int sdram_run_heap_test(void)
     uart_puts("  bounds rejection: ");
     uart_puts(bounds_passed ? "PASS\r\n" : "FAIL\r\n");
 
-    passed = allocation_passed && alignment_passed &&
-        small_patterns_passed && large_passed &&
-        preservation_passed && bounds_passed;
+    /* Use explicit Boolean comparisons for static analysis MISRA C:2012 Rule 10.1. */
+    passed = (allocation_passed != 0) && (alignment_passed != 0) &&
+             (small_patterns_passed != 0) && (large_passed != 0) &&
+             (preservation_passed != 0) && (bounds_passed != 0);
+
     sdram_heap_last_elapsed_ms = system_ticks - start_ticks;
     sdram_heap_last_test_passed = passed != 0;
 
