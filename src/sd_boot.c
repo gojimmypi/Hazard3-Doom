@@ -261,7 +261,8 @@ int hazard3_sd_boot(int launch_after_load)
 
     if (HAZARD3_VIDEO_FPGA_BUILD_ID != HAZARD3_FPGA_BUILD_ID_ULX3S &&
         HAZARD3_VIDEO_FPGA_BUILD_ID != HAZARD3_FPGA_BUILD_ID_ULX3S_12F &&
-        HAZARD3_VIDEO_FPGA_BUILD_ID != HAZARD3_FPGA_BUILD_ID_ULX4M_LD) {
+        HAZARD3_VIDEO_FPGA_BUILD_ID != HAZARD3_FPGA_BUILD_ID_ULX4M_LD &&
+        HAZARD3_VIDEO_FPGA_BUILD_ID != HAZARD3_FPGA_BUILD_ID_ULX5M_GS) {
         ++sd_boot_failures;
         hazard3_console_puts("SD boot: unsupported on this FPGA target\r\n");
         return 0;

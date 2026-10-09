@@ -1,5 +1,7 @@
-name: ECP5 seed sweep
-run-name: ECP5 seed sweep - ${{ inputs.target }} - seeds ${{ inputs.seed_first }}-${{ inputs.seed_last }}
+name: FPGA seed sweep
+run-name: FPGA seed sweep - ${{ inputs.target }} - seeds ${{ inputs.seed_first }}-${{ inputs.seed_last }}
+# TODO:        rename this file as it is no longer ECP5 specific
+#
 
 on:
   workflow_dispatch:
@@ -13,6 +15,7 @@ on:
           - ulx3s-85f
           - ulx3s-12f
           - ulx4m-ld-85f
+          - ulx5m-gs
       seed_first:
         description: First seed to route (1-260)
         required: true
@@ -92,8 +95,19 @@ on:
           - "20"
           - "30"
           - "40"
+      ulx5m_heap_beta:
+        description: ULX5M-GS GateMate HeAP beta (ignored for other targets)
+        required: true
+        default: "0.6"
+        type: choice
+        options:
+          - "0.4"
+          - "0.5"
+          - "0.6"
+          - "0.7"
+          - "0.8"
       placer:
-        description: nextpnr placer
+        description: ECP5 nextpnr placer (ULX5M uses heap)
         required: true
         default: heap
         type: choice
@@ -101,7 +115,7 @@ on:
           - heap
           - sa
       router:
-        description: nextpnr router
+        description: ECP5 nextpnr router (ULX5M uses router2)
         required: true
         default: router1
         type: choice
@@ -109,7 +123,7 @@ on:
           - router1
           - router2
       heap_timingweight:
-        description: HeAP timing weight (ignored for ULX4M-LD)
+        description: ECP5 HeAP timing weight (ignored for ULX4M-LD and ULX5M)
         required: true
         default: "10"
         type: choice
@@ -119,7 +133,7 @@ on:
           - "30"
           - "40"
       heap_critexp:
-        description: HeAP criticality exponent
+        description: ECP5 HeAP criticality exponent (ignored for ULX5M)
         required: true
         default: "2"
         type: choice
@@ -128,12 +142,12 @@ on:
           - "3"
           - "4"
       tmg_ripup:
-        description: Enable experimental timing-driven router rip-up
+        description: Enable ECP5 timing-driven router rip-up (ignored for ULX5M)
         required: true
         default: false
         type: boolean
       router2_alt_weights:
-        description: Enable Router2 alternate weights
+        description: Enable ECP5 Router2 alternate weights (ignored for ULX5M)
         required: true
         default: false
         type: boolean
@@ -175,16 +189,21 @@ env:
   HAZARD3_MEMORY_PROFILE: ${{ inputs.ulx3s_12f_memory_profile }}
   HAZARD3_ULX4M_SYS_CLK_MHZ: ${{ inputs.ulx4m_sys_clk_mhz }}
   ULX4M_LITEDRAM_CPU: ${{ inputs.ulx4m_litedram_cpu }}
-  SWEEP_NEXTPNR_PLACER: ${{ inputs.placer }}
-  SWEEP_NEXTPNR_ROUTER: ${{ inputs.router }}
+  SWEEP_ULX5M_HEAP_BETA: ${{ inputs.ulx5m_heap_beta }}
+  SWEEP_NEXTPNR_PLACER: ${{ inputs.target == 'ulx5m-gs' && 'heap' || inputs.placer }}
+  SWEEP_NEXTPNR_ROUTER: ${{ inputs.target == 'ulx5m-gs' && 'router2' || inputs.router }}
   SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT: ${{ inputs.target == 'ulx4m-ld-85f' && inputs.ulx4m_heap_timingweight || inputs.heap_timingweight }}
   SWEEP_NEXTPNR_HEAP_CRITEXP: ${{ inputs.heap_critexp }}
   SWEEP_NEXTPNR_TMG_RIPUP: ${{ inputs.tmg_ripup }}
   SWEEP_NEXTPNR_ROUTER2_ALT_WEIGHTS: ${{ inputs.router2_alt_weights }}
   SWEEP_NEXTPNR_EXTRA_ARGS: ${{ inputs.nextpnr_extra_args }}
-  SWEEP_ROUTE_TIMEOUT_SECONDS: "7200"
+  # GateMate router2 can occasionally stall on one remaining overused wire.
+  # Give ULX5M nine minutes to route and ten minutes total per seed so a
+  # pathological route cannot monopolize a runner. Preserve the established
+  # ECP5 watchdog values for the other targets.
+  SWEEP_ROUTE_TIMEOUT_SECONDS: ${{ inputs.target == 'ulx5m-gs' && '540' || '7200' }}
   SWEEP_ROUTE_KILL_AFTER_SECONDS: "30"
-  SWEEP_SEED_TIMEOUT_SECONDS: "7600"
+  SWEEP_SEED_TIMEOUT_SECONDS: ${{ inputs.target == 'ulx5m-gs' && '600' || '7600' }}
   SWEEP_SEED_KILL_AFTER_SECONDS: "30"
   XPACK_RISCV_GCC_VERSION: "15.2.0-1"
   XPACK_RISCV_GCC_LINUX_SHA256: "aaaa8060c914851a3e5ee1ba82cc3d6f80972f90638a05c6e823a37557a33758"
@@ -235,7 +254,8 @@ jobs:
               scripts/sweep-ecp5-common.sh \
               scripts/sweep-ulx3s-85f.sh \
               scripts/sweep-ulx3s-12f.sh \
-              scripts/sweep-ulx4m-ld.sh
+              scripts/sweep-ulx4m-ld.sh \
+              scripts/sweep-ulx5m-gs.sh
 
           ./scripts/sweep-ecp5.sh --list-targets | grep -Fxq "${SWEEP_TARGET}"
           ./scripts/sweep-ecp5.sh --print-sweep-dir "${SWEEP_TARGET}"
@@ -296,8 +316,13 @@ jobs:
         shell: bash
         run: |
           test -x "${RUNNER_TEMP}/oss-cad-suite/bin/yosys"
-          test -x "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-ecp5"
-          test -x "${RUNNER_TEMP}/oss-cad-suite/bin/ecppack"
+          if [[ "${SWEEP_TARGET}" == "ulx5m-gs" ]]; then
+              test -x "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-himbaechel"
+              test -x "${RUNNER_TEMP}/oss-cad-suite/bin/gmpack"
+          else
+              test -x "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-ecp5"
+              test -x "${RUNNER_TEMP}/oss-cad-suite/bin/ecppack"
+          fi
           printf '%s\n' "${RUNNER_TEMP}/oss-cad-suite/bin" >> "${GITHUB_PATH}"
 
       - name: Save synthesis OSS CAD Suite cache
@@ -323,8 +348,13 @@ jobs:
         shell: bash
         run: |
           yosys --version
-          nextpnr-ecp5 --version
-          printf 'ecppack: %s\n' "$(command -v ecppack)"
+          if [[ "${SWEEP_TARGET}" == "ulx5m-gs" ]]; then
+              nextpnr-himbaechel --version
+              printf 'gmpack: %s\n' "$(command -v gmpack)"
+          else
+              nextpnr-ecp5 --version
+              printf 'ecppack: %s\n' "$(command -v ecppack)"
+          fi
           "${TOOLCHAIN_PREFIX}gcc" --version
           python3 --version
 
@@ -338,14 +368,20 @@ jobs:
               scripts/sweep-ecp5-common.sh \
               scripts/sweep-ulx3s-85f.sh \
               scripts/sweep-ulx3s-12f.sh \
-              scripts/sweep-ulx4m-ld.sh
+              scripts/sweep-ulx4m-ld.sh \
+              scripts/sweep-ulx5m-gs.sh
 
+          monitor_memory_profile=64m
           case "${SWEEP_TARGET}" in
           ulx3s-85f)
               monitor_clock_hz=50000000
               ;;
           ulx4m-ld-85f)
               monitor_clock_hz="$((HAZARD3_ULX4M_SYS_CLK_MHZ * 1000000))"
+              ;;
+          ulx5m-gs)
+              monitor_clock_hz=25000000
+              monitor_memory_profile=32m
               ;;
           ulx3s-12f)
               monitor_clock_hz=""
@@ -354,7 +390,7 @@ jobs:
 
           if [[ -n "${monitor_clock_hz}" ]]; then
               HAZARD3_BUILD_DIR=build/sweep-monitor \
-              HAZARD3_MEMORY_PROFILE=64m \
+              HAZARD3_MEMORY_PROFILE="${monitor_memory_profile}" \
               HAZARD3_SYS_CLK_HZ="${monitor_clock_hz}" \
                   ./scripts/build.sh
               ./scripts/make-boot-hex.py \
@@ -379,11 +415,16 @@ jobs:
               ./scripts/sweep-ecp5.sh --print-constraint "${SWEEP_TARGET}" |
                   tail -n 1
           )"
+          timing_constraint="$(
+              ./scripts/sweep-ecp5.sh --print-timing-constraint "${SWEEP_TARGET}" |
+                  tail -n 1
+          )"
           metadata="${sweep_dir}/metadata.txt"
 
           printf 'Resolved sweep directory: %s\n' "${sweep_dir}"
           printf 'Resolved netlist: %s\n' "${netlist}"
           printf 'Resolved route constraint: %s\n' "${route_constraint}"
+          printf 'Resolved timing constraint: %s\n' "${timing_constraint:-none}"
           printf 'Resolved metadata: %s\n' "${metadata}"
 
           if [[ -z "${sweep_dir}" ]]; then
@@ -406,6 +447,10 @@ jobs:
               printf '::error::Route constraint is missing or empty: %s\n' "${route_constraint}" >&2
               exit 1
           fi
+          if [[ -n "${timing_constraint}" && ! -s "${timing_constraint}" ]]; then
+              printf '::error::Timing constraint is missing or empty: %s\n' "${timing_constraint}" >&2
+              exit 1
+          fi
           if [[ ! -s "${metadata}" ]]; then
               printf '::error::Sweep metadata is missing or empty: %s\n' "${metadata}" >&2
               find build -maxdepth 3 -name metadata.txt -print >&2 || true
@@ -417,6 +462,12 @@ jobs:
           sha256sum "${netlist}" > reference/netlist.sha256
           printf '%s\n' "${route_constraint}" > reference/route-constraint.txt
           sha256sum "${route_constraint}" > reference/route-constraint.sha256
+          printf '%s\n' "${timing_constraint}" > reference/timing-constraint.txt
+          if [[ -n "${timing_constraint}" ]]; then
+              sha256sum "${timing_constraint}" > reference/timing-constraint.sha256
+          else
+              : > reference/timing-constraint.sha256
+          fi
 
           git rev-parse HEAD > reference/hazard3-doom-head.txt
           git ls-tree HEAD third_party/Hazard3 > reference/hazard3-doom-hazard3-gitlink.txt
@@ -428,8 +479,13 @@ jobs:
 
           {
               yosys --version
-              nextpnr-ecp5 --version
-              printf 'ecppack: %s\n' "$(command -v ecppack)"
+              if [[ "${SWEEP_TARGET}" == "ulx5m-gs" ]]; then
+                  nextpnr-himbaechel --version
+                  printf 'gmpack: %s\n' "$(command -v gmpack)"
+              else
+                  nextpnr-ecp5 --version
+                  printf 'ecppack: %s\n' "$(command -v ecppack)"
+              fi
           } > reference/synthesis-tool-versions.txt
 
           {
@@ -445,6 +501,7 @@ jobs:
               printf 'ulx3s_12f_memory_profile=%s\n' "${HAZARD3_MEMORY_PROFILE}"
               printf 'ulx4m_sys_clk_mhz=%s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
               printf 'ulx4m_litedram_cpu=%s\n' "${ULX4M_LITEDRAM_CPU}"
+              printf 'ulx5m_heap_beta=%s\n' "${SWEEP_ULX5M_HEAP_BETA}"
               printf 'placer=%s\n' "${SWEEP_NEXTPNR_PLACER}"
               printf 'router=%s\n' "${SWEEP_NEXTPNR_ROUTER}"
               printf 'heap_timingweight=%s\n' "${SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT}"
@@ -459,6 +516,7 @@ jobs:
               printf 'sweep_dir=%s\n' "${sweep_dir}"
               printf 'netlist=%s\n' "${netlist}"
               printf 'route_constraint=%s\n' "${route_constraint}"
+              printf 'timing_constraint=%s\n' "${timing_constraint}"
           } > reference/workflow.txt
 
       - name: Generate seed matrix
@@ -503,9 +561,15 @@ jobs:
       - name: Record route nextpnr version
         shell: bash
         run: |
-          test -x "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-ecp5"
-          "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-ecp5" --version \
-              | tee reference/route-nextpnr-version.txt
+          if [[ "${SWEEP_TARGET}" == "ulx5m-gs" ]]; then
+              test -x "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-himbaechel"
+              "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-himbaechel" --version \
+                  | tee reference/route-nextpnr-version.txt
+          else
+              test -x "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-ecp5"
+              "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-ecp5" --version \
+                  | tee reference/route-nextpnr-version.txt
+          fi
 
       - name: Package frozen route inputs
         shell: bash
@@ -513,14 +577,20 @@ jobs:
           set -euo pipefail
 
           route_constraint="$(cat reference/route-constraint.txt)"
+          timing_constraint="$(cat reference/timing-constraint.txt)"
           test -s "${route_constraint}"
           sha256sum --check reference/route-constraint.sha256
 
+          route_inputs=(reference build "${route_constraint}")
+          if [[ -n "${timing_constraint}" ]]; then
+              test -s "${timing_constraint}"
+              sha256sum --check reference/timing-constraint.sha256
+              route_inputs+=("${timing_constraint}")
+          fi
+
           tar \
               -czf "${RUNNER_TEMP}/ecp5-sweep-inputs.tar.gz" \
-              reference \
-              build \
-              "${route_constraint}"
+              "${route_inputs[@]}"
 
       - name: Upload frozen route inputs
         uses: actions/upload-artifact@v7
@@ -566,6 +636,10 @@ jobs:
           ulx4m-ld-85f)
               printf '  HAZARD3_ULX4M_SYS_CLK_MHZ: %s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
               printf '  ULX4M_LITEDRAM_CPU:         %s\n' "${ULX4M_LITEDRAM_CPU}"
+              ;;
+          ulx5m-gs)
+              printf '  System clock:          25 MHz (fixed)\n'
+              printf '  SWEEP_ULX5M_HEAP_BETA: %s\n' "${SWEEP_ULX5M_HEAP_BETA}"
               ;;
           esac
 
@@ -616,8 +690,13 @@ jobs:
               echo "Route OSS CAD Suite cache was not available." >&2
               exit 1
           fi
-          test -x "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-ecp5"
-          test -x "${RUNNER_TEMP}/oss-cad-suite/bin/ecppack"
+          if [[ "${SWEEP_TARGET}" == "ulx5m-gs" ]]; then
+              test -x "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-himbaechel"
+              test -x "${RUNNER_TEMP}/oss-cad-suite/bin/gmpack"
+          else
+              test -x "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-ecp5"
+              test -x "${RUNNER_TEMP}/oss-cad-suite/bin/ecppack"
+          fi
           printf '%s\n' "${RUNNER_TEMP}/oss-cad-suite/bin" >> "${GITHUB_PATH}"
 
       - name: Download frozen route inputs
@@ -635,15 +714,21 @@ jobs:
               -C "${GITHUB_WORKSPACE}"
 
           route_constraint="$(cat reference/route-constraint.txt)"
+          timing_constraint="$(cat reference/timing-constraint.txt)"
           test -s "${route_constraint}"
           sha256sum --check reference/route-constraint.sha256
+          if [[ -n "${timing_constraint}" ]]; then
+              test -s "${timing_constraint}"
+              sha256sum --check reference/timing-constraint.sha256
+          fi
 
           chmod +x \
               scripts/sweep-ecp5.sh \
               scripts/sweep-ecp5-common.sh \
               scripts/sweep-ulx3s-85f.sh \
               scripts/sweep-ulx3s-12f.sh \
-              scripts/sweep-ulx4m-ld.sh
+              scripts/sweep-ulx4m-ld.sh \
+              scripts/sweep-ulx5m-gs.sh
 
           netlist="$(
               ./scripts/sweep-ecp5.sh --print-netlist "${SWEEP_TARGET}" |
@@ -656,7 +741,14 @@ jobs:
 
       - name: Show route tool version
         shell: bash
-        run: nextpnr-ecp5 --version
+        run: |
+          if [[ "${SWEEP_TARGET}" == "ulx5m-gs" ]]; then
+              nextpnr-himbaechel --version
+              printf 'gmpack: %s\n' "$(command -v gmpack)"
+          else
+              nextpnr-ecp5 --version
+              printf 'ecppack: %s\n' "$(command -v ecppack)"
+          fi
 
       - name: Route seed group
         id: route

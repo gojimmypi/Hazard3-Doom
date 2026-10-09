@@ -4,7 +4,9 @@
 # Path:        scripts/sweep-ecp5.sh
 #
 # Project:     Hazard3-Doom
-# Purpose:     Common local/CI entry point for board-specific ECP5 seed sweeps.
+# Purpose:     Common local/CI entry point for board-specific FPGA seed sweeps.
+#
+# TODO:        rename this file as it is no longer ECP5 specific
 #
 # Copyright (c) 2026 gojimmypi
 #
@@ -35,12 +37,14 @@ Usage: $0 TARGET SEED [SEED ...]
        $0 --print-sweep-dir TARGET
        $0 --print-netlist TARGET
        $0 --print-constraint TARGET
+       $0 --print-timing-constraint TARGET
        $0 --list-targets
 
 Targets:
     ulx3s-85f
     ulx3s-12f
     ulx4m-ld-85f
+    ulx5m-gs
 
 Board-specific settings remain environment variables understood by the target
 sweep script. Generic nextpnr tuning uses SWEEP_NEXTPNR_* variables.
@@ -59,8 +63,11 @@ target_script()
     ulx4m-ld|ulx4m-ld-85f)
         printf '%s/sweep-ulx4m-ld.sh\n' "${SCRIPT_DIR}"
         ;;
+    ulx5m-gs)
+        printf '%s/sweep-ulx5m-gs.sh\n' "${SCRIPT_DIR}"
+        ;;
     *)
-        echo "Unknown ECP5 sweep target: $1" >&2
+        echo "Unknown sweep target: $1" >&2
         usage
         exit 1
         ;;
@@ -102,7 +109,7 @@ fi
 
 case "$1" in
 --list-targets)
-    printf '%s\n' ulx3s-85f ulx3s-12f ulx4m-ld-85f
+    printf '%s\n' ulx3s-85f ulx3s-12f ulx4m-ld-85f ulx5m-gs
     exit 0
     ;;
 --prepare)
@@ -130,6 +137,9 @@ case "$1" in
     ulx4m-ld-85f)
         printf 'build/fpga_ulx4m_ld.json\n'
         ;;
+    ulx5m-gs)
+        printf 'build/ulx5m-gs/sweep-synth/fpga_ulx5m_gs.json\n'
+        ;;
     esac
     exit 0
     ;;
@@ -142,6 +152,19 @@ case "$1" in
         ;;
     ulx4m-ld-85f)
         printf 'third_party/Hazard3/example_soc/synth/fpga_ulx4m_ld.lpf\n'
+        ;;
+    ulx5m-gs)
+        printf 'third_party/Hazard3/example_soc/synth/fpga_ulx5m_gs.ccf\n'
+        ;;
+    esac
+    exit 0
+    ;;
+--print-timing-constraint)
+    (( $# == 2 )) || { usage; exit 1; }
+    target="$(canonical_target "$2")"
+    case "${target}" in
+    ulx5m-gs)
+        printf 'third_party/Hazard3/example_soc/synth/fpga_ulx5m_gs.sdc\n'
         ;;
     esac
     exit 0

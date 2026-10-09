@@ -607,12 +607,13 @@ check_sweep_dispatcher()
     local target
     local netlist
     local route_constraint
+    local timing_constraint
     local sweep_dir
 
     run_quiet 'sweep-ecp5.sh: list targets' \
         "${SCRIPT_DIR}/sweep-ecp5.sh" --list-targets
 
-    for target in ulx3s-85f ulx3s-12f ulx4m-ld-85f; do
+    for target in ulx3s-85f ulx3s-12f ulx4m-ld-85f ulx5m-gs; do
         if netlist="$(
             "${SCRIPT_DIR}/sweep-ecp5.sh" --print-netlist "${target}" |
                 tail -n 1
@@ -625,10 +626,29 @@ check_sweep_dispatcher()
         if route_constraint="$(
             "${SCRIPT_DIR}/sweep-ecp5.sh" --print-constraint "${target}" |
                 tail -n 1
-        )" && [[ "${route_constraint}" == third_party/Hazard3/example_soc/synth/*.lpf ]]; then
-            pass "sweep-ecp5.sh: ${target} constraint path"
+        )"; then
+            if [[ "${target}" == "ulx5m-gs" &&
+                  "${route_constraint}" == third_party/Hazard3/example_soc/synth/*.ccf ]] ||
+               [[ "${target}" != "ulx5m-gs" &&
+                  "${route_constraint}" == third_party/Hazard3/example_soc/synth/*.lpf ]]; then
+                pass "sweep-ecp5.sh: ${target} constraint path"
+            else
+                fail "sweep-ecp5.sh: ${target} constraint path"
+            fi
         else
             fail "sweep-ecp5.sh: ${target} constraint path"
+        fi
+
+        if [[ "${target}" == "ulx5m-gs" ]]; then
+            timing_constraint="$(
+                "${SCRIPT_DIR}/sweep-ecp5.sh" --print-timing-constraint "${target}" |
+                    tail -n 1
+            )"
+            if [[ "${timing_constraint}" == third_party/Hazard3/example_soc/synth/*.sdc ]]; then
+                pass "sweep-ecp5.sh: ${target} timing constraint path"
+            else
+                fail "sweep-ecp5.sh: ${target} timing constraint path"
+            fi
         fi
 
         if sweep_dir="$(

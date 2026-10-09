@@ -338,7 +338,11 @@ static void console_print_help(void)
     uart_puts("  j       launch/restart the validated Doom image and IWAD\r\n");
     uart_puts("  b       load DOOM.IMG + DOOM1.WAD from micro-SD and launch\r\n");
     uart_puts("  c       micro-SD/FAT boot status\r\n");
-    uart_puts("  f       rewrite/present the 320x200 RGB332 HDMI test frame\r\n");
+    if (HAZARD3_VIDEO_FPGA_BUILD_ID == HAZARD3_FPGA_BUILD_ID_ULX5M_GS) {
+        uart_puts("  f       video test unavailable (ULX5M-GS phase 1 headless)\r\n");
+    } else {
+        uart_puts("  f       rewrite/present the 320x200 RGB332 HDMI test frame\r\n");
+    }
     uart_puts("  z       reset heap; invalidates every heap pointer\r\n");
     uart_puts("  s       status\r\n");
     uart_puts("  v       version\r\n");
@@ -358,6 +362,17 @@ static int is_ulx3s_build(uint32_t fpga_build_id)
         fpga_build_id == HAZARD3_FPGA_BUILD_ID_ULX3S_12F;
 }
 
+static int is_ulx5m_gs_build(uint32_t fpga_build_id)
+{
+    return fpga_build_id == HAZARD3_FPGA_BUILD_ID_ULX5M_GS;
+}
+
+static int is_native_sdr_sdram_build(uint32_t fpga_build_id)
+{
+    return is_ulx3s_build(fpga_build_id) ||
+        is_ulx5m_gs_build(fpga_build_id);
+}
+
 static int build_ids_match(uint32_t fpga_build_id,
     uint32_t memory_core_build_id, uint32_t memory_adapter_build_id)
 {
@@ -368,7 +383,7 @@ static int build_ids_match(uint32_t fpga_build_id,
                 HAZARD3_MEMORY_ADAPTER_BUILD_ID_ULX4M_LD;
     }
 
-    if (is_ulx3s_build(fpga_build_id)) {
+    if (is_native_sdr_sdram_build(fpga_build_id)) {
         return memory_core_build_id ==
                 HAZARD3_MEMORY_CORE_BUILD_ID_ULX3S &&
             memory_adapter_build_id ==
@@ -382,6 +397,10 @@ static const char* memory_controller_name(uint32_t fpga_build_id)
 {
     if (is_ulx4m_ld_build(fpga_build_id)) {
         return "LiteDRAM-2024.12/ECP5DDRPHY";
+    }
+
+    if (is_ulx5m_gs_build(fpga_build_id)) {
+        return "ULX5M-SDR-SDRAM";
     }
 
     if (is_ulx3s_build(fpga_build_id)) {
@@ -398,7 +417,7 @@ static int memory_status_marker_valid(
 
     if (is_ulx4m_ld_build(fpga_build_id)) {
         expected_marker = HAZARD3_DDR_STATUS_MARKER_ULX4M_LD;
-    } else if (is_ulx3s_build(fpga_build_id)) {
+    } else if (is_native_sdr_sdram_build(fpga_build_id)) {
         expected_marker = HAZARD3_DDR_STATUS_MARKER_ULX3S;
     } else {
         return 0;
@@ -619,6 +638,12 @@ static void video_write_test_pattern(void)
     volatile uint32_t* destination;
     uint32_t start_ticks;
     int presented;
+
+    if (is_ulx5m_gs_build(HAZARD3_VIDEO_FPGA_BUILD_ID)) {
+        uart_puts(
+            "\r\nVideo test unavailable: ULX5M-GS phase 1 is headless.\r\n");
+        return;
+    }
 
     if (!external_memory_require_ready("the HDMI framebuffer test")) {
         return;
@@ -2090,7 +2115,11 @@ static void uart_init(void)
 
 static void console_init(void)
 {
-    uart_puts("\r\nHazard3 ECP5 board boot\r\n");
+    if (is_ulx5m_gs_build(HAZARD3_VIDEO_FPGA_BUILD_ID)) {
+        uart_puts("\r\nHazard3 GateMate board boot\r\n");
+    } else {
+        uart_puts("\r\nHazard3 ECP5 board boot\r\n");
+    }
     uart_puts("project_version=");
     uart_puts(HAZARD3_DOOM_VERSION_DISPLAY);
     uart_puts(" firmware_build=");
@@ -2102,7 +2131,8 @@ static void console_init(void)
     uart_puts("CPU: ");
     uart_puts(HAZARD3_FIRMWARE_SYS_CLK_NAME);
     uart_puts(" Hazard3, Timer: 10 ms machine interrupt\r\n");
-    if (HAZARD3_VIDEO_FPGA_BUILD_ID == HAZARD3_FPGA_BUILD_ID_ULX3S_12F) {
+    if (HAZARD3_VIDEO_FPGA_BUILD_ID == HAZARD3_FPGA_BUILD_ID_ULX3S_12F ||
+        is_ulx5m_gs_build(HAZARD3_VIDEO_FPGA_BUILD_ID)) {
         uart_puts("Doom screen: 0x20040000-0x2004F9FF external SDRAM (320x200 indexed)\r\n");
     } else {
         uart_puts("Internal screen: 0x00010000-0x0001F9FF (320x200 indexed)\r\n");
@@ -2129,7 +2159,9 @@ static void console_init(void)
     uart_puts(", video reserve at ");
     uart_put_hex32(HAZARD3_VIDEO_BASE);
     uart_puts("\r\n");
-    if (HAZARD3_VIDEO_FPGA_BUILD_ID == HAZARD3_FPGA_BUILD_ID_ULX3S_12F) {
+    if (is_ulx5m_gs_build(HAZARD3_VIDEO_FPGA_BUILD_ID)) {
+        uart_puts("Video: ULX5M-GS phase 1 headless; DVI scanout not implemented\r\n");
+    } else if (HAZARD3_VIDEO_FPGA_BUILD_ID == HAZARD3_FPGA_BUILD_ID_ULX3S_12F) {
         uart_puts("HDMI: 1024x600 full-panel scale, SDRAM + two-line EBR scanout\r\n");
     } else {
         uart_puts("HDMI: 1024x600 full-panel scale, direct block-RAM double buffer\r\n");
@@ -2155,8 +2187,10 @@ int main(void)
             SDRAM_QUICK_TEST_BYTES,
             "SDRAM boot quick test");
         video_write_test_pattern();
-        if (is_ulx3s_build(HAZARD3_VIDEO_FPGA_BUILD_ID)) {
-            uart_puts("ULX3S cold boot: trying micro-SD...\r\n");
+        if (is_native_sdr_sdram_build(HAZARD3_VIDEO_FPGA_BUILD_ID)) {
+            uart_puts(is_ulx5m_gs_build(HAZARD3_VIDEO_FPGA_BUILD_ID)
+                ? "ULX5M cold boot: trying micro-SD...\r\n"
+                : "ULX3S cold boot: trying micro-SD...\r\n");
             (void)hazard3_sd_boot(1);
         }
     } else {

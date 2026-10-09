@@ -4,7 +4,7 @@
 # Path:        scripts/watch-ecp5-sweep-results.sh
 #
 # Project:     Hazard3-Doom
-# Purpose:     Show timing-passing ECP5 seed results while CI routing continues.
+# Purpose:     Show timing-passing FPGA seed results while CI routing continues.
 #
 # Copyright (c) 2026 gojimmypi
 #
@@ -37,7 +37,7 @@ Environment required when watching GitHub Actions:
     GITHUB_REPOSITORY
     GITHUB_RUN_ID
 
-The watcher polls completed per-group ECP5 sweep artifacts and prints a
+The watcher polls completed per-group sweep artifacts and prints a
 consolidated list of timing-passing seeds while other route jobs continue.
 EOF_USAGE
 }
@@ -237,6 +237,9 @@ load_seed_metrics()
         seed_clk_tmds["${seed}"]="${fields[4]:-NA}"
         seed_init_clk["${seed}"]="${fields[5]:-NA}"
         ;;
+    ulx5m-gs)
+        seed_clk_sys["${seed}"]="${fields[1]:-NA}"
+        ;;
     esac
 
     seed_clk_sys["${seed}"]="${seed_clk_sys[$seed]:-NA}"
@@ -264,6 +267,9 @@ seed_frequency_metrics()
             "${seed_clk_video[$seed]:-NA}" \
             "${seed_clk_tmds[$seed]:-NA}" \
             "${seed_init_clk[$seed]:-NA}"
+        ;;
+    ulx5m-gs)
+        printf 'sys=%s' "${seed_clk_sys[$seed]:-NA}"
         ;;
     *)
         printf 'sys=%s video=%s tmds=%s' \
@@ -358,6 +364,8 @@ print_best_frequency_summary()
             "${best_sys}" "${best_litedram}" "${best_video}"
         printf '                   tmds=%s | init=%s\n' \
             "${best_tmds}" "${best_init}"
+    elif [[ "${SWEEP_TARGET}" == "ulx5m-gs" ]]; then
+        printf 'Best PASS max MHz: sys=%s\n' "${best_sys}"
     else
         printf 'Best PASS max MHz: sys=%s | video=%s | tmds=%s\n' \
             "${best_sys}" "${best_video}" "${best_tmds}"
@@ -450,6 +458,9 @@ ulx3s-12f)
 ulx4m-ld-85f)
     printf 'Timing targets: sys=%s.00 MHz | litedram_user=60.01 MHz | video=50.00 MHz | tmds=250.00 MHz | init=25.00 MHz\n' \
         "${HAZARD3_ULX4M_SYS_CLK_MHZ:-40}"
+    ;;
+ulx5m-gs)
+    printf 'Timing target: sys=25.00 MHz\n'
     ;;
 esac
 printf 'Expected seed groups: %s (%s seed(s) per job).\n' \

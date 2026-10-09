@@ -483,8 +483,10 @@ int doom_image_loader_load_stream(doom_image_stream_read_fn read_fn,
 
 static uint32_t doom_screenbuffer_base(void)
 {
-    if (HAZARD3_VIDEO_FPGA_BUILD_ID == HAZARD3_FPGA_BUILD_ID_ULX3S_12F)
+    if (HAZARD3_VIDEO_FPGA_BUILD_ID == HAZARD3_FPGA_BUILD_ID_ULX3S_12F ||
+        HAZARD3_VIDEO_FPGA_BUILD_ID == HAZARD3_FPGA_BUILD_ID_ULX5M_GS) {
         return HAZARD3_DOOM_SCREENBUFFER_12F_BASE;
+    }
 
     return HAZARD3_DOOM_SCREENBUFFER_BASE;
 }
