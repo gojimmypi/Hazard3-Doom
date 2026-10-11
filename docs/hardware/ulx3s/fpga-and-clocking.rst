@@ -56,7 +56,8 @@ Timing closure is target-specific
 ---------------------------------
 
 Hazard3-Doom centralizes the default nextpnr routing settings in
-``scripts/build-ecp5-bitstream-common.sh``. Current release baselines are also
+``scripts/ecp5-board-defaults.sh``. Both builds and seed sweeps use these
+board-specific values. Current routing baselines are
 summarized in :doc:`../../reference/board-profiles`.
 
 A seed that passes for ULX3S 85F is not evidence that it will pass on 12F, and a

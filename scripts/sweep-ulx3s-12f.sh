@@ -42,8 +42,11 @@ SYNTH_LOG="${BUILD_DIR}/fpga_ulx3s_12f.synth.log"
 SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_12f.memory-profile"
 SYNTH_DURATION_STAMP="${BUILD_DIR}/fpga_ulx3s_12f.synth-seconds"
 
+# shellcheck source=scripts/ecp5-board-defaults.sh
+source "${SCRIPT_DIR}/ecp5-board-defaults.sh"
+SWEEP_ECP5_BOARD_ID="ulx3s-12f"
+
 # shellcheck source=scripts/sweep-ecp5-common.sh
-# shellcheck disable=SC1091
 source "${COMMON_SCRIPT}"
 printf 'Include source: %s\n' "${COMMON_SCRIPT}" >&2
 

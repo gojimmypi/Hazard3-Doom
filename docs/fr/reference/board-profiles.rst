@@ -39,13 +39,13 @@ Paramètres de routage nextpnr par défaut
 ----------------------------------------
 
 Les wrappers des cartes prennent leurs paramètres de routage par défaut dans
-une seule implémentation commune, ``scripts/build-ecp5-bitstream-common.sh``.
+une seule implémentation commune, ``scripts/ecp5-board-defaults.sh``.
 Les affectations actuelles sont incluses directement depuis ce fichier afin que
 la documentation n'en conserve pas une seconde copie :
 
-.. literalinclude:: ../../scripts/build-ecp5-bitstream-common.sh
+.. literalinclude:: ../../scripts/ecp5-board-defaults.sh
    :language: bash
-   :start-at: ULX3S_85F_DEFAULT_NEXTPNR_SEED=
+   :start-at: ULX3S_12F_DEFAULT_NEXTPNR_SEED=
    :end-at: ULX4M_LD_85F_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT=
 
 ``NEXTPNR_SEED`` peut toujours remplacer la valeur par défaut de la carte pour
@@ -81,9 +81,10 @@ correspondant ; ces valeurs ne sont pas des garanties de timing portables :
      - ``clk_sys`` 43.63 MHz ; port utilisateur LiteDRAM 67.51 MHz
      - PASS à 40 MHz / 60 MHz ; route sélectionnée pour la release
 
-Ces lignes de validation de release conservent volontairement le seed car il
-fait partie de la provenance du résultat de timing. Les valeurs par défaut
-elles-mêmes sont gérées par le script de build commun ci-dessus.
+Ces résultats correspondent à des routes précises. Le seed 8 de l’ULX4M-LD
+a passé les contraintes de timing sur une netlist figée, mais sa qualification
+matérielle reste à effectuer. La qualification antérieure du seed 2 est
+conservée séparément.
 
 Le point de contrôle ULX4M-LD qualifié sur le matériel utilise un netlist
 figé, le seed 2 et

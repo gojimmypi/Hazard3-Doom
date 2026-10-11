@@ -45,7 +45,14 @@ SYNTH_LOG="${BUILD_DIR}/fpga_ulx4m_ld.synth.log"
 
 # shellcheck source=scripts/sweep-ecp5-common.sh
 # shellcheck disable=SC1091
+# shellcheck source=scripts/ecp5-board-defaults.sh
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/ecp5-board-defaults.sh"
+SWEEP_ECP5_BOARD_ID="ulx4m-ld-85f"
+
+# shellcheck source=scripts/sweep-ecp5-common.sh
 source "${COMMON_SCRIPT}"
+
 printf 'Include source: %s\n' "${COMMON_SCRIPT}" >&2
 
 generated_config="${LITEDRAM_DIR}/generated-${ULX4M_LITEDRAM_CPU}/litedram_ulx4m_cpu.yml"

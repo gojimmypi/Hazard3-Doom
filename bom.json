@@ -9,7 +9,7 @@
       "bom-ref": "hazard3-doom",
       "group": "ulx3s",
       "name": "Hazard3-Doom",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "description": "Doom running on the Hazard3 RISC-V CPU in an ECP5 FPGA, including monitor firmware, a DoomGeneric application, FPGA board integrations, host-side upload/flashing tools, and supporting project assets.",
       "externalReferences": [
         {
@@ -782,7 +782,7 @@
       "externalReferences": [
         {
           "type": "vcs",
-          "url": "https://github.com/ulx3s/Hazard3/tree/3c0aca063517bb7fdbe869019c984954c7dd5c97"
+          "url": "https://github.com/gojimmypi/Hazard3/tree/7743b3089b1ded8b74d0d51e201b3554e310b5a3"
         },
         {
           "type": "vcs",
@@ -800,7 +800,7 @@
           "value": "Exact pinned Git revision recorded."
         }
       ],
-      "version": "3c0aca063517bb7fdbe869019c984954c7dd5c97"
+      "version": "7743b3089b1ded8b74d0d51e201b3554e310b5a3"
     },
     {
       "type": "library",

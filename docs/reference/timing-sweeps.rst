@@ -10,6 +10,23 @@ A sweep is more than a search for a lucky seed. It is also a reproducible
 experiment: synthesize one netlist, route that exact netlist many times, record
 the toolchain and configuration, and compare every required clock domain.
 
+Board defaults and overrides
+----------------------------
+
+Default routing seeds and HeAP timing weights are defined per board in
+``scripts/ecp5-board-defaults.sh`` and shared with production builds. Use
+``SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT`` to test a different sweep weight; use
+``NEXTPNR_HEAP_TIMINGWEIGHT`` to override the production build. Record the
+selected seed, netlist hash, tool versions, and all tuning arguments with
+sweep results.
+
+For the October 2026 ULX4M-LD 40 MHz SERV netlist with SHA256
+``9403efe0ff3fb55866be8afbfed0261a5769dd98e4c150fa81aa3520f5ea3173``,
+seed 8 passed at HeAP weight 30: ``clk_sys`` 40.47 MHz, LiteDRAM clocks
+65.71 / 66.05 MHz. This is a routed timing result, not a hardware
+qualification. Seed 8 at weight 10 reached 40.82 MHz on the same sweep
+series; keep routing weights consistent when comparing seeds.
+
 Why seeds matter
 ----------------
 

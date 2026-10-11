@@ -36,8 +36,9 @@ result. Check the host before building with:
 
 See :doc:`../getting-started/prerequisites` for the required host tools. The
 board-specific nextpnr defaults are owned by
-``scripts/build-ecp5-bitstream-common.sh`` and summarized directly from that
-file in :doc:`../reference/board-profiles`.
+``scripts/ecp5-board-defaults.sh`` and listed directly from that
+file in :doc:`../reference/board-profiles`. Production builds and seed sweeps
+use the same per-board defaults.
 
 For the 0.2.0 release, ``.github/workflows/ulx4m-bootloader.yml`` intentionally
 pins OSS CAD Suite to ``2026-09-14`` instead of following the latest nightly.

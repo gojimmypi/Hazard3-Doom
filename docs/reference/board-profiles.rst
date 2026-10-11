@@ -38,17 +38,19 @@ clock automatically.
 Default nextpnr routing settings
 --------------------------------
 
-The board wrappers obtain their routing defaults from one common implementation,
-``scripts/build-ecp5-bitstream-common.sh``. The current assignments are included
-directly from that file so the documentation does not maintain another copy:
+Builds and seed sweeps use the board-specific defaults in
+``scripts/ecp5-board-defaults.sh``. The assignments below are included directly
+from that file:
 
-.. literalinclude:: ../../scripts/build-ecp5-bitstream-common.sh
+.. literalinclude:: ../../scripts/ecp5-board-defaults.sh
    :language: bash
-   :start-at: ULX3S_85F_DEFAULT_NEXTPNR_SEED=
+   :start-at: ULX3S_12F_DEFAULT_NEXTPNR_SEED=
    :end-at: ULX4M_LD_85F_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT=
 
-``NEXTPNR_SEED`` can still override the selected board default for an explicit
-route. Treat the defaults as release baselines, not permanent optima.
+``NEXTPNR_SEED`` and ``NEXTPNR_HEAP_TIMINGWEIGHT`` override build defaults.
+``SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT`` overrides the sweep timing weight.
+Record explicit overrides with the routed results. These defaults are
+configuration baselines, not timing guarantees.
 
 Current FPGA validation
 -----------------------
@@ -75,13 +77,15 @@ portable timing guarantees.
      - ``clk_sys`` 42.70 MHz
      - PASS at 40 MHz
    * - ULX4M-LD 85F
-     - 83
-     - ``clk_sys`` 43.63 MHz; LiteDRAM user 67.51 MHz
-     - PASS at 40 MHz / 60 MHz; selected release route
+     - 8
+     - ``clk_sys`` 40.47 MHz; LiteDRAM clocks 65.71 / 66.05 MHz; HeAP weight 30
+     - PASS at 40 MHz; routed sweep, hardware qualification pending
 
-These release-route rows intentionally keep the seed explicit because it is
-part of the timing result's provenance. The default values themselves are
-owned by the common build script above.
+These rows record specific routes. The ULX4M-LD seed-8 result used frozen
+netlist SHA256 ``9403efe0ff3fb55866be8afbfed0261a5769dd98e4c150fa81aa3520f5ea3173``.
+The older seed-83 route passed a previous netlist but failed at 38.06 MHz on
+the current netlist with HeAP weight 30. Seed 8 has not yet been confirmed by
+a normal production rebuild or hardware test.
 
 The hardware-qualified ULX4M-LD checkpoint is substantially stronger than the
 older ``ALLOW_TIMING_FAILURE`` development state. The exact frozen netlist was:

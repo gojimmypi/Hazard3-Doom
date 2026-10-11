@@ -38,14 +38,13 @@ profil i takt specifičan za cilj.
 Zadane nextpnr postavke routanja
 --------------------------------
 
-Omotači za pločice uzimaju zadane postavke routanja iz jedne zajedničke
-implementacije, ``scripts/build-ecp5-bitstream-common.sh``. Trenutačne se
-vrijednosti uključuju izravno iz te datoteke kako dokumentacija ne bi održavala
-drugu kopiju:
+Build i sweep skripte koriste zadane vrijednosti za pojedine pločice iz
+``scripts/ecp5-board-defaults.sh``. Vrijednosti su izravno uključene iz te
+datoteke:
 
-.. literalinclude:: ../../scripts/build-ecp5-bitstream-common.sh
+.. literalinclude:: ../../scripts/ecp5-board-defaults.sh
    :language: bash
-   :start-at: ULX3S_85F_DEFAULT_NEXTPNR_SEED=
+   :start-at: ULX3S_12F_DEFAULT_NEXTPNR_SEED=
    :end-at: ULX4M_LD_85F_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT=
 
 ``NEXTPNR_SEED`` i dalje može nadjačati zadani seed odabrane pločice za izričiti
@@ -80,9 +79,9 @@ jamstva timinga:
      - ``clk_sys`` 43.63 MHz; LiteDRAM korisnički port 67.51 MHz
      - PASS pri 40 MHz / 60 MHz; odabrani release route
 
-Ovi release-route zapisi namjerno zadržavaju seed jer je on dio podataka o
-podrijetlu timing rezultata. Same zadane vrijednosti održava zajednička build
-skripta iznad.
+Prikazani rezultati odnose se na pojedine route postupke. ULX4M-LD seed 8
+prošao je timing provjeru na zamrznutom netlistu, ali još nije hardverski
+kvalificiran. Ranija hardverska kvalifikacija za seed 2 ostaje zaseban zapis.
 
 Hardverski kvalificirana ULX4M-LD kontrolna točka koristi zamrznuti netlist,
 seed 2 i HeAP

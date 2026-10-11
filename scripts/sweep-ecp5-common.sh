@@ -89,9 +89,11 @@ sweep_ecp5_bool()
 
 sweep_ecp5_init_tuning()
 {
+    ecp5_board_defaults "${SWEEP_ECP5_BOARD_ID}"
     SWEEP_NEXTPNR_PLACER="${SWEEP_NEXTPNR_PLACER:-${HAZARD3_ULX4M_NEXTPNR_PLACER:-heap}}"
     SWEEP_NEXTPNR_ROUTER="${SWEEP_NEXTPNR_ROUTER:-${HAZARD3_ULX4M_NEXTPNR_ROUTER:-router1}}"
-    SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT="${SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT:-${HAZARD3_ULX4M_NEXTPNR_HEAP_TIMINGWEIGHT:-10}}"
+    # Keep the sweep default identical to this board's production build.
+    SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT="${SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT:-${HAZARD3_ULX4M_NEXTPNR_HEAP_TIMINGWEIGHT:-${ECP5_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT}}}"
     SWEEP_NEXTPNR_HEAP_CRITEXP="${SWEEP_NEXTPNR_HEAP_CRITEXP:-${HAZARD3_ULX4M_NEXTPNR_HEAP_CRITEXP:-2}}"
     SWEEP_NEXTPNR_TMG_RIPUP="$(sweep_ecp5_bool "${SWEEP_NEXTPNR_TMG_RIPUP:-${HAZARD3_ULX4M_NEXTPNR_TMG_RIPUP:-0}}")"
     SWEEP_NEXTPNR_ROUTER2_ALT_WEIGHTS="$(sweep_ecp5_bool "${SWEEP_NEXTPNR_ROUTER2_ALT_WEIGHTS:-${HAZARD3_ULX4M_NEXTPNR_ROUTER2_ALT_WEIGHTS:-0}}")"
@@ -135,7 +137,7 @@ sweep_ecp5_init_tuning()
     fi
 
     if [[ "${SWEEP_NEXTPNR_PLACER}" != "heap" &&
-          ( "${SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT}" != "10" ||
+          ( "${SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT}" != "${ECP5_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT}" ||
             "${SWEEP_NEXTPNR_HEAP_CRITEXP}" != "2" ) ]]; then
         echo "HeAP timingweight/critexp tuning requires placer=heap." >&2
         exit 1
@@ -153,6 +155,7 @@ sweep_ecp5_init_tuning()
     )
 
     if [[ "${SWEEP_NEXTPNR_PLACER}" == "heap" ]]; then
+        # See also --placer-heap-timingweight setting in build-ecp5-bitstream-common.sh
         SWEEP_NEXTPNR_ARGS+=(
             --placer-heap-timingweight "${SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT}"
             --placer-heap-critexp "${SWEEP_NEXTPNR_HEAP_CRITEXP}"

@@ -36,8 +36,11 @@ SYNTH_LOG="${BUILD_DIR}/fpga_ulx3s_85f.synth.log"
 NETLIST="${BUILD_DIR}/fpga_ulx3s_85f.json"
 LPF="${SYNTH_DIR}/fpga_ulx3s.lpf"
 
+# shellcheck source=scripts/ecp5-board-defaults.sh
+source "${SCRIPT_DIR}/ecp5-board-defaults.sh"
+SWEEP_ECP5_BOARD_ID="ulx3s-85f"
+
 # shellcheck source=scripts/sweep-ecp5-common.sh
-# shellcheck disable=SC1091
 source "${COMMON_SCRIPT}"
 echo "Include source: ${COMMON_SCRIPT}" >&2
 

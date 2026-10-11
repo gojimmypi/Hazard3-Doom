@@ -46,7 +46,7 @@ page still uses the generic ``build/doom-image/`` directory unless
 ``HAZARD3_DOOM_BUILD_DIR`` is set.
 
 The build uses the shared ULX4M-LD routing defaults defined in
-``scripts/build-ecp5-bitstream-common.sh`` and summarized in
+``scripts/ecp5-board-defaults.sh`` and listed in
 :doc:`../reference/board-profiles`. The historical frozen seed-2 checkpoint
 also passed the full DDR qualification suite on a
 Micron-populated ULX4M-LD, but a complete rebuild changes the synthesized

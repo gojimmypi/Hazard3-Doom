@@ -444,7 +444,7 @@ ROR: Max frequency for clock '$glbnet$clk_sys': XX.YY MHz (FAIL at 50 MHz)
 
 If the routed frequency is below the target when using the default seeds, first
 confirm that Yosys and nextpnr match the versions recorded with the authoritative
-routing defaults in ``scripts/build-ecp5-bitstream-common.sh``. Routing seeds are
+routing defaults in ``scripts/ecp5-board-defaults.sh``. Routing seeds are
 tool-version-specific.
 
 Record the local versions with:

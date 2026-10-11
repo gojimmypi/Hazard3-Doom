@@ -29,35 +29,18 @@ set -euo pipefail
 "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
     --check-file "${BASH_SOURCE[0]}" || true
 
-# Default nextpnr routing settings. Keep these together so board defaults are
-# easy to find and update after timing sweeps. NEXTPNR_SEED still overrides the
-# selected board seed when provided by the caller. ULX4M-LD also accepts
-# NEXTPNR_HEAP_TIMINGWEIGHT as an override for its qualified HeAP timing weight.
-#
-# Seeds are both yosys and nextpnr version-specific:
-#   yosys --version && nextpnr-ecp5 --version
-#   Yosys 0.67 (git sha1 2d1509d1b, Release, GNU /usr/bin/c++ 11.4.0)
-#   "nextpnr-ecp5" -- Next Generation Place and Route (Version nextpnr-0.10-95-gddc6c8c8)
-#
-# These assignments are the authoritative build defaults. Documentation should
-# reference this common location instead of maintaining additional copies. Seed
-# values that appear in sweep summaries or validation tables are retained as
-# experimental provenance and should match the route being documented.
-#
-# When updating default, also check docs:
-# https://ulx3s.github.io/ulx-doom/#current-fpga-validation
-# https://hazard3-doom.readthedocs.io/en/latest/getting-started/build.html
-# https://hazard3-doom.readthedocs.io/en/latest/reference/board-profiles.html
+# Default seed and HeAP timing weight are shared with seed sweeps.
+# See scripts/ecp5-board-defaults.sh for per-board configuration.
+# NEXTPNR_SEED and NEXTPNR_HEAP_TIMINGWEIGHT remain caller overrides.
 
-ULX3S_85F_DEFAULT_NEXTPNR_SEED=232
-ULX3S_12F_DEFAULT_NEXTPNR_SEED=82
-ULX4M_LD_85F_DEFAULT_NEXTPNR_SEED=83
-ULX4M_LD_85F_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT=30
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/ecp5-board-defaults.sh
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/ecp5-board-defaults.sh"
 
 BOARD_ID="${1:-}"
 shift || true
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 HAZARD3_ROOT="${HAZARD3_ROOT:-${REPO_ROOT}/third_party/Hazard3}"
 HAZARD3_SYNTH="${HAZARD3_ROOT}/example_soc/synth"
@@ -522,6 +505,7 @@ validate_ulx3s_12f_system_timing()
 # a better setting for a changed netlist/toolchain.
 #
 PNR_TUNING_ARGS=()
+ecp5_board_defaults "${BOARD_ID}"
 
 case "${BOARD_ID}" in
 ulx3s-85f)
@@ -530,7 +514,7 @@ ulx3s-85f)
     MAKEFILE="ULX3S.mk"
     LPF="${HAZARD3_SYNTH}/fpga_ulx3s.lpf"
     IDCODE="0x41113043"
-    NEXTPNR_SEED="${NEXTPNR_SEED:-${ULX3S_85F_DEFAULT_NEXTPNR_SEED}}"
+    NEXTPNR_SEED="${NEXTPNR_SEED:-${ECP5_DEFAULT_NEXTPNR_SEED}}"
     PNR_DEVICE_ARGS=(--um5g-85k --package CABGA381)
     HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
     SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.video-profile"
@@ -542,7 +526,7 @@ ulx3s-12f)
     MAKEFILE="ULX3S_12F.mk"
     LPF="${HAZARD3_SYNTH}/fpga_ulx3s.lpf"
     IDCODE="0x21111043"
-    NEXTPNR_SEED="${NEXTPNR_SEED:-${ULX3S_12F_DEFAULT_NEXTPNR_SEED}}"
+    NEXTPNR_SEED="${NEXTPNR_SEED:-${ECP5_DEFAULT_NEXTPNR_SEED}}"
     PNR_DEVICE_ARGS=(--12k --speed 6 --package CABGA381)
     HAZARD3_MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE:-32m}"
     SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_12f.memory-profile"
@@ -555,12 +539,13 @@ ulx4m-ld-85f)
     MAKEFILE="ULX4M_LD_85F.mk"
     LPF="${HAZARD3_SYNTH}/fpga_ulx4m_ld.lpf"
     IDCODE="0x01113043"
-    NEXTPNR_SEED="${NEXTPNR_SEED:-${ULX4M_LD_85F_DEFAULT_NEXTPNR_SEED}}"
-    NEXTPNR_HEAP_TIMINGWEIGHT="${NEXTPNR_HEAP_TIMINGWEIGHT:-${SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT:-${ULX4M_LD_85F_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT}}}"
+    NEXTPNR_SEED="${NEXTPNR_SEED:-${ECP5_DEFAULT_NEXTPNR_SEED}}"
+    NEXTPNR_HEAP_TIMINGWEIGHT="${NEXTPNR_HEAP_TIMINGWEIGHT:-${SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT:-${ECP5_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT}}}"
     if [[ ! "${NEXTPNR_HEAP_TIMINGWEIGHT}" =~ ^[1-9][0-9]*$ ]]; then
         echo "NEXTPNR_HEAP_TIMINGWEIGHT must be a positive integer." >&2
         exit 1
     fi
+    # See also --placer-heap-timingweight setting in scripts/sweep-ecp5-common.sh
     PNR_TUNING_ARGS=(--placer-heap-timingweight "${NEXTPNR_HEAP_TIMINGWEIGHT}")
     PNR_DEVICE_ARGS=(--um-85k --speed 8 --package CABGA381)
     LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM"

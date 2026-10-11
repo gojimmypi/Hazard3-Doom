@@ -37,7 +37,7 @@ memory map aligned.
    Complete ULX4M-LD 85F build. It uses the 64 MiB software map at 40 MHz and
    checks the selected generated LiteDRAM sources before building the monitor,
    embedded boot image, FPGA bitstream, and Doom image. The release build uses
-   the ULX4M-LD defaults from ``build-ecp5-bitstream-common.sh`` and must close
+   the ULX4M-LD defaults from ``scripts/ecp5-board-defaults.sh`` and must close
    every required clock. The historical frozen 40 MHz Hazard3 / 60 MHz LiteDRAM
    seed-2
    checkpoint is hardware-qualified. A fresh complete build creates a new netlist
@@ -174,6 +174,10 @@ strategy, see :doc:`timing-sweeps`.
    Shared target dispatcher used by local runs and GitHub Actions. It lists
    supported targets, prepares/fetches target paths, and invokes the
    target-specific routed sweep.
+
+``scripts/ecp5-board-defaults.sh``
+   Board-specific default seeds and HeAP timing weights shared by production
+   builds and seed sweeps. Explicit environment overrides remain available.
 
 ``scripts/sweep-ecp5-common.sh``
    Shared nextpnr implementation. It validates placer/router controls, builds
@@ -399,7 +403,7 @@ Repository hygiene and generated inventory
    ``--integration`` additionally executes the complete builds and routed
    sample sweeps for all three ECP5 targets. The integration seed lists are
    defined in ``test-scripts.sh``; they are separate from the board build
-   defaults in ``build-ecp5-bitstream-common.sh``. Use the target-specific
+   defaults in ``ecp5-board-defaults.sh``. Use the target-specific
    ``SCRIPT_TEST_*_SEEDS`` variables or ``SCRIPT_TEST_SWEEP_SEEDS`` to override
    all three lists; ``SCRIPT_TEST_SWEEP_JOBS`` controls concurrency. A sweep
    that completes without a timing-passing sampled seed is reported as a
