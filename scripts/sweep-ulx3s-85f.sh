@@ -39,7 +39,7 @@ LPF="${SYNTH_DIR}/fpga_ulx3s.lpf"
 # shellcheck source=scripts/sweep-ecp5-common.sh
 # shellcheck disable=SC1091
 source "${COMMON_SCRIPT}"
-echo "Include source: ${COMMON_SCRIPT}"
+echo "Include source: ${COMMON_SCRIPT}" >&2
 
 sweep_ecp5_init_tuning
 TUNING_SUFFIX="$(sweep_ecp5_tuning_suffix)"
@@ -73,7 +73,7 @@ if command -v "${MY_SHELLCHECK}" >/dev/null 2>&1; then
         "${MY_SHELLCHECK}" -x "scripts/$(basename -- "${BASH_SOURCE[0]}")"
     ) || exit 1
 else
-    echo "${MY_SHELLCHECK} is not installed. Please install it if changes to this script have been made."
+    echo "${MY_SHELLCHECK} is not installed. Please install it if changes to this script have been made." >&2
 fi
 
 if (( $# == 1 )) && [[ "$1" == "--print-sweep-dir" ]]; then

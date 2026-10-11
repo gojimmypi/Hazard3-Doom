@@ -78,7 +78,7 @@ if command -v "${MY_SHELLCHECK}" >/dev/null 2>&1; then
         "${MY_SHELLCHECK}" -x "scripts/$(basename -- "${BASH_SOURCE[0]}")"
     ) || exit 1
 else
-    echo "${MY_SHELLCHECK} is not installed. Please install it if changes to this script have been made."
+    echo "${MY_SHELLCHECK} is not installed. Please install it if changes to this script have been made." >&2
 fi
 
 if (( $# == 1 )) && [[ "$1" == "--print-sweep-dir" ]]; then

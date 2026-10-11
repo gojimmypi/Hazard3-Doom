@@ -22,6 +22,7 @@
 set -euo pipefail
 
 # Verify this script against the recorded inventory without blocking normal execution.
+# Keep diagnostics on stderr so --print-* queries return only their requested value.
 "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
     --check-file "${BASH_SOURCE[0]}" || true
 
@@ -96,7 +97,7 @@ if command -v "${MY_SHELLCHECK}" >/dev/null 2>&1; then
         "${MY_SHELLCHECK}" -x "scripts/$(basename -- "${BASH_SOURCE[0]}")"
     ) || exit 1
 else
-    echo "${MY_SHELLCHECK} is not installed. Please install it if changes to this script have been made."
+    echo "${MY_SHELLCHECK} is not installed. Please install it if changes to this script have been made." >&2
 fi
 
 # -----------------------------------------------------------------------------

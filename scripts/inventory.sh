@@ -43,7 +43,7 @@ if [[ "${1:-}" != "--check-file" ]]; then
         # Run your command here
         shellcheck "$0" || exit 1
     else
-        echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made."
+        echo "$MY_SHELLCHECK is not installed. Please install it if changes to this script have been made." >&2
     fi
 fi
 
@@ -309,12 +309,13 @@ check_self_inventory_signature()
 
     self_hash="$(sha256_file "${SELF_PATH}")"
 
+    # calls to this check_self_inventory_signature already redirect to stderr, no need to here
     if [[ "${self_hash}" == "${recorded_hash}" ]]; then
-        printf 'Self SHA-256: SAME (%s matches INVENTORY.sha256)\n' "${SELF_NAME}"
+        printf 'Self SHA-256: SAME (%s matches INVENTORY.sha256)\n' "${SELF_NAME}" >&2
     else
-        printf 'Self SHA-256: DIFFERENT (%s does not match INVENTORY.sha256)\n' "${SELF_NAME}"
-        printf '  inventory: %s\n' "${recorded_hash}"
-        printf '  current:   %s\n' "${self_hash}"
+        printf 'Self SHA-256: DIFFERENT (%s does not match INVENTORY.sha256)\n' "${SELF_NAME}" >&2
+        printf '  inventory: %s\n' "${recorded_hash}" >&2
+        printf '  current:   %s\n' "${self_hash}"  >&2
     fi
 }
 
@@ -506,7 +507,7 @@ make_temp_file()
 SHA256_TOOL="$(find_sha256_tool)"
 
 if [[ "${mode}" == "check-file" ]]; then
-    check_file_inventory_signature "${CHECK_FILE_PATH}"
+    check_file_inventory_signature "${CHECK_FILE_PATH}" >&2
     exit $?
 fi
 
@@ -521,7 +522,7 @@ cleanup()
 }
 trap cleanup EXIT
 
-check_self_inventory_signature
+check_self_inventory_signature >&2
 
 # Ask Git for the current index instead of walking the filesystem. This keeps
 # large ignored/untracked local toolchains out of the inventory automatically.
@@ -664,7 +665,7 @@ if [[ "${mode}" == "check" ]]; then
         exit "${status}"
     fi
 
-    echo "inventory manifests are current (${file_count} Git-tracked files, ${total_bytes} bytes)."
+    echo "inventory manifests are current (${file_count} Git-tracked files, ${total_bytes} bytes)." >&2
     exit 0
 fi
 
@@ -677,7 +678,7 @@ TSV_TMP=""
 SHA_TMP=""
 MD_TMP=""
 
-printf 'Wrote inventory for %d Git-tracked files (%d bytes):\n' "${file_count}" "${total_bytes}"
-printf '  %s\n' "${TSV_OUT}"
-printf '  %s\n' "${SHA_OUT}"
-printf '  %s\n' "${MD_OUT}"
+printf 'Wrote inventory for %d Git-tracked files (%d bytes):\n' "${file_count}" "${total_bytes}" >&2
+printf '  %s\n' "${TSV_OUT}" >&2
+printf '  %s\n' "${SHA_OUT}" >&2
+printf '  %s\n' "${MD_OUT}" >&2
