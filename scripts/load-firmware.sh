@@ -17,18 +17,45 @@
 # See LICENSES/Apache-2.0.txt for the complete license terms.
 # See LICENSING.md for project licensing policy and scope.
 # -----------------------------------------------------------------------------
-
+#
+# This script loads the Hazard3 monitor firmware into the FPGA target through
+# OpenOCD and GDB. It verifies the loaded firmware and starts execution.
+#
+# Example usage:
+#   ./scripts/load-firmware.sh ./build/hazard3-boot-monitor.elf
+#
 set -euo pipefail
 
 # Verify this script against the recorded inventory without blocking normal execution.
 "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
     --check-file "${BASH_SOURCE[0]}" || true
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Prefer the bundled Windows GDB when running from WSL with Windows interop.
+# This keeps GDB and the bundled Windows OpenOCD on the same host.
+if [[ -z "${GDB:-}" ]] && grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null &&
+    command -v cmd.exe >/dev/null 2>&1; then
+    for candidate in \
+        "${ROOT_DIR}/bin/gdb/riscv-none-elf-gdb.exe" \
+        "${ROOT_DIR}/bin/riscv-gcc/bin/riscv-none-elf-gdb.exe"
+    do
+        if [[ -x "${candidate}" ]]; then
+            GDB="${candidate}"
+            break
+        fi
+    done
+fi
+
 if [[ -z "${GDB:-}" ]]; then
     for candidate in \
         riscv-none-elf-gdb \
         riscv32-unknown-elf-gdb \
-        riscv64-unknown-elf-gdb
+        riscv64-unknown-elf-gdb \
+        /opt/riscv/bin/riscv32-unknown-elf-gdb \
+        "${ROOT_DIR}/bin/gdb/riscv-none-elf-gdb.exe" \
+        "${ROOT_DIR}/bin/riscv-gcc/bin/riscv-none-elf-gdb.exe"
     do
         if command -v "${candidate}" >/dev/null 2>&1; then
             GDB="${candidate}"
@@ -38,18 +65,11 @@ if [[ -z "${GDB:-}" ]]; then
 fi
 
 if [[ -z "${GDB:-}" ]]; then
-    if [[ -x /opt/riscv/bin/riscv32-unknown-elf-gdb ]]; then
-        GDB="/opt/riscv/bin/riscv32-unknown-elf-gdb"
-    fi
-fi
-
-if [[ -z "${GDB:-}" ]]; then
-    echo "ERROR: RISC-V GDB not found on PATH" >&2
+    echo "ERROR: RISC-V GDB not found." >&2
     exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+printf 'Using RISC-V GDB: %s\n' "${GDB}"
 
 ELF="${1:-${ROOT_DIR}/build/hazard3-boot-monitor.elf}"
 
@@ -157,12 +177,53 @@ load_firmware_with_gdb()
         return
     fi
 
+    local gdb_elf="${ELF}"
+
+    # Windows GDB launched from WSL needs Windows paths and a Windows cwd.
+    # cmd.exe changes to the Windows drive before starting GDB.
+    if [[ "${GDB,,}" == *.exe ]] && grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null; then
+        if ! command -v wslpath >/dev/null 2>&1 ||
+            ! command -v cmd.exe >/dev/null 2>&1; then
+            echo "ERROR: Windows GDB from WSL requires wslpath and cmd.exe." >&2
+            return 1
+        fi
+
+        local win_root win_gdb win_elf
+        win_root="$(wslpath -w "${ROOT_DIR}")" || return 1
+        win_gdb="$(wslpath -w "$(realpath "${GDB}")")" || return 1
+        win_elf="$(wslpath -w "$(realpath "${ELF}")")" || return 1
+
+        printf 'Windows GDB working directory: %s\n' "${win_root}"
+        printf 'Windows firmware ELF: %s\n' "${win_elf}"
+
+        # Use a temporary Windows batch file to avoid nested cmd.exe quoting.
+        # The Windows working directory is set before GDB starts.
+        local cmd_file win_cmd rc
+        cmd_file="$(mktemp "${ROOT_DIR}/build/.load-firmware-gdb.XXXXXXXX.cmd")" || return 1
+        win_cmd="$(wslpath -w "${cmd_file}")" || {
+            rm -f "${cmd_file}"
+            return 1
+        }
+        # The GDB $pc register expression must remain literal.
+        # shellcheck disable=SC2016
+        printf '@echo off\r\ncd /d "%s"\r\n"%s" --batch --quiet "%s" -ex "set confirm off" -ex "set pagination off" -ex "set remotetimeout 120" -ex "target extended-remote 127.0.0.1:3333" -ex "monitor halt" -ex "load" -ex "compare-sections" -ex "set $pc = _start" -ex "monitor resume" -ex "disconnect"\r\n' \
+            "${win_root}" "${win_gdb}" "${win_elf}" > "${cmd_file}"
+
+        if cmd.exe /d /c "${win_cmd}"; then
+            rc=0
+        else
+            rc=$?
+        fi
+        rm -f "${cmd_file}"
+        return "${rc}"
+    fi
+
     # The GDB expression $pc must be passed literally rather than expanded by Bash.
     # shellcheck disable=SC2016
     "${GDB}" \
         --batch \
         --quiet \
-        "${ELF}" \
+        "${gdb_elf}" \
         -ex 'set confirm off' \
         -ex 'set pagination off' \
         -ex 'set remotetimeout 120' \

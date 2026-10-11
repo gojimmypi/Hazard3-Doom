@@ -89,7 +89,12 @@
 #define MCAUSE_MACHINE_TIMER_IRQ   0x80000007u
 
 #define GPIO_OUT (*(volatile uint32_t *)0x40008000u)
+#define GPIO_IN  (*(volatile uint32_t *)0x40008004u)
 
+#define GPIO_SWITCH_MASK          0x0fu
+#define GPIO_BUTTON_SHIFT         4u
+#define GPIO_BUTTON_MASK          0x3fu
+#define FPGA_BUILD_ID_ULX3S_DEV   0x55445635u /* ASCII "UDV5" */
 #define GPIO_FOREGROUND_MASK       0x7fu
 #define GPIO_TIMER_LED             0x80u
 
@@ -343,6 +348,7 @@ static void console_print_help(void)
     } else {
         uart_puts("  f       rewrite/present the 320x200 RGB332 HDMI test frame\r\n");
     }
+    uart_puts("  g       GPIO input status (ULX3S SW1..SW4 + six buttons)\r\n");
     uart_puts("  z       reset heap; invalidates every heap pointer\r\n");
     uart_puts("  s       status\r\n");
     uart_puts("  v       version\r\n");
@@ -360,6 +366,11 @@ static int is_ulx3s_build(uint32_t fpga_build_id)
 {
     return fpga_build_id == HAZARD3_FPGA_BUILD_ID_ULX3S ||
         fpga_build_id == HAZARD3_FPGA_BUILD_ID_ULX3S_12F;
+}
+
+static int is_ulx3s_dev_build(uint32_t fpga_build_id)
+{
+    return fpga_build_id == FPGA_BUILD_ID_ULX3S_DEV;
 }
 
 static int is_ulx5m_gs_build(uint32_t fpga_build_id)
@@ -381,6 +392,13 @@ static int build_ids_match(uint32_t fpga_build_id,
                 HAZARD3_MEMORY_CORE_BUILD_ID_ULX4M_LD &&
             memory_adapter_build_id ==
                 HAZARD3_MEMORY_ADAPTER_BUILD_ID_ULX4M_LD;
+    }
+
+    if (is_ulx3s_build(fpga_build_id)) {
+        return memory_core_build_id ==
+                HAZARD3_MEMORY_CORE_BUILD_ID_ULX3S &&
+            memory_adapter_build_id ==
+                HAZARD3_MEMORY_ADAPTER_BUILD_ID_ULX3S;
     }
 
     if (is_native_sdr_sdram_build(fpga_build_id)) {
@@ -417,6 +435,8 @@ static int memory_status_marker_valid(
 
     if (is_ulx4m_ld_build(fpga_build_id)) {
         expected_marker = HAZARD3_DDR_STATUS_MARKER_ULX4M_LD;
+    } else if (is_ulx3s_build(fpga_build_id)) {
+        expected_marker = HAZARD3_DDR_STATUS_MARKER_ULX3S;
     } else if (is_native_sdr_sdram_build(fpga_build_id)) {
         expected_marker = HAZARD3_DDR_STATUS_MARKER_ULX3S;
     } else {
@@ -1622,6 +1642,39 @@ static int sdram_run_heap_test(void)
     return passed;
 }
 
+static void console_print_gpio_inputs(void)
+{
+    static const char *const button_names[] = {
+        " F1=", " F2=", " UP=", " DOWN=", " LEFT=", " RIGHT="
+    };
+    uint32_t gpio_in = GPIO_IN;
+    uint32_t switches = gpio_in & GPIO_SWITCH_MASK;
+    uint32_t bit;
+
+    uart_puts("\r\nGPIO inputs: raw=");
+    uart_put_hex32(gpio_in);
+    uart_puts(" switches=");
+    uart_put_hex32(switches);
+    for (bit = 0u; bit < 4u; ++bit) {
+        uart_puts(" SW");
+        uart_putc((char)('1' + bit));
+        uart_putc('=');
+        uart_puts((switches & (1u << bit)) != 0u ? "ON" : "OFF");
+    }
+    uart_puts("\r\n");
+
+    if (is_ulx3s_build(HAZARD3_VIDEO_FPGA_BUILD_ID)) {
+        uint32_t buttons = (gpio_in >> GPIO_BUTTON_SHIFT) & GPIO_BUTTON_MASK;
+        uart_puts("GPIO buttons: mask=");
+        uart_put_hex32(buttons);
+        for (bit = 0u; bit < 6u; ++bit) {
+            uart_puts(button_names[bit]);
+            uart_puts((buttons & (1u << bit)) != 0u ? "PRESSED" : "RELEASED");
+        }
+        uart_puts("\r\n");
+    }
+}
+
 static void console_print_status(void)
 {
     uint32_t fpga_build_id = HAZARD3_VIDEO_FPGA_BUILD_ID;
@@ -1644,7 +1697,8 @@ static void console_print_status(void)
     uart_put_hex32(last_mepc);
     uart_puts(" last_mtval=");
     uart_put_hex32(last_mtval);
-    uart_puts("\r\nuart_rx_count=");
+    console_print_gpio_inputs();
+    uart_puts("uart_rx_count=");
     uart_put_hex32(uart_rx_count);
     uart_puts(" uart_tx_count=");
     uart_put_hex32(uart_tx_count);
@@ -1977,6 +2031,12 @@ static void console_poll(void)
         case 'f':
         case 'F':
             video_write_test_pattern();
+            uart_puts("> ");
+            break;
+
+        case 'g':
+        case 'G':
+            console_print_gpio_inputs();
             uart_puts("> ");
             break;
 

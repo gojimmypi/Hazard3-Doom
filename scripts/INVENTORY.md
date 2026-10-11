@@ -12,9 +12,9 @@ Project version: v0.2.1
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 87
+Files inventoried: 83
 
-Total bytes: 725316
+Total bytes: 718198
 
 ## Verification
 
@@ -31,7 +31,7 @@ should be identified before a public release.
 | `apply-doom-noncombat.py` | 6775 | `3a8062684727b572d903c3a53ef729d64438b6f3c2bdfdd5c426bfe5bec08658` | REVIEW | File |
 | `build-coremark.sh` | 7696 | `bf3456ab3951439cde96e6301f961526893f80e51e02ca5d19f0de933008e2f6` | REVIEW | Shell script |
 | `build-doom-noncombat.sh` | 5708 | `1a904b485825762b1502ede99245f64db1121e3d8a3d2fee944fad9a08218b23` | REVIEW | Shell script |
-| `build-ecp5-bitstream-common.sh` | 27214 | `6f59d138fd59ac1fe6cb21267847d5eb0bce98b79a10f6c892f23059aa467d10` | REVIEW | Shell script |
+| `build-ecp5-bitstream-common.sh` | 27215 | `46d46ce1ab895518250cf53639d4ed75c35faaef4fead2d6870f4b5359be37cb` | REVIEW | Shell script |
 | `build-supercon10-wad.py` | 6988 | `9d69e095203df153dad20f839f8ce049ef62b4433521f4c1804938043c751da6` | REVIEW | File |
 | `build-ulx3s-12f-bitstream.sh` | 1611 | `c3ca7d2f9538a5f3daf10f7e8ad67a3d5c3032e5922ad95876b9522edf2d5bdd` | REVIEW | Shell script |
 | `build-ulx3s-12f-doom.sh` | 10967 | `4d571997082c8d249c1861db46b547aa3352f0129a9a0a5fd8de979d84f48ddd` | REVIEW | Shell script |
@@ -42,20 +42,18 @@ should be identified before a public release.
 | `build-ulx4m-ld-bitstream.sh` | 1544 | `79f607d5031939d1bc08374ce26b7cc5d14aba6eac19459e76bbd622a5a03305` | REVIEW | Shell script |
 | `build-ulx4m-ld-doom.sh` | 9172 | `7b0e548a1e337b0c3b58422df593d246a17d5321dcf7c5a355f2cb8886ae1001` | REVIEW | Shell script |
 | `build-ulx4m-ld-sweep_summary.md` | 8517 | `f92171f9f40d55d815d39a85336320089a93bd6b8f1ef1a4aab620a220d68ac2` | REVIEW | Markdown documentation |
-| `build-ulx5m-gs-bitstream.sh` | 2630 | `ea6e108302601307b422da58a06767be75b41cbf43c3897727d941cf8879f85a` | REVIEW | Shell script |
-| `build-ulx5m-gs-doom.sh` | 4970 | `79c1c4dec3171b9bbeeba043d56110e8c5bdfbab5425153d975da5d88f8b9843` | REVIEW | Shell script |
+| `build-ulx5m-gs-bitstream.sh` | 3656 | `ad0894b285056799d120df2a90098bfcf6124f6c2e77fb5c21c612f0890059d5` | REVIEW | Shell script |
+| `build-ulx5m-gs-doom.sh` | 5334 | `fcefba116f18be5f1b2d79d6b975598cd9337fba195eb2dc08a13954ea7b5622` | REVIEW | Shell script |
 | `build-xpack.cmd` | 9704 | `8672fbf2aab466a9478fdc2cc93f01604659d1ad302243d82307204db43a66b3` | REVIEW | File |
-| `build.sh` | 6049 | `6bbc54624d33449aa073227dcf7599f544b8ee307b7ef9d8961f1fcea6dbcff1` | REVIEW | Shell script |
+| `build.sh` | 6086 | `4ac08d4525e9adf65bb73775757e6695f3a062df0b083d57955401e5313eb98a` | REVIEW | Shell script |
 | `check-executable.sh` | 3297 | `1317c862f081f22633d205ba10f3249e15810e3489c6948a8bb8761ca9ffae8b` | REVIEW | Shell script |
 | `check-nettype.sh` | 4540 | `f20f1011753d02d0c618baab5998c4ae6c4403cc7b2df46177ff6c5584468ef2` | REVIEW | Shell script |
 | `check-system-requirements.sh` | 6780 | `5152c41106826bff882b4e1d34e3787499eb507531cfda602559004ff0016705` | REVIEW | Shell script |
 | `check-windows-visualgdb.ps1` | 8640 | `ff4326dbf7d9e4399b46dd8e981476a3ed3e6ce489eadeb239ae77c0f2b93d28` | REVIEW | File |
 | `check-wsl-visualgdb.ps1` | 8483 | `45c44a693c87952b3a1cc2859804eb08b74ee6b34ded685c99f0aedaee062a1b` | REVIEW | File |
 | `check_submodules.bat` | 10617 | `8f05a6d9f9738ddea8ebc84f4b4cdef7df848824a0b5d971e0a9a5f4675cc98b` | REVIEW | File |
-| `dev-prompt.cmd` | 3879 | `7ada5dc43ae6d7dac5b06878867d09c60e08d0406bdef9c45b938c97333220e7` | REVIEW | File |
+| `dev-prompt.cmd` | 3874 | `1159bbdaf78a2e185ec8cf0d41b2fe836274c0d32ff9aa0c550f203cb42bbab5` | REVIEW | File |
 | `doomgeneric-version.sh` | 1591 | `e461166288862ba39a5d5bbd4237b696ccb11153038ba3011665ad636c917971` | REVIEW | Shell script |
-| `dump-flash.sh` | 839 | `24c074b42c29e6927fdbe4cafa013239b4f3fbd59a603ebc9d64f03ea2b95d2a` | REVIEW | Shell script |
-| `dump-ulx3s-flash.sh` | 6135 | `e88c2026da1c240cb57e6aeec72a94d671018f35efae86d322799f63f70b44d2` | REVIEW | Shell script |
 | `flash-ulx3s-persistent.sh` | 1812 | `ca065c362fb91afc4c981810c3d06d83c90cc8b899216d2988560961e824bf20` | REVIEW | Shell script |
 | `full-clean.sh` | 6201 | `2e167df0d07e94a30dbb12b489ed27154f17f6117e67352ff62b18559c9fef8e` | REVIEW | Shell script |
 | `full-install.sh` | 16370 | `4068d6544094439e6e5724768dedbc5addaeaf355ba1071887bc3cf78662622f` | REVIEW | Shell script |
@@ -81,13 +79,12 @@ should be identified before a public release.
 | `load-firmware-12f.sh` | 5005 | `cb8b0ec2524e760b63656af0cd894459ec5015b37f14d88f4eba4283da87cc66` | REVIEW | Shell script |
 | `load-firmware-direct-verify.py` | 6691 | `3092a9b9a8447ba83ea325863e1d6b8ac4583b7580aef24465de1934d0af48f5` | REVIEW | File |
 | `load-firmware.bat` | 3233 | `3a8f6a2cb06ae93ae85db245320b9834547d96dc33c3967fe4106e0d524e5de5` | REVIEW | File |
-| `load-firmware.sh` | 6463 | `ca9f902c8dce1e20d089a66b4328e0c10d0446d0c9d137a12310fcc701cbfefb` | REVIEW | Shell script |
+| `load-firmware.sh` | 9161 | `43d48fe57fa8e91bdb993413e891198b6191d74c4e75cec380ec512bf4fbfb5b` | REVIEW | Shell script |
 | `load-fpga-bitstream.bat` | 2682 | `b353e67ed74dcaf90b2edb349ab58dfcb5e9ee484b28f3ca031c8cf5599ed957` | REVIEW | File |
 | `make-boot-hex.py` | 2775 | `1f0eb80ad684ed1303fca182eec9b0160c8e20cd165dc8cf710a5c38ec2696f2` | REVIEW | File |
 | `peek-elf.sh` | 25041 | `d6893ccbb714025037dd4f416f455e9d49cd94d8732b6fec6eb82736b6223113` | REVIEW | Shell script |
 | `publish-check.sh` | 3069 | `917f7ad508e708a54a886b7599f26d54436d20501194de122f4e235090876178` | REVIEW | Shell script |
 | `refresh-version.sh` | 4480 | `18418ed6f45af6bef901313e6a2dfbc51c8b6ff59a1038d4a9a793ece455e875` | REVIEW | Shell script |
-| `regression-check.sh` | 2697 | `adadced9a655f576dd1450167d27baad0451ad7a72dbe8500e4328ef76b3a673` | REVIEW | Shell script |
 | `requirements-check.sh` | 37947 | `2668d0746edabf7a3c0f22d6f27b150554cd43f62aa2b33e9d98d489e37dae03` | REVIEW | Shell script |
 | `restart-from-monitor.py` | 2180 | `62fafcba0da53b21b5704f221c655c63eb5520f2def0fbe7312005a65c59dd2d` | REVIEW | File |
 | `return-to-monitor.py` | 2144 | `0214047d05bf37b06453388892bc8c5a13a49af1154f962e1680eaa644316ceb` | REVIEW | File |
@@ -100,7 +97,7 @@ should be identified before a public release.
 | `start-openocd.sh` | 10021 | `2d08c7ec39d6724f1e28976a09d9d119ad97797a426ba6cc1d85c697f2f3125a` | REVIEW | Shell script |
 | `summarize-ecp5-sweep.py` | 11880 | `1c9764208c376f0795c4ec68d84d19bb16fac4a2296cf5c062d1543d740edf75` | REVIEW | File |
 | `sweep-ecp5-common.sh` | 10846 | `04ff401514b143a8f8b20b07d4bef94800186dcba2c8e0fafe60e48f581163ba` | REVIEW | Shell script |
-| `sweep-ecp5.sh` | 4690 | `dc500d4efe87ecf8c2b834011855f9d43a4327c7ea4180cd91d2728882a9587c` | REVIEW | Shell script |
+| `sweep-ecp5.sh` | 4757 | `cd4902e32e55ec88f0f886cf599ff0f1f9dc9fe939db3151347fb391d1726675` | REVIEW | Shell script |
 | `sweep-peek-ulx3s-12f-best-peek.sh` | 1898 | `fc15e3672a893cc2abe7e292956a4d84437521b286d83224a764cdabf1e6d73e` | REVIEW | Shell script |
 | `sweep-peek-ulx3s-12f.sh` | 11810 | `e58458c8205feaab3f51668207797217980ad014d77837bd78b89a15352bbc21` | REVIEW | Shell script |
 | `sweep-peek.sh` | 8033 | `d892fafd87572d9c2510d62cd1f9e00fe5a9a21674c0f6cdd9f167554af87025` | REVIEW | Shell script |
@@ -113,4 +110,3 @@ should be identified before a public release.
 | `test-scripts.sh` | 27886 | `3c2e4cffae7336293d0f23836a790b4adce0a6f46492054abed3e90bd07c15f4` | REVIEW | Shell script |
 | `ulx4m-bootloader.sh` | 30139 | `70842c33881cf42c62d4a290084effed82128d686c71ae957f56347a5e92a8f1` | REVIEW | Shell script |
 | `watch-ecp5-sweep-results.sh` | 18726 | `6a0bd6a1703dff751367ddb34fc9613afca9673b22d930be8d9ab9b279eddc5f` | REVIEW | Shell script |
-| `workflow-run-audit.sh` | 1635 | `6996a48b8346e51ef890fc600107a345fde76ddf5bdd50cadaf07ba9bb6e016b` | REVIEW | Shell script |

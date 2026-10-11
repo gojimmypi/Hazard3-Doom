@@ -49,7 +49,7 @@ set -euo pipefail
 # https://hazard3-doom.readthedocs.io/en/latest/getting-started/build.html
 # https://hazard3-doom.readthedocs.io/en/latest/reference/board-profiles.html
 
-ULX3S_85F_DEFAULT_NEXTPNR_SEED=11
+ULX3S_85F_DEFAULT_NEXTPNR_SEED=232
 ULX3S_12F_DEFAULT_NEXTPNR_SEED=82
 ULX4M_LD_85F_DEFAULT_NEXTPNR_SEED=83
 ULX4M_LD_85F_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT=30

@@ -37,7 +37,7 @@
 #
 # git -C third_party/Hazard3 log -1 --oneline
 #
-# Currently: 3c0aca0 (HEAD) Merge pull request #9 from gojimmypi/ulx-doom-dev
+# Currently: WIP ulx-doom-dev, previously 3c0aca0 (HEAD) Merge pull request #9 from gojimmypi/ulx-doom-dev
 #
 # git -C third_party/Hazard3 rev-parse HEAD:example_soc/libfpga
 # git -C third_party/Hazard3/example_soc/libfpga rev-parse HEAD
@@ -59,16 +59,16 @@
 
 # ulx3s release on ulx-doom branch
 # ------------------------------------------------------
-[submodule "third_party/Hazard3"]
-    path = third_party/Hazard3
-    url = https://github.com/ulx3s/Hazard3.git
-    branch = ulx-doom
-    update = checkout
+# [submodule "third_party/Hazard3"]
+#     path = third_party/Hazard3
+#     url = https://github.com/ulx3s/Hazard3.git
+#     branch = ulx-doom
+#     update = checkout
 
 # dev:
 # ------------------------------------------------------
-# [submodule "third_party/Hazard3"]
-#     path = third_party/Hazard3
-#     url = https://github.com/gojimmypi/Hazard3.git
-#     branch = ulx-doom-dev
-#     update = checkout
+[submodule "third_party/Hazard3"]
+    path = third_party/Hazard3
+    url = https://github.com/gojimmypi/Hazard3.git
+    branch = ulx-doom-dev
+    update = checkout

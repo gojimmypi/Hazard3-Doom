@@ -17,7 +17,6 @@
 # See LICENSES/Apache-2.0.txt for the complete license terms.
 # See LICENSING.md for project licensing policy and scope.
 # -----------------------------------------------------------------------------
-
 set -euo pipefail
 
 # Verify this script against the recorded inventory without blocking normal execution.
@@ -120,10 +119,10 @@ esac
 
 system_clock_hz="${HAZARD3_SYS_CLK_HZ:-50000000}"
 case "${system_clock_hz}" in
-25000000|40000000|50000000)
+12000000|20000000|25000000|40000000|50000000)
     ;;
 *)
-    echo "Unsupported HAZARD3_SYS_CLK_HZ: ${system_clock_hz} (use 25000000, 40000000 or 50000000)" >&2
+    echo "Unsupported HAZARD3_SYS_CLK_HZ: ${system_clock_hz} (use 12000000, 20000000, 25000000, 40000000 or 50000000)" >&2
     exit 1
     ;;
 esac
