@@ -291,6 +291,9 @@ The **Doom H3IMG uploader** sends a packaged ``.h3img`` image over the same Web
 Serial connection as the terminal. The resident monitor must be at its ``>``
 prompt.
 
+See :doc:`../reference/h3img-format` for the executable container layout and
+H3L protocol.
+
 Before transmission, the browser validates the H3IMG header, package length, and
 payload CRC32. It then follows the monitor H3L loader handshake:
 

@@ -43,3 +43,4 @@ Otklanjanje pogrešaka
    :maxdepth: 1
 
    jtag-debugging
+   ghidra

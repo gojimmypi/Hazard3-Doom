@@ -4,6 +4,7 @@ Référence
 .. toctree::
    :maxdepth: 1
 
+   h3img-format
    commands
    scripts
    timing-sweeps

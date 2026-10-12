@@ -43,3 +43,4 @@ Debugging
    :maxdepth: 1
 
    jtag-debugging
+   ghidra
