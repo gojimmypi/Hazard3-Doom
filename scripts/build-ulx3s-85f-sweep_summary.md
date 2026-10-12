@@ -1,20 +1,27 @@
 # ulx3s-85f seed sweep summary
 
-From: https://github.com/gojimmypi/Hazard3-Doom/actions/runs/33443050599/job/99745412024
+Apply updates to default ECP5 seeds in `scripts/ecp5-board-defaults.sh`.
+
+From: https://github.com/gojimmypi/Hazard3-Doom/actions/runs/38148573801/job/114557646830
+
+Using Hazard3 [7743b30](https://github.com/gojimmypi/Hazard3/tree/7743b3089b1ded8b74d0d51e201b3554e310b5a3) WIP: 
+Merge ULX3S GPIO/reset and ULX5M support into ulx-doom-dev
 
 The paths recorded below are historical workflow metadata from that run.
 Current scripts keep netlists, logs, and sweep results under top-level `build/`.
 
-- Synthesis duration: 1:01 (61 seconds)
+## Generated ulx3s-85f seed sweep summary
+
+- Synthesis duration: 1:13 (73 seconds)
 - Seeds expected: 260
-- Routes completed: 256
-- Timed-out seeds: 4
-- TIMEOUT seed values: 66, 149, 212, 252
-- Timing-passing seeds: 46
-- PASS seed values: 11, 16, 19, 34, 35, 40, 41, 43, 49, 51, 54, 57, 60, 62, 63, 68, 81, 91, 103, 114, 116, 120, 121, 136, 140, 141, 144, 146, 147, 150, 153, 158, 176, 182, 193, 202, 206, 217, 227, 231, 248, 249, 256, 257, 258, 260
-- Best combined-margin PASS seed: 150
-- Fastest timing-passing seed: 147
-- Completed routes with timing failure: 210
+- Routes completed: 258
+- Timed-out seeds: 2
+- TIMEOUT seed values: 82, 139
+- Timing-passing seeds: 106
+- PASS seed values: 1, 2, 3, 6, 8, 14, 16, 17, 18, 22, 25, 27, 29, 35, 38, 41, 43, 44, 46, 51, 53, 54, 55, 60, 61, 65, 66, 72, 74, 78, 80, 81, 85, 86, 87, 90, 91, 94, 96, 99, 102, 103, 107, 108, 110, 111, 112, 115, 116, 117, 120, 123, 125, 127, 128, 131, 132, 133, 134, 135, 136, 137, 142, 145, 146, 147, 161, 163, 166, 167, 168, 169, 171, 172, 179, 181, 183, 184, 185, 189, 191, 193, 195, 199, 202, 207, 209, 210, 211, 212, 213, 214, 216, 218, 221, 223, 224, 227, 232, 233, 236, 240, 242, 248, 252, 256
+- Best combined-margin PASS seed: 248
+- Fastest timing-passing seed: 163
+- Completed routes with timing failure: 152
 - Route/tool failures: 0
 - Missing seed results: 0
 
@@ -26,19 +33,20 @@ Current scripts keep netlists, logs, and sweep results under top-level `build/`.
 
 ## Per-clock closure
 
-- clk_sys: 47/256
-- video pixel: 256/256
-- TMDS x5: 256/256
+- clk_sys: 106/258
+- video pixel: 258/258
+- TMDS x5: 258/258
 
 ## Workflow configuration
 
 - heap_critexp: 2
 - heap_timingweight: 10
 - max_parallel: 20
-- netlist: third_party/Hazard3/example_soc/synth/fpga_ulx3s.json
+- netlist: build/fpga_ulx3s_85f.json
 - nextpnr_extra_args: (none)
 - placer: heap
 - retain_bitstreams: false
+- route_constraint: third_party/Hazard3/example_soc/synth/fpga_ulx3s.lpf
 - route_kill_after_seconds: 30
 - route_oss_cad_suite_version: 2026-07-20
 - route_timeout_seconds: 7200
@@ -52,86 +60,88 @@ Current scripts keep netlists, logs, and sweep results under top-level `build/`.
 - sweep_dir: build/ulx3s-seed-sweep
 - synth_oss_cad_suite_version: 2026-07-20
 - target: ulx3s-85f
+- timing_constraint: (none)
 - tmg_ripup: false
 - ulx3s_12f_memory_profile: 32m
 - ulx3s_85f_extended_modes: 1
 - ulx4m_litedram_cpu: serv
 - ulx4m_sys_clk_mhz: 40
+- ulx5m_heap_beta: 0.6
 
 ## Closest to full timing closure
 
 | Seed | Result | clk_sys | video pixel | TMDS x5 | Limiting | Worst ratio | Route time |
 | ---: | :---: | ---: | ---: | ---: | :--- | ---: | ---: |
-| 150 | PASS | 53.35 | 78.85 | 375.09 | clk_sys_mhz | 1.067x | 55:05 |
-| 257 | PASS | 52.82 | 69.45 | 303.58 | clk_sys_mhz | 1.056x | 25:08 |
-| 40 | PASS | 52.79 | 74.31 | 323.00 | clk_sys_mhz | 1.056x | 45:14 |
-| 231 | PASS | 52.53 | 80.37 | 342.11 | clk_sys_mhz | 1.051x | 16:46 |
-| 103 | PASS | 52.30 | 76.41 | 320.31 | clk_sys_mhz | 1.046x | 1:06:57 |
-| 11 | PASS | 52.24 | 72.96 | 342.47 | clk_sys_mhz | 1.045x | 3:53 |
-| 217 | PASS | 52.06 | 71.85 | 333.00 | clk_sys_mhz | 1.041x | 8:14 |
-| 136 | PASS | 52.00 | 72.33 | 303.58 | clk_sys_mhz | 1.040x | 17:32 |
-| 62 | PASS | 51.89 | 74.59 | 366.57 | clk_sys_mhz | 1.038x | 1:31:07 |
-| 146 | PASS | 51.89 | 82.57 | 371.33 | clk_sys_mhz | 1.038x | 39:42 |
-| 202 | PASS | 51.86 | 78.28 | 362.45 | clk_sys_mhz | 1.037x | 11:20 |
-| 121 | PASS | 51.79 | 76.82 | 285.55 | clk_sys_mhz | 1.036x | 6:53 |
-| 158 | PASS | 51.78 | 73.64 | 281.29 | clk_sys_mhz | 1.036x | 12:12 |
-| 116 | PASS | 51.66 | 86.37 | 378.36 | clk_sys_mhz | 1.033x | 3:03 |
-| 176 | PASS | 51.57 | 74.16 | 324.57 | clk_sys_mhz | 1.031x | 13:57 |
-| 120 | PASS | 51.56 | 81.57 | 378.64 | clk_sys_mhz | 1.031x | 3:40 |
-| 68 | PASS | 51.46 | 72.24 | 303.95 | clk_sys_mhz | 1.029x | 15:48 |
-| 258 | PASS | 51.31 | 79.77 | 352.49 | clk_sys_mhz | 1.026x | 15:37 |
-| 19 | PASS | 51.27 | 81.07 | 370.78 | clk_sys_mhz | 1.025x | 4:14 |
-| 182 | PASS | 51.17 | 71.13 | 311.72 | clk_sys_mhz | 1.023x | 5:58 |
+| 248 | PASS | 57.17 | 84.10 | 369.41 | clk_sys_mhz | 1.143x | 39:13 |
+| 3 | PASS | 57.16 | 85.63 | 330.80 | clk_sys_mhz | 1.143x | 40:37 |
+| 131 | PASS | 56.40 | 75.45 | 352.49 | clk_sys_mhz | 1.128x | 37:15 |
+| 85 | PASS | 56.20 | 84.95 | 337.04 | clk_sys_mhz | 1.124x | 36:47 |
+| 211 | PASS | 55.73 | 87.02 | 304.60 | clk_sys_mhz | 1.115x | 4:04 |
+| 133 | PASS | 55.55 | 78.78 | 351.99 | clk_sys_mhz | 1.111x | 7:40 |
+| 147 | PASS | 55.20 | 79.78 | 328.95 | clk_sys_mhz | 1.104x | 45:28 |
+| 46 | PASS | 55.14 | 84.70 | 303.95 | clk_sys_mhz | 1.103x | 34:20 |
+| 167 | PASS | 55.13 | 81.46 | 452.08 | clk_sys_mhz | 1.103x | 3:07 |
+| 102 | PASS | 55.05 | 82.59 | 336.81 | clk_sys_mhz | 1.101x | 4:10 |
+| 169 | PASS | 55.04 | 84.65 | 339.90 | clk_sys_mhz | 1.101x | 20:08 |
+| 123 | PASS | 54.98 | 78.24 | 321.54 | clk_sys_mhz | 1.100x | 17:28 |
+| 214 | PASS | 54.80 | 84.84 | 303.86 | clk_sys_mhz | 1.096x | 11:15 |
+| 38 | PASS | 54.76 | 82.39 | 323.00 | clk_sys_mhz | 1.095x | 10:43 |
+| 55 | PASS | 54.43 | 74.89 | 303.58 | clk_sys_mhz | 1.089x | 7:58 |
+| 135 | PASS | 54.40 | 79.97 | 303.49 | clk_sys_mhz | 1.088x | 49:57 |
+| 72 | PASS | 54.17 | 85.30 | 329.92 | clk_sys_mhz | 1.083x | 6:46 |
+| 65 | PASS | 54.02 | 86.27 | 323.00 | clk_sys_mhz | 1.080x | 10:53 |
+| 27 | PASS | 53.94 | 84.26 | 292.91 | clk_sys_mhz | 1.079x | 7:29 |
+| 66 | PASS | 53.88 | 80.04 | 321.54 | clk_sys_mhz | 1.078x | 6:50 |
 
 ## Timing-passing seeds by combined margin
 
 | Seed | Result | clk_sys | video pixel | TMDS x5 | Limiting | Worst ratio | Route time |
 | ---: | :---: | ---: | ---: | ---: | :--- | ---: | ---: |
-| 150 | PASS | 53.35 | 78.85 | 375.09 | clk_sys_mhz | 1.067x | 55:05 |
-| 257 | PASS | 52.82 | 69.45 | 303.58 | clk_sys_mhz | 1.056x | 25:08 |
-| 40 | PASS | 52.79 | 74.31 | 323.00 | clk_sys_mhz | 1.056x | 45:14 |
-| 231 | PASS | 52.53 | 80.37 | 342.11 | clk_sys_mhz | 1.051x | 16:46 |
-| 103 | PASS | 52.30 | 76.41 | 320.31 | clk_sys_mhz | 1.046x | 1:06:57 |
-| 11 | PASS | 52.24 | 72.96 | 342.47 | clk_sys_mhz | 1.045x | 3:53 |
-| 217 | PASS | 52.06 | 71.85 | 333.00 | clk_sys_mhz | 1.041x | 8:14 |
-| 136 | PASS | 52.00 | 72.33 | 303.58 | clk_sys_mhz | 1.040x | 17:32 |
-| 62 | PASS | 51.89 | 74.59 | 366.57 | clk_sys_mhz | 1.038x | 1:31:07 |
-| 146 | PASS | 51.89 | 82.57 | 371.33 | clk_sys_mhz | 1.038x | 39:42 |
-| 202 | PASS | 51.86 | 78.28 | 362.45 | clk_sys_mhz | 1.037x | 11:20 |
-| 121 | PASS | 51.79 | 76.82 | 285.55 | clk_sys_mhz | 1.036x | 6:53 |
-| 158 | PASS | 51.78 | 73.64 | 281.29 | clk_sys_mhz | 1.036x | 12:12 |
-| 116 | PASS | 51.66 | 86.37 | 378.36 | clk_sys_mhz | 1.033x | 3:03 |
-| 176 | PASS | 51.57 | 74.16 | 324.57 | clk_sys_mhz | 1.031x | 13:57 |
-| 120 | PASS | 51.56 | 81.57 | 378.64 | clk_sys_mhz | 1.031x | 3:40 |
-| 68 | PASS | 51.46 | 72.24 | 303.95 | clk_sys_mhz | 1.029x | 15:48 |
-| 258 | PASS | 51.31 | 79.77 | 352.49 | clk_sys_mhz | 1.026x | 15:37 |
-| 19 | PASS | 51.27 | 81.07 | 370.78 | clk_sys_mhz | 1.025x | 4:14 |
-| 182 | PASS | 51.17 | 71.13 | 311.72 | clk_sys_mhz | 1.023x | 5:58 |
+| 248 | PASS | 57.17 | 84.10 | 369.41 | clk_sys_mhz | 1.143x | 39:13 |
+| 3 | PASS | 57.16 | 85.63 | 330.80 | clk_sys_mhz | 1.143x | 40:37 |
+| 131 | PASS | 56.40 | 75.45 | 352.49 | clk_sys_mhz | 1.128x | 37:15 |
+| 85 | PASS | 56.20 | 84.95 | 337.04 | clk_sys_mhz | 1.124x | 36:47 |
+| 211 | PASS | 55.73 | 87.02 | 304.60 | clk_sys_mhz | 1.115x | 4:04 |
+| 133 | PASS | 55.55 | 78.78 | 351.99 | clk_sys_mhz | 1.111x | 7:40 |
+| 147 | PASS | 55.20 | 79.78 | 328.95 | clk_sys_mhz | 1.104x | 45:28 |
+| 46 | PASS | 55.14 | 84.70 | 303.95 | clk_sys_mhz | 1.103x | 34:20 |
+| 167 | PASS | 55.13 | 81.46 | 452.08 | clk_sys_mhz | 1.103x | 3:07 |
+| 102 | PASS | 55.05 | 82.59 | 336.81 | clk_sys_mhz | 1.101x | 4:10 |
+| 169 | PASS | 55.04 | 84.65 | 339.90 | clk_sys_mhz | 1.101x | 20:08 |
+| 123 | PASS | 54.98 | 78.24 | 321.54 | clk_sys_mhz | 1.100x | 17:28 |
+| 214 | PASS | 54.80 | 84.84 | 303.86 | clk_sys_mhz | 1.096x | 11:15 |
+| 38 | PASS | 54.76 | 82.39 | 323.00 | clk_sys_mhz | 1.095x | 10:43 |
+| 55 | PASS | 54.43 | 74.89 | 303.58 | clk_sys_mhz | 1.089x | 7:58 |
+| 135 | PASS | 54.40 | 79.97 | 303.49 | clk_sys_mhz | 1.088x | 49:57 |
+| 72 | PASS | 54.17 | 85.30 | 329.92 | clk_sys_mhz | 1.083x | 6:46 |
+| 65 | PASS | 54.02 | 86.27 | 323.00 | clk_sys_mhz | 1.080x | 10:53 |
+| 27 | PASS | 53.94 | 84.26 | 292.91 | clk_sys_mhz | 1.079x | 7:29 |
+| 66 | PASS | 53.88 | 80.04 | 321.54 | clk_sys_mhz | 1.078x | 6:50 |
 
 ## Fastest timing-passing seeds
 
 | Seed | Result | clk_sys | video pixel | TMDS x5 | Limiting | Worst ratio | Route time |
 | ---: | :---: | ---: | ---: | ---: | :--- | ---: | ---: |
-| 147 | PASS | 50.24 | 79.67 | 400.16 | clk_sys_mhz | 1.005x | 2:49 |
-| 116 | PASS | 51.66 | 86.37 | 378.36 | clk_sys_mhz | 1.033x | 3:03 |
-| 120 | PASS | 51.56 | 81.57 | 378.64 | clk_sys_mhz | 1.031x | 3:40 |
-| 11 | PASS | 52.24 | 72.96 | 342.47 | clk_sys_mhz | 1.045x | 3:53 |
-| 19 | PASS | 51.27 | 81.07 | 370.78 | clk_sys_mhz | 1.025x | 4:14 |
-| 193 | PASS | 50.25 | 87.25 | 378.36 | clk_sys_mhz | 1.005x | 4:56 |
-| 256 | PASS | 50.02 | 82.97 | 392.93 | clk_sys_mhz | 1.000x | 4:56 |
-| 140 | PASS | 50.84 | 71.42 | 320.92 | clk_sys_mhz | 1.017x | 5:12 |
-| 16 | PASS | 50.60 | 71.97 | 291.04 | clk_sys_mhz | 1.012x | 5:28 |
-| 91 | PASS | 50.65 | 84.18 | 388.80 | clk_sys_mhz | 1.013x | 5:43 |
-| 182 | PASS | 51.17 | 71.13 | 311.72 | clk_sys_mhz | 1.023x | 5:58 |
-| 121 | PASS | 51.79 | 76.82 | 285.55 | clk_sys_mhz | 1.036x | 6:53 |
-| 217 | PASS | 52.06 | 71.85 | 333.00 | clk_sys_mhz | 1.041x | 8:14 |
-| 248 | PASS | 50.79 | 84.22 | 320.92 | clk_sys_mhz | 1.016x | 8:33 |
-| 144 | PASS | 50.07 | 80.48 | 381.53 | clk_sys_mhz | 1.001x | 8:40 |
-| 49 | PASS | 50.05 | 73.31 | 352.49 | clk_sys_mhz | 1.001x | 9:42 |
-| 35 | PASS | 51.06 | 78.76 | 344.71 | clk_sys_mhz | 1.021x | 9:44 |
-| 202 | PASS | 51.86 | 78.28 | 362.45 | clk_sys_mhz | 1.037x | 11:20 |
-| 158 | PASS | 51.78 | 73.64 | 281.29 | clk_sys_mhz | 1.036x | 12:12 |
-| 176 | PASS | 51.57 | 74.16 | 324.57 | clk_sys_mhz | 1.031x | 13:57 |
+| 163 | PASS | 50.12 | 82.42 | 317.97 | clk_sys_mhz | 1.002x | 1:52 |
+| 54 | PASS | 51.32 | 76.30 | 400.16 | clk_sys_mhz | 1.026x | 1:57 |
+| 1 | PASS | 50.07 | 88.87 | 421.94 | clk_sys_mhz | 1.001x | 2:04 |
+| 167 | PASS | 55.13 | 81.46 | 452.08 | clk_sys_mhz | 1.103x | 3:07 |
+| 181 | PASS | 50.94 | 86.49 | 393.24 | clk_sys_mhz | 1.019x | 3:14 |
+| 134 | PASS | 53.81 | 83.44 | 390.17 | clk_sys_mhz | 1.076x | 3:17 |
+| 191 | PASS | 51.12 | 82.64 | 390.17 | clk_sys_mhz | 1.022x | 3:47 |
+| 211 | PASS | 55.73 | 87.02 | 304.60 | clk_sys_mhz | 1.115x | 4:04 |
+| 102 | PASS | 55.05 | 82.59 | 336.81 | clk_sys_mhz | 1.101x | 4:10 |
+| 53 | PASS | 52.75 | 85.21 | 369.28 | clk_sys_mhz | 1.055x | 4:17 |
+| 74 | PASS | 51.57 | 76.56 | 408.33 | clk_sys_mhz | 1.031x | 4:20 |
+| 2 | PASS | 52.88 | 85.56 | 369.28 | clk_sys_mhz | 1.058x | 4:55 |
+| 179 | PASS | 51.37 | 84.08 | 384.02 | clk_sys_mhz | 1.027x | 5:09 |
+| 18 | PASS | 50.67 | 86.42 | 397.14 | clk_sys_mhz | 1.013x | 5:20 |
+| 94 | PASS | 51.33 | 85.11 | 397.77 | clk_sys_mhz | 1.027x | 5:40 |
+| 80 | PASS | 50.14 | 84.85 | 320.92 | clk_sys_mhz | 1.003x | 5:43 |
+| 209 | PASS | 50.63 | 79.43 | 354.48 | clk_sys_mhz | 1.013x | 5:56 |
+| 120 | PASS | 50.02 | 85.52 | 324.57 | clk_sys_mhz | 1.000x | 6:17 |
+| 202 | PASS | 53.67 | 78.21 | 323.00 | clk_sys_mhz | 1.073x | 6:23 |
+| 35 | PASS | 53.39 | 84.08 | 352.49 | clk_sys_mhz | 1.068x | 6:40 |
 
 The complete per-seed data is in `summary.csv`. Timing PASS/FAIL is
 recomputed from the required clocks in the frozen sweep metadata.

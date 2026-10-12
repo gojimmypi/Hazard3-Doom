@@ -33,7 +33,12 @@ COMMON_SCRIPT="${SCRIPT_DIR}/sweep-ecp5-common.sh"
 SWEEP_JOBS="${SWEEP_JOBS:-2}"
 SWEEP_SKIP_SYNTH="${SWEEP_SKIP_SYNTH:-0}"
 SWEEP_PREPARE_ONLY="${SWEEP_PREPARE_ONLY:-0}"
-SWEEP_ULX5M_HEAP_BETA="${SWEEP_ULX5M_HEAP_BETA:-0.6}"
+ULX5M_SYS_CLK_MHZ="${ULX5M_SYS_CLK_MHZ:-12}"
+# shellcheck source=scripts/gatemate-board-defaults.sh
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/gatemate-board-defaults.sh"
+gatemate_board_defaults ulx5m-gs
+SWEEP_ULX5M_HEAP_BETA="${SWEEP_ULX5M_HEAP_BETA:-${GATEMATE_DEFAULT_NEXTPNR_HEAP_BETA}}"
 SWEEP_NEXTPNR_EXTRA_ARGS="${SWEEP_NEXTPNR_EXTRA_ARGS:-}"
 SWEEP_ROUTE_TIMEOUT_SECONDS="${SWEEP_ROUTE_TIMEOUT_SECONDS:-7200}"
 SWEEP_ROUTE_KILL_AFTER_SECONDS="${SWEEP_ROUTE_KILL_AFTER_SECONDS:-30}"
@@ -62,7 +67,8 @@ Usage: $0 SEED [SEED ...]
 Route one or more nextpnr-himbaechel seeds for the ULX5M-GS GateMate A1
 Hazard3-Doom build. Seeds must be decimal values from 1 through 260.
 SWEEP_JOBS=N runs up to N routes concurrently (default: 2).
-SWEEP_ULX5M_HEAP_BETA=N selects the HeAP beta value (default: 0.6).
+ULX5M_SYS_CLK_MHZ=N selects the system clock: 12, 20 or 25 (default: 12).
+SWEEP_ULX5M_HEAP_BETA=N selects the HeAP beta value (default: ${GATEMATE_DEFAULT_NEXTPNR_HEAP_BETA}).
 SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.
 SWEEP_ROUTE_TIMEOUT_SECONDS=N limits each nextpnr route (default: 7200).
 SWEEP_NEXTPNR_EXTRA_ARGS may contain additional whitespace-separated args.
@@ -83,6 +89,11 @@ if (( $# == 1 )) && [[ "$1" == "--print-sweep-dir" ]]; then
     printf '%s\n' "${SWEEP_REL_DIR}"
     exit 0
 fi
+
+case "${ULX5M_SYS_CLK_MHZ}" in
+12|20|25) ;;
+*) echo "ULX5M_SYS_CLK_MHZ must be 12, 20 or 25." >&2; exit 1 ;;
+esac
 
 case "${SWEEP_SKIP_SYNTH}" in
 0|1) ;;
@@ -136,6 +147,7 @@ else
     rm -f "${NETLIST}" "${SYNTH_LOG}"
     synth_start_seconds="$(date +%s)"
     make -C "${SYNTH_DIR}" -f ULX5M_GS.mk \
+        ULX5M_SYS_CLK_MHZ="${ULX5M_SYS_CLK_MHZ}" \
         BUILD_DIR="${SYNTH_BUILD_DIR}" \
         synth
     synthesis_seconds="$(( $(date +%s) - synth_start_seconds ))"
@@ -164,7 +176,7 @@ mkdir -p "${SWEEP_DIR}"
     printf 'extra_args=%s\n' "${SWEEP_NEXTPNR_EXTRA_ARGS}"
     printf 'route_timeout_seconds=%s\n' "${SWEEP_ROUTE_TIMEOUT_SECONDS}"
     printf 'route_kill_after_seconds=%s\n' "${SWEEP_ROUTE_KILL_AFTER_SECONDS}"
-    printf 'clk_sys_required_mhz=25.00\n'
+    printf 'clk_sys_required_mhz=%s.00\n' "${ULX5M_SYS_CLK_MHZ}"
     printf 'synthesis_seconds=%s\n' "${synthesis_seconds}"
     printf 'netlist_sha256=%s\n' "${netlist_sha256}"
     printf 'netlist=ulx5m-gs/sweep-synth/fpga_ulx5m_gs.json\n'
@@ -179,6 +191,7 @@ mkdir -p "${SWEEP_DIR}"
 printf 'ULX5M-GS synthesis duration: %s seconds\n' "${synthesis_seconds}"
 printf 'ULX5M-GS routed sweep netlist SHA256: %s\n' "${netlist_sha256}"
 printf 'ULX5M-GS routed sweep directory: %s\n' "${SWEEP_DIR}"
+printf 'ULX5M-GS system clock: %s MHz\n' "${ULX5M_SYS_CLK_MHZ}"
 printf 'ULX5M-GS HeAP beta: %s\n' "${SWEEP_ULX5M_HEAP_BETA}"
 
 if [[ "${SWEEP_PREPARE_ONLY}" == "1" ]]; then

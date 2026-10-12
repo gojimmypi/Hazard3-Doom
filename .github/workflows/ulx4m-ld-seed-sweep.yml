@@ -95,6 +95,15 @@ on:
           - "20"
           - "30"
           - "40"
+      ulx5m_sys_clk_mhz:
+        description: ULX5M-GS Hazard3 system clock (ignored for other targets)
+        required: true
+        default: "12"
+        type: choice
+        options:
+          - "12"
+          - "20"
+          - "25"
       ulx5m_heap_beta:
         description: ULX5M-GS GateMate HeAP beta (ignored for other targets)
         required: true
@@ -189,6 +198,7 @@ env:
   HAZARD3_MEMORY_PROFILE: ${{ inputs.ulx3s_12f_memory_profile }}
   HAZARD3_ULX4M_SYS_CLK_MHZ: ${{ inputs.ulx4m_sys_clk_mhz }}
   ULX4M_LITEDRAM_CPU: ${{ inputs.ulx4m_litedram_cpu }}
+  ULX5M_SYS_CLK_MHZ: ${{ inputs.ulx5m_sys_clk_mhz }}
   SWEEP_ULX5M_HEAP_BETA: ${{ inputs.ulx5m_heap_beta }}
   SWEEP_NEXTPNR_PLACER: ${{ inputs.target == 'ulx5m-gs' && 'heap' || inputs.placer }}
   SWEEP_NEXTPNR_ROUTER: ${{ inputs.target == 'ulx5m-gs' && 'router2' || inputs.router }}
@@ -380,7 +390,7 @@ jobs:
               monitor_clock_hz="$((HAZARD3_ULX4M_SYS_CLK_MHZ * 1000000))"
               ;;
           ulx5m-gs)
-              monitor_clock_hz=25000000
+              monitor_clock_hz="$((ULX5M_SYS_CLK_MHZ * 1000000))"
               monitor_memory_profile=32m
               ;;
           ulx3s-12f)
@@ -501,6 +511,7 @@ jobs:
               printf 'ulx3s_12f_memory_profile=%s\n' "${HAZARD3_MEMORY_PROFILE}"
               printf 'ulx4m_sys_clk_mhz=%s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
               printf 'ulx4m_litedram_cpu=%s\n' "${ULX4M_LITEDRAM_CPU}"
+              printf 'ulx5m_sys_clk_mhz=%s\n' "${ULX5M_SYS_CLK_MHZ}"
               printf 'ulx5m_heap_beta=%s\n' "${SWEEP_ULX5M_HEAP_BETA}"
               printf 'placer=%s\n' "${SWEEP_NEXTPNR_PLACER}"
               printf 'router=%s\n' "${SWEEP_NEXTPNR_ROUTER}"
@@ -638,7 +649,7 @@ jobs:
               printf '  ULX4M_LITEDRAM_CPU:         %s\n' "${ULX4M_LITEDRAM_CPU}"
               ;;
           ulx5m-gs)
-              printf '  System clock:          25 MHz (fixed)\n'
+              printf '  System clock:          %s MHz\n' "${ULX5M_SYS_CLK_MHZ}"
               printf '  SWEEP_ULX5M_HEAP_BETA: %s\n' "${SWEEP_ULX5M_HEAP_BETA}"
               ;;
           esac

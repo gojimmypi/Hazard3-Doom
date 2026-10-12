@@ -42,7 +42,7 @@
 # git -C third_party/Hazard3 rev-parse HEAD:example_soc/libfpga
 # git -C third_party/Hazard3/example_soc/libfpga rev-parse HEAD
 #
-# Currently: 2c430246892d52c41c610bfdb2afc88992986e00
+# Currently: https://github.com/gojimmypi/Hazard3/tree/7743b3089b1ded8b74d0d51e201b3554e310b5a3 for ulx3s release 0.2.1 WIP
 #
 # Confirm all nested submodules match their recorded gitlinks:
 #

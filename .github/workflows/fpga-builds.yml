@@ -56,6 +56,15 @@ jobs:
             doom_dir: build/ulx4m-ld/doom-image
             seed_required: true
             boot_init: build/ulx4m-ld/hazard3-boot-monitor.hex
+          - name: ULX5M-GS
+            board: ulx5m-gs
+            ulx5m_sys_clk_mhz: "12"
+            command: ./scripts/build-ulx5m-gs-doom.sh
+            fpga_name: fpga_ulx5m_gs
+            monitor_dir: build/ulx5m-gs/monitor
+            doom_dir: build/ulx5m-gs/doom-image
+            seed_required: false
+            boot_init: build/ulx5m-gs/hazard3-boot-monitor.hex
 
     steps:
       - name: Check out repository
@@ -105,8 +114,13 @@ jobs:
         run: |
           make --version
           yosys --version
-          nextpnr-ecp5 --version
-          printf 'ecppack: %s\n' "$(command -v ecppack)"
+          if [[ "${{ matrix.board }}" == "ulx5m-gs" ]]; then
+              nextpnr-himbaechel --version
+              printf 'gmpack: %s\n' "$(command -v gmpack)"
+          else
+              nextpnr-ecp5 --version
+              printf 'ecppack: %s\n' "$(command -v ecppack)"
+          fi
           "${TOOLCHAIN_PREFIX}gcc" --version
           python3 --version
 
@@ -122,6 +136,7 @@ jobs:
       - name: Build FPGA, monitor, and Doom image
         env:
           FORCE_BITSTREAM_REBUILD: "1"
+          ULX5M_SYS_CLK_MHZ: ${{ matrix.ulx5m_sys_clk_mhz }}
 
         run: |
           # Produce a fresh P&R result. All release board builds must close
@@ -129,10 +144,17 @@ jobs:
           ${{ matrix.command }}
 
           test -s "build/${{ matrix.fpga_name }}.bit"
-          test -s "build/${{ matrix.fpga_name }}.config"
-          test -s "build/${{ matrix.fpga_name }}.svf"
           test -s "build/${{ matrix.fpga_name }}.pnr.log"
-          test -s "build/${{ matrix.fpga_name }}.synth.log"
+          if [[ "${{ matrix.board }}" == "ulx5m-gs" ]]; then
+              # GateMate uses gmpack and does not produce ECP5 config/SVF files.
+              test -s "build/${{ matrix.fpga_name }}.clock_mhz"
+              test "$(cat "build/${{ matrix.fpga_name }}.clock_mhz")" = "${ULX5M_SYS_CLK_MHZ}"
+              test -s "build/ulx5m-gs/fpga/synth.log"
+          else
+              test -s "build/${{ matrix.fpga_name }}.config"
+              test -s "build/${{ matrix.fpga_name }}.svf"
+              test -s "build/${{ matrix.fpga_name }}.synth.log"
+          fi
           if [[ "${{ matrix.seed_required }}" == "true" ]]; then
               test -s "build/${{ matrix.fpga_name }}.seed"
           fi
@@ -148,6 +170,8 @@ jobs:
           path: |
             build/${{ matrix.fpga_name }}.*
             build/source_status.log
+            build/build-ulx5m-gs-doom.log
+            build/ulx5m-gs/fpga/synth.log
             ${{ matrix.monitor_dir }}/hazard3-boot-monitor.elf
             ${{ matrix.monitor_dir }}/hazard3-boot-monitor.map
             ${{ matrix.monitor_dir }}/hazard3-boot-monitor.bin

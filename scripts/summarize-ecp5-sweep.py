@@ -24,6 +24,9 @@ import csv
 from pathlib import Path
 
 
+PREFERRED_MARGIN_PERCENT = 10.0
+
+
 CLOCK_COLUMNS = {
     "clk_sys_mhz": "clk_sys",
     "litedram_user_mhz": "LiteDRAM user",
@@ -227,6 +230,18 @@ def main() -> int:
         key=lambda row: int(row["route_seconds"]),
     )
 
+    # Prefer the quickest reproducible route with headroom on every required clock.
+    # If no passing seed meets the preferred margin, use the highest-margin PASS.
+    margin_floor = 1.0 + PREFERRED_MARGIN_PERCENT / 100.0
+    preferred_by_speed = [
+        row for row in passing_by_speed
+        if float(row["worst_required_ratio"]) >= margin_floor
+    ]
+    recommended = (
+        preferred_by_speed[0]
+        if preferred_by_speed else (passing_by_margin[0] if passing_by_margin else None)
+    )
+
     pass_seeds = ", ".join(str(row["seed"]) for row in passing)
     clock_pass_counts = {
         column: sum(
@@ -262,7 +277,8 @@ def main() -> int:
     synthesis_display = format_elapsed(synthesis_seconds) if synthesis_seconds else "unknown"
 
     lines = [
-        f"# {args.target} seed sweep summary",
+        # Paste this text into respective scripts/build-[target]-sweep_summary.md files:
+        f"## Generated {args.target} seed sweep summary",
         "",
         f"- Synthesis duration: {synthesis_display}" + (f" ({synthesis_seconds} seconds)" if synthesis_seconds.isdigit() else ""),
         f"- Seeds expected: {len(rows)}",
@@ -277,9 +293,45 @@ def main() -> int:
         f"- Route/tool failures: {len(tool_failures)}",
         f"- Missing seed results: {len(missing)}",
         "",
+        "## Recommended seeds",
+        "",
+        f"Preferred worst-clock margin: {PREFERRED_MARGIN_PERCENT:g}% (selection policy, not a timing requirement).",
+        "",
+        "A CI/default seed favors short routing time while meeting the preferred margin.",
+        "Only timing-passing seeds are considered. If none meets the margin preference,",
+        "the highest-margin passing seed is reported as a fallback.",
+        "",
+        "| Selection | Seed | Limiting clock | Worst ratio | Margin | Route time |",
+        "| :--- | ---: | :--- | ---: | ---: | ---: |",
+    ]
+
+    def selection_line(label: str, row: dict[str, object] | None) -> str:
+        if row is None:
+            return f"| {label} | none | - | - | - | - |"
+        ratio = float(row["worst_required_ratio"])
+        return (
+            f"| {label} | {row['seed']} | {clock_label(str(row['limiting_clock']))} | "
+            f"{ratio:.3f}x | {(ratio - 1.0) * 100:.1f}% | "
+            f"{format_elapsed(str(row['route_seconds']))} |"
+        )
+
+    lines.extend([
+        selection_line("Recommended CI/default", recommended),
+        selection_line("Highest timing margin", passing_by_margin[0] if passing_by_margin else None),
+        selection_line("Fastest timing PASS", passing_by_speed[0] if passing_by_speed else None),
+        selection_line(f"Fastest PASS with >= {PREFERRED_MARGIN_PERCENT:g}% margin", preferred_by_speed[0] if preferred_by_speed else None),
+    ])
+    if recommended is not None and not preferred_by_speed:
+        lines.extend(["", "No timing-passing seed met the preferred margin; the recommendation is a fallback."])
+
+    lines.extend([
+        "",
         "## Required clocks",
         "",
-    ]
+    ])
+    if metadata.get("netlist_sha256"):
+        lines.extend(["", f"Frozen netlist SHA-256: `{metadata['netlist_sha256']}`"])
+
     for column, requirement in requirements.items():
         lines.append(f"- {clock_label(column)}: {requirement:.2f} MHz")
 
