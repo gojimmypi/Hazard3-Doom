@@ -88,6 +88,60 @@ obrnutu kosu crtu (``\``) za nastavak Bash naredbe. ``cmd.exe`` sintaksa poput
 u ``cmd.exe``; zalijepljeni izravno u WSL tumače se kao odvojene ili izmijenjene
 Bash naredbe.
 
+.. _load-custom-elf:
+
+Učitavanje prilagođenog ELF-a
+-----------------------------
+
+``scripts/load-firmware.sh`` prihvaća izričitu putanju bare-metal ELF-a. Iz
+korijena repozitorija u Bashu (WSL na Windowsu) pokrenite OpenOCD:
+
+.. code-block:: bash
+
+   ./scripts/start-openocd.sh ulx3s-85f
+
+Ostavite ga aktivnim. U drugom terminalu:
+
+.. code-block:: bash
+
+   ./scripts/load-firmware.sh ./path/to/custom.elf
+
+Prvo programirajte odgovarajući bitstream. ELF mora odgovarati ISA-u, ABI-u,
+memorijskoj mapi i adresama perifernih uređaja. Početni kod mora inicijalizirati
+stog, podatke, BSS i potrebne periferije. Učitavanje ne konfigurira FPGA niti
+inicijalizira vanjski memorijski kontroler za aplikaciju.
+
+Skripta koristi adrese ELF sekcija, uspoređuje učitani sadržaj, postavlja ``$pc``
+na ``_start``, nastavlja izvršavanje i odspaja GDB. Ne bira proizvoljnu ELF ulaznu
+točku. Bez ``_start`` koristite interaktivni GDB sa stvarnim početnim simbolom
+ili adresom. ELF s ulazom ``0x20000040`` koristi provjeru izravnim čitanjem;
+ostali koriste ``compare-sections``. Provjerite rezultate usporedbe.
+
+Primjer CoreMarka na ULX3S-85F:
+
+.. code-block:: bash
+
+   ./scripts/load-firmware.sh ./build/coremark/baseline/coremark-performance.elf
+
+Pogledajte :doc:`coremark` za izgradnju, UART i ograničenja. Samostalni ELF može
+prepisati monitor; vratite ga učitavanjem ELF-a monitora za tu ploču. Učitavanje
+piše u RAM, ne SPI flash, i ne koristi H3IMG. Za zaustavljanje na početku
+aplikacije, uz odspojene ostale GDB klijente:
+
+.. code-block:: text
+
+   $ riscv-none-elf-gdb ./path/to/custom.elf
+   (gdb) target extended-remote localhost:3333
+   (gdb) monitor halt
+   (gdb) load
+   (gdb) compare-sections
+   (gdb) set $pc = _start
+   (gdb) break main
+   (gdb) continue
+
+Ako nema simbola ``_start``, upotrijebite stvarnu početnu adresu. Za GDB ``.exe``
+slijedite prethodne upute o Windows putanjama iz WSL-a.
+
 Ugrađeni ULX3S FT231X
 ---------------------
 

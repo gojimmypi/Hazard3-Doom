@@ -306,14 +306,17 @@ Programming and OpenOCD
    as the first argument; otherwise the repository binary is used.
 
 ``scripts/load-firmware.sh``
-   Load a monitor ELF through a running OpenOCD GDB server, halt the target, load
-   and compare sections, set ``$pc`` to ``_start``, resume, and disconnect. The
+   Load a monitor or compatible standalone ELF through a running OpenOCD GDB
+   server, halt the target, load and compare sections, set ``$pc`` to ``_start``,
+   resume, and disconnect. The
    script checks ``localhost:3333`` before starting GDB so a missing OpenOCD
    server cannot fall back to GDB's local ``exec`` target and produce misleading
    section comparisons. With no argument it uses the standalone
    ``build/hazard3-boot-monitor.elf`` output. Complete board builds should pass
    the board-specific ELF explicitly or use the matching
-   ``scripts/gdb/load-*-monitor.gdb`` helper.
+   ``scripts/gdb/load-*-monitor.gdb`` helper. Custom ELFs must provide
+   ``_start`` and match the target memory map and ISA. See
+   :ref:`load-custom-elf` and :doc:`../user-guide/coremark`.
 
 ``scripts/load-firmware-12f.sh``
    One-command second-stage loader for ULX3S 12F. After the compact bitstream has
@@ -386,7 +389,8 @@ CoreMark and ELF analysis
 ``scripts/run-coremark.sh``
    Run ``performance`` or ``validation`` CoreMark images, or use ``qualify`` to
    run both and summarize the result. A serial port may be supplied for automated
-   UART capture.
+   UART capture. OpenOCD must already be running; ``qualify`` requires a serial
+   port. See :doc:`../user-guide/coremark` for the complete procedure.
 
 ``scripts/peek-elf.sh``
    Inspect a RISC-V map/ELF, the selected GCC multilib, linked libgcc members,

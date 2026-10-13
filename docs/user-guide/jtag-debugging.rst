@@ -88,6 +88,67 @@ as ``.\bin\...`` and ``^`` line continuation is only valid after explicitly
 entering ``cmd.exe``; pasted directly into WSL it is parsed as separate/mangled
 Bash commands.
 
+.. _load-custom-elf:
+
+Load a custom ELF
+-----------------
+
+Use ``scripts/load-firmware.sh`` with an explicit ELF path to run a standalone
+bare-metal application on the configured Hazard3 CPU. Run these commands from
+the repository root in Bash (WSL on Windows):
+
+.. code-block:: bash
+
+   ./scripts/start-openocd.sh ulx3s-85f
+
+Leave OpenOCD running. In another terminal:
+
+.. code-block:: bash
+
+   ./scripts/load-firmware.sh ./path/to/custom.elf
+
+Program the matching FPGA bitstream first. The ELF must use the target's ISA,
+ABI, memory map, and peripheral addresses. Its startup code must initialize
+its stack, data, BSS, and required peripherals. Loading an ELF does not configure
+the FPGA or initialize an external-memory controller for the application.
+
+The loader uses the ELF section addresses, compares loaded sections, sets
+``$pc`` to the symbol ``_start``, resumes, and disconnects. It does not select
+an arbitrary ELF entry point. Provide ``_start`` or use interactive GDB with
+the application's actual startup symbol/address. The script has a special
+direct-read verification path for ELFs whose entry is ``0x20000040``; other
+ELFs use GDB ``compare-sections``. Check the comparison output before accepting
+a load as verified.
+
+For CoreMark on the ULX3S-85F:
+
+.. code-block:: bash
+
+   ./scripts/load-firmware.sh ./build/coremark/baseline/coremark-performance.elf
+
+See :doc:`coremark` for build, UART capture, validation, and board restrictions.
+A standalone ELF can overwrite the resident monitor. Reload the board-specific
+monitor ELF to return to the monitor. This operation writes RAM through
+OpenOCD/GDB; it does not write SPI flash or use the monitor's H3IMG protocol.
+
+To stop at application startup instead of running immediately, use the RISC-V
+GDB executable from the installed toolchain:
+
+.. code-block:: text
+
+   $ riscv-none-elf-gdb ./path/to/custom.elf
+   (gdb) target extended-remote localhost:3333
+   (gdb) monitor halt
+   (gdb) load
+   (gdb) compare-sections
+   (gdb) set $pc = _start
+   (gdb) break main
+   (gdb) continue
+
+Use the application's startup address instead of ``_start`` if that symbol is
+absent. Disconnect other GDB clients before loading. See the Windows-from-WSL
+path guidance above when using a bundled ``.exe``.
+
 ULX3S on-board FT231X
 ---------------------
 

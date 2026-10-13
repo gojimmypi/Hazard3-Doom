@@ -13,6 +13,7 @@ Utilisation de base
    build
    monitor
    doom
+   coremark
    bootloader
    sd-card
 

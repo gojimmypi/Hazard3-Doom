@@ -26,7 +26,8 @@ See [../ATTRIBUTION.md](../ATTRIBUTION.md) for broad acknowledgements.
 | `CERN-OHL-W-2.0.txt` | Original Hazard3-Doom FPGA/gateware source explicitly licensed CERN-OHL-W-2.0 |
 | `GPL-2.0.txt` | DOOM/DoomGeneric and other exact GPL-2 components as applicable |
 | `BSD-3-Clause-i2cdriver.txt` | James Bowman's I2CDriver |
-| `CoreMark-NOTICE.md` | EEMBC CoreMark attribution/trademark caution |
+| `CoreMark-LICENSE.md` | Unmodified upstream CoreMark acceptable-use agreement and Apache-2.0 reference; verify against the distributed source revision |
+| `CoreMark-NOTICE.md` | CoreMark ownership, platform-port rules, result reporting, and redistribution requirements |
 | `Hazard3-NOTICE.md` | Hazard3 provenance and submodule boundary |
 | `DOOM-DoomGeneric-NOTICE.md` | DOOM/DoomGeneric lineage and WAD separation |
 | `I2CDriver-NOTICE.md` | I2CDriver inspiration and non-endorsement |

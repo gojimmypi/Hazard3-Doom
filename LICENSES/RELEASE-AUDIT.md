@@ -24,8 +24,16 @@ Before publishing a Hazard3-Doom release:
   as blanket dual-licensed LGPL/BSD material. Include
   `HAD2019-Bootloader-NOTICE.md` and the applicable LGPL-3.0-or-later,
   BSD-3-Clause, ISC/PicoRV32, and mini-printf notices for redistributed content.
-- Review `benchmarks/coremark` against EEMBC's current CoreMark source license,
-  acceptable-use, result-reporting, and trademark rules before publication.
+- For CoreMark source or benchmark binaries, include the complete license
+  matching the distributed source revision, applicable NOTICE material, and
+  trademark ownership notice. See `CoreMark-NOTICE.md` and the upstream
+  reference copy in `CoreMark-LICENSE.md`.
+- Before publishing a CoreMark score, verify unchanged workload files against
+  an identified official CoreMark revision, permitted platform changes, both
+  required seed validations, the 2000-byte data size, and at least 10 seconds
+  per run. Retain compiler/flags, actual clock, memory placement, revisions,
+  ELF hash, and run logs. A Hazard3 source-integrity PASS or local `VALID`
+  result is not EEMBC certification.
 - Do not package commercial DOOM IWAD/game-data files without an independent
   right to redistribute them.
 - Treat `BUNDLED-BINARIES-MANIFEST.md` as a release gate. Pin exact versions,

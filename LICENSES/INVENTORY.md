@@ -8,11 +8,13 @@ It is intended to support integrity verification, reproducibility, release
 auditing, and exact identification of tracked artifacts. A hash identifies
 the bytes in a file; it does not by itself establish provenance or intent.
 
+Project version: v0.2.1
+
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 33
+Files inventoried: 34
 
-Total bytes: 177446
+Total bytes: 199446
 
 ## Verification
 
@@ -30,10 +32,11 @@ should be identified before a public release.
 | `BSD-3-Clause-HAD2019-Bootloader.txt` | 1585 | `3fdc1b9a5efabbda4ae89f2a19a7634fd50ae27480262d8cf89d6cca8505f06f` | REVIEW | File |
 | `BSD-3-Clause-i2cdriver.txt` | 1519 | `11fdd93616341093175bc93c39dc72a6bbf8a3117d0d70f75c613564feaaf046` | REVIEW | File |
 | `BSD-3-Clause-mini-printf.txt` | 1544 | `0c9e725e875a9cd03b8b53f625b6cb74266bc16d3a55bcfa84baea5bfeb8d960` | REVIEW | File |
-| `BUNDLED-BINARIES-MANIFEST.md` | 3035 | `bac6befdb3b6717c0ae5ef4b6f10f3115798328feb174b8581baffc7a6369f4d` | REVIEW | Markdown documentation |
+| `BUNDLED-BINARIES-MANIFEST.md` | 3155 | `9ac8cb3cd7ac52020c8cb54244a9f4a689a28b5cb3c00032ea023d7aa8524461` | REVIEW | Markdown documentation |
 | `CC0-1.0.txt` | 7048 | `a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499` | REVIEW | File |
 | `CERN-OHL-W-2.0.txt` | 14539 | `4b6a7717ef4fcd145eabb577de44d84ffdc893532177b67479dad42f6c4e355e` | REVIEW | File |
-| `CoreMark-NOTICE.md` | 1006 | `a5d6b996b1e16523b361b9d3c72f7a179a65d9eb1c6e73aa341ff90b567446cd` | REVIEW | Markdown documentation |
+| `CoreMark-LICENSE.md` | 18582 | `9577b9c846f61fd69a0d8ac965998c6450c7d8969f71f0bb4a931b91aebad28a` | REVIEW | Markdown documentation |
+| `CoreMark-NOTICE.md` | 3536 | `08349165aa914c979df07dbc89ae572e82f653fa6c725398b4df580f3c449936` | REVIEW | Markdown documentation |
 | `DOOM-DoomGeneric-NOTICE.md` | 977 | `6231c9a1482878484ae97e37cada2dcab35d4e0aa20cf91e93d3479f28f18ce2` | REVIEW | Markdown documentation |
 | `GPL-2.0.txt` | 17984 | `edaef632cbb643e4e7a221717a6c441a4c1a7c918e6e4d56debc3d8739b233f6` | REVIEW | File |
 | `GPL-3.0.txt` | 35149 | `3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986` | REVIEW | File |
@@ -47,8 +50,8 @@ should be identified before a public release.
 | `Nested-Upstream-NOTICE.md` | 756 | `cb0971c215ad740d9c86d971918f74a195285e3b0fabfd51503730213b115acb` | REVIEW | Markdown documentation |
 | `OpenOCD-xPack-NOTICE.md` | 977 | `911ccde75f369b49a1a7d2ab0cbb80190215633f1415e52d76f4c58c42776553` | REVIEW | Markdown documentation |
 | `PuTTY-NOTICE.md` | 1133 | `67c1e7e88565ae57629b30594dff2e89dc4ceb952a710657d5c8fb4ffd967885` | REVIEW | Markdown documentation |
-| `README.md` | 4637 | `df507b9597b5f27b2f4bb255537e8da314f70c352b125a4587c233d97d76ab49` | REVIEW | Markdown documentation |
-| `RELEASE-AUDIT.md` | 3828 | `24ee6968fa4b754b6289cebdcf134acf75c3961f3acc4fd5bd98493ebf5a25c1` | REVIEW | Markdown documentation |
+| `README.md` | 4874 | `f58934b4a76d3801ce8d6fd1a14b95e8a56a13d3e28b0f8ab4b6fc85e8d3ee24` | REVIEW | Markdown documentation |
+| `RELEASE-AUDIT.md` | 4359 | `6db7c82194295386ca2c90e55ccc0b00f58c7e74088ad3ffe821b11a2cbe9d3f` | REVIEW | Markdown documentation |
 | `RISC-V-GNU-Toolchain-NOTICE.md` | 1441 | `7f73a56d6c9e8176f65b017e28bade862d50529fcca94dbcbe6b3dea53aa1acc` | REVIEW | Markdown documentation |
 | `Web-Flasher-Provenance-NOTICE.md` | 1539 | `e55c5b93ad9b411ac3d41fce67204da4c61655c3f8e2caf5ae28b21149159ab4` | REVIEW | Markdown documentation |
 | `Zadig-libwdi-NOTICE.md` | 1005 | `e262c18f0cdb0cb1c529b59d8ad4d8595c0e236fcd24278a2ad24f3fb761fce1` | REVIEW | Markdown documentation |

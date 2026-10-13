@@ -96,6 +96,61 @@ syntaxe ``cmd.exe`` comme ``.\bin\...`` et la continuation ``^`` n'est valide
 qu'après être entré explicitement dans ``cmd.exe`` ; collée directement dans WSL,
 elle est interprétée comme des commandes Bash séparées ou altérées.
 
+.. _load-custom-elf:
+
+Charger un ELF personnalisé
+---------------------------
+
+``scripts/load-firmware.sh`` accepte le chemin explicite d'un ELF bare-metal.
+Depuis la racine du dépôt dans Bash (WSL sous Windows), lancez OpenOCD:
+
+.. code-block:: bash
+
+   ./scripts/start-openocd.sh ulx3s-85f
+
+Laissez-le actif. Dans un autre terminal:
+
+.. code-block:: bash
+
+   ./scripts/load-firmware.sh ./path/to/custom.elf
+
+Programmez d'abord le bitstream correspondant. L'ELF doit respecter ISA, ABI,
+carte mémoire et adresses des périphériques. Son code de démarrage initialise
+pile, données, BSS et périphériques requis. Le chargement ne configure ni le
+FPGA ni un contrôleur de mémoire externe pour l'application.
+
+Le chargeur utilise les adresses des sections, compare leur contenu, positionne
+``$pc`` sur ``_start``, reprend l'exécution et se déconnecte. Il ne sélectionne
+pas un point d'entrée ELF arbitraire. Sans ``_start``, utilisez GDB interactif
+avec le symbole ou l'adresse de démarrage réelle. Les ELF dont l'entrée est
+``0x20000040`` utilisent une vérification par lectures directes; les autres
+utilisent ``compare-sections``. Vérifiez les résultats de comparaison.
+
+Exemple CoreMark sur ULX3S-85F:
+
+.. code-block:: bash
+
+   ./scripts/load-firmware.sh ./build/coremark/baseline/coremark-performance.elf
+
+Voir :doc:`coremark` pour compilation, UART et restrictions. Un ELF autonome
+peut écraser le moniteur; rechargez l'ELF du moniteur propre à la carte pour le
+restaurer. Ce chargement écrit la RAM, pas la SPI flash, et n'utilise pas H3IMG.
+Pour arrêter au début de l'application, avec les autres clients GDB déconnectés:
+
+.. code-block:: text
+
+   $ riscv-none-elf-gdb ./path/to/custom.elf
+   (gdb) target extended-remote localhost:3333
+   (gdb) monitor halt
+   (gdb) load
+   (gdb) compare-sections
+   (gdb) set $pc = _start
+   (gdb) break main
+   (gdb) continue
+
+Remplacez ``_start`` par l'adresse de démarrage si ce symbole est absent.
+Appliquez les règles de chemins Windows/WSL ci-dessus pour un GDB ``.exe``.
+
 FT231X intégré à l'ULX3S
 ------------------------
 
