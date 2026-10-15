@@ -63,3 +63,27 @@ jobs:
           lpf: tt/fpga/ulx3s/ulx3s_v316.lpf
           artifact-name: fpga_ulx3s_ecp5_v316
           uart-enabled: true
+
+  fpga-ulx3s-v20-50MHz:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: FPGA bitstream for TT ASIC Sim (ULX3S ECP5, v20 GN12 50 MHz LPF)
+        uses: ulx3s/tt-gds-action/fpga/ulx3s@experimental
+        with:
+          ecp5-device: 85k
+
+          # Override the support tools repository and branch.
+          tools-repo: ulx3s/tt-support-tools
+          tools-ref: experimental
+
+          # LPF files come from tools-repo, checked out by the action into tt/.
+          # See https://github.com/ulx3s/tt-support-tools/tree/experimental/fpga/ulx3s
+          lpf: tt/fpga/ulx3s/ulx3s_v20_gn12_50mhz.lpf
+
+          artifact-name: fpga_ulx3s_ecp5
+          uart-enabled: false
