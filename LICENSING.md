@@ -37,6 +37,11 @@ Third-party material remains subject to its respective upstream license.
 In particular:
 
 - Hazard3 upstream material remains subject to its applicable Apache-2.0 terms.
+- CoreMark software is licensed under Apache-2.0 with separate CoreMark
+  acceptable-use/trademark terms and benchmark run/reporting rules. See
+  `LICENSES/CoreMark-NOTICE.md` and the complete upstream reference in
+  `LICENSES/CoreMark-LICENSE.md`. Local benchmark validation does not imply
+  EEMBC certification.
 - The DOOM engine source, DoomGeneric source, and derivative material remain
   subject to their applicable GNU GPL terms. Those terms do not license DOOM
   game data, artwork, audio, names, logos, or trademarks.

@@ -150,9 +150,11 @@ Hazard3-Doom. See `LICENSES/I2CDriver-NOTICE.md`.
 
 Upstream: https://github.com/eembc/coremark
 
-CoreMark is an EEMBC trademark and has separate acceptable-use/trademark
-terms. See `LICENSES/CoreMark-NOTICE.md` before publishing modified benchmark
-results.
+CoreMark is a registered trademark of the Embedded Microprocessor Benchmark
+Consortium (EEMBC). Its software is Apache-2.0 licensed with separate
+acceptable-use/trademark terms and run/reporting rules. See
+`LICENSES/CoreMark-NOTICE.md` and `LICENSES/CoreMark-LICENSE.md`. Hazard3-Doom's
+local benchmark checks do not constitute EEMBC certification.
 
 ## ULX3S hardware and community
 
