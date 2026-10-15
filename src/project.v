@@ -42,27 +42,39 @@ module tt_um_ulx3s_example (
     input  wire       rst_n     // reset_n - low to reset
 );
 
-    // Use visible counter bits so the low output nibble blinks at a human-
-    // observable rate over the normal TinyTapeout FPGA clock range.
+    // Counter provides visible activity on four dedicated outputs.
     reg [25:0] counter;
+
+    // UART pin-path smoke test: ui_in[3] (RX) -> uo_out[4] (TX).
+    // This is a bit-level loopback, not a UART receiver/transmitter.
+    // Two stages synchronize the asynchronous RX input to clk.
+    reg uart_rx_meta;
+    reg uart_rx_sync;
 
     always @(posedge clk) begin
         if (!rst_n) begin
-            counter <= 26'd0;
-        end else if (ena) begin
-            counter <= counter + 26'd1;
+            counter      <= 26'd0;
+            uart_rx_meta <= 1'b1;
+            uart_rx_sync <= 1'b1;
+        end else begin
+            uart_rx_meta <= ui_in[3];
+            uart_rx_sync <= uart_rx_meta;
+            if (ena) begin
+                counter <= counter + 26'd1;
+            end
         end
     end
 
-    // 0xD identifies this as the Hazard3-Doom TinyTapeout smoke image.
-    assign uo_out = {4'hD, counter[25:22]};
+    // 110 identifies the smoke image, with TX loopback and blink outputs.
+    // Drive the UART output to its idle-high state when disabled.
+    assign uo_out = {3'b110, (ena ? uart_rx_sync : 1'b1), counter[25:22]};
 
     // Do not drive the bidirectional TinyTapeout pins in this smoke test.
     assign uio_out = 8'h00;
     assign uio_oe  = 8'h00;
 
     // Keep otherwise-unused standard TinyTapeout inputs intentional.
-    wire _unused = &{ui_in, uio_in, 1'b0};
+    wire _unused = &{ui_in[7:4], ui_in[2:0], uio_in, 1'b0};
 
 endmodule
 
