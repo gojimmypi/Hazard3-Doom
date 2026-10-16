@@ -1,0 +1,119 @@
+# ULX5M-GS GateMate bring-up. Separate from original ECP5 Makefile.
+# Safe first target: FPGA RAM-only LED + PLL image; no flash programming.
+
+YOSYS ?= yosys
+NEXTPNR ?= nextpnr-himbaechel
+GMPACK ?= gmpack
+DEVICE ?= CCGM1A1
+BUILD_DIR ?= build-ulx5m-gs
+
+TOP := top_ulx5m_gs_bringup
+SRC := rtl/top-ulx5m-gs-bringup.v rtl/sysmgr_gatemate.v
+CCF := data/top-ulx5m-gs-bringup.ccf
+SDC := data/top-ulx5m-gs-bringup.sdc
+JSON := $(BUILD_DIR)/$(TOP).json
+IMPL := $(BUILD_DIR)/$(TOP).txt
+BIT := $(BUILD_DIR)/$(TOP).bit
+
+.DEFAULT_GOAL := help
+.PHONY: help bringup usb-monitor usb-probe check flash dfu clean
+
+help:
+	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs bringup'
+	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs usb-monitor'
+	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs usb-probe'
+	@echo 'Produces a volatile JTAG-loadable LED/PLL bitstream (NOT DFU).'
+	@echo 'USB monitor is RX-only with no attach, and will NOT enumerate.'
+	@echo 'USB probe enumerates a non-programmable DFU interface from JTAG RAM.'
+	@echo 'No flash-writing targets are provided.'
+
+bringup: $(BIT)
+
+# Independent, RX-only USB pad test. No DFU firmware and no flash access.
+USB_TOP := top_ulx5m_gs_usb_monitor
+USB_SRC := rtl/top-ulx5m-gs-usb-monitor.v rtl/sysmgr_gatemate.v cores/usb/rtl/usb_phy.v
+USB_CCF := data/top-ulx5m-gs-usb-monitor.ccf
+USB_SDC := data/top-ulx5m-gs-usb-monitor.sdc
+USB_JSON := $(BUILD_DIR)/$(USB_TOP).json
+USB_IMPL := $(BUILD_DIR)/$(USB_TOP).txt
+USB_BIT := $(BUILD_DIR)/$(USB_TOP).bit
+
+usb-monitor: $(USB_BIT)
+
+$(USB_JSON): $(USB_SRC) | $(BUILD_DIR)
+	$(YOSYS) -p 'read_verilog -defer $(USB_SRC); synth_gatemate -top $(USB_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/usb-monitor-synth.log
+
+$(USB_IMPL): $(USB_JSON) $(USB_CCF) $(USB_SDC)
+	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(USB_JSON)) -o ccf=$(abspath $(USB_CCF)) -o out=$(abspath $@) --sdc $(abspath $(USB_SDC)) --router router2 --placer-heap-beta=0.6 -l $(abspath $(BUILD_DIR)/usb-monitor-pnr.log)
+
+$(USB_BIT): $(USB_IMPL)
+	$(GMPACK) $(abspath $(USB_IMPL)) $(abspath $@)
+
+
+# PicoRV32 + USB controller enumeration probe, RAM-only; no flash access.
+# NOTE: compile firmware first so synth_gatemate can initialize BRAM directly.
+PROBE_TOP := top_ulx5m_gs_usb_probe
+PROBE_FW := $(BUILD_DIR)/fw_ulx5m_probe.hex
+PROBE_MC := $(BUILD_DIR)/usb_trans_mc.hex
+PROBE_SRC := rtl/top-ulx5m-gs-usb-probe.v rtl/soc_ulx5m_misc.v \
+  rtl/sysmgr_gatemate.v rtl/picorv32.v rtl/soc_bridge.v rtl/soc_bram.v \
+  rtl/soc_mem_response_reg.v \
+  cores/misc/rtl/uart_wb.v cores/misc/rtl/uart_tx.v \
+  cores/misc/rtl/uart_rx.v cores/misc/rtl/uart_irda_tx.v \
+  cores/misc/rtl/uart_irda_rx.v cores/misc/rtl/fifo_sync_ram.v \
+  cores/misc/rtl/glitch_filter.v cores/misc/rtl/ram_sdp.v \
+  cores/misc/rtl/fifo_sync_shift.v \
+  $(wildcard cores/usb/rtl/*.v)
+PROBE_CCF := data/top-ulx5m-gs-usb-probe.ccf
+PROBE_SDC := data/top-ulx5m-gs-usb-probe.sdc
+PROBE_JSON := $(BUILD_DIR)/$(PROBE_TOP).json
+PROBE_IMPL := $(BUILD_DIR)/$(PROBE_TOP).txt
+PROBE_BIT := $(BUILD_DIR)/$(PROBE_TOP).bit
+
+.PHONY: usb-probe test-usb-probe-bus
+usb-probe: $(PROBE_BIT)
+
+# Exercise the complete PicoRV32-to-BRAM/Wishbone handshake in simulation.
+# No USB PHY or configuration flash is instantiated by this test.
+test-usb-probe-bus: | $(BUILD_DIR)
+	iverilog -g2012 -s tb_ulx5m_probe_bus -o $(BUILD_DIR)/probe-bus-test.vvp \
+	  rtl/picorv32.v rtl/soc_bridge.v rtl/soc_bram.v \
+	  rtl/soc_mem_response_reg.v tests/tb_ulx5m_probe_bus.v
+	vvp $(BUILD_DIR)/probe-bus-test.vvp
+
+$(PROBE_FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S fw/lnk-app.lds fw/Makefile.ulx5m-gs
+	$(MAKE) -C fw -f Makefile.ulx5m-gs
+
+$(PROBE_MC): cores/usb/utils/microcode.py | $(BUILD_DIR)
+	python3 $< > $@
+
+$(PROBE_JSON): $(PROBE_SRC) $(PROBE_FW) $(PROBE_MC) $(PROBE_CCF) $(PROBE_SDC) | $(BUILD_DIR)
+	$(YOSYS) -p 'read_verilog -defer -Icores/usb/rtl $(PROBE_SRC); synth_gatemate -top $(PROBE_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/usb-probe-synth.log
+
+$(PROBE_IMPL): $(PROBE_JSON) $(PROBE_CCF) $(PROBE_SDC)
+	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(PROBE_JSON)) -o ccf=$(abspath $(PROBE_CCF)) -o out=$(abspath $@) --sdc $(abspath $(PROBE_SDC)) --router router2 --placer-heap-beta=0.6 -l $(abspath $(BUILD_DIR)/usb-probe-pnr.log)
+
+$(PROBE_BIT): $(PROBE_IMPL)
+	$(GMPACK) $(abspath $(PROBE_IMPL)) $(abspath $@)
+
+check:
+	python3 tests/check-ulx5m-gs-port.py
+
+$(BUILD_DIR):
+	mkdir -p $@
+
+$(JSON): $(SRC) | $(BUILD_DIR)
+	$(YOSYS) -p 'read_verilog $(SRC); synth_gatemate -top $(TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/synth.log
+
+$(IMPL): $(JSON) $(CCF) $(SDC)
+	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(JSON)) -o ccf=$(abspath $(CCF)) -o out=$(abspath $@) --sdc $(abspath $(SDC)) --router router2 --placer-heap-beta=0.6 -l $(abspath $(BUILD_DIR)/pnr.log)
+
+$(BIT): $(IMPL)
+	$(GMPACK) $(abspath $(IMPL)) $(abspath $@)
+
+flash dfu:
+	@echo 'ERROR: ULX5M flash and DFU targets are disabled until verified.' >&2
+	@exit 1
+
+clean:
+	rm -rf $(BUILD_DIR)

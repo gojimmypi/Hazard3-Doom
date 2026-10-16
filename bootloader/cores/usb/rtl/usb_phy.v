@@ -132,6 +132,47 @@ module usb_phy #(
 			);
 
 
+
+        end else if (TARGET == "GATEMATE") begin
+            // GateMate GPIO buffers have active-low output enables.
+            // Register TX and tri-state controls, as in the ECP5 PHY.
+            wire dp_in, dn_in;
+            reg dp_out = 1'b0;
+            reg dn_out = 1'b0;
+            reg tx_tristate = 1'b1;
+
+            always @(posedge clk) begin
+                if (rst) begin
+                    dp_out <= 1'b0;
+                    dn_out <= 1'b0;
+                    tx_tristate <= 1'b1;
+                end else begin
+                    dp_out <= tx_dp;
+                    dn_out <= tx_dn;
+                    tx_tristate <= ~tx_en;
+                end
+            end
+
+            CC_IOBUF #(
+                .V_IO("3.3"), .PULLUP(1'b0), .PULLDOWN(1'b0)
+            ) dp_iobuf (
+                .IO(pad_dp), .A(dp_out), .T(tx_tristate), .Y(dp_in)
+            );
+            CC_IOBUF #(
+                .V_IO("3.3"), .PULLUP(1'b0), .PULLDOWN(1'b0)
+            ) dn_iobuf (
+                .IO(pad_dn), .A(dn_out), .T(tx_tristate), .Y(dn_in)
+            );
+
+            CC_IDDR dp_iddr (
+                .CLK(clk), .D(dp_in),
+                .Q0(rx_dp_i[0]), .Q1(rx_dp_i[1])
+            );
+            CC_IDDR dn_iddr (
+                .CLK(clk), .D(dn_in),
+                .Q0(rx_dn_i[0]), .Q1(rx_dn_i[1])
+            );
+
 		end
 	endgenerate
 

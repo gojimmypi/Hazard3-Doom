@@ -27,6 +27,7 @@
 
 module usb #(
 	parameter         TARGET = "ICE40",
+	parameter         MC_INIT_FILE = "usb_trans_mc.hex",
 	parameter integer EPDW = 16,
 	parameter integer EVT_DEPTH = 0,
 
@@ -296,7 +297,7 @@ module usb #(
 	// Transaction control
 	// -------------------
 
-	usb_trans trans_I (
+	usb_trans #(.MC_INIT_FILE(MC_INIT_FILE)) trans_I (
 		.txpkt_start(txpkt_start),
 		.txpkt_done(txpkt_done),
 		.txpkt_pid(txpkt_pid),

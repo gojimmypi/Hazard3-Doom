@@ -45,7 +45,11 @@ static bool
 _get_status_intf(struct usb_ctrl_req *req, struct usb_xfer *xfer)
 {
 	/* Check interface exits */
+#ifdef BOARD_ULX5M_GS
+	if (!usb_desc_find_intf(NULL, req->wIndex, 0, NULL))
+#else
 	if (usb_desc_find_intf(NULL, req->wIndex, 0, NULL))
+#endif
 		return false;
 
 	/* Nothing to return really */
@@ -236,8 +240,13 @@ _get_interface(struct usb_ctrl_req *req, struct usb_xfer *xfer)
 	enum usb_fnd_resp rv;
 
 	/* Check interface exits */
+#ifdef BOARD_ULX5M_GS
+	intf = usb_desc_find_intf(NULL, idx, 0, NULL);
+	if (intf == NULL)
+#else
 	if (usb_desc_find_intf(NULL, idx, 0, NULL))
 	if (intf == NULL)
+#endif
 		return false;
 
 	/* Fast path */

@@ -1,0 +1,12 @@
+# ULX5M-GS V005, only clock/BTN1/LEDs. No configuration flash pins.
+# Same mapping as user's Hazard3 ULX5M-GS platform file.
+Pin_in  "clk25" Loc = "IO_SB_A8" | SCHMITT_TRIGGER=true;
+Pin_in  "btn0_n" Loc = "IO_EA_B4";
+Pin_out "led_n[0]" Loc = "IO_SB_A0";
+Pin_out "led_n[1]" Loc = "IO_SB_B0";
+Pin_out "led_n[2]" Loc = "IO_SB_A1";
+Pin_out "led_n[3]" Loc = "IO_SB_B1";
+Pin_out "led_n[4]" Loc = "IO_SB_A2";
+Pin_out "led_n[5]" Loc = "IO_SB_B2";
+Pin_out "led_n[6]" Loc = "IO_SB_A3";
+Pin_out "led_n[7]" Loc = "IO_SB_B3";
