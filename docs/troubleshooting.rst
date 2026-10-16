@@ -584,6 +584,26 @@ both OpenOCD/GDB and WebUSB work without another driver swap. Restore the FTDI
 VCP/D2XX driver only when a tool such as Windows ``fujprog`` requires it.
 
 
+ULX5M-GS: JTAG transfer completes but user LEDs remain dark
+-----------------------------------------------------------
+
+An ``openFPGALoader -c tigard`` transfer can report ``Done`` without the
+expected user LED pattern. On the tested ULX5M-GS V005 setup, both Tigard and
+the USB-powered FPGA board had to start from a fully unpowered state:
+
+#. Disconnect the ULX5M USB-C and Tigard USB power cables.
+#. Power the ULX5M through its USB-C cable first; do not hold any buttons.
+#. Power Tigard through its USB cable second (1.8 V JTAG, ``VTGT`` open).
+#. Reload the bitstream through JTAG at ``--freq 100k``.
+
+The verified bring-up pattern is D0-D5 on, D6 blinking, D7 off. The verified
+USB-probe pattern is D0-D2 off, D3-D5 on, D6 blinking, D7 off. This is an
+observed power-up dependency, not a proven root cause; BTN2 is not required.
+A corrupted USB product-name character was also cleared by this full power
+cycle without a firmware change. Do not unplug the ULX5M USB-C cable unless
+prepared to reload the volatile FPGA image. See :doc:`user-guide/bootloader`
+for the exact build, programming commands, and Windows enumeration checks.
+
 No cable or board specified: using direct ft2232 interface
 ----------------------------------------------------------
 

@@ -26,7 +26,8 @@
 `default_nettype none
 
 module usb_trans #(
-	parameter integer ADDR_MATCH = 1
+	parameter integer ADDR_MATCH = 1,
+	parameter MC_INIT_FILE = "usb_trans_mc.hex"
 )(
 	// TX Packet interface
 	output wire txpkt_start,
@@ -222,7 +223,7 @@ module usb_trans #(
 	reg [15:0] rom_rd;
 
 	initial
-		$readmemh("usb_trans_mc.hex", rom);
+		$readmemh(MC_INIT_FILE, rom);
 
 	always @(posedge clk)
 		rom_rd <= rom[mc_pc];

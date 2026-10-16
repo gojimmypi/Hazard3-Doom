@@ -19,6 +19,8 @@ The monitor ELF is intentionally not duplicated in `bin/`. Load the board-specif
 | `fpga_ulx3s_85f_hdmi_doom.bit` | Prebuilt ULX3S-85F FPGA bitstream containing the Hazard3 SoC and HDMI Doom hardware design. Load this file with `fujprog-v48-win64.exe` or `openFPGALoader.exe`. |
 | `fpga_ulx3s_12f_hdmi_doom.bit` | Prebuilt ULX3S-12F FPGA bitstream containing the Hazard3 SoC and HDMI Doom hardware design. Load this file with `fujprog-v48-win64.exe` or `openFPGALoader.exe`. |
 | `fpga_ulx4m_ld_hdmi_doom.bit` | Prebuilt ULX4M-LD FPGA bitstream for ULX4M-LD hardware. |
+| `fpga_ulx5m_gs_bringup.bit` | ULX5M-GS V005 GateMate SRAM-only hardware test for JTAG configuration, PLL lock, and LED heartbeat. No CPU, USB DFU, or flash programming. |
+| `fpga__ulx5m_gs_usb_probe.bit` | ULX5M-GS V005 SRAM-only PicoRV32 USB enumeration probe. Uses development VID:PID `1d50:614b`; USB DFU downloads/uploads and flash access are disabled. Not a persistent bootloader or Doom image. |
 | `fujprog-v48-win64.exe` | Windows FPGA programming utility commonly used with ULX3S boards. Source: https://github.com/kost/fujprog |
 | `hazard3-doom-ulx3s-12F.h3img` | Prebuilt Hazard3-Doom application image in the project-specific H3IMG format for ULX3S-12F. |
 | `hazard3-doom-ulx4m-ld.h3img` | Prebuilt Hazard3-Doom application image in the project-specific H3IMG format for ULX4M-LD-85F. |
@@ -58,6 +60,15 @@ The Windows executable can also be called from a WSL Bash prompt:
 ```bash
 ./bin/fujprog-v48-win64.exe ./bin/fpga_ulx3s_85f_hdmi_doom.bit
 ```
+
+Program the ULX5M-GS V005 diagnostics into volatile FPGA SRAM using Tigard JTAG (Windows, from repo root):
+
+```DOS
+.\bin\openFPGALoader.exe -c tigard --freq 100k .\bin\top_ulx5m_gs_bringup.bit
+.\bin\openFPGALoader.exe -c tigard --freq 100k .\bin\top_ulx5m_gs_usb_probe.bit
+```
+
+Use the Tigard JTAG 1.8 V setting with the ULX5M powered externally. If JTAG programming completes but the design does not start, power off both devices; power on ULX5M first, then Tigard, and retry. These `.bit` files configure volatile SRAM only; power cycling removes them. The USB probe can enumerate as `1d50:614b` and Windows may label it `ULX4M-LS FPGA (DFU)` because it has no product string and shares the development VID:PID. It does not accept DFU transfers or program configuration flash.
 
 Windows users can start OpenOCD using the VisualGDB script:
 

@@ -12,9 +12,9 @@ Project version: v0.2.1
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 28
+Files inventoried: 30
 
-Total bytes: 41316248
+Total bytes: 41726097
 
 ## Verification
 
@@ -27,7 +27,7 @@ should be identified before a public release.
 
 | Path | Bytes | SHA-256 | Component | Kind |
 |---|---:|---|---|---|
-| `README.md` | 6438 | `de350023aa58cda9ee9e6bdbfbb9475afe4f9d8b2595385f40c73f5226553c88` | REVIEW | Markdown documentation |
+| `README.md` | 7622 | `7d45b10a939590e252b638399e70f84bcf5ee0faa3fa411b6f020b55ad733296` | REVIEW | Markdown documentation |
 | `dfu-prefix.exe` | 178765 | `96f1d24e00d1772e2c2721e100d86da4f7489af82fef1481819705bd0636d42e` | REVIEW | Windows executable |
 | `dfu-suffix.exe` | 179276 | `22946fa4cea2fd1396d5716af43b40e89e0096245135ae8080a09309880e4f0c` | REVIEW | Windows executable |
 | `dfu-util-static.exe` | 799602 | `1f4687d0f11f0eede72d582fb5174537d5820de515862a8041ac9506b4a6fa1e` | REVIEW | Windows executable |
@@ -35,6 +35,8 @@ should be identified before a public release.
 | `fpga_ulx3s_12f.bit` | 309906 | `da68d4c3049fb1ee2ded4a3da8ac81c9e5d7efc646b162075f0464b1dc094084` | Hazard3-Doom project output | FPGA bitstream |
 | `fpga_ulx3s_85f.bit` | 981156 | `9a7265336898e8aa52c627bb3ce84b46f65a56b420299d3f091237cb091bf125` | Hazard3-Doom project output | FPGA bitstream |
 | `fpga_ulx4m_ld.bit` | 993246 | `1e7be30f31f6aefc4c4c3aff67b6614b27221e627012404cd9863a7b531badb7` | Hazard3-Doom project output | FPGA bitstream |
+| `fpga_ulx5m_gs_bringup.bit` | 9868 | `dc28bb1ea52a979e285bd498cac8ec9cef7c413123c5be0c6ae98e02195e9be1` | Hazard3-Doom project output | FPGA bitstream |
+| `fpga_ulx5m_gs_usb_probe.bit` | 398797 | `da1733563fbeb9db755b8cfb1b63591491cec85a98a6e4f80403ad78bd7c697e` | Hazard3-Doom project output | FPGA bitstream |
 | `fujprog-v48-win64.exe` | 212992 | `376be3f349c5cac35496f6cb8eaf75867e7f1ab3d8ecf7e5ddb43040eec272d5` | fujprog | Windows executable |
 | `gdb/README.md` | 217 | `2b83faba2c959cf9cc8180176279792e1185723f120bbfaeb54d9689eeb58f47` | xPack GNU RISC-V Embedded GCC/GDB runtime | Markdown documentation |
 | `gdb/libgcc_s_seh-1.dll` | 184227 | `61252331a388c1092649b561555f815e3a93175f8c33f819f6e09a1f0e3039c7` | xPack GNU RISC-V Embedded GCC/GDB runtime | Windows DLL |
