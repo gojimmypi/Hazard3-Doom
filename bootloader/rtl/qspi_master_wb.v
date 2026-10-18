@@ -34,7 +34,7 @@
 `default_nettype none
 
 module qspi_master_wb #(
-	parameter integer N_CS = 1,
+	parameter integer N_CS = 1
 )(
 	// SPI PHY interface
 	input  wire [3:0] spi_io_i,

@@ -24,9 +24,12 @@ module qspi_phy_gatemate #(
     reg [N_CS-1:0] cs_out;
     reg sck_out;
 
+    wire [3:0] io_in;
     genvar i;
     generate for (i = 0; i < 4; i = i + 1) begin : g_io
-        assign spi_io[i] = io_tristate[i] ? 1'bz : io_out[i];
+        CC_IOBUF #(.V_IO("1.8"), .PULLUP(1'b0), .PULLDOWN(1'b0)) pad_i (
+            .IO(spi_io[i]), .A(io_out[i]), .T(io_tristate[i]), .Y(io_in[i])
+        );
     end endgenerate
     assign spi_cs = cs_out;
     assign spi_sck = sck_out;
@@ -43,7 +46,7 @@ module qspi_phy_gatemate #(
             io_tristate <= spi_io_t;
             cs_out <= spi_cs_o;
             sck_out <= spi_sck_o;
-            spi_io_i <= spi_io;
+            spi_io_i <= io_in;
         end
     end
 endmodule

@@ -39,7 +39,8 @@ module soc_bridge #(
 	parameter integer WB_DW  = 32,
 	parameter integer WB_AW  = 16,
 	parameter integer WB_AI  =  2,
-	parameter integer WB_REG = 0	// [0] = cyc / [1] = addr/wdata/wstrb / [2] = ack/rdata
+	parameter integer WB_REG = 0,	// [0] = cyc / [1] = addr/wdata/wstrb / [2] = ack/rdata
+	parameter integer BRAM_REG = 0	// Register BRAM request and delay ACK (GateMate timing)
 )(
 	/* PicoRV32 bus */
 	input  wire [31:0] pb_addr,
@@ -88,17 +89,54 @@ module soc_bridge #(
 	// RAM access
 	// ----------
 
-	assign bram_addr   = pb_addr[RAM_AW+1:2];
-	assign bram_wdata  = pb_wdata;
-	assign bram_wmsk   = pb_wstrb;
-	assign bram_we     = pb_valid & ~pb_addr[31] & |pb_wstrb & ~pb_addr[17];
-
 	assign ram_rdata = ~pb_addr[31] ? bram_rdata : 32'h00000000;
 
 	assign ram_sel = pb_valid & ~pb_addr[31];
 
-	always @(posedge clk)
-		ram_rdy <= ram_sel && ~ram_rdy;
+	generate if (BRAM_REG) begin : g_bram_reg
+		// Register the request before the BRAM port. With synchronous BRAM
+		// reads, the read data becomes valid on the following clock edge;
+		// issue the ACK only after that edge. This removes the direct
+		// PicoRV32 address/write-mask -> BRAM write-enable timing path.
+		reg [RAM_AW-1:0] addr_q;
+		reg [31:0] wdata_q;
+		reg [3:0] wmsk_q;
+		reg we_q;
+		reg pending_q;
+		wire issue = ram_sel & ~pending_q & ~ram_rdy;
+
+		assign bram_addr = addr_q;
+		assign bram_wdata = wdata_q;
+		assign bram_wmsk = wmsk_q;
+		assign bram_we = we_q;
+
+		always @(posedge clk) begin
+			if (rst) begin
+				pending_q <= 1'b0;
+				ram_rdy <= 1'b0;
+				we_q <= 1'b0;
+			end else begin
+				pending_q <= issue;
+				ram_rdy <= pending_q;
+				we_q <= 1'b0;
+				if (issue) begin
+					addr_q <= pb_addr[RAM_AW+1:2];
+					wdata_q <= pb_wdata;
+					wmsk_q <= pb_wstrb;
+					we_q <= (|pb_wstrb) & ~pb_addr[17];
+				end
+			end
+		end
+	end else begin : g_bram_direct
+		// Preserve the existing ULX3S/ULX4M and USB-probe handshake.
+		assign bram_addr = pb_addr[RAM_AW+1:2];
+		assign bram_wdata = pb_wdata;
+		assign bram_wmsk = pb_wstrb;
+		assign bram_we = pb_valid & ~pb_addr[31] & |pb_wstrb & ~pb_addr[17];
+
+		always @(posedge clk)
+			ram_rdy <= ram_sel && ~ram_rdy;
+	end endgenerate
 
 
 	// Wishbone

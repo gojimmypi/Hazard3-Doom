@@ -216,11 +216,11 @@ ULX5M-GS V005 bootloader port (in development)
 
 .. warning::
 
-   The current ULX5M-GS image is a **USB enumeration probe**, not a persistent
-   DFU bootloader. It cannot write configuration flash or boot a stored user
-   image. The ULX4M flash layout, DFU alternate settings, and recovery commands
-   do not apply to ULX5M. JTAG loading is volatile; removing board power
-   erases the loaded image.
+   The ULX5M-GS port is **not a persistent DFU bootloader**. Its verified
+   JTAG-loaded diagnostics cover hardware bring-up, USB enumeration, and a
+   read-only SPI flash ID. They cannot program configuration flash or boot a
+   stored user image. ULX4M flash layouts and DFU recovery commands do not
+   apply. Removing board power erases these SRAM-loaded images.
 
 The port targets the Intergalaktik ULX5M-GS V005 with a Cologne Chip GateMate
 CCGM1A1. It retains the ULX4M bootloader's PicoRV32/USB architecture but uses
@@ -429,15 +429,83 @@ workaround or USB data-path change was required.
    enumeration; if power is removed, repeat the JTAG programming sequence.
    ``Done`` from openFPGALoader alone is not proof of a running FPGA image.
 
+Read-only configuration-flash JEDEC diagnostic
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The standalone ``flash-jedec`` target runs from the ULX5M-GS V005 25 MHz
+oscillator. It has no PicoRV32, PLL, or USB controller. It sends only SPI
+``0x9f`` (Read JEDEC ID) at 6.25 MHz, then displays the three response bytes
+on the board's eight user LEDs. It does not read flash contents or enable
+flash writes.
+
+From ``bootloader/``, build and validate:
+
+.. code-block:: bash
+
+   python3 tests/check-ulx5m-gs-flash-jedec.py
+   make -f Makefile.ulx5m-gs test-flash-jedec
+   make -f Makefile.ulx5m-gs flash-jedec
+   grep 'Max frequency for clock' build-ulx5m-gs/flash-jedec-pnr.log | tail -1
+
+The October 2026 ULX5M-GS V005 test passed the Icarus simulation and routed
+at ``84.21 MHz`` Fmax against the ``25.00 MHz`` target. The output is
+``bootloader/build-ulx5m-gs/top_ulx5m_gs_flash_jedec.bit``. A copy of the
+hardware-tested bitstream is distributed as
+``bin/fpga_ulx5m_gs_flash_jedec.bit``.
+
+With the board in JTAG configuration mode, follow the ULX5M-first, Tigard-second
+cold-start sequence above. From the repository root, load the distributed
+image into volatile FPGA SRAM:
+
+.. code-block:: bash
+
+   ./bin/openFPGALoader.exe -c tigard --freq 100k \
+       ./bin/fpga_ulx5m_gs_flash_jedec.bit
+
+Read the *physical* D0-D7 LEDs, with D0 as bit 0. The diagnostic compensates
+for the observed V005 D4/D5 and D6/D7 permutations:
+
+.. list-table:: Hardware-verified flash ID, ULX5M-GS V005
+   :header-rows: 1
+   :widths: 32 32 36
+
+   * - Action
+     - LEDs on
+     - Displayed byte
+   * - After programming
+     - D0, D1, D2, D3, D4
+     - ``0x1f`` (manufacturer)
+   * - Press BTN1 once
+     - D1, D6
+     - ``0x42`` (memory type)
+   * - Press BTN1 again
+     - D1, D2, D4
+     - ``0x16`` (capacity)
+   * - Hold BTN2 after two BTN1 presses
+     - D2, D7
+     - ``0x84`` (third-byte index)
+
+The resulting JEDEC ID is ``1f 42 16``, consistent with the fitted
+AT25QL321-MBUE-T, a 32 Mbit (4 MiB) SPI NOR flash. BTN1 cycles back to
+the manufacturer byte on the third press; holding BTN2 indicates the
+selected byte using ``0x81``, ``0x82``, or ``0x84``. Release BTN2 to
+restore the ID display. The LEDs do not blink after the read completes.
+
+The successful test confirms that GateMate user logic can access the board's
+configuration-flash SPI pins after a JTAG SRAM load. It does **not** validate
+SPI flash-content reads, erase/program operations, persistent boot, or USB DFU.
+See ``bootloader/README_ULX5M_FLASH_JEDEC.md`` for RTL and signal details.
+
 Remaining work
 ~~~~~~~~~~~~~~
 
-The current image enumerates, but it is **not** a usable DFU flasher. Before
-enabling flash writes, verify USB request handling and determine the GateMate
-configuration-flash layout, bootloader protection, user-image boot address,
-and recovery method. ULX5M persistent boot and DFU-entry button mapping have
-not been validated. See ``bootloader/README_ULX5M_USB_PROBE.md`` for the source
-implementation and probe limitations.
+The USB probe enumerates, and the standalone JEDEC diagnostic identifies the
+configuration flash. The integrated 48 MHz PicoRV32/USB flash-read target has
+not met timing; flash-content reads are not hardware-verified. Before enabling
+flash writes, complete read-only data access, verify USB request handling,
+and establish the flash layout, bootloader protection, user-image boot address,
+and recovery method. Persistent boot and DFU-entry buttons remain unvalidated.
+See ``bootloader/README_ULX5M_USB_PROBE.md`` for USB-probe limitations.
 
 Rare bootloader replacement and recovery
 ----------------------------------------

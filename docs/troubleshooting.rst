@@ -604,6 +604,20 @@ cycle without a firmware change. Do not unplug the ULX5M USB-C cable unless
 prepared to reload the volatile FPGA image. See :doc:`user-guide/bootloader`
 for the exact build, programming commands, and Windows enumeration checks.
 
+ULX5M-GS: JEDEC diagnostic shows unexpected LEDs
+------------------------------------------------
+
+The SRAM-only ``bin/fpga_ulx5m_gs_flash_jedec.bit`` diagnostic displays the
+three-byte flash ID with D0 as bit 0. The verified result is ``1f 42 16``:
+D0-D4 on at startup, then D1+D6 and D1+D2+D4 after successive BTN1 presses.
+Holding BTN2 after two presses should show D2+D7 (``0x84``, byte index 2).
+
+If the result differs, first repeat the ULX5M-first/Tigard-second cold-start
+procedure, then confirm the correct bitstream and JTAG voltage (1.8 V).
+The expected JEDEC ID comes from a single SPI ``0x9f`` transaction; an
+unexpected result is not evidence that erase or program operations failed.
+This diagnostic cannot write flash. See :doc:`user-guide/bootloader`.
+
 No cable or board specified: using direct ft2232 interface
 ----------------------------------------------------------
 

@@ -1,0 +1,27 @@
+# ULX5M-GS V005: volatile read-only flash diagnostic (no erase/program).
+# USB_PULL_P is driven high when the USB controller requests attach.
+# USB_PULL_N and duplicate USB data pads A0/B0 remain unused.
+Pin_in    "clk25"       Loc = "IO_SB_A8" | SCHMITT_TRIGGER=true;
+Pin_in    "btn_n[0]"    Loc = "IO_EA_B4";
+Pin_in    "btn_n[1]"    Loc = "IO_EA_A4";
+Pin_in    "btn_n[2]"    Loc = "IO_EA_B3";
+Pin_inout "usb_dp"      Loc = "IO_EA_A1";
+Pin_inout "usb_dn"      Loc = "IO_EA_B1";
+Pin_inout "usb_pull_p"  Loc = "IO_EA_A2";
+Pin_out   "led_n[0]"    Loc = "IO_SB_A0";
+Pin_out   "led_n[1]"    Loc = "IO_SB_B0";
+Pin_out   "led_n[2]"    Loc = "IO_SB_A1";
+Pin_out   "led_n[3]"    Loc = "IO_SB_B1";
+Pin_out   "led_n[4]"    Loc = "IO_SB_A2";
+Pin_out   "led_n[5]"    Loc = "IO_SB_B2";
+Pin_out   "led_n[6]"    Loc = "IO_SB_A3";
+Pin_out   "led_n[7]"    Loc = "IO_SB_B3";
+
+# CCGM1A1 configuration SPI pins, reused as West-A GPIO after JTAG loading.
+# Board U9 AT25QL321: 1.8 V supply. Do not use 3.3 V I/O buffers.
+Pin_inout "flash_io[0]" Loc = "IO_WA_B7";
+Pin_inout "flash_io[1]" Loc = "IO_WA_A7";
+Pin_inout "flash_io[2]" Loc = "IO_WA_B6";
+Pin_inout "flash_io[3]" Loc = "IO_WA_A6";
+Pin_out "flash_cs_n" Loc = "IO_WA_A8";
+Pin_out "flash_sck" Loc = "IO_WA_B8";
