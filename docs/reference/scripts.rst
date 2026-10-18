@@ -11,7 +11,27 @@ script says otherwise, examples below assume the current directory is the
 Hazard3-Doom repository root.
 
 For the shorter directory-oriented summary, see ``scripts/README.md`` in the
-repository.
+repository. The separate ``bootloader/scripts/`` helpers include read-only
+ULX5M-GS flash backup and JTAG SRAM programming tools:
+
+``bootloader/scripts/dump-ulx5m-flash.sh``
+   Read the 4 MiB AT25QL321 in 64 KiB JTAG chunks, retain chunks for resume,
+   assemble the image, and write its SHA-256. A direct 4 MiB dump failed with a
+   zero-byte output on the tested Windows loader; two chunked full backups
+   were subsequently verified as identical.
+
+``bootloader/scripts/read-ulx5m-flash.sh``
+   Read a specified region of up to 64 KiB without overwriting an existing
+   output file. Bounds and returned byte counts are checked.
+
+``bootloader/scripts/load-ulx5m-sram.sh``
+   Load a GateMate diagnostic bitstream into volatile SRAM through Tigard JTAG;
+   configuration flash is not modified.
+
+All three require the native Windows ``bin/openFPGALoader.exe`` from WSL and
+use 100 kHz JTAG on the tested ULX5M-GS V005. After a JTAG failure, power
+both devices off, then connect **Tigard first and ULX5M second**. See
+:doc:`../user-guide/bootloader` for examples and validation details.
 
 Complete board builds
 ---------------------

@@ -592,13 +592,15 @@ expected user LED pattern. On the tested ULX5M-GS V005 setup, both Tigard and
 the USB-powered FPGA board had to start from a fully unpowered state:
 
 #. Disconnect the ULX5M USB-C and Tigard USB power cables.
-#. Power the ULX5M through its USB-C cable first; do not hold any buttons.
-#. Power Tigard through its USB cable second (1.8 V JTAG, ``VTGT`` open).
+#. Power Tigard through its USB cable first (1.8 V JTAG, ``VTGT`` open).
+#. Power the ULX5M through USB-C second; do not hold any buttons.
 #. Reload the bitstream through JTAG at ``--freq 100k``.
 
 The verified bring-up pattern is D0-D5 on, D6 blinking, D7 off. The verified
-USB-probe pattern is D0-D2 off, D3-D5 on, D6 blinking, D7 off. This is an
-observed power-up dependency, not a proven root cause; BTN2 is not required.
+USB-probe pattern is D0-D2 off, D3-D5 on, D6 blinking, D7 off. Subsequent
+JTAG detection can also fail with ``Error: no device found`` after an SRAM
+load; repeat the full power cycle in the order above. The underlying cause
+is unknown; BTN2 is not required.
 A corrupted USB product-name character was also cleared by this full power
 cycle without a firmware change. Do not unplug the ULX5M USB-C cable unless
 prepared to reload the volatile FPGA image. See :doc:`user-guide/bootloader`
@@ -612,11 +614,26 @@ three-byte flash ID with D0 as bit 0. The verified result is ``1f 42 16``:
 D0-D4 on at startup, then D1+D6 and D1+D2+D4 after successive BTN1 presses.
 Holding BTN2 after two presses should show D2+D7 (``0x84``, byte index 2).
 
-If the result differs, first repeat the ULX5M-first/Tigard-second cold-start
+If the result differs, first repeat the Tigard-first/ULX5M-second cold-start
 procedure, then confirm the correct bitstream and JTAG voltage (1.8 V).
 The expected JEDEC ID comes from a single SPI ``0x9f`` transaction; an
 unexpected result is not evidence that erase or program operations failed.
 This diagnostic cannot write flash. See :doc:`user-guide/bootloader`.
+
+ULX5M-GS: flash dump is empty or stops after opening the file
+--------------------------------------------------------------
+
+The Windows ``openFPGALoader.exe`` successfully dumped 32 bytes and 64 KiB,
+but a single 4 MiB dump stopped immediately after ``Open dump file DONE`` and
+left a zero-byte file. The exact cause has not been established; do not treat
+an opened file or an identified JEDEC ID as a completed backup. Check exit
+status, byte count, and the final ``Done`` message.
+
+Use the read-only ``bootloader/scripts/dump-ulx5m-flash.sh`` utility to read
+the 4 MiB AT25QL321 as 64 separate 64 KiB chunks. Two complete independent
+captures were identical (SHA-256
+``74b3accfa91b04efee753a72b6b9787eb20bfb217266198fefb349ca1cb9509d``).
+Keep the original image outside Git. See :doc:`user-guide/bootloader`.
 
 No cable or board specified: using direct ft2232 interface
 ----------------------------------------------------------

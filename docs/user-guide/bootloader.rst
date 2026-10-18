@@ -217,9 +217,10 @@ ULX5M-GS V005 bootloader port (in development)
 .. warning::
 
    The ULX5M-GS port is **not a persistent DFU bootloader**. Its verified
-   JTAG-loaded diagnostics cover hardware bring-up, USB enumeration, and a
-   read-only SPI flash ID. They cannot program configuration flash or boot a
-   stored user image. ULX4M flash layouts and DFU recovery commands do not
+   JTAG-loaded diagnostics cover hardware bring-up, USB enumeration, SPI
+   flash identification, and read-only flash-content access. They cannot
+   program configuration flash or boot a stored user image. ULX4M flash layouts
+   and DFU recovery commands do not
    apply. Removing board power erases these SRAM-loaded images.
 
 The port targets the Intergalaktik ULX5M-GS V005 with a Cologne Chip GateMate
@@ -352,11 +353,12 @@ Cold-start sequence (no buttons are pressed):
 
 #. Remove USB power from both the ULX5M and Tigard. Leave JTAG signal wires
    connected.
-#. Connect the ULX5M USB-C cable to the Windows host first. The user LEDs
+#. Connect Tigard USB power first (1.8 V JTAG, ``VTGT`` disconnected).
+#. Connect the ULX5M USB-C cable to the Windows host second. The user LEDs
    remain dark before FPGA programming.
-#. Connect Tigard USB power second.
-#. Run the JTAG detection and programming commands below. Do not power-cycle
-   either device between programming the two test images.
+#. Run the JTAG detection or programming command. After an SRAM load, if a
+   subsequent JTAG command reports ``Error: no device found``, fully remove
+   power from both devices and repeat this sequence before retrying.
 
 From the Hazard3-Doom repository root in WSL, use the native Windows
 ``openFPGALoader.exe`` (verified with ``--freq 100k``):
@@ -377,7 +379,9 @@ On the tested board, physical LEDs D0-D5 turn on, D6 blinks, and D7 remains
 off. This confirms that the loaded configuration is executing, not merely
 that the JTAG transfer reached 100 percent.
 
-Program the PicoRV32 USB enumeration probe without cycling power:
+To test the PicoRV32 USB enumeration probe, program its image. A fresh
+cold-start may be required if the preceding SRAM load makes JTAG detection
+fail:
 
 .. code-block:: bash
 
@@ -453,7 +457,7 @@ at ``84.21 MHz`` Fmax against the ``25.00 MHz`` target. The output is
 hardware-tested bitstream is distributed as
 ``bin/fpga_ulx5m_gs_flash_jedec.bit``.
 
-With the board in JTAG configuration mode, follow the ULX5M-first, Tigard-second
+With the board in JTAG configuration mode, follow the Tigard-first, ULX5M-second
 cold-start sequence above. From the repository root, load the distributed
 image into volatile FPGA SRAM:
 
@@ -492,20 +496,99 @@ selected byte using ``0x81``, ``0x82``, or ``0x84``. Release BTN2 to
 restore the ID display. The LEDs do not blink after the read completes.
 
 The successful test confirms that GateMate user logic can access the board's
-configuration-flash SPI pins after a JTAG SRAM load. It does **not** validate
-SPI flash-content reads, erase/program operations, persistent boot, or USB DFU.
-See ``bootloader/README_ULX5M_FLASH_JEDEC.md`` for RTL and signal details.
+configuration-flash SPI pins after a JTAG SRAM load. This test alone does not
+validate flash-content reads, erase/program operations, persistent boot, or
+USB DFU. See ``bootloader/README_ULX5M_FLASH_JEDEC.md`` for signal details.
+
+Read-only SPI flash-content diagnostic
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The standalone ``flash-data`` target uses the board's 25 MHz oscillator, no
+CPU, PLL, or USB, and a 6.25 MHz SPI clock. It issues ``0x03`` with a 24-bit
+address of zero and captures 32 bytes from the configuration flash in one
+read-only transaction. BTN1 advances the displayed byte offset (0 through 31,
+wrapping); holding BTN2 displays ``0x80 | offset`` on D0-D7 instead of data.
+The diagnostic sends no write-enable, erase, or program command.
+
+From ``bootloader/``:
+
+.. code-block:: bash
+
+   make -f Makefile.ulx5m-gs test-flash-data
+   make -f Makefile.ulx5m-gs flash-data
+
+The Icarus simulation passed, and the routed diagnostic achieved ``61.36 MHz``
+Fmax against a ``25.00 MHz`` constraint (October 18, 2026). The output is
+``build-ulx5m-gs/top_ulx5m_gs_flash_data.bit``; the hardware-tested copy is
+``bin/fpga_ulx5m_gs_flash_data.bit``. From the repository root:
+
+.. code-block:: bash
+
+   ./bin/openFPGALoader.exe -c tigard --freq 100k \
+       ./bin/fpga_ulx5m_gs_flash_data.bit
+
+The first eight bytes were read twice using the physical LEDs and then
+confirmed by a separate JTAG-to-flash dump:
+
+.. code-block:: text
+
+   Address  00 01 02 03 04 05 06 07
+   Data     D9 01 ED 96 10 4D D6 00
+
+At offset 2, holding BTN2 displayed ``0x82`` (D1 and D7 on); releasing it
+displayed ``0xed`` (D0, D2, D3, D5, D6, D7 on). The earlier ``0xeb`` report
+was corrected by this repeat test. The 32-byte independent JTAG dump began:
+
+.. code-block:: text
+
+   d9 01 ed 96 10 4d d6 00 00 00 00 33 00 00 00 00
+   c3 01 0c fe 00 cc c6 dd 01 8d f1 01 45 d7 c1 18
+
+See ``bootloader/README_ULX5M_FLASH_DATA.md`` for implementation and LED
+operation. This validates basic FPGA-driven flash-content reads, but not
+USB-to-flash transfers or persistent DFU.
+
+Original 4 MiB configuration-flash backup
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The fitted AT25QL321 (JEDEC ``1f 42 16``) contains 4,194,304 bytes. A direct
+4 MiB ``openFPGALoader.exe --dump-flash`` attempt ended with an empty output;
+the cause is not proven. Separate 32-byte and 64 KiB reads succeeded. To avoid
+that failure mode, ``bootloader/scripts/dump-ulx5m-flash.sh`` reads 64 chunks
+of 65,536 bytes through Tigard JTAG, checks each chunk's size, and assembles
+the full image. It uses read-only operations and retains chunks for resuming.
+
+From the repository root, after a Tigard-first, ULX5M-second cold start:
+
+.. code-block:: bash
+
+   ./bootloader/scripts/dump-ulx5m-flash.sh
+
+Two independently captured complete images matched byte-for-byte using
+``cmp`` on October 18, 2026. Both measured 4,194,304 bytes and produced the
+following SHA-256:
+
+.. code-block:: text
+
+   74b3accfa91b04efee753a72b6b9787eb20bfb217266198fefb349ca1cb9509d
+
+This checksum identifies the **original tested board image**, not a required
+hash for future flash updates. Store both verified backups outside the
+repository and do not commit the flash images or temporary chunk files to
+Git. See ``bootloader/README_ULX5M_FLASH_BACKUP.md`` for resume, verification,
+and SRAM-loading utility instructions.
 
 Remaining work
 ~~~~~~~~~~~~~~
 
-The USB probe enumerates, and the standalone JEDEC diagnostic identifies the
-configuration flash. The integrated 48 MHz PicoRV32/USB flash-read target has
-not met timing; flash-content reads are not hardware-verified. Before enabling
-flash writes, complete read-only data access, verify USB request handling,
-and establish the flash layout, bootloader protection, user-image boot address,
-and recovery method. Persistent boot and DFU-entry buttons remain unvalidated.
-See ``bootloader/README_ULX5M_USB_PROBE.md`` for USB-probe limitations.
+The USB probe enumerates, and separate 25 MHz GateMate diagnostics identify
+and read the configuration flash. The integrated 48 MHz PicoRV32/USB flash-read
+target has **not** met timing; USB flash-content reads are not yet available.
+Before enabling flash writes, integrate and verify USB read requests against
+the preserved backup, determine the flash layout and bootloader protection,
+and validate user-image handoff and recovery. Persistent boot and DFU-entry
+buttons remain unvalidated. See ``bootloader/README_ULX5M_USB_PROBE.md`` for
+USB-probe limitations.
 
 Rare bootloader replacement and recovery
 ----------------------------------------

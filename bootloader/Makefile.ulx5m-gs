@@ -24,6 +24,7 @@ help:
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs usb-probe'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs flash-read-probe'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs flash-jedec'
+	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs flash-data'
 	@echo 'Produces a volatile JTAG-loadable LED/PLL bitstream (NOT DFU).'
 	@echo 'USB monitor is RX-only with no attach, and will NOT enumerate.'
 	@echo 'USB probe enumerates a non-programmable DFU interface from JTAG RAM.'
@@ -162,6 +163,34 @@ $(JEDEC_IMPL): $(JEDEC_JSON) $(JEDEC_CCF) $(JEDEC_SDC)
 
 $(JEDEC_BIT): $(JEDEC_IMPL)
 	$(GMPACK) $(abspath $(JEDEC_IMPL)) $(abspath $@)
+
+# Standalone 25 MHz SPI 0x03 content reader. JEDEC target unchanged.
+# Volatile JTAG SRAM load, first 32 bytes only; no erase or program.
+FLASH_DATA_TOP := top_ulx5m_gs_flash_data
+FLASH_DATA_SRC := rtl/top-ulx5m-gs-flash-data.v
+FLASH_DATA_CCF := data/top-ulx5m-gs-flash-data.ccf
+FLASH_DATA_SDC := data/top-ulx5m-gs-flash-data.sdc
+FLASH_DATA_JSON := $(BUILD_DIR)/$(FLASH_DATA_TOP).json
+FLASH_DATA_IMPL := $(BUILD_DIR)/$(FLASH_DATA_TOP).txt
+FLASH_DATA_BIT := $(BUILD_DIR)/$(FLASH_DATA_TOP).bit
+
+.PHONY: flash-data test-flash-data
+flash-data: $(FLASH_DATA_BIT)
+
+test-flash-data: | $(BUILD_DIR)
+	python3 tests/check-ulx5m-gs-flash-data.py
+	iverilog -g2012 -s tb_ulx5m_flash_data -o $(BUILD_DIR)/flash-data-test.vvp \
+	  rtl/top-ulx5m-gs-flash-data.v tests/tb_ulx5m_flash_data.v
+	vvp $(BUILD_DIR)/flash-data-test.vvp
+
+$(FLASH_DATA_JSON): $(FLASH_DATA_SRC) $(FLASH_DATA_CCF) $(FLASH_DATA_SDC) | $(BUILD_DIR)
+	$(YOSYS) -p 'read_verilog $(FLASH_DATA_SRC); synth_gatemate -top $(FLASH_DATA_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/flash-data-synth.log
+
+$(FLASH_DATA_IMPL): $(FLASH_DATA_JSON) $(FLASH_DATA_CCF) $(FLASH_DATA_SDC)
+	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(FLASH_DATA_JSON)) -o ccf=$(abspath $(FLASH_DATA_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_DATA_SDC)) --router router2 --placer-heap-beta=0.6 -l $(abspath $(BUILD_DIR)/flash-data-pnr.log)
+
+$(FLASH_DATA_BIT): $(FLASH_DATA_IMPL)
+	$(GMPACK) $(abspath $(FLASH_DATA_IMPL)) $(abspath $@)
 
 check:
 	python3 tests/check-ulx5m-gs-port.py
