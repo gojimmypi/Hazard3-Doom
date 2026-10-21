@@ -1,15 +1,32 @@
-name: ULX5M-GS bootloader probe
+# PicoRV32 USB enumeration probe build and test for the ULX5M-GS board.
+name: ULX5M-GS PicoRV32 USB probe (manual)
+
+# Retain this legacy probe for comparison while focusing CI on SERV.
+# Run manually when investigating the PicoRV32 implementation.
 
 on:
-  push:
-    paths:
-      - 'bootloader/**'
-      - '.github/workflows/bootloader-ulx5m-gs.yml'
-  pull_request:
-    paths:
-      - 'bootloader/**'
-      - '.github/workflows/bootloader-ulx5m-gs.yml'
+# workflow
+#  push:
+#    paths:
+#      - 'bootloader/**'
+#      - '.github/workflows/ulx5m-gs-bootloader.yml'
+#  pull_request:
+#    paths:
+#      - 'bootloader/**'
+#      - '.github/workflows/ulx5m-gs-bootloader.yml'
+
   workflow_dispatch:
+    inputs:
+      oss_cad_suite_version:
+        description: 'OSS CAD Suite release (YYYY-MM-DD)'
+        type: string
+        required: true
+        default: '2026-07-20'
+      seed:
+        description: 'Optional nextpnr placement seed (blank uses the default)'
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -28,7 +45,8 @@ jobs:
         shell: bash
         working-directory: bootloader
     env:
-      OSS_CAD_SUITE_VERSION: '2026-10-14'
+      OSS_CAD_SUITE_VERSION: ${{ inputs.oss_cad_suite_version || '2026-07-20' }}
+      PNR_SEED: ${{ inputs.seed || '' }}
       XPACK_RISCV_GCC_VERSION: '15.2.0-1'
       XPACK_RISCV_GCC_LINUX_SHA256: 'aaaa8060c914851a3e5ee1ba82cc3d6f80972f90638a05c6e823a37557a33758'
 
@@ -86,7 +104,28 @@ jobs:
 
       - name: Build USB enumeration probe (48 MHz timing required)
         run: |
-          make -f Makefile.ulx5m-gs usb-probe
+          if [[ -n "${PNR_SEED}" && ! "${PNR_SEED}" =~ ^[1-9][0-9]*$ ]]; then
+            echo 'ERROR: Seed must be a positive decimal integer or blank.' >&2
+            exit 2
+          fi
+          mkdir -p build-ulx5m-gs
+          {
+            printf 'commit=%s\n' "${GITHUB_SHA}"
+            printf 'oss_cad_suite_version=%s\n' "${OSS_CAD_SUITE_VERSION}"
+            printf 'pnr_seed=%s\n' "${PNR_SEED:-default}"
+            yosys --version
+            nextpnr-himbaechel --version
+          } > build-ulx5m-gs/usb-probe-build-info.txt
+          cat build-ulx5m-gs/usb-probe-build-info.txt
+
+          if [[ -n "${PNR_SEED}" ]]; then
+            # The Makefile allows NEXTPNR to be overridden; append a seed
+            # without modifying the normal local build or its defaults.
+            make -f Makefile.ulx5m-gs usb-probe \
+              NEXTPNR="nextpnr-himbaechel --seed ${PNR_SEED}"
+          else
+            make -f Makefile.ulx5m-gs usb-probe
+          fi
           test -s build-ulx5m-gs/top_ulx5m_gs_usb_probe.bit
           test -s build-ulx5m-gs/usb-probe-synth.log
           test -s build-ulx5m-gs/usb-probe-pnr.log
@@ -108,5 +147,6 @@ jobs:
             bootloader/build-ulx5m-gs/fw_ulx5m_probe.hex
             bootloader/build-ulx5m-gs/usb-probe-synth.log
             bootloader/build-ulx5m-gs/usb-probe-pnr.log
+            bootloader/build-ulx5m-gs/usb-probe-build-info.txt
           if-no-files-found: warn
           retention-days: 14

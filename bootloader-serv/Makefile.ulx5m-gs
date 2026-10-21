@@ -1,6 +1,9 @@
 # ULX5M-GS GateMate bring-up. Separate from original ECP5 Makefile.
 # Safe first target: FPGA RAM-only LED + PLL image; no flash programming.
 
+# Default placement seed for ULX5M-GS SERV bootloader.
+SERV_SEED ?= 260
+
 YOSYS ?= yosys
 NEXTPNR ?= nextpnr-himbaechel
 GMPACK ?= gmpack
@@ -199,7 +202,7 @@ $(SERV_JSON): $(SERV_FW) $(PROBE_MC) $(SERV_STAMP) $(SERV_SRC) $(FLASH_CCF) $(FL
 	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -Icores/usb/rtl $(SERV_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/flash-read-serv-synth.log
 
 $(SERV_IMPL): $(SERV_JSON) $(FLASH_CCF) $(FLASH_SDC)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(SERV_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 -l $(abspath $(BUILD_DIR)/flash-read-serv-pnr.log)
+	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(SERV_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(SERV_SEED) -l $(abspath $(BUILD_DIR)/flash-read-serv-pnr.log)
 
 $(SERV_BIT): $(SERV_IMPL)
 	$(GMPACK) $(abspath $(SERV_IMPL)) $(abspath $@)

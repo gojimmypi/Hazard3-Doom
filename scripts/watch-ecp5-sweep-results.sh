@@ -18,7 +18,6 @@
 # -----------------------------------------------------------------------------
 
 set -euo pipefail
-
 # Verify this script against the recorded inventory without blocking normal execution.
 "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
     --check-file "${BASH_SOURCE[0]}" || true
@@ -96,7 +95,9 @@ done
 
 expected_seeds=$((SWEEP_SEED_LAST - SWEEP_SEED_FIRST + 1))
 expected_groups=$(((expected_seeds + SWEEP_SEEDS_PER_JOB - 1) / SWEEP_SEEDS_PER_JOB))
-artifact_prefix="ecp5-sweep-seeds-"
+artifact_prefix="${SWEEP_ARTIFACT_PREFIX:-ecp5-sweep-seeds-}"
+clock_label="${SWEEP_CLOCK_LABEL:-sys}"
+clock_target_mhz="${SWEEP_CLOCK_TARGET_MHZ:-}"
 artifact_suffix="-${GITHUB_RUN_ID}"
 work_dir="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/ecp5-live-seed-results-${GITHUB_RUN_ID}"
 mkdir -p "${work_dir}"
@@ -269,7 +270,7 @@ seed_frequency_metrics()
             "${seed_init_clk[$seed]:-NA}"
         ;;
     ulx5m-gs)
-        printf 'sys=%s' "${seed_clk_sys[$seed]:-NA}"
+        printf '%s=%s' "${clock_label}" "${seed_clk_sys[$seed]:-NA}"
         ;;
     *)
         printf 'sys=%s video=%s tmds=%s' \
@@ -365,7 +366,7 @@ print_best_frequency_summary()
         printf '                   tmds=%s | init=%s\n' \
             "${best_tmds}" "${best_init}"
     elif [[ "${SWEEP_TARGET}" == "ulx5m-gs" ]]; then
-        printf 'Best PASS max MHz: sys=%s\n' "${best_sys}"
+        printf 'Best PASS max MHz: %s=%s\n' "${clock_label}" "${best_sys}"
     else
         printf 'Best PASS max MHz: sys=%s | video=%s | tmds=%s\n' \
             "${best_sys}" "${best_video}" "${best_tmds}"
@@ -460,7 +461,7 @@ ulx4m-ld-85f)
         "${HAZARD3_ULX4M_SYS_CLK_MHZ:-40}"
     ;;
 ulx5m-gs)
-    printf 'Timing target: sys=25.00 MHz\n'
+    printf 'Timing target: %s=%s MHz\n' "${clock_label}" "${clock_target_mhz:-25.00}"
     ;;
 esac
 printf 'Expected seed groups: %s (%s seed(s) per job).\n' \
