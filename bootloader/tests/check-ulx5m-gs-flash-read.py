@@ -33,6 +33,13 @@ assert len(newpins.values()) == len(set(newpins.values()))
 assert 'Pin_inout "flash_io[0]"' in ccf
 assert '.V_IO("1.8")' in files["rtl/qspi_phy_gatemate.v"]
 assert 'flash_master_i' in top and 'flash_phy_i' in top
+# The integrated experiment avoids unused UART hardware but preserves slot 1.
+assert 'uart_wb' not in top
+assert 'wb_ack_uart <= wb_cyc[1] & ~wb_ack_uart;' in top
+assert 'assign wb_rdata[1] = 32\'h00000000;' in top
+# Hardware-verified single-bit SPI held WP_N and HOLD_N high.
+assert ".spi_io_o({2'b11, spi_io_o[1:0]})" in top
+assert ".spi_io_t({2'b00, spi_io_t[1:0]})" in top
 # The registered BRAM request path is used only by the read-only flash top.
 bridge = (root / "rtl/soc_bridge.v").read_text(encoding="ascii")
 usb_top = (root / "rtl/top-ulx5m-gs-usb-probe.v").read_text(encoding="ascii")

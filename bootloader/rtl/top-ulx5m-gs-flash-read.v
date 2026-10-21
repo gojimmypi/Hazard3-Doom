@@ -152,15 +152,19 @@ module top_ulx5m_gs_flash_read (
         .clk(clk48), .rst(reset)
     );
 
-    // Peripheral 1: console UART (TX unconnected; RX idle).
-    wire unused_uart_tx;
-    uart_wb #(.DIV_WIDTH(16), .DW(WB_DW)) uart_i (
-        .uart_tx(unused_uart_tx), .uart_rx(1'b1),
-        .bus_addr(wb_addr[1:0]), .bus_wdata(wb_wdata),
-        .bus_rdata(wb_rdata[1]), .bus_cyc(wb_cyc[1]),
-        .bus_ack(wb_ack[1]), .bus_we(wb_we),
-        .clk(clk48), .rst(reset)
-    );
+    // Peripheral 1: the read-only USB firmware does not use the UART.
+    // Retain its bus slot and one-shot acknowledgement, but eliminate the
+    // unconnected UART logic from this timing experiment. The usb-probe
+    // top and the original ECP5 bootloader remain unchanged.
+    reg wb_ack_uart;
+    always @(posedge clk48) begin
+        if (reset)
+            wb_ack_uart <= 1'b0;
+        else
+            wb_ack_uart <= wb_cyc[1] & ~wb_ack_uart;
+    end
+    assign wb_ack[1] = wb_ack_uart;
+    assign wb_rdata[1] = 32'h00000000;
 
     wire [8:0] ep_tx_addr, ep_rx_addr;
     wire [31:0] ep_tx_data, ep_rx_data;
@@ -219,9 +223,14 @@ module top_ulx5m_gs_flash_read (
         .bus_ack(wb_ack[4]), .bus_we(wb_we),
         .clk(clk48), .rst(reset)
     );
+    // Normal 0x9F / 0x03 SPI mode uses IO0 (MOSI) and IO1 (MISO).
+    // Hold flash WP_N (IO2) and HOLD_N (IO3) high, just as the validated
+    // standalone 25 MHz reader does. No quad-mode commands are supported.
     qspi_phy_gatemate #(.N_CS(1)) flash_phy_i (
         .spi_io(flash_io), .spi_cs(flash_cs_n), .spi_sck(flash_sck),
-        .spi_io_i(spi_io_i), .spi_io_o(spi_io_o), .spi_io_t(spi_io_t),
+        .spi_io_i(spi_io_i),
+        .spi_io_o({2'b11, spi_io_o[1:0]}),
+        .spi_io_t({2'b00, spi_io_t[1:0]}),
         .spi_sck_o(spi_sck_o), .spi_cs_o(spi_cs_o),
         .clk(clk48), .rst(reset)
     );
