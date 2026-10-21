@@ -36,6 +36,7 @@ The monitor ELF is intentionally not duplicated in `bin/`. Load the board-specif
 | `openocd.exe` | OpenOCD JTAG debug server. It provides the connection between the FPGA JTAG interface and RISC-V GDB. |
 | `putty.exe` | Windows serial-terminal utility for viewing the Hazard3 console and interacting with the running firmware. |
 | `README.md` | This file. |
+| `usbview` | USB device viewer utility. See https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/usbview |
 | `zadig-2.5.exe` | USB driver installation utility. It can install a libusb-compatible Windows driver when required by an FPGA programming or JTAG tool. Changing a device driver can affect other software that uses the same device. |
 
 ## Typical roles
