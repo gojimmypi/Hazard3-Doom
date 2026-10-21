@@ -30,3 +30,4 @@ rather than silently choosing one source.
 
    ulx3s/index
    ulx4m/index
+   ulx5m/index

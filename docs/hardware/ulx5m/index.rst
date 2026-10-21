@@ -68,6 +68,63 @@ connecting external logic. For 3.3 V peripherals, consult Cologne Chip's
 UG1003 level-shifting guide; its examples assume the GateMate supply itself
 is within its specified range.
 
+USB-C power on the CM5-IO-BASE-B carrier
+----------------------------------------
+
+A reported ULX5M-GS V005 setup using a Waveshare CM5-IO-BASE-B carrier
+showed no power LEDs when the carrier's USB-C input was connected to a
+USB-C host or USB-C power adapter. A replacement carrier behaved the same
+way. Connecting USB-C power directly to the FPGA board did illuminate its
+LEDs. This is consistent with missing USB-C sink identification resistors,
+not necessarily two defective carriers.
+
+A USB-C sink normally advertises its presence using a nominal **5.1 kohm
+pull-down (Rd) from each CC pin to ground**. The source detects Rd before
+applying the initial 5 V VBUS supply. This attach detection is distinct from
+USB Power Delivery negotiation for higher voltages or currents.
+
+The CM5-IO-BASE-B USB-C schematic shows positions ``R4`` and ``R9``
+marked ``NC`` (not populated), corresponding to the connector's CC lines.
+The ULX5M V005 carrier interface drawing separately exposes ``USB_CC1``
+and ``USB_CC2``. Verify the assembled revision and the actual CC circuit
+rather than assuming that the FPGA or carrier provides the required Rd
+terminations.
+
+.. figure:: ../../images/CM5-IO-BASE-B-USB-power.png
+   :alt: CM5-IO-BASE-B Type-C power schematic showing R4 and R9 marked NC
+
+   CM5-IO-BASE-B Type-C power input schematic: CC resistor positions
+   ``R4`` and ``R9`` are marked ``NC``.
+
+.. figure:: ../../images/ULX5M-USB-Power.png
+   :alt: ULX5M V005 header schematic exposing USB_CC1 and USB_CC2
+
+   ULX5M V005 interface excerpt showing ``USB_CC1`` and ``USB_CC2``.
+   These signal names alone do not establish that Rd is installed.
+
+.. figure:: ../../images/CM5-IO-BASE-B-USB.png
+   :alt: Top view of Waveshare CM5-IO-BASE-B carrier
+
+   Waveshare CM5-IO-BASE-B carrier board and USB-C power connector.
+
+Possible remedies include using a suitable powered USB-A host or hub with
+a USB-A-to-USB-C cable for **5 V-only power**, inserting a purpose-built
+USB-C CC resistor adapter (for example `Adafruit product 6323
+<https://www.adafruit.com/product/6323>`_), or installing the appropriate
+5.1 kohm Rd resistors after checking the schematic and assembly. The adapter
+must be intended for this particular sink-power use; avoid combining
+unknown USB-C adapters or adding duplicate CC pull-downs. A USB-A workaround
+does not provide USB Power Delivery and must supply sufficient current for
+the board. Do not bypass current limits or inject an unverified voltage.
+
+**Diagnostic check:** With power disconnected, inspect the CC terminations.
+Then use a known-good, appropriately rated 5 V power source and measure VBUS
+to GND at a documented safe test point. Do not infer a successful repair from
+LEDs alone. This power problem is independent of USB enumeration and the
+experimental SERV endpoint-zero data-path diagnostics below.
+
+See :doc:`../../troubleshooting` for the symptom-oriented checklist.
+
 USB-C connection
 ----------------
 

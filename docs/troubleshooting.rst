@@ -1,6 +1,27 @@
 Troubleshooting
 ===============
 
+ULX5M with CM5-IO-BASE-B carrier has no USB-C power
+-----------------------------------------------------
+
+If the ULX5M and Waveshare CM5-IO-BASE-B carrier both remain dark when USB-C
+power is connected to the carrier, but the FPGA board powers when connected
+directly, first inspect the USB-C configuration channel (CC) pull-downs.
+The carrier schematic marks CC resistor positions ``R4`` and ``R9`` as
+``NC``. Without effective 5.1 kohm Rd terminations on CC1 and CC2, a
+USB-C source may not enable its initial 5 V supply. This is an attach
+problem, not a requirement to negotiate a higher USB Power Delivery voltage.
+
+#. Disconnect power before examining the board and CC wiring.
+#. Verify the assembled board revision and whether either board supplies
+   the required Rd terminations; do not add duplicates blindly.
+#. Test with a suitable 5 V source using a USB-A-to-USB-C cable, or a
+   purpose-built USB-C CC resistor adapter. Check the supply current rating.
+#. Measure 5 V VBUS to GND at a documented safe point before proceeding to
+   FPGA or bootloader troubleshooting.
+
+See :doc:`hardware/ulx5m/index` for schematic images and other precautions.
+
 Windows ``fujprog`` reports ``Cannot find JTAG cable``
 ------------------------------------------------------
 

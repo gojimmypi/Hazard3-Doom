@@ -15,6 +15,7 @@ otklanjanje pogrešaka u ovom projektu.
 
    ulx3s/index
    ulx4m/index
+   ulx5m/index
 
 Zašto hardverski vodič?
 -----------------------

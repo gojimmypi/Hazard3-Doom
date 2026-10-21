@@ -17,6 +17,7 @@ projet.
 
    ulx3s/index
    ulx4m/index
+   ulx5m/index
 
 Pourquoi un guide matériel ?
 ----------------------------

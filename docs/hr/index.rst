@@ -71,7 +71,8 @@ Počnite ovdje
 Istražite dalje
 ---------------
 
-* :doc:`hardware/index` - istražite ULX3S i ULX4M hardver koji koristi Hazard3-Doom.
+* :doc:`hardware/index` - istražite ULX3S i ULX4M hardver i bilješke za ULX5M-GS V005.
+* :doc:`hardware/ulx5m/index` - pogledajte GPIO napone, JTAG, USB i razvoj bootloadera za ULX5M-GS V005.
 * :doc:`user-guide/pinouts` - pronađite pinout dijagrame i praktično UART/JTAG ožičenje.
 * :doc:`user-guide/jtag-debugging` - otklanjajte pogreške u Hazard3 putem OpenOCD/GDB-a ili VisualGDB-a.
 * :doc:`user-guide/i2cdriver` - skenirajte i interaktivno koristite SAO I2C sabirnicu.

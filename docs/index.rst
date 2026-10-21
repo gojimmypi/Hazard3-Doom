@@ -74,7 +74,8 @@ Start here
 Explore further
 ---------------
 
-* :doc:`hardware/index` - explore the ULX3S and ULX4M hardware used by Hazard3-Doom.
+* :doc:`hardware/index` - explore ULX3S/ULX4M hardware and ULX5M-GS V005 bring-up notes.
+* :doc:`hardware/ulx5m/index` - ULX5M-GS V005 GPIO voltages, JTAG, USB, and bootloader bring-up.
 * :doc:`user-guide/pinouts` - find board pinouts and practical UART/JTAG wiring.
 * :doc:`user-guide/jtag-debugging` - debug Hazard3 through OpenOCD/GDB or VisualGDB.
 * :doc:`user-guide/i2cdriver` - scan and interact with the SAO I2C bus.
