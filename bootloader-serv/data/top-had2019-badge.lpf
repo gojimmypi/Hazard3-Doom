@@ -1,0 +1,113 @@
+# -----------------------------------------------------------------------------
+# File:        top-had2019-badge.lpf
+# Path:        bootloader/data/top-had2019-badge.lpf
+#
+# Project:     Hazard3-Doom
+# Purpose:     Define ECP5 pin and timing constraints for the HAD2019 badge bootloader.
+#
+# Original author(s):    Sylvain Munaut (smunaut)
+# Upstream contributors:
+#                        Jeroen Domburg (Spritetm)
+#                        Lawrie Griffiths (lawrie)
+#
+# Upstream:    HAD2019 / ULX3S / ULX4M DFU bootloader
+# Upstream license: No file-level license notice was present in this
+#                   imported upstream file; do not infer one here.
+#
+# This file contains third-party material and is not relicensed by
+# Hazard3-Doom. Preserve its upstream history and provenance.
+# See LICENSES/HAD2019-Bootloader-NOTICE.md for provenance and licensing.
+# See LICENSING.md for project licensing policy and scope.
+# -----------------------------------------------------------------------------
+
+# 25 MHz clock
+LOCATE COMP "clk" SITE "G2";
+IOBUF PORT "clk" PULLMODE=NONE IO_TYPE=LVCMOS33;
+FREQUENCY PORT "clk" 25 MHZ;
+
+# LEDs
+LOCATE COMP "led[7]" SITE "H3";
+LOCATE COMP "led[6]" SITE "E1";
+LOCATE COMP "led[5]" SITE "E2";
+LOCATE COMP "led[4]" SITE "D1";
+LOCATE COMP "led[3]" SITE "D2";
+LOCATE COMP "led[2]" SITE "C1";
+LOCATE COMP "led[1]" SITE "C2";
+LOCATE COMP "led[0]" SITE "B2";
+
+IOBUF PORT "led[0]" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[1]" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[2]" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[3]" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[4]" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[5]" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[6]" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "led[7]" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+
+# Buttons
+# [6:0]
+LOCATE COMP "btn[0]" SITE "D6"; # PWRn
+LOCATE COMP "btn[1]" SITE "R1"; # FIRE1
+LOCATE COMP "btn[2]" SITE "T1"; # FIRE2
+LOCATE COMP "btn[3]" SITE "R18"; # UP
+LOCATE COMP "btn[4]" SITE "V1"; # DOWN
+LOCATE COMP "btn[5]" SITE "U1"; # LEFT
+LOCATE COMP "btn[6]" SITE "H16"; # RIGHT
+
+IOBUF PORT "btn[0]" IO_TYPE=LVCMOS33 PULLMODE=UP DRIVE=4;
+IOBUF PORT "btn[1]" IO_TYPE=LVCMOS33 PULLMODE=DOWN DRIVE=4;
+IOBUF PORT "btn[2]" IO_TYPE=LVCMOS33 PULLMODE=DOWN DRIVE=4;
+IOBUF PORT "btn[3]" IO_TYPE=LVCMOS33 PULLMODE=DOWN DRIVE=4;
+IOBUF PORT "btn[4]" IO_TYPE=LVCMOS33 PULLMODE=DOWN DRIVE=4;
+IOBUF PORT "btn[5]" IO_TYPE=LVCMOS33 PULLMODE=DOWN DRIVE=4;
+IOBUF PORT "btn[6]" IO_TYPE=LVCMOS33 PULLMODE=DOWN DRIVE=4;
+
+# UART
+LOCATE COMP "uart_rx" SITE "M1";
+LOCATE COMP "uart_tx" SITE "L4";
+
+IOBUF PORT "uart_rx" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "uart_tx" IO_TYPE=LVCMOS33;
+
+# Flash
+LOCATE COMP "flash_mosi" SITE "W2";
+LOCATE COMP "flash_miso" SITE "V2";
+LOCATE COMP "flash_wp" SITE "Y2";
+LOCATE COMP "flash_hold" SITE "W1";
+LOCATE COMP "flash_sck" SITE "U3";
+LOCATE COMP "flash_cs" SITE "R2";
+
+IOBUF PORT "flash_mosi" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "flash_miso" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "flash_wp" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "flash_hold" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "flash_sck" PULLMODE=DOWN IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT "flash_cs" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
+
+# USB
+LOCATE COMP "usb_dp" SITE "E16";
+LOCATE COMP "usb_dm" SITE "F16";
+LOCATE COMP "usb_pu" SITE "B12";
+LOCATE COMP "usb_vdet" SITE "F4";
+
+IOBUF PORT "usb_dp" IO_TYPE=LVCMOS33;
+IOBUF PORT "usb_dm" IO_TYPE=LVCMOS33;
+IOBUF PORT "usb_pu" IO_TYPE=LVCMOS33;
+IOBUF PORT "usb_vdet" IO_TYPE=LVCMOS33;
+
+# Boot
+LOCATE COMP "programn" SITE "M4";
+IOBUF PORT "programn" IO_TYPE=LVCMOS33;
+
+LOCATE COMP "fsel_d" SITE "D5";
+LOCATE COMP "fsel_c" SITE "E5";
+IOBUF PORT "fsel_d" IO_TYPE=LVCMOS33;
+IOBUF PORT "fsel_c" IO_TYPE=LVCMOS33;
+
+# Diagnostics
+LOCATE COMP "diag[0]"  SITE "B11"; 
+LOCATE COMP "diag[1]"  SITE "A10";
+
+IOBUF PORT  "diag[0]"  PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF PORT  "diag[1]"  PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=4;
+

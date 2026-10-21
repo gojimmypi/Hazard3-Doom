@@ -1,0 +1,5 @@
+# Generated ULX5M SERV build products
+/build-ulx5m-gs/
+
+# Pinned SERV checkout fetched by the Makefile
+/third_party/serv/
