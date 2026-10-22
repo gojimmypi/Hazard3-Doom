@@ -1,12 +1,15 @@
 /*
- * ULX5M-GS: discard-only DFU streaming proof of concept.
- * It measures ordered blocks and CRC32, without retaining an image.
- * NO flash erase/program/write-enable/SPI commands exist in this module.
- * A zero-length DNLOAD cannot report a successful manifestation.
+ * ULX5M-GS: ordered DFU streaming, discarding bytes by default.
+ * A separately compiled, explicitly armed experiment may set a sink.
+ * This module itself has no SPI opcodes or boot activation.
+ * Zero-length DNLOAD never reports successful manifestation.
  */
 #include <stdint.h>
 #include "ulx5m_dfu_stream.h"
 #include "usb_dfu_proto.h"
+#ifdef ULX5M_FLASH_HW_TEST
+#include "ulx5m_flash_hw_test.h"
+#endif
 
 #if defined(__riscv) && defined(ULX5M_DFU_STREAM_EMULATOR_TEST)
 #error "DFU emulator sink must never be built for RISC-V hardware"
@@ -19,6 +22,14 @@ void ulx5m_dfu_stream_set_test_sink(
     int (*sink)(uint32_t, const uint8_t *, unsigned))
 {
     stream_test_sink = sink;
+}
+#endif
+#ifdef ULX5M_FLASH_HW_TEST
+static int (*stream_flash_sink)(uint32_t, const uint8_t *, unsigned);
+void ulx5m_dfu_stream_set_flash_sink(
+    int (*sink)(uint32_t, const uint8_t *, unsigned))
+{
+    stream_flash_sink = sink;
 }
 #endif
 
@@ -40,6 +51,9 @@ static void put32(uint8_t *p, uint32_t v)
 
 void ulx5m_dfu_stream_reset(void)
 {
+#ifdef ULX5M_FLASH_HW_TEST
+    ulx5m_flash_hw_test_reset();
+#endif
     stream.used = 0;
     stream.crc = 0xffffffffu;
     stream.next_block = 0;
@@ -72,6 +86,15 @@ static bool block_done(struct usb_xfer *xfer)
 #ifdef ULX5M_DFU_STREAM_EMULATOR_TEST
     if (stream_test_sink &&
         stream_test_sink(stream.used, stream.pending, stream.pending_len)) {
+        stream.state = dfuERROR;
+        stream.status = errWRITE;
+        stream.pending_len = 0;
+        return true;
+    }
+#endif
+#ifdef ULX5M_FLASH_HW_TEST
+    if (stream_flash_sink &&
+        stream_flash_sink(stream.used, stream.pending, stream.pending_len)) {
         stream.state = dfuERROR;
         stream.status = errWRITE;
         stream.pending_len = 0;

@@ -1,9 +1,18 @@
 /* Fail-closed flash image programming state machine.
- * This module has NO MMIO and NO SPI hardware driver. Its callbacks are
- * implemented by the host flash emulator only. Normal firmware builds
- * reject begin() before invoking any callback or changing flash state.
+ * This module has no MMIO. Production denies begin() outright. Host mock
+ * and isolated one-sector hardware test builds can supply callbacks.
  */
 #include "ulx5m_flash_program.h"
+
+#if defined(ULX5M_FLASH_HW_TEST) && \
+    !((defined(__riscv) && defined(ULX5M_DFU_HW_TEST_ONLY)) || \
+      defined(ULX5M_FLASH_HW_HOST_TEST))
+#error "Hardware flash writes require isolated experimental build"
+#endif
+
+#if defined(__riscv) && defined(ULX5M_FLASH_HW_HOST_TEST)
+#error "Hardware MMIO host simulation is forbidden in FPGA firmware"
+#endif
 
 #if defined(__riscv) && defined(ULX5M_FLASH_PROGRAM_EMULATOR_TEST)
 #error "Flash emulator authorization must never be built for RISC-V hardware"
@@ -70,7 +79,7 @@ ulx5m_flash_program_begin(struct ulx5m_flash_program *s,
     s->active = 0;
     s->finalized = 0;
     s->result = ULX5M_PROGRAM_DENIED;
-#ifndef ULX5M_FLASH_PROGRAM_EMULATOR_TEST
+#if !defined(ULX5M_FLASH_PROGRAM_EMULATOR_TEST) && !defined(ULX5M_FLASH_HW_TEST)
     /* FLM1 still reports zero writable regions. Even providing a valid
      * backend does not allow the production module to touch any flash. */
     (void)ops;
@@ -82,6 +91,10 @@ ulx5m_flash_program_begin(struct ulx5m_flash_program *s,
         return fail(s, ULX5M_PROGRAM_STATE);
     if (!size || size > ULX5M_FLASH_CANDIDATE_BYTES)
         return fail(s, ULX5M_PROGRAM_RANGE);
+#ifdef ULX5M_FLASH_HW_TEST
+    if (size > ULX5M_FLASH_ERASE_BYTES)
+        return fail(s, ULX5M_PROGRAM_RANGE);
+#endif
     s->ops = *ops;
     s->image_size = size;
     s->expected_crc32 = crc;

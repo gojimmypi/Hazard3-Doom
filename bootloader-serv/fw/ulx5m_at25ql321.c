@@ -1,8 +1,19 @@
-/* AT25QL321 0x9f/0x05/0x03 and emulator-only 0x06/0x04/0x20/0x02.
- * The production firmware cannot compile the emulator authorization macro.
- * No nonvolatile status register modification, bulk erase, or boot activation.
+/* AT25QL321 read commands and gated experimental 0x06/0x04/0x20/0x02.
+ * Normal firmware denies erase/program. Hardware authorization exists only
+ * in the separate volatile one-sector test image, never in a release image.
+ * No status-register writes, bulk erase, or boot activation.
  */
 #include "ulx5m_at25ql321.h"
+
+#if defined(ULX5M_FLASH_HW_TEST) && \
+    !((defined(__riscv) && defined(ULX5M_DFU_HW_TEST_ONLY)) || \
+      defined(ULX5M_FLASH_HW_HOST_TEST))
+#error "Hardware flash writes require isolated experimental build"
+#endif
+
+#if defined(__riscv) && defined(ULX5M_FLASH_HW_HOST_TEST)
+#error "Hardware MMIO host simulation is forbidden in FPGA firmware"
+#endif
 
 #if defined(__riscv) && defined(ULX5M_AT25QL321_EMULATOR_TEST)
 #error "AT25QL321 emulator write authorization is forbidden on FPGA firmware"
@@ -11,7 +22,7 @@
 #define CMD_RDID 0x9fu
 #define CMD_RDSR 0x05u
 #define CMD_READ 0x03u
-#ifdef ULX5M_AT25QL321_EMULATOR_TEST
+#if defined(ULX5M_AT25QL321_EMULATOR_TEST) || defined(ULX5M_FLASH_HW_TEST)
 #define CMD_WREN 0x06u
 #define CMD_WRDI 0x04u
 #define CMD_BE4K 0x20u
@@ -112,7 +123,7 @@ ulx5m_at25ql321_read(struct ulx5m_at25ql321 *dev, uint32_t address,
     return command(dev, cmd, sizeof(cmd), buffer, length);
 }
 
-#ifdef ULX5M_AT25QL321_EMULATOR_TEST
+#if defined(ULX5M_AT25QL321_EMULATOR_TEST) || defined(ULX5M_FLASH_HW_TEST)
 static enum ulx5m_at25ql321_result wait_ready(struct ulx5m_at25ql321 *d)
 {
     for (unsigned i = 0; i < ULX5M_AT25QL321_MAX_POLLS; ++i) {
@@ -161,6 +172,11 @@ static enum ulx5m_at25ql321_result candidate_range(
         address >= ULX5M_FLASH_BYTES || !len ||
         len > ULX5M_FLASH_BYTES - address)
         return ULX5M_AT25_RANGE;
+#ifdef ULX5M_FLASH_HW_TEST
+    if (len > 4096u ||
+        address - ULX5M_AT25QL321_CANDIDATE_START > 4096u - len)
+        return ULX5M_AT25_RANGE;
+#endif
     return ULX5M_AT25_OK;
 }
 #endif
@@ -168,7 +184,7 @@ static enum ulx5m_at25ql321_result candidate_range(
 enum ulx5m_at25ql321_result
 ulx5m_at25ql321_erase_4k(struct ulx5m_at25ql321 *dev, uint32_t address)
 {
-#ifndef ULX5M_AT25QL321_EMULATOR_TEST
+#if !defined(ULX5M_AT25QL321_EMULATOR_TEST) && !defined(ULX5M_FLASH_HW_TEST)
     (void)dev;
     (void)address;
     return ULX5M_AT25_DENIED;
@@ -200,7 +216,7 @@ ulx5m_at25ql321_program_page(struct ulx5m_at25ql321 *dev,
                                uint32_t address, const uint8_t *data,
                                unsigned length)
 {
-#ifndef ULX5M_AT25QL321_EMULATOR_TEST
+#if !defined(ULX5M_AT25QL321_EMULATOR_TEST) && !defined(ULX5M_FLASH_HW_TEST)
     (void)dev;
     (void)address;
     (void)data;

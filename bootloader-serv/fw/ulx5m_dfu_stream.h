@@ -1,4 +1,4 @@
-/* ULX5M SERV volatile streaming DFU experiment. No flash writes. */
+/* ULX5M SERV streaming DFU: discard-only except separate HW test build. */
 #pragma once
 #include "usb.h"
 
@@ -14,5 +14,10 @@ enum usb_fnd_resp ulx5m_dfu_stream_req(struct usb_ctrl_req *req,
 #ifdef ULX5M_DFU_STREAM_EMULATOR_TEST
 /* Native-host test only: production DFU continues discarding every block. */
 void ulx5m_dfu_stream_set_test_sink(
+    int (*sink)(uint32_t offset, const uint8_t *data, unsigned length));
+#endif
+#ifdef ULX5M_FLASH_HW_TEST
+/* Only populated by explicit vendor arm in experimental build. */
+void ulx5m_dfu_stream_set_flash_sink(
     int (*sink)(uint32_t offset, const uint8_t *data, unsigned length));
 #endif

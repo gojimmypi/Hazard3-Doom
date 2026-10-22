@@ -149,7 +149,10 @@ module top_ulx5m_gs_flash_read (
     // Firmware is compiled into this word-addressed RAM image before
     // GateMate synthesis. No ECP5 ecpbram patching is needed.
 `ifdef ULX5M_USE_SERV
-`ifdef ULX5M_SERV_DFU_STREAM
+`ifdef ULX5M_SERV_DFU_HW_TEST
+    // Volatile, explicitly armed one-sector flash test; not for release.
+    localparam FW_IMAGE = "build-ulx5m-gs/dfu-hw-test/fw_ulx5m_flash_read.hex";
+`elsif ULX5M_SERV_DFU_STREAM
     // Separate volatile streaming DFU experiment; no configuration writes.
     localparam FW_IMAGE = "build-ulx5m-gs/dfu-stream/fw_ulx5m_flash_read.hex";
 `elsif ULX5M_SERV_DFU_STAGE

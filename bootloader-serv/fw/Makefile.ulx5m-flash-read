@@ -39,17 +39,31 @@ CFLAGS += -DULX5M_DFU_STAGE_ONLY=1
 SRCS += ulx5m_dfu_stage.c ulx5m_flash_layout.c
 endif
 
+# Hardware-write permission must never appear in legacy/normal firmware.
+ifeq ($(DFU_HW_TEST_ONLY),1)
+ifneq ($(DFU_STREAM_ONLY),1)
+$(error DFU_HW_TEST_ONLY requires DFU_STREAM_ONLY=1)
+endif
+endif
+
 # Separate discard-only DFU streaming profile: no image retention or writes.
 ifeq ($(DFU_STREAM_ONLY),1)
 ifneq ($(DFU_STAGE_ONLY),)
 $(error DFU_STREAM_ONLY cannot be combined with DFU_STAGE_ONLY)
 endif
-ifeq ($(findstring dfu-stream,$(BUILD_DIR)),)
-$(error DFU_STREAM_ONLY requires separate BUILD_DIR containing dfu-stream)
+ifeq ($(findstring dfu-stream,$(BUILD_DIR))$(findstring dfu-hw-test,$(BUILD_DIR)),)
+$(error DFU_STREAM_ONLY requires separate dfu-stream or dfu-hw-test BUILD_DIR)
 endif
 CFLAGS += -DULX5M_DFU_STREAM_ONLY=1
 SRCS += ulx5m_dfu_stream.c ulx5m_flash_layout.c \
   ulx5m_at25ql321.c ulx5m_at25ql321_hw.c
+ifeq ($(DFU_HW_TEST_ONLY),1)
+ifeq ($(findstring dfu-hw-test,$(BUILD_DIR)),)
+$(error DFU_HW_TEST_ONLY requires an isolated dfu-hw-test BUILD_DIR)
+endif
+CFLAGS += -DULX5M_FLASH_HW_TEST=1 -DULX5M_DFU_HW_TEST_ONLY=1
+SRCS += ulx5m_flash_program.c ulx5m_flash_hw_test.c
+endif
 endif
 
 .DEFAULT_GOAL := all

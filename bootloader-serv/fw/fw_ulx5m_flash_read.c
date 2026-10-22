@@ -1,5 +1,5 @@
-/* ULX5M-GS V005: read-only JEDEC ID / 0x03 SPI flash diagnostic.
- * Vendor USB IN requests only. DFU upload/download/erase/program disabled.
+/* ULX5M-GS V005: read-only SPI flash diagnostic in normal firmware.
+ * Separate volatile experimental build can arm one 4 KiB candidate sector.
  * Board U9: AT25QL321-MBUE-T, nominal 4 MiB, 1.8 V.
  */
 #include <stdint.h>
@@ -14,6 +14,9 @@
 #include "ulx5m_dfu_stream.h"
 #include "ulx5m_flash_layout.h"
 #include "ulx5m_at25ql321_hw.h"
+#ifdef ULX5M_FLASH_HW_TEST
+#include "ulx5m_flash_hw_test.h"
+#endif
 #endif
 #ifdef ULX5M_SERV_TEST
 #include "usb_ep0_diag.h"
@@ -253,6 +256,13 @@ flash_ctrl_req(struct usb_ctrl_req *req, struct usb_xfer *xfer)
     }
     /* Experimental receiver, never installed in the golden build. */
 #ifdef ULX5M_DFU_STREAM_ONLY
+#ifdef ULX5M_FLASH_HW_TEST
+    {
+        enum usb_fnd_resp response = ulx5m_flash_hw_test_req(req, xfer);
+        if (response != USB_FND_CONTINUE)
+            return response;
+    }
+#endif
     return ulx5m_dfu_stream_req(req, xfer);
 #else
     return ulx5m_dfu_stage_req(req, xfer);
