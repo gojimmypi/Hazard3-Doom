@@ -190,6 +190,67 @@ distinction in future test reports. See `bootloader-serv/README_ULX5M_DFU_HW_TWO
 This bitstream is NOT a production bootloader; there is no persistent
 boot activation, automatic fallback or interrupted-update recovery.
 
+## Hardware-Tested Four-Sector DFU Flash Experiment (October 22, 2026)
+
+**File:** `top_ulx5m_gs_flash_read-serv-dfu-hw-quad.bit`
+
+| Property | Result |
+|---|---|
+| Build target | `dfu-hw-quad-serv` (volatile SRAM-only) |
+| Protocol | `FWT3` / `U5W3` |
+| Tested flash range | `0x200000..0x203FFF` (four 4 KiB sectors) |
+| Data transferred | 16384 bytes, 256 USB DFU blocks, 64 SPI pages |
+| Firmware CRC32 | `d52908a7`, PASS |
+| Independent JTAG validation | Exact 16384-byte candidate payload, PASS |
+| Out-of-region flash | Matched factory reference |
+| Recovery | All four sectors restored; complete 4 MiB comparison PASS |
+| Factory backup SHA-256 | `74b3accfa91b04efee753a72b6b9787eb20bfb217266198fefb349ca1cb9509d` |
+| Bitstream SHA-256 and source commit | TODO: record from local build / `git rev-parse HEAD` |
+
+Keep this hardware-tested binary separately from the earlier two-sector image:
+
+```bash
+cp ./bootloader-serv/build-ulx5m-gs/top_ulx5m_gs_flash_read-serv-dfu-hw-quad.bit \
+   ./bootloader-serv/bitstreams/top_ulx5m_gs_flash_read-serv-dfu-hw-quad.bit
+sha256sum ./bootloader-serv/bitstreams/top_ulx5m_gs_flash_read-serv-dfu-hw-quad.bit
+```
+
+The experimental USB write, independent JTAG payload readback and full factory
+restoration all passed. No persistent boot selection or flash boot installation
+was performed. Startup enumeration after SRAM loading is still intermittent.
+See `bootloader-serv/README_ULX5M_DFU_HW_FOUR_SECTORS.md`.
+
+## Planned DFU Entry Button: BTN2 (middle button)
+
+Hold **BTN2** (the middle of BTN1, BTN2, BTN3) through power-up and FPGA
+configuration to request DFU. Otherwise boot the normal application. BTN2
+is active-low, `btn_n[1]` on GateMate pin `IO_EA_A4` in the current ULX5M-GS
+constraints. It is not BTN1 or BTN3.
+
+The FPGA cannot read BTN2 until after configuration and the PLL reset sequence.
+The planned selector therefore samples a continuously held BTN2 after reset,
+then latches the result until a new reset. Holding BTN2 briefly only before
+configuration is insufficient; keep it held until mode is indicated.
+
+A separate **read-only, SRAM-only** LED probe is available for initial hardware
+validation: `make -C bootloader-serv -f Makefile.ulx5m-gs btn2-boot-probe`.
+The existing FWT3 bitstream is unchanged; it does not yet implement this mode
+selection, nor does this probe select a persistent GateMate boot image.
+See `bootloader-serv/README_ULX5M_BTN2_BOOT_SELECT.md`.
+
+## BTN2 mode selection (SRAM-only integration WIP)
+
+The middle physical BTN2 (`btn_n[1]`, active-low, `IO_EA_A4`) was confirmed
+on hardware using the standalone LED-only startup probe. A new, separate
+`btn2-dfu-quad-serv` profile uses that latch to enable the experimental
+`FWT3` USB firmware ONLY when BTN2 is held through configuration and the
+approximately 44 ms startup window. The unpressed path holds SERV, USB, and
+SPI peripherals in reset; it does not yet boot an application.
+
+This integrated bitstream is NOT hardware-qualified and must not replace the
+known-good `top_ulx5m_gs_flash_read-serv-dfu-hw-quad.bit` or be written to
+persistent flash. See `bootloader-serv/README_ULX5M_BTN2_BOOT_SELECT.md`.
+
 ## Programming
 
 Development is performed under Windows with WSL.
@@ -314,4 +375,4 @@ Binary bitstreams are generated artifacts and cannot be meaningfully reviewed as
 
 The historical v16g2f right-versus-left USB difference remains unresolved. The newer one-sector DFU experiment has separately verified physical USB flash write and JTAG recovery, but still needs consistent enumeration and a validated persistent boot design.
 
-The 8 KiB two-sector DFU and JTAG factory restoration are hardware-tested (exact JTAG payload match before restoration was not captured). The new 16 KiB four-sector profile is experimental and not yet hardware-tested. Next: independent readback before restoration, startup reliability, and GateMate boot-image validation.
+The 8 KiB two-sector DFU and JTAG factory restoration are hardware-tested (exact JTAG payload match before restoration was not captured). The 16 KiB four-sector profile has passed USB write, exact-payload independent JTAG comparison and factory restoration. Next: BTN2 power-up DFU selection, reliable SRAM-load enumeration, and GateMate boot-image validation.

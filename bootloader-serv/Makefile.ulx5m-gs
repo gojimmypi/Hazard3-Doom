@@ -23,6 +23,8 @@ BIT := $(BUILD_DIR)/$(TOP).bit
 
 help:
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs bringup'
+	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs btn2-boot-probe (SRAM only; no USB/flash)'
+	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-btn2-boot-mode (offline)'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs usb-monitor'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs usb-probe'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs flash-read-probe'
@@ -42,6 +44,33 @@ help:
 	@echo 'Flash-writing experiments are opt-in volatile SRAM builds; never install in factory flash.'
 
 bringup: $(BIT)
+
+# Standalone volatile BTN2 startup-mode probe; no USB/SPI flash resources.
+BTN2_TOP := top_ulx5m_gs_btn2_boot_probe
+BTN2_SRC := rtl/top-ulx5m-gs-btn2-boot-probe.v rtl/ulx5m_btn2_boot_select.v rtl/sysmgr_gatemate.v
+BTN2_CCF := data/top-ulx5m-gs-btn2-boot-probe.ccf
+BTN2_SDC := data/top-ulx5m-gs-bringup.sdc
+BTN2_JSON := $(BUILD_DIR)/$(BTN2_TOP).json
+BTN2_IMPL := $(BUILD_DIR)/$(BTN2_TOP).txt
+BTN2_BIT := $(BUILD_DIR)/$(BTN2_TOP).bit
+
+.PHONY: btn2-boot-probe test-btn2-boot-mode
+btn2-boot-probe: $(BTN2_BIT)
+
+test-btn2-boot-mode: | $(BUILD_DIR)
+	iverilog -g2012 -s tb_ulx5m_btn2_boot_select \
+	  -o $(BUILD_DIR)/btn2-boot-select-test.vvp \
+	  rtl/ulx5m_btn2_boot_select.v tests/tb_ulx5m_btn2_boot_select.v
+	vvp $(BUILD_DIR)/btn2-boot-select-test.vvp
+
+$(BTN2_JSON): $(BTN2_SRC) | $(BUILD_DIR)
+	$(YOSYS) -p 'read_verilog -defer $(BTN2_SRC); synth_gatemate -top $(BTN2_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/btn2-boot-probe-synth.log
+
+$(BTN2_IMPL): $(BTN2_JSON) $(BTN2_CCF) $(BTN2_SDC)
+	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(BTN2_JSON)) -o ccf=$(abspath $(BTN2_CCF)) -o out=$(abspath $@) --sdc $(abspath $(BTN2_SDC)) --router router2 --placer-heap-beta=0.6 -l $(abspath $(BUILD_DIR)/btn2-boot-probe-pnr.log)
+
+$(BTN2_BIT): $(BTN2_IMPL)
+	$(GMPACK) $(abspath $(BTN2_IMPL)) $(abspath $@)
 
 # Independent, RX-only USB pad test. No DFU firmware and no flash access.
 USB_TOP := top_ulx5m_gs_usb_monitor

@@ -119,3 +119,10 @@ __pycache__/
 /bootloader-serv/README_ULX5M_DFU_STREAM.md
 /bootloader-serv/README_ULX5M_FLASH_PROGRAM_EMULATOR.md
 /bootloader-serv/README_ULX5M_AT25QL321_SPI_EMULATOR.md
+/bootloader-serv/README_ULX5M_AT25QL321_HW.md
+/bootloader-serv/README_ULX5M_JTAG_MODE_PROBE.md
+/bootloader-serv/README_ULX5M_JTAG_WRITE_QUALIFICATION.md
+/bootloader-serv/README_ULX5M_DFU_HW_ONE_SECTOR.md
+/bootloader-serv/README_ULX5M_DFU_HW_TWO_SECTORS.md
+/bootloader-serv/README_ULX5M_DFU_HW_FOUR_SECTORS.md
+/bootloader-serv/README_ULX5M_BTN2_BOOT_SELECT.md
