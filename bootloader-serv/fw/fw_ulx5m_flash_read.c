@@ -13,6 +13,7 @@
 #ifdef ULX5M_DFU_STREAM_ONLY
 #include "ulx5m_dfu_stream.h"
 #include "ulx5m_flash_layout.h"
+#include "ulx5m_at25ql321_hw.h"
 #endif
 #ifdef ULX5M_SERV_TEST
 #include "usb_ep0_diag.h"
@@ -27,6 +28,10 @@ _Static_assert(FLASH_BYTES == ULX5M_FLASH_BYTES, "ULX5M flash size mismatch");
 #define FLASH_READ_MAX       32u
 #define USB_REQ_FLASH_ID     0x51u
 #define USB_REQ_FLASH_READ   0x52u
+#ifdef ULX5M_DFU_STREAM_ONLY
+#define USB_REQ_AT25_STATUS  0x5au
+#define USB_REQ_AT25_READ    0x5bu
+#endif
 #define SPI_CS_HIGH          0x00010f00u
 #define SPI_CS_LOW           0x00000f00u
 #define SPI_RX_PENDING       0x80000000u
@@ -194,6 +199,47 @@ flash_ctrl_req(struct usb_ctrl_req *req, struct usb_xfer *xfer)
         xfer->len = (int)len;
         return USB_FND_SUCCESS;
     }
+#ifdef ULX5M_DFU_STREAM_ONLY
+    /* Independent read-only AT25QL321 command driver over the same SPI MMIO. */
+    if (req->bmRequestType == 0xc0u &&
+        req->bRequest == USB_REQ_AT25_STATUS) {
+        struct ulx5m_at25ql321_hw hw;
+        struct ulx5m_at25ql321 dev;
+        uint8_t id[3];
+        uint8_t status;
+        if (req->wValue || req->wIndex || req->wLength != 8u)
+            return USB_FND_ERROR;
+        ulx5m_at25ql321_hw_init(&hw, SPI_BASE);
+        ulx5m_at25ql321_hw_bind(&dev, &hw);
+        if (ulx5m_at25ql321_identify(&dev, id) != ULX5M_AT25_OK ||
+            ulx5m_at25ql321_status(&dev, &status) != ULX5M_AT25_OK)
+            return USB_FND_ERROR;
+        xfer->data[0] = 'A'; xfer->data[1] = '2';
+        xfer->data[2] = '5'; xfer->data[3] = '1';
+        xfer->data[4] = id[0]; xfer->data[5] = id[1];
+        xfer->data[6] = id[2]; xfer->data[7] = status;
+        xfer->len = 8;
+        return USB_FND_SUCCESS;
+    }
+    if (req->bmRequestType == 0xc0u &&
+        req->bRequest == USB_REQ_AT25_READ) {
+        struct ulx5m_at25ql321_hw hw;
+        struct ulx5m_at25ql321 dev;
+        uint8_t id[3];
+        addr = ((uint32_t)req->wIndex << 16) | req->wValue;
+        len = req->wLength;
+        if (!len || len > FLASH_READ_MAX || addr >= FLASH_BYTES ||
+            len > FLASH_BYTES - addr)
+            return USB_FND_ERROR;
+        ulx5m_at25ql321_hw_init(&hw, SPI_BASE);
+        ulx5m_at25ql321_hw_bind(&dev, &hw);
+        if (ulx5m_at25ql321_identify(&dev, id) != ULX5M_AT25_OK ||
+            ulx5m_at25ql321_read(&dev, addr, xfer->data, len) != ULX5M_AT25_OK)
+            return USB_FND_ERROR;
+        xfer->len = (int)len;
+        return USB_FND_SUCCESS;
+    }
+#endif
 #if defined(ULX5M_DFU_STAGE_ONLY) || defined(ULX5M_DFU_STREAM_ONLY)
     /* Read-only provisional layout; no SPI command is issued. */
     if (req->bmRequestType == 0xc0u &&

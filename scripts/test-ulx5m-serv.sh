@@ -133,7 +133,13 @@ run_offline() {
     run_test 'DFU streaming firmware dispatch' make -f "$makefile" test-dfu-stream-dispatch
     run_test 'AT25QL321 production SPI write protection' make -f "$makefile" test-at25ql321-protected
     run_test 'AT25QL321 SPI command emulator' make -f "$makefile" test-at25ql321-emulator
+    run_test 'AT25QL321 read-only MMIO adapter' make -f "$makefile" test-at25ql321-hw
+    run_test 'AT25QL321 hardware request dispatch' make -f "$makefile" test-at25ql321-hw-dispatch
+    run_test 'AT25QL321 Windows host mock' python3 tests/test-ulx5m-serv-at25-hw-host.py
     run_test 'DFU to AT25QL321 SPI emulator' make -f "$makefile" test-dfu-at25ql321-chain
+    run_test 'DFU to AT25QL321 MMIO emulator' make -f "$makefile" test-dfu-at25ql321-mmio-emulator
+    run_test 'AT25QL321 MMIO compile guards' python3 tests/test-ulx5m-serv-at25-mmio-guards.py
+    run_test 'Read-only JTAG recovery mode probe mock' python3 tests/test-ulx5m-serv-jtag-mode.py
     run_test 'Flash programmer production protection' make -f "$makefile" test-flash-program-protected
     run_test 'Flash programmer 4 MiB chip emulator' make -f "$makefile" test-flash-program-emulator
     run_test 'DFU stream to flash emulator' make -f "$makefile" test-dfu-stream-program-emulator

@@ -396,7 +396,8 @@ test-dfu-stream-dispatch: | $(BUILD_DIR)
 	  -DULX5M_DFU_STREAM_ONLY=1 -Ifw \
 	  -Wl,--gc-sections -o $(BUILD_DIR)/test-dfu-stream-dispatch \
 	  tests/test-ulx5m-serv-dfu-stream-dispatch.c \
-	  fw/ulx5m_flash_layout.c fw/ulx5m_dfu_stream.c
+	  fw/ulx5m_flash_layout.c fw/ulx5m_dfu_stream.c \
+	  fw/ulx5m_at25ql321.c fw/ulx5m_at25ql321_hw.c
 	$(BUILD_DIR)/test-dfu-stream-dispatch
 
 # Host-only flash programming model. Neither target can write physical flash.
@@ -475,3 +476,40 @@ test-dfu-at25ql321-chain: | $(BUILD_DIR)
 	  fw/ulx5m_dfu_stream.c tests/ulx5m-at25ql321-mock.c \
 	  tests/test-ulx5m-serv-at25ql321-chain.c
 	$(BUILD_DIR)/test-dfu-at25ql321-chain
+
+# Hardware MMIO adapter tested against a register-level fake (no FPGA needed).
+.PHONY: test-at25ql321-hw
+
+test-at25ql321-hw: | $(BUILD_DIR)
+	gcc -std=c11 -O1 -Wall -Wextra -Werror -Ifw \
+	  -o $(BUILD_DIR)/test-at25ql321-hw \
+	  fw/ulx5m_at25ql321_hw.c fw/ulx5m_at25ql321.c \
+	  tests/test-ulx5m-serv-at25-hw.c
+	$(BUILD_DIR)/test-at25ql321-hw
+
+# Exercise real 0x5A/0x5B firmware request validation with mock flash calls.
+# Native-host-only DFU -> GateMate MMIO -> SPI flash model. NEVER hardware.
+.PHONY: test-dfu-at25ql321-mmio-emulator
+
+test-dfu-at25ql321-mmio-emulator: | $(BUILD_DIR)
+	gcc -std=c11 -Wall -Wextra -Werror -O1 \
+	  -DULX5M_AT25QL321_EMULATOR_TEST=1 \
+	  -DULX5M_AT25QL321_MMIO_HOST_TEST=1 \
+	  -DULX5M_FLASH_PROGRAM_EMULATOR_TEST=1 \
+	  -DULX5M_DFU_STREAM_EMULATOR_TEST=1 -Ifw -Itests \
+	  -o $(BUILD_DIR)/test-dfu-at25ql321-mmio-emulator \
+	  fw/ulx5m_at25ql321.c fw/ulx5m_at25ql321_hw.c \
+	  fw/ulx5m_flash_program.c fw/ulx5m_dfu_stream.c \
+	  tests/ulx5m-at25ql321-mock.c \
+	  tests/test-ulx5m-serv-at25-mmio-chain.c
+	$(BUILD_DIR)/test-dfu-at25ql321-mmio-emulator
+
+.PHONY: test-at25ql321-hw-dispatch
+
+test-at25ql321-hw-dispatch: | $(BUILD_DIR)
+	gcc -std=gnu11 -O1 -Wall -Wextra -Werror \
+	  -ffunction-sections -fdata-sections -DULX5M_DFU_STREAM_ONLY=1 -Ifw \
+	  -Wl,--gc-sections -o $(BUILD_DIR)/test-at25ql321-hw-dispatch \
+	  tests/test-ulx5m-serv-at25-hw-dispatch.c \
+	  fw/ulx5m_dfu_stream.c fw/ulx5m_flash_layout.c
+	$(BUILD_DIR)/test-at25ql321-hw-dispatch
