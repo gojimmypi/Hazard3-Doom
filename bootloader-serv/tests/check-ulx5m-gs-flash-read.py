@@ -49,6 +49,9 @@ assert 'fw_ulx5m_flash_read.c' in files["fw/Makefile.ulx5m-flash-read"]
 assert 'flash-read-probe: $(FLASH_BIT)' in make
 assert 'usb-probe: $(PROBE_BIT)' in make
 assert '#define FLASH_BYTES          0x400000u' in firmware
+assert 'ULX5M_FLASH_LAYOUT_REQ' in firmware
+assert 'ulx5m_flash_layout_encode(xfer->data)' in firmware
+assert 'ulx5m_flash_layout.c' in files['fw/Makefile.ulx5m-flash-read']
 assert 'USB_REQ_FLASH_ID' in firmware and 'USB_REQ_FLASH_READ' in firmware
 assert 'case USB_RT_DFU_UPLOAD:' in firmware
 assert 'case USB_RT_DFU_DNLOAD:' in firmware

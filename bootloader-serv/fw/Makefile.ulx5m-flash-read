@@ -30,6 +30,15 @@ endif
 SRCS := start.S fw_ulx5m_flash_read.c usb_desc_ulx5m_probe.c \
   usb.c usb_ctrl_ep0.c usb_ctrl_std.c console.c mini-printf.c
 
+# Opt-in RAM-only DFU receiver. Use a SEPARATE BUILD_DIR for this profile.
+ifeq ($(DFU_STAGE_ONLY),1)
+ifeq ($(findstring dfu-stage,$(BUILD_DIR)),)
+$(error DFU_STAGE_ONLY requires separate BUILD_DIR containing dfu-stage)
+endif
+CFLAGS += -DULX5M_DFU_STAGE_ONLY=1
+SRCS += ulx5m_dfu_stage.c ulx5m_flash_layout.c
+endif
+
 .DEFAULT_GOAL := all
 .PHONY: all check-toolchain
 all: $(BUILD_DIR)/fw_ulx5m_flash_read.hex
@@ -50,6 +59,10 @@ check-toolchain:
 
 $(BUILD_DIR)/fw_ulx5m_flash_read.elf: $(SRCS) lnk-app.lds Makefile.ulx5m-gs | $(BUILD_DIR) check-toolchain
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRCS)
+ifeq ($(DFU_STAGE_ONLY),1)
+	$(CROSS)nm -n $@ > $(BUILD_DIR)/dfu-stage-symbols.txt
+	python3 ../tests/check-ulx5m-serv-dfu-ram.py $(BUILD_DIR)/dfu-stage-symbols.txt
+endif
 
 $(BUILD_DIR)/fw_ulx5m_flash_read.bin: $(BUILD_DIR)/fw_ulx5m_flash_read.elf
 	$(OBJCOPY) -O binary $< $@

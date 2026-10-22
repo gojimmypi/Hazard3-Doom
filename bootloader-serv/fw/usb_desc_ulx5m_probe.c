@@ -37,7 +37,11 @@ static const struct {
     .dfu = {
         .bLength = sizeof(struct usb_dfu_desc),
         .bDescriptorType = USB_DT_DFU,
+#ifdef ULX5M_DFU_STAGE_ONLY
+        .bmAttributes = 0x01, /* canDnload only; RAM staging, not persistent */
+#else
         .bmAttributes = 0x08, /* manifestation tolerant; no upload/download */
+#endif
         .wDetachTimeOut = 0,
         .wTransferSize = 64,
         .bcdDFUVersion = 0x0110,
@@ -58,8 +62,13 @@ static const struct usb_str_desc probe_product = {
     .bDescriptorType = USB_DT_STR,
     .wString = {
         'U', 'L', 'X', '5', 'M', '-', 'G', 'S',
+#ifdef ULX5M_DFU_STAGE_ONLY
+        ' ', 'F', 'P', 'G', 'A', ' ', '(', 'D',
+        'F', 'U', ' ', 'S', 't', 'a', 'g', 'e', ')',
+#else
         ' ', 'F', 'P', 'G', 'A', ' ', '(', 'D',
         'F', 'U', ' ', 'P', 'r', 'o', 'b', 'e', ')',
+#endif
     },
 };
 

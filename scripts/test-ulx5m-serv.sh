@@ -125,6 +125,12 @@ run_offline() {
     done
     run_test 'EP0 trace decoder' python3 tests/test-ulx5m-serv-ep0-trace-decoder.py
     run_test 'EP0 firmware diagnostics host test' python3 tests/test-ulx5m-serv-ep0-diag.py
+    run_test 'DFU RAM staging state machine' make -f "$makefile" test-dfu-stage
+    run_test 'DFU EP0 control-OUT integration' make -f "$makefile" test-dfu-ep0
+    run_test 'DFU multiblock host selftest' python3 tests/test-ulx5m-serv-dfu-host.py
+    run_test 'Flash layout policy' make -f "$makefile" test-flash-layout
+    run_test 'Flash layout USB dispatch' make -f "$makefile" test-flash-layout-ep0
+    run_test 'Flash layout diagnostic selftest' python3 tests/test-ulx5m-serv-flash-layout-host.py
     run_test 'USB copy ASan/UBSan regression' python3 tests/test-ulx5m-serv-usb-copy.py
     run_test 'Registered memory response' test_memory_response
 
