@@ -39,6 +39,18 @@ CFLAGS += -DULX5M_DFU_STAGE_ONLY=1
 SRCS += ulx5m_dfu_stage.c ulx5m_flash_layout.c
 endif
 
+# Separate discard-only DFU streaming profile: no image retention or writes.
+ifeq ($(DFU_STREAM_ONLY),1)
+ifneq ($(DFU_STAGE_ONLY),)
+$(error DFU_STREAM_ONLY cannot be combined with DFU_STAGE_ONLY)
+endif
+ifeq ($(findstring dfu-stream,$(BUILD_DIR)),)
+$(error DFU_STREAM_ONLY requires separate BUILD_DIR containing dfu-stream)
+endif
+CFLAGS += -DULX5M_DFU_STREAM_ONLY=1
+SRCS += ulx5m_dfu_stream.c ulx5m_flash_layout.c
+endif
+
 .DEFAULT_GOAL := all
 .PHONY: all check-toolchain
 all: $(BUILD_DIR)/fw_ulx5m_flash_read.hex

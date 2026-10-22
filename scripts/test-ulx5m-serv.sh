@@ -127,6 +127,10 @@ run_offline() {
     run_test 'EP0 firmware diagnostics host test' python3 tests/test-ulx5m-serv-ep0-diag.py
     run_test 'DFU RAM staging state machine' make -f "$makefile" test-dfu-stage
     run_test 'DFU EP0 control-OUT integration' make -f "$makefile" test-dfu-ep0
+    run_test 'DFU 2 MiB streaming state machine' make -f "$makefile" test-dfu-stream
+    run_test 'DFU streaming EP0 integration' make -f "$makefile" test-dfu-stream-ep0
+    run_test 'DFU streaming Windows host selftest' python3 tests/test-ulx5m-serv-dfu-stream-host.py
+    run_test 'DFU streaming firmware dispatch' make -f "$makefile" test-dfu-stream-dispatch
     run_test 'DFU multiblock host selftest' python3 tests/test-ulx5m-serv-dfu-host.py
     run_test 'Flash layout policy' make -f "$makefile" test-flash-layout
     run_test 'Flash layout USB dispatch' make -f "$makefile" test-flash-layout-ep0

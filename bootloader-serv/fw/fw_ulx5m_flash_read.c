@@ -10,6 +10,10 @@
 #include "ulx5m_dfu_stage.h"
 #include "ulx5m_flash_layout.h"
 #endif
+#ifdef ULX5M_DFU_STREAM_ONLY
+#include "ulx5m_dfu_stream.h"
+#include "ulx5m_flash_layout.h"
+#endif
 #ifdef ULX5M_SERV_TEST
 #include "usb_ep0_diag.h"
 #endif
@@ -17,7 +21,7 @@
 extern const struct usb_stack_descriptors ulx5m_probe_desc;
 
 #define FLASH_BYTES          0x400000u
-#ifdef ULX5M_DFU_STAGE_ONLY
+#if defined(ULX5M_DFU_STAGE_ONLY) || defined(ULX5M_DFU_STREAM_ONLY)
 _Static_assert(FLASH_BYTES == ULX5M_FLASH_BYTES, "ULX5M flash size mismatch");
 #endif
 #define FLASH_READ_MAX       32u
@@ -190,7 +194,7 @@ flash_ctrl_req(struct usb_ctrl_req *req, struct usb_xfer *xfer)
         xfer->len = (int)len;
         return USB_FND_SUCCESS;
     }
-#ifdef ULX5M_DFU_STAGE_ONLY
+#if defined(ULX5M_DFU_STAGE_ONLY) || defined(ULX5M_DFU_STREAM_ONLY)
     /* Read-only provisional layout; no SPI command is issued. */
     if (req->bmRequestType == 0xc0u &&
         req->bRequest == ULX5M_FLASH_LAYOUT_REQ) {
@@ -201,8 +205,12 @@ flash_ctrl_req(struct usb_ctrl_req *req, struct usb_xfer *xfer)
         xfer->len = ULX5M_FLASH_LAYOUT_BYTES;
         return USB_FND_SUCCESS;
     }
-    /* Experimental RAM receiver, never installed in the golden build. */
+    /* Experimental receiver, never installed in the golden build. */
+#ifdef ULX5M_DFU_STREAM_ONLY
+    return ulx5m_dfu_stream_req(req, xfer);
+#else
     return ulx5m_dfu_stage_req(req, xfer);
+#endif
 #else
     switch (req->wRequestAndType) {
     case USB_RT_DFU_GETSTATUS:
@@ -250,6 +258,8 @@ flash_get_intf(const struct usb_intf_desc *base, uint8_t *alt)
 static struct usb_fn_drv flash_drv = {
 #ifdef ULX5M_DFU_STAGE_ONLY
     .bus_reset = ulx5m_dfu_stage_reset,
+#elif defined(ULX5M_DFU_STREAM_ONLY)
+    .bus_reset = ulx5m_dfu_stream_reset,
 #endif
     .ctrl_req = flash_ctrl_req,
     .set_intf = flash_set_intf,
@@ -262,6 +272,8 @@ void main(void)
 {
 #ifdef ULX5M_DFU_STAGE_ONLY
     ulx5m_dfu_stage_reset();
+#elif defined(ULX5M_DFU_STREAM_ONLY)
+    ulx5m_dfu_stream_reset();
 #endif
     flash_end(); /* deselect flash, release IO2/IO3 using CSR 0xF */
     usb_init(&ulx5m_probe_desc);

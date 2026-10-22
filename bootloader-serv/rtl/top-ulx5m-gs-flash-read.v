@@ -149,12 +149,15 @@ module top_ulx5m_gs_flash_read (
     // Firmware is compiled into this word-addressed RAM image before
     // GateMate synthesis. No ECP5 ecpbram patching is needed.
 `ifdef ULX5M_USE_SERV
-    `ifdef ULX5M_SERV_DFU_STAGE
-        // Opt-in volatile DFU receiver; never use the read-only firmware HEX.
-        localparam FW_IMAGE = "build-ulx5m-gs/dfu-stage/fw_ulx5m_flash_read.hex";
-    `else
-        localparam FW_IMAGE = "build-ulx5m-gs/serv/fw_ulx5m_flash_read.hex";
-    `endif
+`ifdef ULX5M_SERV_DFU_STREAM
+    // Separate volatile streaming DFU experiment; no configuration writes.
+    localparam FW_IMAGE = "build-ulx5m-gs/dfu-stream/fw_ulx5m_flash_read.hex";
+`elsif ULX5M_SERV_DFU_STAGE
+    // Opt-in volatile DFU receiver; never use the read-only firmware HEX.
+    localparam FW_IMAGE = "build-ulx5m-gs/dfu-stage/fw_ulx5m_flash_read.hex";
+`else
+    localparam FW_IMAGE = "build-ulx5m-gs/serv/fw_ulx5m_flash_read.hex";
+`endif
 `else
     localparam FW_IMAGE = "build-ulx5m-gs/fw_ulx5m_flash_read.hex";
 `endif
