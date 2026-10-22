@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Native Windows probe for isolated ULX5M 4 KiB DFU flash-write experiment.
 
-Default is READ ONLY. --write-test is destructive at 0x200000 and intentionally
-LEAVES the first 4 KiB candidate sector programmed. Restore with the separate
-JTAG candidate restorer after powering the ULX5M off/on (Tigard stays powered).
-NEVER test against the normal discard-only dfu-stream-serv image.
+Default is READ ONLY. --write-test --size {64,512,4096} is destructive at
+0x200000 and LEAVES the candidate sector programmed. Restore via separate
+JTAG restorer after powering the ULX5M off/on (Tigard stays powered).
+Never test against the normal discard-only dfu-stream-serv image.
 """
 import argparse
 import hashlib
@@ -51,8 +51,19 @@ def read_flash(dev, offset, count, timeout):
     return bytes(result)
 
 
-def payload():
-    return bytes(((i * 37 + 0x5a) & 0xff) for i in range(64))
+def payload(size=64):
+    if size not in (64, 512, 4096):
+        raise ValueError("Test size must be exactly 64, 512 or 4096 bytes")
+    # Preserve the original 64-byte v1 pattern; differentiate later pages.
+    return bytes(((i * 37 + (i // 256) * 11 + 0x5a) & 0xff)
+                 for i in range(size))
+
+
+def read_stream_info(dev, timeout):
+    raw = bytes(dev.ctrl_transfer(0xc0, 0x59, 0, 0, 20, timeout=timeout))
+    if len(raw) != 20 or raw[:4] != b"STR1":
+        raise ValueError("Unexpected DFU stream information")
+    return struct.unpack("<IIHBBI", raw[4:])
 
 
 def save_report(path, data):
@@ -65,7 +76,8 @@ def save_report(path, data):
     os.replace(temporary, path)
 
 
-def write_first_block(dev, backup, timeout, report=None, report_path=None):
+def write_blocks(dev, backup, timeout, size=64, report=None, report_path=None):
+    data = payload(size)
     if read_status(dev, timeout) != (0, 0, 0, 0, 0):
         raise RuntimeError("FWT1 is not disarmed and idle")
     state = bytes(dev.ctrl_transfer(0xc0, 0x5a, 0, 0, 8, timeout=timeout))
@@ -74,58 +86,81 @@ def write_first_block(dev, backup, timeout, report=None, report_path=None):
     before = read_flash(dev, CANDIDATE, 4096, timeout)
     if before != backup[CANDIDATE:CANDIDATE + 4096]:
         raise RuntimeError("Candidate sector does not match erased factory reference")
-    raw = bytes(dev.ctrl_transfer(0xc0, 0x59, 0, 0, 20, timeout=timeout))
-    expected = b"STR1" + b"\0" * 10 + bytes([2, 0]) + struct.pack("<I", 0x200000)
-    if raw != expected:
-        raise RuntimeError("DFU receiver is not empty: {}".format(raw.hex()))
-    data = payload()
+    if read_stream_info(dev, timeout) != (0, 0, 0, 2, 0, 0x200000):
+        raise RuntimeError("DFU receiver is not empty")
+
     crc = zlib.crc32(data) & 0xffffffff
-    arm = b"U5W1" + struct.pack("<III", len(data), crc, 0xc01d2026)
-    print("[ARM] 64 bytes, CRC32={:08x}, target=0x200000".format(crc), flush=True)
+    arm = b"U5W1" + struct.pack("<III", size, crc, 0xc01d2026)
+    print("[ARM] {} bytes, CRC32={:08x}, target=0x200000".format(size, crc), flush=True)
     if report is not None:
         report["phase"] = "about_to_arm"
+        report["payload_bytes"] = size
         report["payload_crc32"] = "{:08x}".format(crc)
+        report["blocks_completed"] = 0
         save_report(report_path, report)
     wrote = dev.ctrl_transfer(0x40, 0x5c, 1, 0x2000, arm, timeout=timeout)
-    if wrote != len(arm) or read_status(dev, timeout)[:3] != (1, len(data), crc):
+    if wrote != len(arm) or read_status(dev, timeout) != (1, size, crc, 0, 0):
         raise RuntimeError("Arm did not complete; STOP")
     if report is not None:
         report["phase"] = "armed_flash_may_change"
         save_report(report_path, report)
-    wrote = dev.ctrl_transfer(0x21, 1, 0, 0, data, timeout=timeout)
-    if wrote != len(data):
-        raise RuntimeError("Short DFU OUT; do not retry")
-    dfu = bytes(dev.ctrl_transfer(0xa1, 3, 0, 0, 6, timeout=timeout))
-    if len(dfu) != 6 or dfu[0] or dfu[4] != 5:
-        raise RuntimeError("DFU status mismatch: {}".format(dfu.hex()))
-    got = read_status(dev, timeout)
-    if got != (1, len(data), crc, len(data), 0):
-        raise RuntimeError("FWT1 receiver mismatch: {}".format(got))
+
+    # Each control-OUT is an independent, ordered DFU block. Never retry a
+    # block after a timeout: the device may have already programmed its page.
+    for offset in range(0, size, 64):
+        block = offset // 64
+        chunk = data[offset:offset + 64]
+        wrote = dev.ctrl_transfer(0x21, 1, block, 0, chunk, timeout=timeout)
+        if wrote != len(chunk):
+            raise RuntimeError("Short DFU OUT for block {}; do not retry".format(block))
+        dfu = bytes(dev.ctrl_transfer(0xa1, 3, 0, 0, 6, timeout=timeout))
+        if len(dfu) != 6 or dfu[0] or dfu[4] != 5:
+            raise RuntimeError("DFU GETSTATUS failed after block {}: {}".format(
+                block, dfu.hex()))
+        received = offset + len(chunk)
+        running_crc = zlib.crc32(data[:received]) & 0xffffffff
+        expected_stream = (received, running_crc, block + 1, 5, 0, 0x200000)
+        if read_stream_info(dev, timeout) != expected_stream:
+            raise RuntimeError("DFU stream mismatch after block {}; STOP".format(block))
+        if read_status(dev, timeout) != (1, size, crc, received, 0):
+            raise RuntimeError("FWT1 mismatch after block {}; STOP".format(block))
+        if report is not None:
+            report["phase"] = "dfu_blocks_in_progress"
+            report["blocks_completed"] = block + 1
+            save_report(report_path, report)
+        if received % 256 == 0 or received == size:
+            print("[BLOCK] {}/{} bytes accepted and checked".format(received, size),
+                  flush=True)
+
+    print("[FINISH] Flush remaining page, verify full payload CRC", flush=True)
     if report is not None:
-        report["phase"] = "dfu_block_accepted"
-        save_report(report_path, report)
-    print("[FINISH] Trigger page flush, sector erase, readback CRC", flush=True)
-    if report is not None:
-        report["phase"] = "about_to_erase_and_program"
+        report["phase"] = "about_to_finish"
         save_report(report_path, report)
     dev.ctrl_transfer(0x40, 0x5e, 0x5afe, 0x2026, b"", timeout=timeout)
-    got = read_status(dev, timeout)
-    if got != (2, len(data), crc, len(data), 0):
-        raise RuntimeError("Hardware flash finish FAILED: {}".format(got))
+    if read_status(dev, timeout) != (2, size, crc, size, 0):
+        raise RuntimeError("Hardware flash finish FAILED")
     actual = read_flash(dev, CANDIDATE, 4096, timeout)
-    if actual != data + b"\xff" * (4096 - len(data)):
+    if actual != data + b"\xff" * (4096 - size):
         raise RuntimeError("Candidate flash verification failed")
     if report is not None:
         report["phase"] = "usb_candidate_verified_restore_required"
         save_report(report_path, report)
-    print("[PASS] USB wrote and verified 64 bytes at 0x200000; factory boot region not targeted")
-    print("[ACTION] Restore candidate 4 KiB via JTAG after power-cycling ULX5M only")
+    print("[PASS] USB wrote and verified {} bytes at 0x200000; ".format(size) +
+          "factory boot region not targeted")
+    print("[ACTION] Verify by JTAG, then restore candidate 4 KiB (power-cycle ULX5M only)")
+
+
+def write_first_block(dev, backup, timeout, report=None, report_path=None):
+    # Keep the v1 host-test entry point for existing consumers.
+    return write_blocks(dev, backup, timeout, 64, report, report_path)
 
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--backup-dir", type=Path)
     p.add_argument("--write-test", action="store_true")
+    p.add_argument("--size", type=int, choices=(64, 512, 4096), default=64,
+                   help="Explicit physical write length; default 64 bytes")
     p.add_argument("--report", type=Path,
                    help="Required NEW JSON report for any physical write")
     p.add_argument("--confirm-write", default="")
@@ -139,6 +174,8 @@ def main():
         p.error("--write-test requires --backup-dir, NEW --report, and --confirm-write " + ACK)
     if not args.write_test and args.confirm_write:
         p.error("Write acknowledgment without --write-test")
+    if not args.write_test and args.size != 64:
+        p.error("--size 512/4096 requires --write-test and explicit authorization")
     backup = verified_backup(args.backup_dir) if args.backup_dir else None
     if args.write_test and (args.report.exists() or
                             args.report.with_name(args.report.name + ".writing").exists()):
@@ -164,7 +201,7 @@ def main():
     args.report.parent.mkdir(parents=True, exist_ok=True)
     save_report(args.report, record)
     try:
-        write_first_block(dev, backup, args.timeout_ms, record, args.report)
+        write_blocks(dev, backup, args.timeout_ms, args.size, record, args.report)
     except BaseException as exc:
         record["phase"] = "UNVERIFIED_KEEP_BACKUPS"
         record["error"] = str(exc)

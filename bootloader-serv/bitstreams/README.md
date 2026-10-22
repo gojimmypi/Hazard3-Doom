@@ -4,7 +4,7 @@ This directory contains selected, hardware-tested FPGA bitstreams for the ULX5M-
 
 These files are retained as reproducible diagnostic baselines. Experimental builds and routine synthesis outputs should not be committed.
 
-## Current Reference Bitstream
+## Historical USB Diagnostic Reference Bitstream
 
 **File:** `ulx5m-gs-serv-v16g2f-seed5.bit`
 
@@ -66,6 +66,72 @@ The following bootloader capabilities are not yet implemented or validated:
 
 Do not use this bitstream as a production firmware-update or recovery solution.
 
+## Current Hardware-Tested One-Sector DFU Flash Experiment (October 22, 2026)
+
+**File:** `top_ulx5m_gs_flash_read-serv-dfu-hw-test.bit`
+
+This is a separately built, experimental SERV firmware image. It is NOT the
+older v16g2f diagnostic reference and is NOT a production bootloader.
+
+| Property | Value |
+|---|---|
+| Board and FPGA | ULX5M-GS, Cologne Chip GateMate GM1Ax |
+| Build target | `dfu-hw-test-serv` |
+| Routing seed used | 260 |
+| Target clock | 48 MHz |
+| Reported Fmax | 51.15 MHz (PASS) |
+| Programming | Tigard JTAG, FPGA SRAM (`-m`), volatile only |
+| Physical test address | `0x200000..0x200FFF` (one 4 KiB sector) |
+| Confirmed transfer lengths | 64, 512 and 4096 bytes |
+| Independent verification | JTAG data comparison followed by complete 4 MiB restore |
+| Factory image | Restored byte-for-byte, verified against both original backups |
+| SHA-256 of bitstream | TODO: run `sha256sum` on the copied `.bit` |
+| Source revision and toolchain | TODO: record Git commit and OSS CAD Suite version |
+
+Copy the tested output into the reference directory from the repository root
+in WSL (the source file must already exist and have passed FPGA timing):
+
+```bash
+cp ./bootloader-serv/build-ulx5m-gs/top_ulx5m_gs_flash_read-serv-dfu-hw-test.bit \
+   ./bootloader-serv/bitstreams/top_ulx5m_gs_flash_read-serv-dfu-hw-test.bit
+sha256sum ./bootloader-serv/bitstreams/top_ulx5m_gs_flash_read-serv-dfu-hw-test.bit
+```
+
+Use the Windows openFPGALoader executable from WSL for FPGA SRAM loading:
+
+```bash
+./bin/openFPGALoader.exe -c tigard --freq 1000k -m \
+  ./bootloader-serv/bitstreams/top_ulx5m_gs_flash_read-serv-dfu-hw-test.bit
+```
+
+Keep Tigard powered. After SRAM loading do not power-cycle the FPGA before
+running the USB diagnostic; SRAM configuration is volatile. On this board,
+USB enumeration after programming has sometimes required another successful
+SRAM load. Successful `openFPGALoader` completion alone does not prove USB
+enumeration. Always run the read-only native-Windows diagnostic first:
+
+```powershell
+py -3 .\bootloader-serv\tests\diagnose-ulx5m-serv-dfu-hw-test.py
+```
+
+Native USB access is **not** available in the WSL environment. Run USB host
+tests using native Windows Python and `bin/libusb-1.0.dll`. The experimental
+USB write operation requires a separate explicit authorization and must never
+be invoked during ordinary enumeration testing.
+
+Hardware verification completed in this project: 64 bytes (one partial page),
+512 bytes (two pages), and 4096 bytes (one complete sector) each passed the
+USB programming CRC check, independent JTAG verification, candidate-sector
+restoration and full 4 MiB comparison to the factory backup. The 4 KiB test
+used 64 USB blocks, 16 SPI pages and one sector erase. The flash is back to
+its factory contents (SHA-256
+`74b3accfa91b04efee753a72b6b9787eb20bfb217266198fefb349ca1cb9509d`).
+
+The experimental image supports **no persistent boot selection**. Do not
+write this `.bit` to factory flash or confuse copying it into `bitstreams/`
+with installing a bootloader. For test and recovery commands see
+`bootloader-serv/README_ULX5M_DFU_HW_ONE_SECTOR.md`.
+
 ## Programming
 
 Development is performed under Windows with WSL.
@@ -89,7 +155,7 @@ From the repository root in WSL:
 ```bash
 ./bin/openFPGALoader.exe \
   -c tigard \
-  --freq 1000000 \
+  --freq 1000k -m \
   bootloader-serv/bitstreams/ulx5m-gs-serv-v16g2f-seed5.bit
 ```
 
@@ -186,8 +252,8 @@ Binary bitstreams are generated artifacts and cannot be meaningfully reviewed as
 
 ## Status
 
-**Development diagnostic image — not a production bootloader.**
+**Retained diagnostic and experimental SRAM images - not production bootloaders.**
 
-The immediate development priority is to determine why USB operates through the right-side connection but fails through the left-side connection.
+The historical v16g2f right-versus-left USB difference remains unresolved. The newer one-sector DFU experiment has separately verified physical USB flash write and JTAG recovery, but still needs consistent enumeration and a validated persistent boot design.
 
-After USB communication is sufficiently reliable, development can proceed toward firmware upload, verified SPI flash programming, image validation, and recovery functionality.
+The next work is safe multi-sector DFU programming and recovery, reliable SRAM-load USB enumeration, and GateMate boot-image validation. The separate 8 KiB multi-sector experiment is documented in `bootloader-serv/README_ULX5M_DFU_HW_TWO_SECTORS.md`; it is not yet hardware-tested.

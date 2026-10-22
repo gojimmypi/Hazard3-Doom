@@ -72,8 +72,8 @@ static void arm_for(const uint8_t *image, unsigned length, int wrong_token)
     assert(x.cb_done && x.len == 16);
     memcpy(x.data, "U5W1", 4);
     put32(x.data + 4, length);
-    /* A rejected oversize request needs no CRC over nonexistent bytes. */
-    put32(x.data + 8, crc(image, length > 512u ? 512u : length));
+    /* Rejected oversize length must not read beyond the test payload. */
+    put32(x.data + 8, crc(image, length > 4096u ? 4096u : length));
     put32(x.data + 12, wrong_token ? 0 : ULX5M_HW_ARM_TOKEN);
     x.ofs = 16;
     assert(x.cb_done(&x));
@@ -81,7 +81,7 @@ static void arm_for(const uint8_t *image, unsigned length, int wrong_token)
 int main(void)
 {
     struct usb_xfer x;
-    uint8_t image[512];
+    uint8_t image[4096];
     for (unsigned i = 0; i < sizeof(image); ++i)
         image[i] = (uint8_t)((i * 37u + 0x5au) & 0xffu);
     ulx5m_spi_mock_init(&model);
@@ -124,6 +124,30 @@ int main(void)
     assert(phase() == 0);
     arm_for(image, 512, 0);
     assert(phase() == 3); /* Non-blank candidate cannot be armed again. */
+    /* Separate erased-sector run: all 64 ordered blocks across 16 pages. */
+    ulx5m_spi_mock_init(&model);
+    mock_bus = ulx5m_spi_mock_bus(&model);
+    memset(model.memory, 0x95, ULX5M_AT25QL321_CANDIDATE_START);
+    ulx5m_dfu_stream_reset();
+    arm_for(image, 4096, 0);
+    assert(phase() == 1);
+    for (unsigned block = 0; block < 64; ++block) {
+        assert(req(0x21, USB_REQ_DFU_DNLOAD, block, 0, 64, &x) == USB_FND_SUCCESS);
+        memcpy(x.data, image + block * 64, 64);
+        x.ofs = 64;
+        assert(x.cb_done && x.cb_done(&x));
+        assert(req(0xa1, USB_REQ_DFU_GETSTATUS, 0, 0, 6, &x) == USB_FND_SUCCESS);
+        assert(x.data[0] == OK && x.data[4] == dfuDNLOAD_IDLE);
+    }
+    assert(req(0x40, ULX5M_HW_FINISH_REQ, 0x5afe, 0x2026, 0, &x) == USB_FND_SUCCESS);
+    assert(x.cb_done && x.cb_done(&x) && phase() == 2);
+    assert(model.erases == 1 && model.pages == 16);
+    assert(!memcmp(model.memory + ULX5M_AT25QL321_CANDIDATE_START,
+                   image, sizeof(image)));
+    for (unsigned i = 0; i < ULX5M_AT25QL321_CANDIDATE_START; ++i)
+        assert(model.memory[i] == 0x95);
+    assert(!model.writes_to_factory && !model.bad_command);
+    puts("[PASS] 4096-byte DFU: 64 blocks, 16 pages, 1 sector erase, CRC finish");
     puts("[PASS] explicit arm, 4KiB limit, 512 byte DFU to flash and CRC finish");
     puts("[PASS] factory intact, duplicate arm rejected, second attempt blocked by nonblank slot");
     return 0;

@@ -8,6 +8,7 @@ import argparse
 import importlib.util
 import json
 import os
+import zlib
 from pathlib import Path
 import sys
 
@@ -43,7 +44,25 @@ def report(path, record):
     os.replace(temp, path)
 
 
-def execute(loader, freq, backup, restore_file=None):
+def expected_sector_from_report(path, backup_sha):
+    record = json.loads(path.read_text(encoding="ascii"))
+    if record.get("format") != "ULX5M-DFU-PHYSICAL-4K-V1" or \
+       record.get("backup_sha256") != backup_sha or \
+       record.get("target") != TARGET or \
+       record.get("phase") != "usb_candidate_verified_restore_required":
+        raise ValueError("USB write report does not show a verified candidate")
+    size = record.get("payload_bytes")
+    if type(size) is not int or size not in (64, 512, 4096) or \
+       record.get("blocks_completed") != size // 64:
+        raise ValueError("Unexpected USB write size or incomplete block count")
+    data = bytes(((i * 37 + (i // 256) * 11 + 0x5a) & 0xff)
+                 for i in range(size))
+    if record.get("payload_crc32") != "{:08x}".format(zlib.crc32(data) & 0xffffffff):
+        raise ValueError("USB report CRC32 does not match expected deterministic pattern")
+    return data + b"\xff" * (SECTOR - size)
+
+
+def execute(loader, freq, backup, restore_file=None, expected_sector=None):
     qual.detect(loader, freq)
     header = qual.read_region(loader, freq, 0, SECTOR)
     qual.compare("factory boot header", header, backup[:SECTOR])
@@ -51,10 +70,14 @@ def execute(loader, freq, backup, restore_file=None):
     flash = qual.read_region(loader, freq, 0, qual.FLASH_BYTES)
     if flash[:TARGET] != backup[:TARGET] or flash[TARGET + SECTOR:] != backup[TARGET + SECTOR:]:
         raise ValueError("Unexpected changes outside candidate sector; no write allowed")
+    if expected_sector is not None:
+        qual.compare("independent JTAG candidate pattern + erased padding",
+                     flash[TARGET:TARGET + SECTOR], expected_sector)
     if restore_file is None:
         print("[READ ONLY] Candidate sector matches factory: {}".format(
             flash[TARGET:TARGET + SECTOR] == backup[TARGET:TARGET + SECTOR]))
-        return "read_only_complete"
+        return ("read_only_verified_candidate_pattern" if expected_sector is not None
+                else "read_only_complete")
     print("[RESTORE] Replacing only 0x200000..0x200fff from verified backup", flush=True)
     qual.call(write_cmd(loader, freq, restore_file), timeout=180)
     full = qual.read_region(loader, freq, 0, qual.FLASH_BYTES)
@@ -69,12 +92,16 @@ def main(argv=None):
     p.add_argument("--loader", type=Path, default=HERE.parents[1] / "bin" / "openFPGALoader.exe")
     p.add_argument("--freq-khz", type=int, default=1000)
     p.add_argument("--run", action="store_true", help="Only compare flash, no changes")
+    p.add_argument("--expected-write-report", type=Path,
+                   help="With --run: verify exact candidate bytes from successful USB report")
     p.add_argument("--restore", action="store_true", help="Write original 4 KiB and verify 4 MiB")
     p.add_argument("--confirm-restore", default="")
     args = p.parse_args(argv)
     try:
         if args.run and args.restore:
             raise ValueError("Choose one action")
+        if args.expected_write_report and not args.run:
+            raise ValueError("--expected-write-report requires read-only --run")
         if args.restore and args.confirm_restore != ACK:
             raise ValueError("Explicit exact --confirm-restore required")
         if not args.restore and args.confirm_restore:
@@ -89,6 +116,8 @@ def main(argv=None):
         if not args.run and not args.restore:
             print("[DRY RUN] No programmer commands; add --run or explicit --restore")
             return 0
+        expected_sector = (expected_sector_from_report(args.expected_write_report, sha)
+                           if args.expected_write_report else None)
         args.report.parent.mkdir(parents=True, exist_ok=True)
         record = {"format": "ULX5M-CANDIDATE-RESTORE-V1",
                   "backup_sha256": sha, "target": TARGET, "size": SECTOR,
@@ -108,7 +137,7 @@ def main(argv=None):
             record["phase"] = "restore_image_saved"
         report(args.report, record)
         try:
-            state = execute(args.loader, args.freq_khz, backup, original)
+            state = execute(args.loader, args.freq_khz, backup, original, expected_sector)
             record["phase"] = state
         except Exception as exc:
             record["phase"] = "FAILED_KEEP_RECOVERY_FILES"
