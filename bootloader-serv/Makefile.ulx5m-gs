@@ -31,6 +31,7 @@ help:
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs dfu-stream-serv (discard-only, no flash writes)'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs dfu-hw-test-serv (DANGEROUS 4KiB flash test, SRAM ONLY)'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs dfu-hw-multi-serv (DANGEROUS 8KiB flash test, SRAM ONLY)'
+	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs dfu-hw-quad-serv (DANGEROUS 16KiB flash test, SRAM ONLY)'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-flash-serv-firmware'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-dfu-at25ql321-chain (mock SPI only)'
 	@echo 'Produces a volatile JTAG-loadable LED/PLL bitstream (NOT DFU).'
@@ -240,6 +241,39 @@ test-dfu-hw-multi-arm: | $(BUILD_DIR)
 	  fw/ulx5m_dfu_stream.c fw/ulx5m_flash_hw_test.c \
 	  tests/ulx5m-at25ql321-mock.c tests/test-ulx5m-serv-dfu-hw-multi.c
 	$(BUILD_DIR)/test-dfu-hw-multi-arm
+
+# Opt-in 16 KiB / four-sector SRAM-only experiment. Not a bootloader.
+DFU_HW_QUAD_FW := $(BUILD_DIR)/dfu-hw-quad/fw_ulx5m_flash_read.hex
+DFU_HW_QUAD_JSON := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad.json
+DFU_HW_QUAD_IMPL := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad.txt
+DFU_HW_QUAD_BIT := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad.bit
+.PHONY: dfu-hw-quad-serv dfu-hw-quad-serv-firmware
+dfu-hw-quad-serv: $(DFU_HW_QUAD_BIT)
+dfu-hw-quad-serv-firmware: $(DFU_HW_QUAD_FW)
+$(DFU_HW_QUAD_FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S fw/lnk-app.lds fw/Makefile.ulx5m-flash-read
+	$(MAKE) -C fw -f Makefile.ulx5m-flash-read \
+	  BUILD_DIR=../$(BUILD_DIR)/dfu-hw-quad SERV=1 DFU_STREAM_ONLY=1 DFU_HW_TEST_ONLY=1 DFU_HW_QUAD_TEST_ONLY=1
+$(DFU_HW_QUAD_JSON): $(DFU_HW_QUAD_FW) $(PROBE_MC) $(SERV_STAMP) $(SERV_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
+	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_DFU_HW_QUAD_TEST -Icores/usb/rtl $(SERV_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/dfu-hw-quad-serv-synth.log
+$(DFU_HW_QUAD_IMPL): $(DFU_HW_QUAD_JSON) $(FLASH_CCF) $(FLASH_SDC)
+	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(DFU_HW_QUAD_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(SERV_SEED) -l $(abspath $(BUILD_DIR)/dfu-hw-quad-serv-pnr.log)
+$(DFU_HW_QUAD_BIT): $(DFU_HW_QUAD_IMPL)
+	$(GMPACK) $(abspath $(DFU_HW_QUAD_IMPL)) $(abspath $@)
+
+# Native-only emulator for four physical flash sectors.
+.PHONY: test-dfu-hw-quad-arm
+test-dfu-hw-quad-arm: | $(BUILD_DIR)
+	gcc -std=c11 -Wall -Wextra -Werror -O1 \
+	  -DULX5M_AT25QL321_EMULATOR_TEST=1 \
+	  -DULX5M_FLASH_PROGRAM_EMULATOR_TEST=1 \
+	  -DULX5M_FLASH_HW_TEST=1 -DULX5M_FLASH_HW_QUAD_TEST=1 \
+	  -DULX5M_FLASH_HW_HOST_TEST=1 -DULX5M_DFU_HW_TEST_ONLY=1 \
+	  -DULX5M_DFU_HW_QUAD_TEST_ONLY=1 -Ifw -Itests \
+	  -o $(BUILD_DIR)/test-dfu-hw-quad-arm \
+	  fw/ulx5m_at25ql321.c fw/ulx5m_flash_program.c \
+	  fw/ulx5m_dfu_stream.c fw/ulx5m_flash_hw_test.c \
+	  tests/ulx5m-at25ql321-mock.c tests/test-ulx5m-serv-dfu-hw-quad.c
+	$(BUILD_DIR)/test-dfu-hw-quad-arm
 
 # Icarus cannot resolve a forward declaration in pinned SERV 1.4.0.
 # Generate a build-only state copy; leave the pinned upstream checkout intact.

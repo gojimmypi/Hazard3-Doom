@@ -1,4 +1,4 @@
-/* Isolated one-sector physical flash experiment. Not the normal DFU build. */
+/* Isolated bounded physical flash experiment. Not the normal DFU build. */
 #ifndef ULX5M_FLASH_HW_TEST_H
 #define ULX5M_FLASH_HW_TEST_H
 #include "usb.h"
@@ -8,7 +8,10 @@
 #define ULX5M_HW_FINISH_REQ 0x5eu
 #define ULX5M_HW_ARM_BYTES  16u
 #define ULX5M_HW_STATUS_BYTES 24u
-#ifdef ULX5M_FLASH_HW_MULTI_TEST
+#ifdef ULX5M_FLASH_HW_QUAD_TEST
+#define ULX5M_HW_MAX_BYTES 16384u
+#define ULX5M_HW_ARM_TOKEN  0xc01d2028u
+#elif defined(ULX5M_FLASH_HW_MULTI_TEST)
 #define ULX5M_HW_MAX_BYTES 8192u
 #define ULX5M_HW_ARM_TOKEN  0xc01d2027u
 #else

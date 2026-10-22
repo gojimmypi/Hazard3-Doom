@@ -149,7 +149,10 @@ module top_ulx5m_gs_flash_read (
     // Firmware is compiled into this word-addressed RAM image before
     // GateMate synthesis. No ECP5 ecpbram patching is needed.
 `ifdef ULX5M_USE_SERV
-`ifdef ULX5M_SERV_DFU_HW_MULTI_TEST
+`ifdef ULX5M_SERV_DFU_HW_QUAD_TEST
+    // Volatile, explicitly armed four-sector test. NO boot selection.
+    localparam FW_IMAGE = "build-ulx5m-gs/dfu-hw-quad/fw_ulx5m_flash_read.hex";
+`elsif ULX5M_SERV_DFU_HW_MULTI_TEST
     // Volatile, explicitly armed two-sector test; never boot from flash.
     localparam FW_IMAGE = "build-ulx5m-gs/dfu-hw-multi/fw_ulx5m_flash_read.hex";
 `elsif ULX5M_SERV_DFU_HW_TEST
