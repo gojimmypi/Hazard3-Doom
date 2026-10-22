@@ -398,6 +398,34 @@ test-dfu-stream-dispatch: | $(BUILD_DIR)
 	  fw/ulx5m_flash_layout.c fw/ulx5m_dfu_stream.c
 	$(BUILD_DIR)/test-dfu-stream-dispatch
 
+# Host-only flash programming model. Neither target can write physical flash.
+# The emulator test define is prohibited by the RISC-V production source.
+.PHONY: test-flash-program-protected test-flash-program-emulator
+.PHONY: test-dfu-stream-program-emulator
+
+test-flash-program-protected: | $(BUILD_DIR)
+	gcc -std=c11 -Wall -Wextra -Werror -Ifw \
+	  -o $(BUILD_DIR)/test-flash-program-protected \
+	  fw/ulx5m_flash_program.c fw/ulx5m_flash_layout.c \
+	  tests/test-ulx5m-serv-flash-program-protected.c
+	$(BUILD_DIR)/test-flash-program-protected
+
+test-flash-program-emulator: | $(BUILD_DIR)
+	gcc -std=c11 -Wall -Wextra -Werror \
+	  -DULX5M_FLASH_PROGRAM_EMULATOR_TEST=1 -Ifw \
+	  -o $(BUILD_DIR)/test-flash-program-emulator \
+	  fw/ulx5m_flash_program.c tests/test-ulx5m-serv-flash-program.c
+	$(BUILD_DIR)/test-flash-program-emulator
+
+test-dfu-stream-program-emulator: | $(BUILD_DIR)
+	gcc -std=c11 -Wall -Wextra -Werror \
+	  -DULX5M_FLASH_PROGRAM_EMULATOR_TEST=1 \
+	  -DULX5M_DFU_STREAM_EMULATOR_TEST=1 -Ifw \
+	  -o $(BUILD_DIR)/test-dfu-stream-program-emulator \
+	  fw/ulx5m_flash_program.c fw/ulx5m_dfu_stream.c \
+	  tests/test-ulx5m-serv-dfu-to-flash-emulator.c
+	$(BUILD_DIR)/test-dfu-stream-program-emulator
+
 # Host-only provisional flash layout and write-protection policy test.
 .PHONY: test-flash-layout
 

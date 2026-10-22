@@ -10,3 +10,9 @@
 void ulx5m_dfu_stream_reset(void);
 enum usb_fnd_resp ulx5m_dfu_stream_req(struct usb_ctrl_req *req,
                                        struct usb_xfer *xfer);
+
+#ifdef ULX5M_DFU_STREAM_EMULATOR_TEST
+/* Native-host test only: production DFU continues discarding every block. */
+void ulx5m_dfu_stream_set_test_sink(
+    int (*sink)(uint32_t offset, const uint8_t *data, unsigned length));
+#endif

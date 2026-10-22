@@ -8,6 +8,20 @@
 #include "ulx5m_dfu_stream.h"
 #include "usb_dfu_proto.h"
 
+#if defined(__riscv) && defined(ULX5M_DFU_STREAM_EMULATOR_TEST)
+#error "DFU emulator sink must never be built for RISC-V hardware"
+#endif
+
+#ifdef ULX5M_DFU_STREAM_EMULATOR_TEST
+/* Compile-time native emulator hook, absent from the FPGA firmware. */
+static int (*stream_test_sink)(uint32_t, const uint8_t *, unsigned);
+void ulx5m_dfu_stream_set_test_sink(
+    int (*sink)(uint32_t, const uint8_t *, unsigned))
+{
+    stream_test_sink = sink;
+}
+#endif
+
 static struct {
     uint8_t pending[ULX5M_STREAM_BLOCK_BYTES] __attribute__((aligned(4)));
     uint32_t used;
@@ -55,6 +69,15 @@ static bool block_done(struct usb_xfer *xfer)
         stream.status = errUSBR;
         return true;
     }
+#ifdef ULX5M_DFU_STREAM_EMULATOR_TEST
+    if (stream_test_sink &&
+        stream_test_sink(stream.used, stream.pending, stream.pending_len)) {
+        stream.state = dfuERROR;
+        stream.status = errWRITE;
+        stream.pending_len = 0;
+        return true;
+    }
+#endif
     for (unsigned i = 0; i < stream.pending_len; ++i) {
         uint32_t crc = stream.crc ^ stream.pending[i];
         for (unsigned bit = 0; bit < 8; ++bit)
