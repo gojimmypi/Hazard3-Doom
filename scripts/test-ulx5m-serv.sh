@@ -144,6 +144,9 @@ run_offline() {
     run_test 'One-sector DFU flash hardware-arm emulator' make -f "$makefile" test-dfu-hw-flash-arm
     run_test 'One-sector DFU Windows/JTAG recovery mock' python3 tests/test-ulx5m-serv-dfu-hw-host.py
     run_test 'One-sector DFU firmware build guards' python3 tests/test-ulx5m-serv-dfu-hw-guards.py
+    run_test 'Two-sector DFU flash hardware-arm emulator' make -f "$makefile" test-dfu-hw-multi-arm
+    run_test 'Two-sector DFU Windows/JTAG recovery mock' python3 tests/test-ulx5m-serv-dfu-hw-multi-host.py
+    run_test 'Two-sector DFU firmware build guards' python3 tests/test-ulx5m-serv-dfu-hw-multi-guards.py
     run_test 'Flash programmer production protection' make -f "$makefile" test-flash-program-protected
     run_test 'Flash programmer 4 MiB chip emulator' make -f "$makefile" test-flash-program-emulator
     run_test 'DFU stream to flash emulator' make -f "$makefile" test-dfu-stream-program-emulator

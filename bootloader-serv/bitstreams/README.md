@@ -132,6 +132,64 @@ write this `.bit` to factory flash or confuse copying it into `bitstreams/`
 with installing a bootloader. For test and recovery commands see
 `bootloader-serv/README_ULX5M_DFU_HW_ONE_SECTOR.md`.
 
+## Current Hardware-Tested Two-Sector DFU Flash Experiment (October 22, 2026)
+
+**File:** `top_ulx5m_gs_flash_read-serv-dfu-hw-multi.bit`
+
+| Property | Value |
+|---|---|
+| Target board | ULX5M-GS, GateMate GM1Ax |
+| Build target | `dfu-hw-multi-serv` (isolated SRAM-only firmware) |
+| Routing seed / target | 260 / 48 MHz |
+| Reported post-route Fmax | 51.15 MHz, PASS |
+| USB vendor interface | `FWT2` status, `U5W2` arm protocol |
+| Permitted physical test address | `0x200000..0x201FFF` (two 4 KiB sectors) |
+| Physical test | 8192 bytes, 128 DFU blocks, 32 SPI pages, two erases |
+| Firmware verification | Completed, CRC32 `e6ef4a72` |
+| JTAG restoration | PASS, full 4 MiB matched dual factory backup |
+| Independent JTAG 8 KiB payload comparison | Not captured on hardware before restoration; mocked test only |
+| Factory backup SHA-256 | `74b3accfa91b04efee753a72b6b9787eb20bfb217266198fefb349ca1cb9509d` |
+| Source commit message (user supplied) | `DFU JTAG factory flash and restore working, WIP` |
+| Exact Git commit SHA | TODO: `git rev-parse HEAD` |
+| Saved bitstream SHA-256 | TODO: `sha256sum` locally |
+
+Retain the tested image as a separate diagnostic baseline. From repository root in WSL:
+
+```bash
+cp ./bootloader-serv/build-ulx5m-gs/top_ulx5m_gs_flash_read-serv-dfu-hw-multi.bit \
+   ./bootloader-serv/bitstreams/top_ulx5m_gs_flash_read-serv-dfu-hw-multi.bit
+sha256sum ./bootloader-serv/bitstreams/top_ulx5m_gs_flash_read-serv-dfu-hw-multi.bit
+```
+
+Use native Windows openFPGALoader.exe through WSL to program **SRAM only**:
+
+```bash
+./bin/openFPGALoader.exe -c tigard --freq 1000k -m \
+  ./bootloader-serv/bitstreams/top_ulx5m_gs_flash_read-serv-dfu-hw-multi.bit
+```
+
+USB diagnostics require native Windows PowerShell / PyUSB (no native USB in WSL):
+
+```powershell
+py -3 .\bootloader-serv\tests\diagnose-ulx5m-serv-dfu-hw-multi.py
+```
+
+After power-up, a successful SRAM load does not reliably guarantee USB enumeration;
+observe the LEDs and require the read-only `FWT2` response before authorization.
+Tigard/ULX5M power sequencing and repeat programming affected startup. Do not
+interpret `openFPGALoader` exit code 0 alone as firmware boot confirmation.
+
+All three sizes of the earlier one-sector experiment (64, 512, and 4096 bytes)
+passed USB-write, independent JTAG payload verification, and full restoration.
+For the two-sector 8192-byte experiment, USB firmware write/CRC verification and
+complete 4 MiB **JTAG factory restoration** passed, but exact pre-restore payload
+matching did not execute successfully on hardware (the first JTAG read attempt
+was blocked by a tooling bug, since corrected in the verifier). Preserve this
+distinction in future test reports. See `bootloader-serv/README_ULX5M_DFU_HW_TWO_SECTORS.md`.
+
+This bitstream is NOT a production bootloader; there is no persistent
+boot activation, automatic fallback or interrupted-update recovery.
+
 ## Programming
 
 Development is performed under Windows with WSL.
@@ -256,4 +314,4 @@ Binary bitstreams are generated artifacts and cannot be meaningfully reviewed as
 
 The historical v16g2f right-versus-left USB difference remains unresolved. The newer one-sector DFU experiment has separately verified physical USB flash write and JTAG recovery, but still needs consistent enumeration and a validated persistent boot design.
 
-The next work is safe multi-sector DFU programming and recovery, reliable SRAM-load USB enumeration, and GateMate boot-image validation. The separate 8 KiB multi-sector experiment is documented in `bootloader-serv/README_ULX5M_DFU_HW_TWO_SECTORS.md`; it is not yet hardware-tested.
+The 8 KiB two-sector DFU and JTAG factory restoration are hardware-tested (exact JTAG payload match before restoration was not captured). The new 16 KiB four-sector profile is experimental and not yet hardware-tested. Next: independent readback before restoration, startup reliability, and GateMate boot-image validation.

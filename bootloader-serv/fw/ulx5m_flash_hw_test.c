@@ -1,4 +1,4 @@
-/* Single 4 KiB experimental physical flash slot at 0x200000.
+/* Isolated experimental physical flash slot at 0x200000 (4K or 8K).
  * This file must NEVER be linked by the normal DFU-stream firmware.
  * The FPGA is loaded into VOLATILE SRAM for this experiment.
  * External flash boot selection is NOT performed by this module.
@@ -12,6 +12,9 @@
 
 #if !defined(ULX5M_FLASH_HW_TEST) || !defined(ULX5M_DFU_HW_TEST_ONLY)
 #error "Hardware writer is available only in opt-in experimental firmware"
+#endif
+#if defined(ULX5M_FLASH_HW_MULTI_TEST) && !defined(ULX5M_DFU_HW_MULTI_TEST_ONLY)
+#error "Multi-sector writer requires its isolated experimental profile"
 #endif
 #if !defined(__riscv) && !defined(ULX5M_FLASH_HW_HOST_TEST)
 #error "Hardware writer host execution requires explicit host mock"
@@ -127,7 +130,12 @@ static bool arm_done(struct usb_xfer *xfer)
     if (xfer->data != arm_buffer || xfer->ofs != ULX5M_HW_ARM_BYTES ||
         xfer->len != ULX5M_HW_ARM_BYTES ||
         arm_buffer[0] != 'U' || arm_buffer[1] != '5' ||
-        arm_buffer[2] != 'W' || arm_buffer[3] != '1' ||
+        arm_buffer[2] != 'W' ||
+#ifdef ULX5M_FLASH_HW_MULTI_TEST
+        arm_buffer[3] != '2' ||
+#else
+        arm_buffer[3] != '1' ||
+#endif
         get32(arm_buffer + 12) != ULX5M_HW_ARM_TOKEN ||
         arm(get32(arm_buffer + 4), get32(arm_buffer + 8))) {
         phase = 3;
@@ -161,7 +169,12 @@ enum usb_fnd_resp ulx5m_flash_hw_test_req(struct usb_ctrl_req *req,
             req->wLength != ULX5M_HW_STATUS_BYTES)
             return USB_FND_ERROR;
         xfer->data[0] = 'F'; xfer->data[1] = 'W';
-        xfer->data[2] = 'T'; xfer->data[3] = '1';
+        xfer->data[2] = 'T';
+#ifdef ULX5M_FLASH_HW_MULTI_TEST
+        xfer->data[3] = '2';
+#else
+        xfer->data[3] = '1';
+#endif
         put32(xfer->data + 4, phase);
         put32(xfer->data + 8, image_bytes);
         put32(xfer->data + 12, expected_crc);
