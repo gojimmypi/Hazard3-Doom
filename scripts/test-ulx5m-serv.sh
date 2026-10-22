@@ -126,6 +126,8 @@ run_offline() {
     run_test 'EP0 trace decoder' python3 tests/test-ulx5m-serv-ep0-trace-decoder.py
     run_test 'EP0 firmware diagnostics host test' python3 tests/test-ulx5m-serv-ep0-diag.py
     run_test 'BTN2 startup selection latch' make -f "$makefile" test-btn2-boot-mode
+    run_test 'BTN2 gated DFU startup' make -f "$makefile" test-btn2-dfu-gate
+    run_test 'BTN2 gated DFU build isolation guards' python3 tests/test-ulx5m-serv-btn2-dfu-gate-guards.py
     run_test 'DFU RAM staging state machine' make -f "$makefile" test-dfu-stage
     run_test 'DFU EP0 control-OUT integration' make -f "$makefile" test-dfu-ep0
     run_test 'DFU 2 MiB streaming state machine' make -f "$makefile" test-dfu-stream

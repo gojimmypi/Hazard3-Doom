@@ -25,6 +25,8 @@ help:
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs bringup'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs btn2-boot-probe (SRAM only; no USB/flash)'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-btn2-boot-mode (offline)'
+	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs btn2-dfu-quad-serv (SRAM only; BTN2-gated FWT3, flash-write experiment)'
+	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-btn2-dfu-gate (offline)'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs usb-monitor'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs usb-probe'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs flash-read-probe'
@@ -303,6 +305,34 @@ test-dfu-hw-quad-arm: | $(BUILD_DIR)
 	  fw/ulx5m_dfu_stream.c fw/ulx5m_flash_hw_test.c \
 	  tests/ulx5m-at25ql321-mock.c tests/test-ulx5m-serv-dfu-hw-quad.c
 	$(BUILD_DIR)/test-dfu-hw-quad-arm
+
+# Isolated BTN2-gated FWT3 16 KiB experiment. Reuse the exact validated
+# four-sector firmware HEX; only the top-level reset/attach policy differs.
+# BTN2 held -> enable SERV/USB/SPI after selection; released -> hold in reset.
+# NO application boot, NO persistent flash configuration, NO automatic writes.
+BTN2_DFU_QUAD_JSON := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2.json
+BTN2_DFU_QUAD_IMPL := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2.txt
+BTN2_DFU_QUAD_BIT := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2.bit
+BTN2_DFU_QUAD_SRC := $(SERV_SRC) rtl/ulx5m_btn2_boot_select.v rtl/ulx5m_btn2_dfu_gate.v
+
+.PHONY: btn2-dfu-quad-serv test-btn2-dfu-gate
+btn2-dfu-quad-serv: $(BTN2_DFU_QUAD_BIT)
+
+test-btn2-dfu-gate: | $(BUILD_DIR)
+	iverilog -g2012 -s tb_ulx5m_btn2_dfu_gate \
+	  -o $(BUILD_DIR)/btn2-dfu-gate-test.vvp \
+	  rtl/ulx5m_btn2_boot_select.v rtl/ulx5m_btn2_dfu_gate.v \
+	  tests/tb_ulx5m_btn2_dfu_gate.v
+	vvp $(BUILD_DIR)/btn2-dfu-gate-test.vvp
+
+$(BTN2_DFU_QUAD_JSON): $(DFU_HW_QUAD_FW) $(PROBE_MC) $(SERV_STAMP) $(BTN2_DFU_QUAD_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
+	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_DFU_HW_QUAD_TEST -DULX5M_SERV_BTN2_DFU_GATE -Icores/usb/rtl $(BTN2_DFU_QUAD_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/btn2-dfu-quad-serv-synth.log
+
+$(BTN2_DFU_QUAD_IMPL): $(BTN2_DFU_QUAD_JSON) $(FLASH_CCF) $(FLASH_SDC)
+	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(BTN2_DFU_QUAD_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(SERV_SEED) -l $(abspath $(BUILD_DIR)/btn2-dfu-quad-serv-pnr.log)
+
+$(BTN2_DFU_QUAD_BIT): $(BTN2_DFU_QUAD_IMPL)
+	$(GMPACK) $(abspath $(BTN2_DFU_QUAD_IMPL)) $(abspath $@)
 
 # Icarus cannot resolve a forward declaration in pinned SERV 1.4.0.
 # Generate a build-only state copy; leave the pinned upstream checkout intact.

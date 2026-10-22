@@ -59,6 +59,34 @@ module top_ulx5m_gs_flash_read (
         .rst_out(reset), .locked(locked)
     );
 
+    wire fw_reset;
+    wire [7:0] fw_led_n;
+`ifdef ULX5M_SERV_BTN2_DFU_GATE
+    wire mode_valid, dfu_selected, btn2_pressed, dfu_enable;
+    reg [23:0] mode_heartbeat = 24'd0;
+    ulx5m_btn2_dfu_gate gate_i (
+        .clk(clk48), .rst(reset), .btn2_n(btn_n[1]),
+        .fw_reset(fw_reset), .dfu_enable(dfu_enable),
+        .mode_valid(mode_valid), .dfu_selected(dfu_selected),
+        .btn2_pressed(btn2_pressed)
+    );
+    always @(posedge clk48) begin
+        if (reset)
+            mode_heartbeat <= 24'd0;
+        else
+            mode_heartbeat <= mode_heartbeat + 24'd1;
+    end
+    // V005 LED pads are active-high. D4=DFU; D3=normal (not booted).
+    // D5 indicates selection latched; D2 shows live BTN2 level.
+    assign led_n = {mode_heartbeat[23], locked, mode_valid,
+                    mode_valid && dfu_selected,
+                    mode_valid && !dfu_selected,
+                    btn2_pressed, fw_led_n[1:0]};
+`else
+    assign fw_reset = reset;
+    assign led_n = fw_led_n;
+`endif
+
     wire mem_valid, mem_instr, mem_ready;
     wire bridge_valid, bridge_ready;
     wire [31:0] bridge_rdata;
@@ -84,7 +112,7 @@ module top_ulx5m_gs_flash_read (
 `ifdef ULX5M_USE_SERV
     // Separate, read-only test build. The original PicoRV32 path is unchanged.
     soc_serv_cpu serv_i (
-        .clk(clk48), .rst(reset),
+        .clk(clk48), .rst(fw_reset),
         .mem_valid(mem_valid), .mem_instr(mem_instr),
         .mem_ready(mem_ready), .mem_addr(mem_addr),
         .mem_wdata(mem_wdata), .mem_wstrb(mem_wstrb),
@@ -106,7 +134,7 @@ module top_ulx5m_gs_flash_read (
         .CATCH_MISALIGN(0),
         .CATCH_ILLINSN(0)
     ) cpu_i (
-        .clk(clk48), .resetn(~reset),
+        .clk(clk48), .resetn(~fw_reset),
         .mem_valid(mem_valid), .mem_instr(mem_instr),
         .mem_ready(mem_ready), .mem_addr(mem_addr),
         .mem_wdata(mem_wdata), .mem_wstrb(mem_wstrb),
@@ -120,7 +148,7 @@ module top_ulx5m_gs_flash_read (
     // prevents repeated writes while the CPU is consuming that response.
     // USB and CPU still run from the same 48 MHz clock (no clock-domain crossing).
     soc_mem_response_reg response_i (
-        .clk(clk48), .rst(reset),
+        .clk(clk48), .rst(fw_reset),
         .cpu_valid(mem_valid), .cpu_ready(mem_ready), .cpu_rdata(mem_rdata),
         .bridge_valid(bridge_valid), .bridge_ready(bridge_ready),
         .bridge_rdata(bridge_rdata)
@@ -143,7 +171,7 @@ module top_ulx5m_gs_flash_read (
         .wb_wdata(wb_wdata), .wb_wmsk(wb_wmsk),
         .wb_rdata(wb_rdata_flat), .wb_cyc(wb_cyc),
         .wb_we(wb_we), .wb_ack(wb_ack),
-        .clk(clk48), .rst(reset)
+        .clk(clk48), .rst(fw_reset)
     );
 
     // Firmware is compiled into this word-addressed RAM image before
@@ -178,11 +206,11 @@ module top_ulx5m_gs_flash_read (
 
     // Peripheral 0: minimal LED/button register block, without ECP5 pads.
     soc_ulx5m_misc misc_i (
-        .led_n(led_n), .btn_n(btn_n), .locked(locked),
+        .led_n(fw_led_n), .btn_n(btn_n), .locked(locked),
         .bus_addr(wb_addr[3:0]), .bus_wdata(wb_wdata),
         .bus_rdata(wb_rdata[0]), .bus_cyc(wb_cyc[0]),
         .bus_ack(wb_ack[0]), .bus_we(wb_we),
-        .clk(clk48), .rst(reset)
+        .clk(clk48), .rst(fw_reset)
     );
 
     // Peripheral 1: console UART (TX unconnected; RX idle).
@@ -192,7 +220,7 @@ module top_ulx5m_gs_flash_read (
         .bus_addr(wb_addr[1:0]), .bus_wdata(wb_wdata),
         .bus_rdata(wb_rdata[1]), .bus_cyc(wb_cyc[1]),
         .bus_ack(wb_ack[1]), .bus_we(wb_we),
-        .clk(clk48), .rst(reset)
+        .clk(clk48), .rst(fw_reset)
     );
 
     wire [8:0] ep_tx_addr, ep_rx_addr;
@@ -215,7 +243,7 @@ module top_ulx5m_gs_flash_read (
         .bus_dout(wb_rdata[2][15:0]),
         .bus_cyc(wb_cyc[2]), .bus_we(wb_we),
         .bus_ack(wb_ack[2]), .irq(), .sof(),
-        .clk(clk48), .rst(reset)
+        .clk(clk48), .rst(fw_reset)
     );
     assign wb_rdata[2][31:16] = 16'h0000;
 
@@ -223,13 +251,13 @@ module top_ulx5m_gs_flash_read (
     // High -> pull D+ up; disabled -> high-Z (never drive low).
     // USB_PULL_N is not used and must remain unconstrained/high-Z.
     CC_IOBUF #(.V_IO("3.3"), .PULLUP(1'b0), .PULLDOWN(1'b0)) attach_i (
-        .IO(usb_pull_p), .A(1'b1), .T(~usb_attach | reset), .Y()
+        .IO(usb_pull_p), .A(1'b1), .T(~usb_attach | fw_reset), .Y()
     );
 
     // Peripheral 3: endpoint RAM window shared with the USB controller.
     reg wb_ack_ep;
     always @(posedge clk48) begin
-        if (reset)
+        if (fw_reset)
             wb_ack_ep <= 1'b0;
         else
             wb_ack_ep <= wb_cyc[3] & ~wb_ack_ep;
@@ -242,7 +270,8 @@ module top_ulx5m_gs_flash_read (
     assign ep_rx_re = 1'b1;
     assign wb_rdata[3] = wb_cyc[3] ? ep_rx_data : 32'h00000000;
 
-    // Peripheral 4: read-only flash diagnostic. No DFU write service is linked.
+    // Peripheral 4: SPI flash MMIO. Experimental DFU write permission is
+    // restricted in the separately compiled firmware; not enabled by this RTL.
     // The four shared GateMate configuration pins are released as user GPIOs.
     wire [3:0] spi_io_i, spi_io_o, spi_io_t;
     wire spi_sck_o;
@@ -253,13 +282,13 @@ module top_ulx5m_gs_flash_read (
         .bus_addr(wb_addr[1:0]), .bus_wdata(wb_wdata),
         .bus_rdata(wb_rdata[4]), .bus_cyc(wb_cyc[4]),
         .bus_ack(wb_ack[4]), .bus_we(wb_we),
-        .clk(clk48), .rst(reset)
+        .clk(clk48), .rst(fw_reset)
     );
     qspi_phy_gatemate #(.N_CS(1)) flash_phy_i (
         .spi_io(flash_io), .spi_cs(flash_cs_n), .spi_sck(flash_sck),
         .spi_io_i(spi_io_i), .spi_io_o(spi_io_o), .spi_io_t(spi_io_t),
         .spi_sck_o(spi_sck_o), .spi_cs_o(spi_cs_o),
-        .clk(clk48), .rst(reset)
+        .clk(clk48), .rst(fw_reset)
     );
 
 endmodule
