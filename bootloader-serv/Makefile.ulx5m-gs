@@ -30,6 +30,7 @@ help:
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs dfu-stage-serv (RAM-only, no flash writes)'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs dfu-stream-serv (discard-only, no flash writes)'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-flash-serv-firmware'
+	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-dfu-at25ql321-chain (mock SPI only)'
 	@echo 'Produces a volatile JTAG-loadable LED/PLL bitstream (NOT DFU).'
 	@echo 'USB monitor is RX-only with no attach, and will NOT enumerate.'
 	@echo 'USB probe enumerates a non-programmable DFU interface from JTAG RAM.'
@@ -445,3 +446,32 @@ test-flash-layout-ep0: | $(BUILD_DIR)
 	  tests/test-ulx5m-serv-flash-layout-ep0.c \
 	  fw/ulx5m_flash_layout.c fw/ulx5m_dfu_stage.c
 	$(BUILD_DIR)/test-flash-layout-ep0
+
+# AT25QL321 command-layer tests. The SPI model and write permission are
+# native-host-only. Normal firmware compiles the mutating API as DENIED.
+.PHONY: test-at25ql321-protected test-at25ql321-emulator test-dfu-at25ql321-chain
+
+test-at25ql321-protected: | $(BUILD_DIR)
+	gcc -std=c11 -Wall -Wextra -Werror -Ifw \
+	  -o $(BUILD_DIR)/test-at25ql321-protected \
+	  fw/ulx5m_at25ql321.c tests/test-ulx5m-serv-at25ql321-protected.c
+	$(BUILD_DIR)/test-at25ql321-protected
+
+test-at25ql321-emulator: | $(BUILD_DIR)
+	gcc -std=c11 -Wall -Wextra -Werror -O1 \
+	  -DULX5M_AT25QL321_EMULATOR_TEST=1 -Ifw -Itests \
+	  -o $(BUILD_DIR)/test-at25ql321-emulator \
+	  fw/ulx5m_at25ql321.c tests/ulx5m-at25ql321-mock.c \
+	  tests/test-ulx5m-serv-at25ql321.c
+	$(BUILD_DIR)/test-at25ql321-emulator
+
+test-dfu-at25ql321-chain: | $(BUILD_DIR)
+	gcc -std=c11 -Wall -Wextra -Werror -O1 \
+	  -DULX5M_AT25QL321_EMULATOR_TEST=1 \
+	  -DULX5M_FLASH_PROGRAM_EMULATOR_TEST=1 \
+	  -DULX5M_DFU_STREAM_EMULATOR_TEST=1 -Ifw -Itests \
+	  -o $(BUILD_DIR)/test-dfu-at25ql321-chain \
+	  fw/ulx5m_at25ql321.c fw/ulx5m_flash_program.c \
+	  fw/ulx5m_dfu_stream.c tests/ulx5m-at25ql321-mock.c \
+	  tests/test-ulx5m-serv-at25ql321-chain.c
+	$(BUILD_DIR)/test-dfu-at25ql321-chain
