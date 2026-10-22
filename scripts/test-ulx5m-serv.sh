@@ -140,6 +140,7 @@ run_offline() {
     run_test 'DFU to AT25QL321 MMIO emulator' make -f "$makefile" test-dfu-at25ql321-mmio-emulator
     run_test 'AT25QL321 MMIO compile guards' python3 tests/test-ulx5m-serv-at25-mmio-guards.py
     run_test 'Read-only JTAG recovery mode probe mock' python3 tests/test-ulx5m-serv-jtag-mode.py
+    run_test 'Guarded JTAG flash write qualification host mock' python3 tests/test-ulx5m-serv-jtag-write.py
     run_test 'Flash programmer production protection' make -f "$makefile" test-flash-program-protected
     run_test 'Flash programmer 4 MiB chip emulator' make -f "$makefile" test-flash-program-emulator
     run_test 'DFU stream to flash emulator' make -f "$makefile" test-dfu-stream-program-emulator
