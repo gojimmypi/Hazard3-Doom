@@ -33,6 +33,7 @@ je cijeli Doom SoC kvalificiran za svaku populaciju.
    video-and-storage
    interfaces
    pinout-and-revisions
+   schematic-highlights
    sources
 
 Koristan mentalni model

@@ -37,6 +37,7 @@ qualifié pour chacune d'elles.
    video-and-storage
    interfaces
    pinout-and-revisions
+   schematic-highlights
    sources
 
 Modèle mental utile

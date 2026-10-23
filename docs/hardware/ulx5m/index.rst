@@ -27,6 +27,18 @@ board revision before applying them to another unit.
    without reviewing the V005 schematic and every peripheral attached to EA.
    A signal-level shifter alone cannot fix an out-of-range **VDD_EA supply**.
 
+GPIO stress-test research
+-------------------------
+
+The external `gm_gpio_ringosc project
+<https://github.com/pu-cc/gm_gpio_ringosc>`_ investigates operation of
+GateMate 2.5 V-rated GPIO under 3.3 V stress. It uses GPIO ring oscillators
+and reference measurements to look for changes in behavior; the authors warn
+that the tests can permanently damage GPIO. This is **experimental stress
+testing**, not qualification, a datasheet revision, or a demonstration of
+long-term reliability at 3.3 V. It does not supersede DS1001 voltage limits.
+Do not repeat overvoltage experiments on a board that must remain reliable.
+
 GPIO voltage domains and evidence
 ---------------------------------
 
@@ -193,6 +205,18 @@ the original image was backed up in 64 KiB chunks. The ULX5M port is still
 experimental: programming FPGA SRAM through JTAG does not create a persistent
 DFU bootloader and power loss removes the running image. Do not apply ULX4M
 flash layouts or recovery commands to ULX5M.
+
+Development notes and tested configurations
+-------------------------------------------
+
+The October 2026 development record covers SERV DFU, flash backups, BTN2
+selection, toolchain, timing and USB-port results. These are development
+checkpoints, not an assertion that persistent boot is complete.
+
+.. toctree::
+   :maxdepth: 1
+
+   bringup
 
 Sources and revision checks
 ---------------------------

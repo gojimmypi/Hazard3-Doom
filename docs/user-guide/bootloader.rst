@@ -214,6 +214,13 @@ bootloader to the user image already stored in flash.
 ULX5M-GS V005 bootloader port (in development)
 ----------------------------------------------
 
+.. note::
+
+   The probe description below documents the earlier PicoRV32 JTAG/SRAM
+   stage. Later SERV-based experiments verified limited DFU flash writes
+   and BTN2 startup selection, but not persistent application handoff.
+   See :doc:`../hardware/ulx5m/bringup` for the dated results.
+
 .. warning::
 
    The ULX5M-GS port is **not a persistent DFU bootloader**. Its verified

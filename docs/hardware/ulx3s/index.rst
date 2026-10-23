@@ -28,6 +28,7 @@ possible ULX3S population.
    :maxdepth: 2
 
    overview-and-variants
+   schematic-highlights
    fpga-and-clocking
    memory
    boot-and-flash

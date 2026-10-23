@@ -159,3 +159,11 @@ kopija je iz **siječnja 2023.**, usprkos nazivu. Ovdje navedene granice
 ponovno su provjerene prema proizvođačevu DS1001 iz **rujna 2026.**
 Za aktualne granice slijedite poveznicu na proizvođačev dokument umjesto
 da pretpostavite kako je lokalna kopija najnovija.
+
+Development record (English translation pending)
+------------------------------------------------
+
+.. toctree::
+   :maxdepth: 1
+
+   bringup

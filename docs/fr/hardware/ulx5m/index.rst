@@ -166,3 +166,11 @@ dépôt est une copie de **janvier 2023**, malgré son nom. Les limites indiqué
 ici ont été revérifiées dans la DS1001 du fabricant de **septembre 2026**.
 Pour les limites en vigueur, consultez le lien du fabricant plutôt que de
 supposer que la copie incluse est la dernière version.
+
+Development record (English translation pending)
+------------------------------------------------
+
+.. toctree::
+   :maxdepth: 1
+
+   bringup
