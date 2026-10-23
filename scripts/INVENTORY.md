@@ -12,9 +12,9 @@ Project version: v0.2.1
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 94
+Files inventoried: 96
 
-Total bytes: 780990
+Total bytes: 790607
 
 ## Verification
 
@@ -43,7 +43,7 @@ should be identified before a public release.
 | `build-ulx4m-ld-doom.sh` | 9172 | `7b0e548a1e337b0c3b58422df593d246a17d5321dcf7c5a355f2cb8886ae1001` | REVIEW | Shell script |
 | `build-ulx4m-ld-sweep_summary.md` | 8647 | `242a53cd1b44d1f4a34a6b7ada754a3ae850d506337e707f5de1d284eb424caa` | REVIEW | Markdown documentation |
 | `build-ulx5m-gs-bitstream.sh` | 5120 | `8db0db74888d666f5d8c63cc9d0c65d98e8f07e854920001a6684ce824342b97` | REVIEW | Shell script |
-| `build-ulx5m-gs-bootloader.sh` | 5347 | `1c5d8bf36ef6ed941c963dd5a8cb7f48348033c96d99b82d52f1a32597c3f4b0` | REVIEW | Shell script |
+| `build-ulx5m-gs-bootloader.sh` | 5197 | `bfdf31c0df96c4231665c5cc93ce0b69200ca1f3ec34afefb791fb5d989ab33f` | REVIEW | Shell script |
 | `build-ulx5m-gs-doom.sh` | 5334 | `fcefba116f18be5f1b2d79d6b975598cd9337fba195eb2dc08a13954ea7b5622` | REVIEW | Shell script |
 | `build-ulx5m-gs-sweep_summary.md` | 6673 | `14b890a742a104336cfea0cdbea298861779177c602f9a023e146655d4b46178` | REVIEW | Markdown documentation |
 | `build-xpack.cmd` | 9704 | `8672fbf2aab466a9478fdc2cc93f01604659d1ad302243d82307204db43a66b3` | REVIEW | File |
@@ -90,6 +90,7 @@ should be identified before a public release.
 | `make-boot-hex.py` | 2775 | `1f0eb80ad684ed1303fca182eec9b0160c8e20cd165dc8cf710a5c38ec2696f2` | REVIEW | File |
 | `peek-elf.sh` | 25041 | `d6893ccbb714025037dd4f416f455e9d49cd94d8732b6fec6eb82736b6223113` | REVIEW | Shell script |
 | `publish-check.sh` | 3069 | `917f7ad508e708a54a886b7599f26d54436d20501194de122f4e235090876178` | REVIEW | Shell script |
+| `qualify-ulx5m-gmpack-handoff.sh` | 4826 | `382489542fa9f24c15891a32eb4a4be317a777f3606ab9a50e1d1683a377a4f9` | REVIEW | Shell script |
 | `refresh-version.sh` | 4480 | `18418ed6f45af6bef901313e6a2dfbc51c8b6ff59a1038d4a9a793ece455e875` | REVIEW | Shell script |
 | `requirements-check.sh` | 37947 | `2668d0746edabf7a3c0f22d6f27b150554cd43f62aa2b33e9d98d489e37dae03` | REVIEW | Shell script |
 | `restart-from-monitor.py` | 2180 | `62fafcba0da53b21b5704f221c655c63eb5520f2def0fbe7312005a65c59dd2d` | REVIEW | File |
@@ -112,11 +113,12 @@ should be identified before a public release.
 | `sweep-ulx3s-85f.sh` | 13257 | `f0c35e6dd4b7c3bd7cfa5dfca4a855c39e34d4cf67da2eef31fc8bdde7750d74` | REVIEW | Shell script |
 | `sweep-ulx4m-ld.sh` | 16982 | `7e4f61f08fc4b33035385c0f5990fd1411e7b8f55073e4dc6071fc8c508829fa` | REVIEW | Shell script |
 | `sweep-ulx5m-bootloader-ci.py` | 12374 | `5138fde6539f428c14073627cbab754871b8bf07a8e1d825519945857e10799d` | REVIEW | File |
-| `sweep-ulx5m-bootloader.sh` | 10891 | `9fd70a25985d2c7fa38d50ec11ad3d933e14e54732174d3403ca9564ce673eb0` | REVIEW | Shell script |
+| `sweep-ulx5m-bootloader.sh` | 11177 | `bdd36601cbd182701e27e3040a20cb0b31329ded532b8bfbf3081495d8dc8f26` | REVIEW | Shell script |
 | `sweep-ulx5m-gs.sh` | 12266 | `2d2aecc0201f94b243328562c9296f55b3eee212a3b5ee194b2c7dca661cf05c` | REVIEW | Shell script |
 | `sweep.sh` | 980 | `0ea3290a5ef9f6fe7a386d46add42cf7bb0e217023beb2b79713a463aa92f9d6` | REVIEW | Shell script |
 | `test-readthedocs.sh` | 11128 | `cb4c49cf3e3065fdc851d66c193b23966d615c10721cdb889e7ae4cdd0d70f4b` | REVIEW | Shell script |
 | `test-scripts.sh` | 27886 | `3c2e4cffae7336293d0f23836a790b4adce0a6f46492054abed3e90bd07c15f4` | REVIEW | Shell script |
+| `test-ulx5m-gs-bootloader-toolchain.py` | 4655 | `aae8647d29f774b4f96a966c1ad18f83d6f17c02e14c4cdb76e1ad98e8fed7e6` | REVIEW | File |
 | `test-ulx5m-serv-hardware.ps1` | 3240 | `eb028cda2d499010ce857758ee7353a3eb03e14204574e527fb7e5ad2b14846b` | REVIEW | File |
 | `test-ulx5m-serv.sh` | 9383 | `6a67e8680fbbf9b724941b0670609135e520f78b135c9044c396faa1a07d736b` | REVIEW | Shell script |
 | `ulx4m-bootloader.sh` | 30139 | `70842c33881cf42c62d4a290084effed82128d686c71ae957f56347a5e92a8f1` | REVIEW | Shell script |

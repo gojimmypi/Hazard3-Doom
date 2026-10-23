@@ -30,6 +30,15 @@ endif
 SRCS := start.S fw_ulx5m_flash_read.c usb_desc_ulx5m_probe.c \
   usb.c usb_ctrl_ep0.c usb_ctrl_std.c console.c mini-printf.c
 
+ifeq ($(NORMAL_BOOT_EXPERIMENT),1)
+ifeq ($(findstring normal-boot,$(BUILD_DIR)),)
+$(error NORMAL_BOOT_EXPERIMENT requires isolated normal-boot BUILD_DIR)
+endif
+CFLAGS += -DULX5M_NORMAL_BOOT_EXPERIMENT=1
+SRCS += ulx5m_normal_image.c ulx5m_normal_boot.c
+endif
+
+
 # Opt-in RAM-only DFU receiver. Use a SEPARATE BUILD_DIR for this profile.
 ifeq ($(DFU_STAGE_ONLY),1)
 ifeq ($(findstring dfu-stage,$(BUILD_DIR)),)
@@ -71,7 +80,7 @@ ifeq ($(DFU_STREAM_ONLY),1)
 ifneq ($(DFU_STAGE_ONLY),)
 $(error DFU_STREAM_ONLY cannot be combined with DFU_STAGE_ONLY)
 endif
-ifeq ($(findstring dfu-stream,$(BUILD_DIR))$(findstring dfu-hw-test,$(BUILD_DIR))$(findstring dfu-hw-multi,$(BUILD_DIR))$(findstring dfu-hw-quad,$(BUILD_DIR)),)
+ifeq ($(findstring dfu-stream,$(BUILD_DIR))$(findstring dfu-hw-test,$(BUILD_DIR))$(findstring dfu-hw-multi,$(BUILD_DIR))$(findstring dfu-hw-quad,$(BUILD_DIR))$(findstring normal-boot,$(BUILD_DIR)),)
 $(error DFU_STREAM_ONLY requires separate dfu-stream or dfu-hw-test BUILD_DIR)
 endif
 CFLAGS += -DULX5M_DFU_STREAM_ONLY=1

@@ -6,11 +6,12 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: Design (SERV or PicoRV32; different seeds/results)
+        description: Design (normal-boot = BTN2 SERV; flash-read-serv = diagnostic)
         type: choice
         required: true
-        default: flash-read-serv
+        default: normal-boot
         options:
+          - normal-boot
           - flash-read-serv
           - usb-probe
           - flash-read-probe
@@ -120,10 +121,11 @@ jobs:
             exit 2
           fi
           case "${SWEEP_TARGET}" in
-            flash-read-serv|usb-probe|flash-read-probe) ;;
+            normal-boot|flash-read-serv|usb-probe|flash-read-probe) ;;
             *) echo 'ERROR: invalid design.' >&2; exit 2 ;;
           esac
           bash -n scripts/sweep-ulx5m-bootloader.sh
+          python3 .github/scripts/test-ulx5m-bootloader-targets.py
           python3 -m py_compile scripts/sweep-ulx5m-bootloader-ci.py
           python3 scripts/sweep-ulx5m-bootloader-ci.py matrix \
             --first "${SWEEP_FIRST}" --last "${SWEEP_LAST}" --per-job "${SWEEP_PER_JOB}" > /dev/null
@@ -184,6 +186,11 @@ jobs:
         run: |
           set -euo pipefail
           case "${SWEEP_TARGET}" in
+            normal-boot)
+              source_dir=bootloader-serv
+              design=top_ulx5m_gs_flash_read-normal-boot
+              constraint=top-ulx5m-gs-flash-read
+              ;;
             flash-read-serv)
               source_dir=bootloader-serv
               design=top_ulx5m_gs_flash_read-serv

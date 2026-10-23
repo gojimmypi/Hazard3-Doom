@@ -11,6 +11,7 @@ Targets:
   usb-probe         PicoRV32 USB enumeration probe (bootloader/)
   flash-read-probe  PicoRV32 read-only flash diagnostic (bootloader/)
   flash-read-serv   SERV read-only flash diagnostic (bootloader-serv/)
+  normal-boot       SERV BTN2 DFU/normal-mode experiment (bootloader-serv/)
 
 Defaults: FIRST_SEED=1 COUNT=20 TIMEOUT_SECONDS=180.
 CI: SWEEP_SKIP_SYNTH=1 requires SWEEP_JSON, SWEEP_CCF, SWEEP_SDC.
@@ -77,6 +78,12 @@ case "$target" in
         design=top_ulx5m_gs_flash_read-serv
         constraint_stem=top-ulx5m-gs-flash-read
         synth_log=flash-read-serv-synth.log
+        ;;
+    normal-boot)
+        source_subdir=bootloader-serv
+        design=top_ulx5m_gs_flash_read-normal-boot
+        constraint_stem=top-ulx5m-gs-flash-read
+        synth_log=normal-boot-serv-synth.log
         ;;
     *)
         echo "ERROR: unsupported target: $target" >&2

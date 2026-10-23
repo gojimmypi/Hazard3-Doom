@@ -6,6 +6,9 @@
 #include "config.h"
 #include "usb.h"
 #include "usb_dfu_proto.h"
+#ifdef ULX5M_NORMAL_BOOT_EXPERIMENT
+#include "ulx5m_normal_boot.h"
+#endif
 #ifdef ULX5M_DFU_STAGE_ONLY
 #include "ulx5m_dfu_stage.h"
 #include "ulx5m_flash_layout.h"
@@ -322,10 +325,104 @@ static struct usb_fn_drv flash_drv = {
     .get_intf = flash_get_intf,
 };
 
+#ifdef ULX5M_NORMAL_BOOT_EXPERIMENT
+#define CFG_BASE 0x85000000u
+#define CFG_STATUS (*(volatile uint32_t *)(uintptr_t)(CFG_BASE))
+#define CFG_EXPECTED (*(volatile uint32_t *)(uintptr_t)(CFG_BASE + 4u))
+#define CFG_SENT (*(volatile uint32_t *)(uintptr_t)(CFG_BASE + 8u))
+#define CFG_CONTROL (*(volatile uint32_t *)(uintptr_t)(CFG_BASE + 8u))
+#define CFG_DATA (*(volatile uint32_t *)(uintptr_t)(CFG_BASE + 12u))
+#define CFG_ARM 0x43464731u
+#define CFG_FINISH 0x454e4431u
+#define CFG_ABORT 0x41425431u
+#define CFG_READY 1u
+#define CFG_DONE 4u
+#define CFG_ERROR 8u
+#define CFG_CAPABLE 16u
+#define CFG_POLL_LIMIT 100000u
+#define MISC_MODE (*(volatile uint32_t *)(uintptr_t)(HAD_MISC_BASE + 4u))
+#define MISC_LEDS (*(volatile uint32_t *)(uintptr_t)(HAD_MISC_BASE))
+
+static int normal_read(void *ctx, uint32_t addr, uint8_t *data, unsigned n)
+{
+    (void)ctx;
+    if (!n || addr >= FLASH_BYTES || n > FLASH_BYTES - addr)
+        return -1;
+    return flash_read_bytes(addr, data, n) ? 0 : -1;
+}
+static int cfg_wait(uint32_t mask)
+{
+    for (unsigned count = 0; count < CFG_POLL_LIMIT; ++count) {
+        uint32_t state = CFG_STATUS;
+        if (state & CFG_ERROR)
+            return -1;
+        if (state & mask)
+            return 0;
+    }
+    return -1;
+}
+static int normal_prepare(void *ctx, uint32_t len)
+{
+    (void)ctx;
+    if (!(CFG_STATUS & CFG_CAPABLE))
+        return -1;
+    CFG_EXPECTED = len;
+    CFG_CONTROL = CFG_ARM;
+    return cfg_wait(CFG_READY);
+}
+static int normal_send(void *ctx, uint8_t byte)
+{
+    (void)ctx;
+    if (cfg_wait(CFG_READY))
+        return -1;
+    CFG_DATA = byte;
+    return 0;
+}
+static int normal_finish(void *ctx)
+{
+    (void)ctx;
+    if (cfg_wait(CFG_READY))
+        return -1;
+    CFG_CONTROL = CFG_FINISH;
+    return cfg_wait(CFG_DONE);
+}
+static void normal_abort(void *ctx)
+{
+    (void)ctx;
+    CFG_CONTROL = CFG_ABORT;
+}
+static void normal_mode_main(void)
+{
+    struct ulx5m_normal_image_reader image_reader = {0, normal_read};
+    struct ulx5m_normal_boot_transport output = {
+        0, normal_prepare, normal_send, normal_finish, normal_abort
+    };
+    enum ulx5m_normal_boot_result result;
+    // Read-only unless the separately reviewed recovery-qualified build
+    // explicitly enables the CC_CFG_CTRL primitive.
+#ifdef ULX5M_ENABLE_CFG_STREAM
+    const int authorize = 1;
+#else
+    const int authorize = 0;
+#endif
+    flash_end();
+    result = ulx5m_normal_boot_run(&image_reader, &output, 0, authorize);
+    // D1:D0: 01=no image, 10=bad image, 11=valid but handoff blocked.
+    // Full handoff does not return if the FPGA actually reconfigures.
+    MISC_LEDS = (result == ULX5M_BOOT_NO_IMAGE) ? 1u :
+                (result == ULX5M_BOOT_INVALID) ? 2u : 3u;
+    while (1) { }
+}
+#endif
+
 void _dfu_tick(void) {}
 
 void main(void)
 {
+#ifdef ULX5M_NORMAL_BOOT_EXPERIMENT
+    if ((MISC_MODE & 3u) == 1u)
+        normal_mode_main();
+#endif
 #ifdef ULX5M_DFU_STAGE_ONLY
     ulx5m_dfu_stage_reset();
 #elif defined(ULX5M_DFU_STREAM_ONLY)

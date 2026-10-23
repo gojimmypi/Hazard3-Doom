@@ -49,7 +49,11 @@ module top_ulx5m_gs_flash_read (
     output wire flash_sck
 );
     localparam integer RAM_AW = 13;
+`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
+    localparam integer WB_N = 6;
+`else
     localparam integer WB_N = 5;
+`endif
     localparam integer WB_DW = 32;
     localparam integer WB_AW = 16;
 
@@ -73,12 +77,30 @@ module top_ulx5m_gs_flash_read (
     localparam integer BTN2_REGISTERED_RELEASE = 0;
 `endif
 `endif
+`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
+    // Experimental alternative: SERV runs in both modes after BTN2 latches.
+    // USB is still held in reset unless BTN2 selected DFU.
+    ulx5m_btn2_boot_select select_i (
+        .clk(clk48), .rst(reset), .btn2_n(btn_n[1]),
+        .mode_valid(mode_valid), .dfu_selected(dfu_selected),
+        .btn2_pressed(btn2_pressed)
+    );
+    // Keep the system-reset/mode-select combinational path away from the
+    // CPU and BRAM register enables. Assertion is asynchronous; only
+    // deassertion waits for the 48 MHz clock after BTN2 selection latches.
+    ulx5m_normal_boot_reset normal_reset_i (
+        .clk(clk48), .rst(reset), .mode_valid(mode_valid),
+        .fw_reset(fw_reset)
+    );
+    assign dfu_enable = mode_valid && dfu_selected && !reset;
+`else
     ulx5m_btn2_dfu_gate #(.REGISTERED_RELEASE(BTN2_REGISTERED_RELEASE)) gate_i (
         .clk(clk48), .rst(reset), .btn2_n(btn_n[1]),
         .fw_reset(fw_reset), .dfu_enable(dfu_enable),
         .mode_valid(mode_valid), .dfu_selected(dfu_selected),
         .btn2_pressed(btn2_pressed)
     );
+`endif
     always @(posedge clk48) begin
         if (reset)
             mode_heartbeat <= 24'd0;
@@ -186,7 +208,9 @@ module top_ulx5m_gs_flash_read (
     // Firmware is compiled into this word-addressed RAM image before
     // GateMate synthesis. No ECP5 ecpbram patching is needed.
 `ifdef ULX5M_USE_SERV
-`ifdef ULX5M_SERV_DFU_HW_QUAD_TEST
+`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
+    localparam FW_IMAGE = "build-ulx5m-gs/normal-boot/fw_ulx5m_flash_read.hex";
+`elsif ULX5M_SERV_DFU_HW_QUAD_TEST
     // Volatile, explicitly armed four-sector test. NO boot selection.
     localparam FW_IMAGE = "build-ulx5m-gs/dfu-hw-quad/fw_ulx5m_flash_read.hex";
 `elsif ULX5M_SERV_DFU_HW_MULTI_TEST
@@ -216,6 +240,9 @@ module top_ulx5m_gs_flash_read (
     // Peripheral 0: minimal LED/button register block, without ECP5 pads.
     soc_ulx5m_misc misc_i (
         .led_n(fw_led_n), .btn_n(btn_n), .locked(locked),
+`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
+        .mode_valid(mode_valid), .dfu_selected(dfu_selected),
+`endif
         .bus_addr(wb_addr[3:0]), .bus_wdata(wb_wdata),
         .bus_rdata(wb_rdata[0]), .bus_cyc(wb_cyc[0]),
         .bus_ack(wb_ack[0]), .bus_we(wb_we),
@@ -236,6 +263,11 @@ module top_ulx5m_gs_flash_read (
     wire [31:0] ep_tx_data, ep_rx_data;
     wire ep_tx_we, ep_rx_re;
     wire usb_attach;
+`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
+    wire usb_core_reset = fw_reset | ~dfu_enable;
+`else
+    wire usb_core_reset = fw_reset;
+`endif
 
     // Peripheral 2: USB controller using the already-routed GateMate PHY.
     usb #(.TARGET("GATEMATE"), .EPDW(32),
@@ -255,7 +287,7 @@ module top_ulx5m_gs_flash_read (
         .bus_dout(wb_rdata[2][15:0]),
         .bus_cyc(wb_cyc[2]), .bus_we(wb_we),
         .bus_ack(wb_ack[2]), .irq(), .sof(),
-        .clk(clk48), .rst(fw_reset)
+        .clk(clk48), .rst(usb_core_reset)
     );
     assign wb_rdata[2][31:16] = 16'h0000;
 
@@ -263,7 +295,7 @@ module top_ulx5m_gs_flash_read (
     // High -> pull D+ up; disabled -> high-Z (never drive low).
     // USB_PULL_N is not used and must remain unconstrained/high-Z.
     CC_IOBUF #(.V_IO("3.3"), .PULLUP(1'b0), .PULLDOWN(1'b0)) attach_i (
-        .IO(usb_pull_p), .A(1'b1), .T(~usb_attach | fw_reset), .Y()
+        .IO(usb_pull_p), .A(1'b1), .T(~usb_attach | usb_core_reset), .Y()
     );
 
     // Peripheral 3: endpoint RAM window shared with the USB controller.
@@ -302,6 +334,20 @@ module top_ulx5m_gs_flash_read (
         .spi_sck_o(spi_sck_o), .spi_cs_o(spi_cs_o),
         .clk(clk48), .rst(fw_reset)
     );
+
+`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
+    // Peripheral 5: firmware-driven configuration stream controller.
+    // The normal build contains NO live CC_CFG_CTRL unless separately
+    // compiled with ULX5M_ENABLE_CFG_STREAM after physical recovery passes.
+    ulx5m_cfg_stream_wb cfg_stream_i (
+        .clk(clk48), .rst(fw_reset),
+        .normal_mode(mode_valid && !dfu_selected),
+        .spi_idle(spi_cs_o[0]),
+        .bus_addr(wb_addr[2:0]), .bus_wdata(wb_wdata),
+        .bus_rdata(wb_rdata[5]), .bus_cyc(wb_cyc[5]),
+        .bus_ack(wb_ack[5]), .bus_we(wb_we)
+    );
+`endif
 
 endmodule
 `default_nettype wire

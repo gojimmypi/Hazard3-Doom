@@ -104,14 +104,9 @@ for tool in yosys nextpnr-himbaechel gmpack make sha256sum; do
     fi
 done
 
-yosys_version=$(yosys -V)
-nextpnr_version=$(nextpnr-himbaechel --version)
-printf '%s\n%s\n' "$yosys_version" "$nextpnr_version"
-if [[ $yosys_version != *'Yosys 0.67+47 (git sha1 5f29546d8'* ||
-      $nextpnr_version != *'nextpnr-0.10-95-gddc6c8c8'* ]]; then
-    printf 'ERROR: expected the Yosys/nextpnr pair from OSS CAD Suite 2026-07-20.\n' >&2
-    # exit 0
-fi
+# Use the shared check so stderr-only nextpnr --version is captured.
+# A failed toolchain check must stop before invalidating build artifacts.
+NEXTPNR=nextpnr-himbaechel "$script_dir/check-ulx5m-oss-cad-suite.sh"
 
 if [[ $reuse_json == true && ! -s $json ]]; then
     printf 'ERROR: --reuse-json requested but synthesis JSON is missing: %s\n' "$json" >&2

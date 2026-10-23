@@ -23,7 +23,17 @@ class Btn2DfuIsolation(unittest.TestCase):
         self.assertIn("assign fw_reset = reset;", TOP)
         self.assertIn(".resetn(~fw_reset)", TOP)
         self.assertGreaterEqual(TOP.count(".rst(fw_reset)"), 8)
-        self.assertIn(".T(~usb_attach | fw_reset)", TOP)
+        # Legacy BTN2-only builds still use fw_reset for USB and pullup.
+        # The normal-boot experiment additionally disconnects USB in normal mode.
+        self.assertRegex(
+            TOP,
+            r"`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT\s+"
+            r"wire usb_core_reset = fw_reset \| ~dfu_enable;\s+"
+            r"`else\s+wire usb_core_reset = fw_reset;\s+`endif",
+        )
+        self.assertIn(".rst(usb_core_reset)", TOP)
+        self.assertIn(".T(~usb_attach | usb_core_reset)", TOP)
+        self.assertIn("assign dfu_enable = mode_valid && dfu_selected && !reset;", TOP)
         self.assertIn("if (fw_reset)\n            wb_ack_ep", TOP)
         self.assertIn(".led_n(fw_led_n)", TOP)
 

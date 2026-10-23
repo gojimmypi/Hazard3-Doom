@@ -2,7 +2,7 @@
 # Safe first target: FPGA RAM-only LED + PLL image; no flash programming.
 
 # Default placement seed for ULX5M-GS SERV bootloader.
-SERV_SEED ?= 147
+SERV_SEED ?= 148
 
 YOSYS ?= yosys
 NEXTPNR ?= nextpnr-himbaechel
@@ -743,3 +743,48 @@ test-dfu-hw-flash-arm: | $(BUILD_DIR)
 	  fw/ulx5m_dfu_stream.c fw/ulx5m_flash_hw_test.c \
 	  tests/ulx5m-at25ql321-mock.c tests/test-ulx5m-serv-dfu-hw-test.c
 	$(BUILD_DIR)/test-dfu-hw-flash-arm
+
+# Separate SRAM-only normal-boot integration. Frozen seed-147 inputs and
+# established BTN2 DFU targets remain unchanged. Reconfiguration is NOT
+# instantiated by default; JTAG read access has passed on hardware, but
+# automatic recovery from failed reconfiguration has not been established.
+NORMAL_BOOT_FW := $(BUILD_DIR)/normal-boot/fw_ulx5m_flash_read.hex
+NORMAL_BOOT_JSON := $(BUILD_DIR)/$(FLASH_TOP)-normal-boot.json
+NORMAL_BOOT_IMPL := $(BUILD_DIR)/$(FLASH_TOP)-normal-boot.txt
+NORMAL_BOOT_BIT := $(BUILD_DIR)/$(FLASH_TOP)-normal-boot.bit
+NORMAL_BOOT_SRC := $(SERV_SRC) rtl/ulx5m_btn2_boot_select.v \
+  rtl/ulx5m_normal_boot_reset.v rtl/ulx5m_cfg_stream_wb.v
+NORMAL_BOOT_SEED ?= 147
+
+.PHONY: normal-boot-sram normal-boot-firmware
+normal-boot-sram: $(NORMAL_BOOT_BIT)
+normal-boot-firmware: $(NORMAL_BOOT_FW)
+
+$(NORMAL_BOOT_FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S fw/lnk-app.lds fw/Makefile.ulx5m-flash-read
+	$(MAKE) -C fw -f Makefile.ulx5m-flash-read \
+	  BUILD_DIR=../$(BUILD_DIR)/normal-boot SERV=1 \
+	  NORMAL_BOOT_EXPERIMENT=1 DFU_STREAM_ONLY=1
+
+$(NORMAL_BOOT_JSON): $(NORMAL_BOOT_FW) $(PROBE_MC) $(SERV_STAMP) $(NORMAL_BOOT_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
+	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_DFU_STREAM -DULX5M_SERV_BTN2_DFU_GATE -DULX5M_SERV_NORMAL_BOOT_EXPERIMENT -Icores/usb/rtl $(NORMAL_BOOT_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/normal-boot-serv-synth.log
+
+$(NORMAL_BOOT_IMPL): $(NORMAL_BOOT_JSON) $(FLASH_CCF) $(FLASH_SDC)
+	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(NORMAL_BOOT_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(NORMAL_BOOT_SEED) -l $(abspath $(BUILD_DIR)/normal-boot-serv-pnr.log)
+
+$(NORMAL_BOOT_BIT): $(NORMAL_BOOT_IMPL)
+	$(GMPACK) $(abspath $(NORMAL_BOOT_IMPL)) $(abspath $@)
+
+# Harmless normal-application test bitstream, not a bootloader or flash image.
+NORMAL_LED_TOP := top_ulx5m_gs_normal_led
+NORMAL_LED_CCF := data/top-ulx5m-gs-normal-led.ccf
+NORMAL_LED_JSON := $(BUILD_DIR)/$(NORMAL_LED_TOP).json
+NORMAL_LED_IMPL := $(BUILD_DIR)/$(NORMAL_LED_TOP).txt
+NORMAL_LED_BIT := $(BUILD_DIR)/$(NORMAL_LED_TOP).bit
+.PHONY: normal-led-sram
+normal-led-sram: $(NORMAL_LED_BIT)
+$(NORMAL_LED_JSON): rtl/top-ulx5m-gs-normal-led.v $(NORMAL_LED_CCF) | $(BUILD_DIR)
+	$(YOSYS) -p 'read_verilog rtl/top-ulx5m-gs-normal-led.v; synth_gatemate -top $(NORMAL_LED_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/normal-led-synth.log
+$(NORMAL_LED_IMPL): $(NORMAL_LED_JSON) $(NORMAL_LED_CCF)
+	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(NORMAL_LED_JSON)) -o ccf=$(abspath $(NORMAL_LED_CCF)) -o out=$(abspath $@) --router router2 --placer-heap-beta=0.6 --seed 147 -l $(abspath $(BUILD_DIR)/normal-led-pnr.log)
+$(NORMAL_LED_BIT): $(NORMAL_LED_IMPL)
+	$(GMPACK) $(abspath $(NORMAL_LED_IMPL)) $(abspath $@)

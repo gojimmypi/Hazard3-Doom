@@ -6,6 +6,10 @@ module soc_ulx5m_misc (
     output wire [7:0] led_n,
     input  wire [2:0] btn_n,
     input  wire locked,
+`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
+    input wire mode_valid,
+    input wire dfu_selected,
+`endif
     input  wire [3:0] bus_addr,
     input  wire [31:0] bus_wdata,
     output reg  [31:0] bus_rdata,
@@ -34,7 +38,12 @@ module soc_ulx5m_misc (
                 leds <= bus_wdata[7:0];
             if (bus_cyc && !ack && !bus_we)
                 bus_rdata <= (bus_addr[1:0] == 2'b00) ?
-                    {8'h00, 5'h1f, btn_sample, 8'h00, leds} : 32'h00000000;
+                    {8'h00, 5'h1f, btn_sample, 8'h00, leds} :
+`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
+                    (bus_addr[1:0] == 2'b01) ?
+                    {30'd0, dfu_selected, mode_valid} :
+`endif
+                    32'h00000000;
         end
     end
     assign bus_ack = ack;
