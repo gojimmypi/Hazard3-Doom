@@ -3,7 +3,9 @@
  * memory from the CPU; arming is explicit through a separate CSR write.
  */
 `default_nettype none
-module usb_ep0_raw_capture (
+module usb_ep0_raw_capture #(
+    parameter integer FREE_RUNNING_READ = 0
+)(
     input wire clk,
     input wire rst,
     input wire arm,
@@ -42,11 +44,17 @@ module usb_ep0_raw_capture (
     assign status = {12'b0, frozen, recording, watching, !frozen};
     assign sample_count = {7'b0, count};
 
-    // Synchronous read; callers use a pipelined CSR bus.
-    always @(posedge clk) begin
-        if (rd_en)
+    // Optional always-clocked RAM read eliminates the bus-derived read
+    // enable from the critical path. Only the BTN2 build opts into this;
+    // CSR read latency and the capture write path are unchanged.
+    generate if (FREE_RUNNING_READ) begin : g_free_read
+        always @(posedge clk)
             rd_data <= ram[rd_addr];
-    end
+    end else begin : g_gated_read
+        always @(posedge clk)
+            if (rd_en)
+                rd_data <= ram[rd_addr];
+    end endgenerate
 
     always @(posedge clk) begin
         if (rst) begin

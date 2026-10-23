@@ -117,6 +117,10 @@ for tool in "$pnr" yosys make gmpack timeout awk sort sha256sum; do
     fi
 done
 
+# Refuse an incompatible local toolchain before synthesizing or routing.
+export OSS_CAD_SUITE_VERSION=${OSS_CAD_SUITE_VERSION:-2026-07-20}
+bash "$script_dir/check-ulx5m-oss-cad-suite.sh"
+
 printf 'Target: %s\nSeeds: %d..%d\nOSS CAD Suite: %s\n' \
     "$target" "$first_seed" "$((first_seed + seed_count - 1))" "${OSS_CAD_SUITE_VERSION:-not-set}"
 printf 'Synthesis once, then place-and-route for each seed.\n'

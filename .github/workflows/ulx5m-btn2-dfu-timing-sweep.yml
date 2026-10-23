@@ -1,0 +1,296 @@
+name: ULX5M-GS BTN2 FWT3 timing sweep
+run-name: BTN2 FWT3 seeds ${{ inputs.seed_first }}-${{ inputs.seed_last }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      seed_first:
+        description: First routing seed
+        required: true
+        type: string
+        default: '1'
+      seed_last:
+        description: Last routing seed (inclusive)
+        required: true
+        type: string
+        default: '20'
+      seeds_per_job:
+        description: Seeds per parallel job
+        required: true
+        type: choice
+        default: '2'
+        options: ['1', '2', '3', '4', '5']
+      max_parallel:
+        description: Maximum parallel route jobs
+        required: true
+        type: choice
+        default: '8'
+        options: ['4', '8', '12', '20']
+      oss_cad_suite_version:
+        description: Pinned synthesis and routing toolchain
+        required: true
+        type: string
+        default: '2026-07-20'
+      heap_beta:
+        description: GateMate HeAP beta
+        required: true
+        type: choice
+        default: '0.6'
+        options: ['0.4', '0.5', '0.6', '0.7', '0.8']
+      timeout_seconds:
+        description: Per-seed router timeout
+        required: true
+        type: choice
+        default: '540'
+        options: ['180', '300', '540', '600']
+
+permissions:
+  contents: read
+
+env:
+  TARGET: dfu-hw-quad-btn2
+  FIRST: ${{ inputs.seed_first }}
+  LAST: ${{ inputs.seed_last }}
+  PER_JOB: ${{ inputs.seeds_per_job }}
+  SUITE: ${{ inputs.oss_cad_suite_version }}
+  HEAP_BETA: ${{ inputs.heap_beta }}
+  ROUTE_TIMEOUT: ${{ inputs.timeout_seconds }}
+  XPACK_VERSION: '15.2.0-1'
+  XPACK_SHA256: 'aaaa8060c914851a3e5ee1ba82cc3d6f80972f90638a05c6e823a37557a33758'
+
+jobs:
+  prepare:
+    name: Freeze BTN2-gated FWT3 netlist
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: recursive
+      - name: Validate seed range and construct matrix
+        id: matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$FIRST" =~ ^[1-9][0-9]{0,8}$ && "$LAST" =~ ^[1-9][0-9]{0,8}$ ]] || exit 2
+          [[ "$SUITE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || exit 2
+          (( FIRST <= LAST && LAST <= 2147483647 )) || exit 2
+          python3 scripts/sweep-ulx5m-bootloader-ci.py matrix \
+            --first "$FIRST" --last "$LAST" --per-job "$PER_JOB" > matrix.json
+          printf 'value=%s\n' "$(cat matrix.json)" >> "$GITHUB_OUTPUT"
+      - name: Restore pinned OSS CAD Suite cache
+        id: suite-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}/oss-cad-suite
+          key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.SUITE }}-v1
+      - uses: YosysHQ/setup-oss-cad-suite@v4
+        if: steps.suite-cache.outputs.cache-hit != 'true'
+        with:
+          version: ${{ env.SUITE }}
+          github-token: ${{ github.token }}
+          python-override: true
+      - name: Save pinned OSS CAD Suite cache
+        if: steps.suite-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}/oss-cad-suite
+          key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.SUITE }}-v1
+      - name: Add pinned tools to PATH
+        shell: bash
+        run: printf '%s\n' "${RUNNER_TEMP}/oss-cad-suite/bin" >> "$GITHUB_PATH"
+      - name: Install checksum-verified RISC-V compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="xpack-riscv-none-elf-gcc-${XPACK_VERSION}-linux-x64.tar.gz"
+          url="https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v${XPACK_VERSION}/${archive}"
+          curl --fail --location --retry 3 --output "${RUNNER_TEMP}/${archive}" "$url"
+          printf '%s  %s\n' "$XPACK_SHA256" "${RUNNER_TEMP}/${archive}" | sha256sum --check -
+          mkdir -p bin/riscv-gcc
+          tar -xzf "${RUNNER_TEMP}/${archive}" --strip-components=1 -C bin/riscv-gcc
+          printf '%s\n' "${GITHUB_WORKSPACE}/bin/riscv-gcc/bin" >> "$GITHUB_PATH"
+      - name: Run BTN2 unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          make -C bootloader-serv -f Makefile.ulx5m-gs test-btn2-boot-mode
+          make -C bootloader-serv -f Makefile.ulx5m-gs test-btn2-dfu-gate
+          python3 bootloader-serv/tests/test-ulx5m-serv-btn2-dfu-gate-guards.py
+      - name: Synthesize only BTN2-gated four-sector FWT3
+        shell: bash
+        run: |
+          set -euo pipefail
+          yosys --version
+          make -C bootloader-serv -f Makefile.ulx5m-gs \
+            build-ulx5m-gs/top_ulx5m_gs_flash_read-serv-dfu-hw-quad-btn2.json
+          mkdir -p frozen
+          cp bootloader-serv/build-ulx5m-gs/top_ulx5m_gs_flash_read-serv-dfu-hw-quad-btn2.json frozen/netlist.json
+          cp bootloader-serv/data/top-ulx5m-gs-flash-read.ccf frozen/constraints.ccf
+          cp bootloader-serv/data/top-ulx5m-gs-flash-read.sdc frozen/constraints.sdc
+          (cd frozen && sha256sum netlist.json constraints.ccf constraints.sdc > SHA256SUMS)
+          {
+            printf 'commit=%s\n' "$GITHUB_SHA"
+            printf 'target=%s\n' "$TARGET"
+            printf 'design=%s\n' top_ulx5m_gs_flash_read-serv-dfu-hw-quad-btn2
+            printf 'make_target=%s\n' build-ulx5m-gs/top_ulx5m_gs_flash_read-serv-dfu-hw-quad-btn2.json
+            printf 'synthesis_suite=%s\nroute_suite=%s\n' "$SUITE" "$SUITE"
+            printf 'heap_beta=%s\nrouter=router2\n' "$HEAP_BETA"
+            printf 'riscv_toolchain=%s\n' "$XPACK_VERSION"
+            yosys --version
+          } > frozen/metadata.txt
+          cat frozen/metadata.txt
+          cat frozen/SHA256SUMS
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ulx5m-btn2-frozen-${{ github.run_id }}
+          path: frozen/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  route:
+    name: Route BTN2 seeds ${{ matrix.group }}
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(inputs.max_parallel) }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Restore pinned routing tools
+        id: suite-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}/oss-cad-suite
+          key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.SUITE }}-v1
+      - name: Check pinned tool cache
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.suite-cache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          [[ "$CACHE_HIT" == true ]] || { echo 'Missing pinned OSS CAD Suite cache' >&2; exit 1; }
+          test -x "${RUNNER_TEMP}/oss-cad-suite/bin/nextpnr-himbaechel"
+          test -x "${RUNNER_TEMP}/oss-cad-suite/bin/gmpack"
+      - name: Add pinned tools to PATH
+        shell: bash
+        run: printf '%s\n' "${RUNNER_TEMP}/oss-cad-suite/bin" >> "$GITHUB_PATH"
+      - uses: actions/download-artifact@v8
+        with:
+          name: ulx5m-btn2-frozen-${{ github.run_id }}
+          path: frozen/
+      - name: Route exact frozen BTN2 netlist
+        shell: bash
+        env:
+          GROUP_FIRST: ${{ matrix.first }}
+          GROUP_LAST: ${{ matrix.last }}
+        run: |
+          set -euo pipefail
+          (cd frozen && sha256sum --check SHA256SUMS)
+          grep -Fx "target=${TARGET}" frozen/metadata.txt
+          grep -Fx "commit=${GITHUB_SHA}" frozen/metadata.txt
+          grep -Fx 'design=top_ulx5m_gs_flash_read-serv-dfu-hw-quad-btn2' frozen/metadata.txt
+          nextpnr-himbaechel --version
+          mkdir -p group-results
+          cp frozen/SHA256SUMS group-results/inputs.sha256
+          printf 'seed\tstatus\tfmax_mhz\tmargin_mhz\texit_code\telapsed_seconds\tlog\n' > group-results/results.tsv
+          for (( seed = GROUP_FIRST; seed <= GROUP_LAST; seed++ )); do
+            impl="group-results/seed-${seed}.txt"
+            log="group-results/seed-${seed}.log"
+            output="group-results/seed-${seed}.stdout.log"
+            start=$SECONDS
+            rc=0
+            timeout --signal=TERM --kill-after=10s "${ROUTE_TIMEOUT}s" \
+              nextpnr-himbaechel --device CCGM1A1 --json frozen/netlist.json \
+              -o ccf=frozen/constraints.ccf -o "out=${impl}" \
+              --sdc frozen/constraints.sdc --router router2 \
+              --placer-heap-beta="$HEAP_BETA" --seed "$seed" -l "$log" \
+              > "$output" 2>&1 || rc=$?
+            elapsed=$((SECONDS - start))
+            timing_line=''
+            if [[ -f "$log" ]]; then
+              timing_line="$(grep -F "Max frequency for clock 'bram_i.clk':" "$log" | tail -n 1 || true)"
+            fi
+            status=ERROR
+            fmax='-'
+            margin='-'
+            if (( rc == 124 || rc == 137 )); then
+              status=TIMEOUT
+            elif [[ -n "$timing_line" ]] && grep -Fq 'Routing complete.' "$log"; then
+              fmax="${timing_line##*: }"
+              fmax="${fmax%% MHz*}"
+              if [[ "$fmax" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+                margin="$(awk -v f="$fmax" 'BEGIN {printf "%.2f", f - 48.0}')"
+                if [[ "$timing_line" == *'(PASS at 48.00 MHz)'* && $rc -eq 0 && -s "$impl" ]]; then
+                  status=PASS
+                  gmpack "$impl" "group-results/best-seed-${seed}.bit"
+                elif [[ "$timing_line" == *'(FAIL at 48.00 MHz)'* ]]; then
+                  status=FAIL
+                fi
+              else
+                fmax='-'
+              fi
+            fi
+            printf '%d\t%s\t%s\t%s\t%d\t%d\tseed-%d.log\n' \
+              "$seed" "$status" "$fmax" "$margin" "$rc" "$elapsed" "$seed" \
+              >> group-results/results.tsv
+            printf 'Seed %d: %s MHz %s (nextpnr exit %d)\n' "$seed" "$fmax" "$status" "$rc"
+            rm -f -- "$impl"
+          done
+          cat group-results/results.tsv >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ulx5m-btn2-group-${{ matrix.group }}-${{ github.run_id }}
+          path: group-results/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
+
+  summarize:
+    name: Rank BTN2 FWT3 results
+    needs: [prepare, route]
+    if: ${{ always() && needs.prepare.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: ulx5m-btn2-frozen-${{ github.run_id }}
+          path: final/frozen/
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: ulx5m-btn2-group-*-${{ github.run_id }}
+          path: final/groups/
+      - name: Summarize with existing seed-sweep reporter
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd final/frozen && sha256sum --check SHA256SUMS)
+          mkdir -p final/report
+          result=0
+          python3 scripts/sweep-ulx5m-bootloader-ci.py summarize \
+            --target "$TARGET" --first "$FIRST" --last "$LAST" \
+            --groups final/groups --frozen final/frozen --out final/report || result=$?
+          cat final/report/summary.md >> "$GITHUB_STEP_SUMMARY"
+          printf 'Summary exit status: %s\n' "$result"
+          exit "$result"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ulx5m-btn2-summary-${{ github.run_number }}-${{ github.sha }}
+          path: final/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0

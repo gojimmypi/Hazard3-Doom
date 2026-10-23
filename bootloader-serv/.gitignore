@@ -3,3 +3,6 @@
 
 # Pinned SERV checkout fetched by the Makefile
 /third_party/serv/
+
+# Local preserved BTN2 routing candidates; not part of the source tree
+/bitstreams/local-candidates/

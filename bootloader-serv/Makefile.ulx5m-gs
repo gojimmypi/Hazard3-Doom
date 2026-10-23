@@ -2,7 +2,7 @@
 # Safe first target: FPGA RAM-only LED + PLL image; no flash programming.
 
 # Default placement seed for ULX5M-GS SERV bootloader.
-SERV_SEED ?= 260
+SERV_SEED ?= 147
 
 YOSYS ?= yosys
 NEXTPNR ?= nextpnr-himbaechel
@@ -27,6 +27,10 @@ help:
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-btn2-boot-mode (offline)'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs btn2-dfu-quad-serv (SRAM only; BTN2-gated FWT3, flash-write experiment)'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-btn2-dfu-gate (offline)'
+	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-btn2-dfu-regreset (offline)'
+	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs btn2-dfu-quad-regreset-serv (isolated SRAM-only experiment)'
+	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-btn2-dfu-asyncreset (offline)'
+	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs btn2-dfu-quad-asyncreset-serv (isolated SRAM-only experiment)'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs usb-monitor'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs usb-probe'
 	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs flash-read-probe'
@@ -334,6 +338,60 @@ $(BTN2_DFU_QUAD_IMPL): $(BTN2_DFU_QUAD_JSON) $(FLASH_CCF) $(FLASH_SDC)
 $(BTN2_DFU_QUAD_BIT): $(BTN2_DFU_QUAD_IMPL)
 	$(GMPACK) $(abspath $(BTN2_DFU_QUAD_IMPL)) $(abspath $@)
 
+# Separate BTN2 timing experiment: register only the release of firmware
+# reset. Keep the seed-38 baseline JSON/bitstream and Makefile target intact.
+# Uses the identical FWT3 firmware; SRAM-only, never install in flash.
+BTN2_DFU_REGRESET_JSON := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2-regreset.json
+BTN2_DFU_REGRESET_IMPL := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2-regreset.txt
+BTN2_DFU_REGRESET_BIT := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2-regreset.bit
+
+.PHONY: btn2-dfu-quad-regreset-serv test-btn2-dfu-regreset
+btn2-dfu-quad-regreset-serv: $(BTN2_DFU_REGRESET_BIT)
+
+test-btn2-dfu-regreset: | $(BUILD_DIR)
+	iverilog -g2012 -s tb_ulx5m_btn2_dfu_regreset \
+	  -o $(BUILD_DIR)/btn2-dfu-regreset-test.vvp \
+	  rtl/ulx5m_btn2_boot_select.v rtl/ulx5m_btn2_dfu_gate.v \
+	  tests/tb_ulx5m_btn2_dfu_regreset.v
+	vvp $(BUILD_DIR)/btn2-dfu-regreset-test.vvp
+	python3 tests/test-ulx5m-serv-btn2-regreset-guards.py
+
+$(BTN2_DFU_REGRESET_JSON): $(DFU_HW_QUAD_FW) $(PROBE_MC) $(SERV_STAMP) $(BTN2_DFU_QUAD_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
+	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_DFU_HW_QUAD_TEST -DULX5M_SERV_BTN2_DFU_GATE -DULX5M_SERV_BTN2_REGRESET -Icores/usb/rtl $(BTN2_DFU_QUAD_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/btn2-dfu-regreset-serv-synth.log
+
+$(BTN2_DFU_REGRESET_IMPL): $(BTN2_DFU_REGRESET_JSON) $(FLASH_CCF) $(FLASH_SDC)
+	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(BTN2_DFU_REGRESET_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(SERV_SEED) -l $(abspath $(BUILD_DIR)/btn2-dfu-regreset-serv-pnr.log)
+
+$(BTN2_DFU_REGRESET_BIT): $(BTN2_DFU_REGRESET_IMPL)
+	$(GMPACK) $(abspath $(BTN2_DFU_REGRESET_IMPL)) $(abspath $@)
+
+# Separately built asynchronous-assertion/registered-release experiment.
+# Unlike the regreset variant, no combinational system-reset bypass remains
+# on the firmware reset output. The proven seed-38 image is not overwritten.
+BTN2_DFU_ASYNCRESET_JSON := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2-asyncreset.json
+BTN2_DFU_ASYNCRESET_IMPL := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2-asyncreset.txt
+BTN2_DFU_ASYNCRESET_BIT := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2-asyncreset.bit
+
+.PHONY: btn2-dfu-quad-asyncreset-serv test-btn2-dfu-asyncreset
+btn2-dfu-quad-asyncreset-serv: $(BTN2_DFU_ASYNCRESET_BIT)
+
+test-btn2-dfu-asyncreset: | $(BUILD_DIR)
+	iverilog -g2012 -s tb_ulx5m_btn2_dfu_asyncreset \
+	  -o $(BUILD_DIR)/btn2-dfu-asyncreset-test.vvp \
+	  rtl/ulx5m_btn2_boot_select.v rtl/ulx5m_btn2_dfu_gate.v \
+	  tests/tb_ulx5m_btn2_dfu_asyncreset.v
+	vvp $(BUILD_DIR)/btn2-dfu-asyncreset-test.vvp
+	python3 tests/test-ulx5m-serv-btn2-asyncreset-guards.py
+
+$(BTN2_DFU_ASYNCRESET_JSON): $(DFU_HW_QUAD_FW) $(PROBE_MC) $(SERV_STAMP) $(BTN2_DFU_QUAD_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
+	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_DFU_HW_QUAD_TEST -DULX5M_SERV_BTN2_DFU_GATE -DULX5M_SERV_BTN2_ASYNC_REGRESET -Icores/usb/rtl $(BTN2_DFU_QUAD_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/btn2-dfu-asyncreset-serv-synth.log
+
+$(BTN2_DFU_ASYNCRESET_IMPL): $(BTN2_DFU_ASYNCRESET_JSON) $(FLASH_CCF) $(FLASH_SDC)
+	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(BTN2_DFU_ASYNCRESET_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(SERV_SEED) -l $(abspath $(BUILD_DIR)/btn2-dfu-asyncreset-serv-pnr.log)
+
+$(BTN2_DFU_ASYNCRESET_BIT): $(BTN2_DFU_ASYNCRESET_IMPL)
+	$(GMPACK) $(abspath $(BTN2_DFU_ASYNCRESET_IMPL)) $(abspath $@)
+
 # Icarus cannot resolve a forward declaration in pinned SERV 1.4.0.
 # Generate a build-only state copy; leave the pinned upstream checkout intact.
 SERV_SIM_STATE := $(BUILD_DIR)/serv_state_iverilog.v
@@ -428,6 +486,15 @@ test-flash-serv-ep0-trace: $(PROBE_MC) | $(BUILD_DIR)
 	  -o $(BUILD_DIR)/flash-serv-ep0-trace-test.vvp \
 	  $(wildcard cores/usb/rtl/*.v) tests/tb_ulx5m_serv_ep0_trace_csr.v
 	vvp $(BUILD_DIR)/flash-serv-ep0-trace-test.vvp
+
+# Compare BTN2 free-running raw RAM readback against the original CSR tests.
+# No hardware programming, flash writes, or firmware changes.
+.PHONY: test-btn2-raw-read
+test-btn2-raw-read: $(PROBE_MC) | $(BUILD_DIR)
+	iverilog -g2012 -DULX5M_RAW_FREE_READ_TEST -Icores/usb/rtl -s tb_ulx5m_serv_ep0_trace_csr \
+	  -o $(BUILD_DIR)/btn2-free-read-ep0-trace-test.vvp \
+	  $(wildcard cores/usb/rtl/*.v) tests/tb_ulx5m_serv_ep0_trace_csr.v
+	vvp $(BUILD_DIR)/btn2-free-read-ep0-trace-test.vvp
 
 # Exercise real USB PHY/RX LL and packet ACK decoding at 4 clocks/bit.
 .PHONY: test-flash-serv-ep0-ack

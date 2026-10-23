@@ -32,6 +32,7 @@ module usb #(
 	parameter integer EVT_DEPTH = 0,
 	parameter integer EP0_TRACE = 0,
 	parameter integer RX_TX_GUARD = 0,
+	parameter integer EP0_RAW_FREE_READ = 0,
 
 	/* Auto-set */
 	parameter integer EPAW = 11 - $clog2(EPDW / 8)
@@ -513,7 +514,7 @@ module usb #(
 		wire [15:0] raw_rdata;
 		wire [15:0] raw_status;
 		wire [15:0] raw_count;
-		usb_ep0_raw_capture raw_capture_I (
+		usb_ep0_raw_capture #(.FREE_RUNNING_READ(EP0_RAW_FREE_READ)) raw_capture_I (
 			.clk(clk), .rst(rst), .arm(raw_arm),
 			.tx_data_pending(ack_tx_pending),
 			.tx_en(phy_tx_en), .tx_en_pad_d(tx_en_history[0]),

@@ -27,6 +27,18 @@ class Btn2DfuIsolation(unittest.TestCase):
         self.assertIn("if (fw_reset)\n            wb_ack_ep", TOP)
         self.assertIn(".led_n(fw_led_n)", TOP)
 
+    def test_isolated_trace_read_experiment(self):
+        usb = (ROOT / "cores/usb/rtl/usb.v").read_text(encoding="ascii")
+        raw = (ROOT / "cores/usb/rtl/usb_ep0_raw_capture.v").read_text(encoding="ascii")
+        self.assertIn(".EP0_RAW_FREE_READ(1)", TOP)
+        self.assertIn("`ifdef ULX5M_SERV_BTN2_DFU_GATE\n           .EP0_RAW_FREE_READ(1)", TOP)
+        self.assertIn("parameter integer EP0_RAW_FREE_READ = 0", usb)
+        self.assertIn(".FREE_RUNNING_READ(EP0_RAW_FREE_READ)", usb)
+        self.assertIn("parameter integer FREE_RUNNING_READ = 0", raw)
+        self.assertIn("generate if (FREE_RUNNING_READ)", raw)
+        self.assertIn("if (rd_en)", raw)
+        self.assertIn("test-btn2-raw-read:", MAKE)
+
     def test_isolated_build_and_firmware(self):
         self.assertIn("btn2-dfu-quad-serv: $(BTN2_DFU_QUAD_BIT)", MAKE)
         self.assertIn("BTN2_DFU_QUAD_SRC := $(SERV_SRC) rtl/ulx5m_btn2_boot_select.v rtl/ulx5m_btn2_dfu_gate.v", MAKE)

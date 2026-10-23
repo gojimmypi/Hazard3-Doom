@@ -26,6 +26,9 @@ module tb_ulx5m_serv_ep0_trace_csr;
         .TARGET("SIM"),
         .EPDW(32),
         .EP0_TRACE(1),
+`ifdef ULX5M_RAW_FREE_READ_TEST
+        .EP0_RAW_FREE_READ(1),
+`endif
         .MC_INIT_FILE("build-ulx5m-gs/usb_trans_mc.hex")
     ) dut (
         .pad_dp(pad_dp), .pad_dn(pad_dn), .pad_pu(pad_pu),

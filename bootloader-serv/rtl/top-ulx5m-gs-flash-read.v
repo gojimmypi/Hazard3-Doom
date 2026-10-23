@@ -64,7 +64,16 @@ module top_ulx5m_gs_flash_read (
 `ifdef ULX5M_SERV_BTN2_DFU_GATE
     wire mode_valid, dfu_selected, btn2_pressed, dfu_enable;
     reg [23:0] mode_heartbeat = 24'd0;
-    ulx5m_btn2_dfu_gate gate_i (
+`ifdef ULX5M_SERV_BTN2_ASYNC_REGRESET
+    localparam integer BTN2_REGISTERED_RELEASE = 2;
+`else
+`ifdef ULX5M_SERV_BTN2_REGRESET
+    localparam integer BTN2_REGISTERED_RELEASE = 1;
+`else
+    localparam integer BTN2_REGISTERED_RELEASE = 0;
+`endif
+`endif
+    ulx5m_btn2_dfu_gate #(.REGISTERED_RELEASE(BTN2_REGISTERED_RELEASE)) gate_i (
         .clk(clk48), .rst(reset), .btn2_n(btn_n[1]),
         .fw_reset(fw_reset), .dfu_enable(dfu_enable),
         .mode_valid(mode_valid), .dfu_selected(dfu_selected),
@@ -230,6 +239,9 @@ module top_ulx5m_gs_flash_read (
 
     // Peripheral 2: USB controller using the already-routed GateMate PHY.
     usb #(.TARGET("GATEMATE"), .EPDW(32),
+`ifdef ULX5M_SERV_BTN2_DFU_GATE
+           .EP0_RAW_FREE_READ(1),
+`endif
 `ifdef ULX5M_USE_SERV
            .EP0_TRACE(1), .RX_TX_GUARD(1),
 `endif
