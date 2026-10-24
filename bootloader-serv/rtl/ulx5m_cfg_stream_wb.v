@@ -62,13 +62,20 @@ module ulx5m_cfg_stream_wb (
             end else begin
                 idle_cycles <= 3'd0;
             end
+            // Flash reads between configuration bytes are expected.
+            // Prevent a VALID pulse while SPI chip-select is asserted;
+            // there is no rollback once the controller accepts bytes.
             case (state)
                 LEAD: if (delay_cycles == 0)
                     state <= READY;
                 else delay_cycles <= delay_cycles - 1'b1;
-                PULSE: begin
+                PULSE: if (spi_idle) begin
                     valid <= 1'b1;
                     state <= GAP;
+                end else begin
+                    valid <= 1'b0;
+                    en <= 1'b0;
+                    state <= ERROR;
                 end
                 GAP: state <= READY;
                 TAIL: if (delay_cycles == 0) begin
@@ -85,12 +92,16 @@ module ulx5m_cfg_stream_wb (
                     default: bus_rdata <= 32'd0;
                 endcase
             end
-            if (write_req) begin
+            if (write_req && !(state == PULSE && !spi_idle)) begin
                 case (bus_addr)
                     1: if (state == IDLE && bus_wdata != 0 &&
                            bus_wdata <= MAX_STREAM)
                            expected <= bus_wdata;
-                       else state <= ERROR;
+                       else begin
+                           state <= ERROR;
+                           en <= 1'b0;
+                           valid <= 1'b0;
+                       end
                     2: if (bus_wdata == ABORT_KEY) begin
                            // Abort is not rollback of already accepted bytes.
                            state <= ERROR;

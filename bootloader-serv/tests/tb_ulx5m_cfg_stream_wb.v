@@ -123,6 +123,52 @@ module tb_ulx5m_cfg_stream_wb;
         if (dut.en || dut.valid || dut.state != 0)
             $fatal(1, "Normal-mode withdrawal must reset stream");
         $display("[PASS] Mode withdrawal resets stream controller");
+        @(negedge clk); normal_mode=1;
+        repeat (5) @(posedge clk);
+        write_reg(1, 2);
+        write_reg(2, 32'h43464731);
+        wait_ready();
+        // A flash read while EN is high is expected: firmware fills its
+        // next 256-byte buffer between configuration byte pulses.
+        @(negedge clk); spi_idle=0;
+        repeat (6) @(posedge clk);
+        #1;
+        if (dut.state != 3'd2 || !dut.en || dut.valid || pulses != 3)
+            $fatal(1, "SPI read between bytes aborted active controller");
+        @(negedge clk); spi_idle=1;
+        repeat (5) @(posedge clk);
+        #1;
+        if (dut.state != 3'd2 || !dut.en)
+            $fatal(1, "Controller did not recover from flash-read gap");
+        $display("[PASS] SPI flash read between bytes is permitted");
+        // Force a SPI collision after accepting a Wishbone data byte but
+        // BEFORE the next clock edge that would raise CFG VALID.
+        @(negedge clk);
+        bus_addr=3; bus_wdata=32'h000000a5; bus_we=1; bus_cyc=1;
+        @(posedge clk); #1;
+        if (!bus_ack || dut.state != 3'd3)
+            $fatal(1, "Expected PULSE before SPI collision");
+        @(negedge clk);
+        bus_cyc=0; bus_we=0; spi_idle=0;
+        @(posedge clk); #1;
+        if (dut.state != 3'd7 || dut.en || dut.valid || pulses != 3)
+            $fatal(1, "SPI collision did not stop configuration pulse");
+        $display("[PASS] SPI collision before VALID aborts without a pulse");
+        @(negedge clk); normal_mode=0; spi_idle=1;
+        repeat (3) @(posedge clk);
+        #1;
+        if (dut.state != 3'd0 || dut.en || dut.valid)
+            $fatal(1, "Mode withdrawal did not clear collision error");
+        @(negedge clk); normal_mode=1;
+        repeat (5) @(posedge clk);
+        write_reg(1, 2);
+        write_reg(2, 32'h43464731);
+        wait_ready();
+        write_reg(1, 32'd3); // Cannot alter the length after ARM.
+        #1;
+        if (dut.state != 3'd7 || dut.en || dut.valid)
+            $fatal(1, "Illegal length update left CFG EN asserted");
+        $display("[PASS] Invalid write after ARM terminates CFG EN");
 `endif
         $finish;
     end

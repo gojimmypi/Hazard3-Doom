@@ -1,0 +1,43 @@
+# ULX5M-GS VOLATILE self-reconfiguration capability probe.
+# Does not program SPI flash, require a running bootloader, or replace
+# any of the known-good normal-boot build targets. Hardware is OPT-IN.
+# Invoke from bootloader-serv directory.
+SHELL := /bin/sh
+BUILD := build-ulx5m-gs/cfg-probe
+TOP := top_ulx5m_gs_cfg_probe
+SRC := rtl/top-ulx5m-gs-cfg-probe.v
+LED := build-ulx5m-gs/top_ulx5m_gs_normal_led.bit
+ROM := $(BUILD)/walking-led.hex
+CCF := data/top-ulx5m-gs-cfg-probe.ccf
+SDC := data/top-ulx5m-gs-cfg-probe.sdc
+JSON := $(BUILD)/$(TOP).json
+IMPL := $(BUILD)/$(TOP).txt
+BIT := $(BUILD)/$(TOP).bit
+SIM := $(BUILD)/cfg-probe.vvp
+SEED ?= 122
+
+.PHONY: test bit
+
+$(BUILD):
+	mkdir -p $@
+
+$(ROM): $(LED) tests/prepare-ulx5m-cfg-probe-rom.py | $(BUILD)
+	python3 tests/prepare-ulx5m-cfg-probe-rom.py --image $(LED) --rom $@
+
+$(SIM): $(SRC) tests/tb_ulx5m_cfg_probe.v $(ROM)
+	iverilog -g2012 -s tb_ulx5m_cfg_probe -o $@ $(SRC) tests/tb_ulx5m_cfg_probe.v
+
+test: $(SIM)
+	vvp $(SIM)
+
+$(JSON): $(SRC) $(ROM) | $(BUILD)
+	yosys -p 'read_verilog -defer $(SRC); synth_gatemate -top $(TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD)/synth.log
+
+$(IMPL): $(JSON) $(CCF) $(SDC)
+	nextpnr-himbaechel --device CCGM1A1 --json $(abspath $(JSON)) -o ccf=$(abspath $(CCF)) -o out=$(abspath $@) --sdc $(abspath $(SDC)) --router router2 --placer-heap-beta=0.6 --seed $(SEED) -l $(abspath $(BUILD)/pnr.log)
+
+$(BIT): $(IMPL)
+	gmpack --reconfig $(abspath $(IMPL)) $(abspath $@)
+
+bit: $(BIT)
+	sha256sum $(BIT)

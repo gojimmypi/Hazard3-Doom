@@ -774,6 +774,21 @@ $(NORMAL_BOOT_IMPL): $(NORMAL_BOOT_JSON) $(FLASH_CCF) $(FLASH_SDC)
 $(NORMAL_BOOT_BIT): $(NORMAL_BOOT_IMPL)
 	$(GMPACK) $(abspath $(NORMAL_BOOT_IMPL)) $(abspath $@)
 
+# Offline-only CC_CFG_CTRL integration, with separate opt-in firmware.
+# This produces a netlist but deliberately has NO route, gmpack or JTAG
+# target. Do not use for physical reconfiguration without verified recovery.
+NORMAL_BOOT_CFG_FW := $(BUILD_DIR)/normal-boot-cfg-offline/fw_ulx5m_flash_read.hex
+NORMAL_BOOT_CFG_JSON := $(BUILD_DIR)/$(FLASH_TOP)-normal-boot-cfg-offline.json
+.PHONY: normal-boot-cfg-offline
+normal-boot-cfg-offline: $(NORMAL_BOOT_CFG_JSON)
+$(NORMAL_BOOT_CFG_FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S fw/lnk-app.lds fw/Makefile.ulx5m-flash-read
+	$(MAKE) -C fw -f Makefile.ulx5m-flash-read \
+	  BUILD_DIR=../$(BUILD_DIR)/normal-boot-cfg-offline SERV=1 \
+	  NORMAL_BOOT_EXPERIMENT=1 DFU_STREAM_ONLY=1 CFG_STREAM_ENABLE=1
+
+$(NORMAL_BOOT_CFG_JSON): $(NORMAL_BOOT_CFG_FW) $(PROBE_MC) $(SERV_STAMP) $(NORMAL_BOOT_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
+	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_DFU_STREAM -DULX5M_SERV_BTN2_DFU_GATE -DULX5M_SERV_NORMAL_BOOT_EXPERIMENT -DULX5M_SERV_CFG_HANDOFF_OFFLINE -DULX5M_ENABLE_CFG_STREAM -Icores/usb/rtl $(NORMAL_BOOT_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/normal-boot-cfg-offline-synth.log
+
 # Harmless normal-application test bitstream, not a bootloader or flash image.
 NORMAL_LED_TOP := top_ulx5m_gs_normal_led
 NORMAL_LED_CCF := data/top-ulx5m-gs-normal-led.ccf

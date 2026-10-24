@@ -9,7 +9,7 @@
 
 static uint8_t *flash;
 static unsigned calls, transmitted, aborts, prepares, finishes;
-static int fail_read, fail_byte;
+static int fail_read, fail_byte, mutate_after_probe;
 static unsigned byte_index;
 
 static uint32_t crc32(const uint8_t *data, size_t n)
@@ -33,6 +33,9 @@ static int reader(void *ctx, uint32_t addr, uint8_t *buf, unsigned n)
     ++calls;
     if (fail_read && calls == (unsigned)fail_read)
         return -1;
+    /* One header + four 256-byte CRC reads precede the streaming pass. */
+    if (mutate_after_probe && calls == 6)
+        flash[ULX5M_NORMAL_BOOT_SLOT + 256 + 800] ^= 1u;
     if (!n || addr >= ULX5M_FLASH_BYTES || n > ULX5M_FLASH_BYTES - addr)
         return -1;
     memcpy(buf, flash + addr, n);
@@ -53,6 +56,8 @@ static int send_byte(void *ctx, uint8_t byte)
     uint8_t expected = (uint8_t)(byte_index * 13u + 5u);
     if (byte_index < 4)
         expected = (const uint8_t[]){0xd9, 0x01, 0xed, 0x96}[byte_index];
+    if (mutate_after_probe && byte_index == 800)
+        expected ^= 1u;
     assert(byte == expected);
     ++byte_index;
     ++transmitted;
@@ -67,7 +72,7 @@ static struct ulx5m_normal_boot_transport t = {
 static void clear_state(void)
 {
     calls = transmitted = aborts = prepares = finishes = byte_index = 0;
-    fail_read = fail_byte = 0;
+    fail_read = fail_byte = mutate_after_probe = 0;
 }
 static void valid_image(void)
 {
@@ -117,6 +122,13 @@ int main(void)
     puts("[PASS] Verified 1024-byte payload streamed in order");
 
     clear_state();
+    mutate_after_probe = 1;
+    assert(ulx5m_normal_boot_run(&r, &t, 0, 1) == ULX5M_BOOT_STREAM_ERROR);
+    assert(prepares == 1 && transmitted == 1024 && finishes == 0 && aborts == 1);
+    puts("[PASS] Changed payload during second flash pass rejects FINISH");
+
+    clear_state();
+    valid_image();
     fail_read = 8; // header + 4 CRC reads + 2 stream reads -> later stream read
     assert(ulx5m_normal_boot_run(&r, &t, 0, 1) == ULX5M_BOOT_STREAM_ERROR);
     assert(aborts == 1 && finishes == 0 && transmitted > 0);

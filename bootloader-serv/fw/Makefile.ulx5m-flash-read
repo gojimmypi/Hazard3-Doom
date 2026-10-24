@@ -38,6 +38,18 @@ CFLAGS += -DULX5M_NORMAL_BOOT_EXPERIMENT=1
 SRCS += ulx5m_normal_image.c ulx5m_normal_boot.c
 endif
 
+# Separate OFFLINE-ONLY integrated handoff firmware. The parent make target
+# synthesizes a JSON netlist and intentionally has no bitstream target.
+ifeq ($(CFG_STREAM_ENABLE),1)
+ifneq ($(NORMAL_BOOT_EXPERIMENT),1)
+$(error CFG_STREAM_ENABLE requires NORMAL_BOOT_EXPERIMENT=1)
+endif
+ifeq ($(findstring normal-boot-cfg-offline,$(BUILD_DIR)),)
+$(error CFG_STREAM_ENABLE requires isolated normal-boot-cfg-offline BUILD_DIR)
+endif
+CFLAGS += -DULX5M_ENABLE_CFG_STREAM=1
+endif
+
 
 # Opt-in RAM-only DFU receiver. Use a SEPARATE BUILD_DIR for this profile.
 ifeq ($(DFU_STAGE_ONLY),1)

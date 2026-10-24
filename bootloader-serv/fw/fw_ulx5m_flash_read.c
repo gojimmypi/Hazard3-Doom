@@ -400,7 +400,10 @@ static void normal_mode_main(void)
     enum ulx5m_normal_boot_result result;
     // Read-only unless the separately reviewed recovery-qualified build
     // explicitly enables the CC_CFG_CTRL primitive.
-#ifdef ULX5M_ENABLE_CFG_STREAM
+#if defined(ULX5M_ENABLE_CFG_STREAM) && defined(ULX5M_CFG_HANDOFF_AUTHORIZED) && \
+    (ULX5M_CFG_HANDOFF_AUTHORIZED == 1)
+    // The primitive being present is not authorization for a live handoff.
+    // No existing Makefile target defines the second, independent gate.
     const int authorize = 1;
 #else
     const int authorize = 0;

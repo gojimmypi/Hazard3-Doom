@@ -192,6 +192,9 @@ module top_ulx5m_gs_flash_read (
         .RAM_AW(RAM_AW), .WB_N(WB_N),
         .WB_DW(WB_DW), .WB_AW(WB_AW), .WB_AI(2),
         .WB_REG(4), .BRAM_REG(1)
+`ifdef ULX5M_ENABLE_CFG_STREAM
+        , .WB_DECODE_RDATA(1)
+`endif
     ) bridge_i (
         .pb_addr(mem_addr), .pb_rdata(bridge_rdata),
         .pb_wdata(mem_wdata), .pb_wstrb(mem_wstrb),
@@ -208,7 +211,9 @@ module top_ulx5m_gs_flash_read (
     // Firmware is compiled into this word-addressed RAM image before
     // GateMate synthesis. No ECP5 ecpbram patching is needed.
 `ifdef ULX5M_USE_SERV
-`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
+`ifdef ULX5M_SERV_CFG_HANDOFF_OFFLINE
+    localparam FW_IMAGE = "build-ulx5m-gs/normal-boot-cfg-offline/fw_ulx5m_flash_read.hex";
+`elsif ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
     localparam FW_IMAGE = "build-ulx5m-gs/normal-boot/fw_ulx5m_flash_read.hex";
 `elsif ULX5M_SERV_DFU_HW_QUAD_TEST
     // Volatile, explicitly armed four-sector test. NO boot selection.

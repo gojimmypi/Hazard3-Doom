@@ -40,7 +40,8 @@ module soc_bridge #(
 	parameter integer WB_AW  = 16,
 	parameter integer WB_AI  =  2,
 	parameter integer WB_REG = 0,	// [0] = cyc / [1] = addr/wdata/wstrb / [2] = ack/rdata
-	parameter integer BRAM_REG = 0	// Register BRAM request and delay ACK (GateMate timing)
+	parameter integer BRAM_REG = 0,	// Register BRAM request and delay ACK (GateMate timing)
+	parameter integer WB_DECODE_RDATA = 0 // Mask inactive read-data responders
 )(
 	/* PicoRV32 bus */
 	input  wire [31:0] pb_addr,
@@ -196,7 +197,8 @@ module soc_bridge #(
 		integer i;
 		wb_rdata_or = 0;
 		for (i=0; i<WB_N; i=i+1)
-			wb_rdata_or[WB_DW-1:0] = wb_rdata_or[WB_DW-1:0] | wb_rdata[WB_DW*i+:WB_DW];
+			if (!WB_DECODE_RDATA || wb_cyc[i])
+				wb_rdata_or[WB_DW-1:0] = wb_rdata_or[WB_DW-1:0] | wb_rdata[WB_DW*i+:WB_DW];
 	end
 
 	if (WB_REG & 4) begin
