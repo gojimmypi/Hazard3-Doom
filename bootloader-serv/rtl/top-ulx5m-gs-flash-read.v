@@ -237,6 +237,13 @@ module top_ulx5m_gs_flash_read (
         .we(bram_we), .clk(clk48)
     );
 
+    // Prevent the latched boot-mode readback from contaminating later
+    // Wishbone reads (the bridge ORs all peripheral read-data buses).
+`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
+    wire [31:0] misc_rdata;
+    assign wb_rdata[0] = wb_cyc[0] ? misc_rdata : 32'h00000000;
+`endif
+
     // Peripheral 0: minimal LED/button register block, without ECP5 pads.
     soc_ulx5m_misc misc_i (
         .led_n(fw_led_n), .btn_n(btn_n), .locked(locked),
@@ -244,7 +251,12 @@ module top_ulx5m_gs_flash_read (
         .mode_valid(mode_valid), .dfu_selected(dfu_selected),
 `endif
         .bus_addr(wb_addr[3:0]), .bus_wdata(wb_wdata),
-        .bus_rdata(wb_rdata[0]), .bus_cyc(wb_cyc[0]),
+`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
+        .bus_rdata(misc_rdata),
+`else
+        .bus_rdata(wb_rdata[0]),
+`endif
+        .bus_cyc(wb_cyc[0]),
         .bus_ack(wb_ack[0]), .bus_we(wb_we),
         .clk(clk48), .rst(fw_reset)
     );
