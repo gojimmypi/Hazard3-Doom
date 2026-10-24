@@ -2,7 +2,7 @@
 # Safe first target: FPGA RAM-only LED + PLL image; no flash programming.
 
 # Default placement seed for ULX5M-GS SERV bootloader.
-SERV_SEED ?= 148
+SERV_SEED ?= 69
 
 YOSYS ?= yosys
 NEXTPNR ?= nextpnr-himbaechel
