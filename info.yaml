@@ -14,7 +14,9 @@ project:
   # analog_pins: 0        # Valid values: 0 to 6
   # uses_vapwr: false     # Set to true if your project uses the second analog power supply (VAPWR) in addition to VDPWR (3.3V)
 
-  # Your top module name must start with "tt_um_". Make it unique by including your github username:
+  # The tt_um_ulx3s_example example name is already used in https://app.tinytapeout.com/projects/6226
+  # Project names must be unique across all TT shuttles and projects.
+  # Your top module name must start with "tt_um_". Make it unique by including your github username (e.g. tt_um_sky26_yourid_ulx3s_project):
   top_module:  "tt_um_ulx3s_example"
 
   # List your project's source files here. Source files must be in ./src and you must list each source file separately, one per line:
