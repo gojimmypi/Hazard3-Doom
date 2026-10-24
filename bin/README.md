@@ -32,7 +32,10 @@ The monitor ELF is intentionally not duplicated in `bin/`. Load the board-specif
 | `INVENTORY.tsv` | Tab-separated package inventory intended for scripts, tooling, and other machine-readable processing. |
 | `libftdi1.dll` | Runtime library used by tools that communicate with FTDI USB devices. Keep it beside the executable that requires it. |
 | `libusb-1.0.dll` | Runtime library used for USB communication. Keep it beside the executable that requires it. |
-| `openFPGALoader.exe` | Cross-platform FPGA programming utility, provided here as a Windows executable. Source: https://github.com/trabucayre/openFPGALoader |
+| `openFPGALoader` | Linux x86-64 ELF executable, modified v1.2.0-ulx5m-rxfix.1; dynamically linked. Source: [fork commit c1c588e](https://github.com/gojimmypi/openFPGALoader/commit/c1c588ee29b8a03dceacf395f4dd361f0216e586). Linux build and dependencies checked under WSL; native Linux hardware operation not yet tested. |
+| `openFPGALoader.exe` | Windows executable, modified v1.2.0-ulx5m-rxfix.1. Source: [fork commit c1c588e](https://github.com/gojimmypi/openFPGALoader/commit/c1c588ee29b8a03dceacf395f4dd361f0216e586). GateMate/Tigard JTAG-SPI flash read verified; modified flash writes not qualified. |
+| `openFPGALoader-v1.1.1.exe` | v1.1.1 compiled from [tag/v1.1.1](https://github.com/trabucayre/openFPGALoader/releases/tag/v1.1.1)  Source: https://github.com/trabucayre/openFPGALoader |
+| `openFPGALoader-v1.2.0.exe` | v1.2.0 compiled from [tag/v1.2.0](https://github.com/trabucayre/openFPGALoader/releases/tag/v1.2.0)  Source: https://github.com/trabucayre/openFPGALoader |
 | `openocd.exe` | OpenOCD JTAG debug server. It provides the connection between the FPGA JTAG interface and RISC-V GDB. |
 | `putty.exe` | Windows serial-terminal utility for viewing the Hazard3 console and interacting with the running firmware. |
 | `README.md` | This file. |
@@ -67,12 +70,12 @@ The Windows executable can also be called from a WSL Bash prompt:
 Program the ULX5M-GS V005 diagnostics into volatile FPGA SRAM using Tigard JTAG (Windows, from repo root):
 
 ```DOS
-.\bin\openFPGALoader.exe -c tigard --freq 100k .\bin\top_ulx5m_gs_bringup.bit
-.\bin\openFPGALoader.exe -c tigard --freq 100k .\bin\top_ulx5m_gs_usb_probe.bit
-.\bin\openFPGALoader.exe -c tigard --freq 100k .\bin\fpga_ulx5m_gs_flash_jedec.bit
+.\bin\openFPGALoader.exe -c tigard --freq 100k -m .\bin\fpga_ulx5m_gs_bringup.bit
+.\bin\openFPGALoader.exe -c tigard --freq 100k -m .\bin\fpga_ulx5m_gs_usb_probe.bit
+.\bin\openFPGALoader.exe -c tigard --freq 100k -m .\bin\fpga_ulx5m_gs_flash_jedec.bit
 ```
 
-Use the Tigard JTAG 1.8 V setting with the ULX5M powered externally. If JTAG programming completes but the design does not start, power off both devices; power on ULX5M first, then Tigard, and retry. These `.bit` files configure volatile SRAM only; power cycling removes them. The USB probe reports `ULX5M-GS FPGA (DFU Probe)` via its USB product string; Windows may still show the cached driver description `ULX4M-LS FPGA (DFU)` for the shared development VID:PID. It does not accept DFU transfers or program configuration flash.
+Use the Tigard JTAG 1.8 V setting with the ULX5M powered externally. If JTAG programming completes but the design does not start, power off both devices; power on Tigard first, then ULX5M, and retry. These `.bit` files configure volatile SRAM only; power cycling removes them. The USB probe reports `ULX5M-GS FPGA (DFU Probe)` via its USB product string; Windows may still show the cached driver description `ULX4M-LS FPGA (DFU)` for the shared development VID:PID. It does not accept DFU transfers or program configuration flash.
 
 The JEDEC diagnostic was verified on ULX5M-GS V005 hardware: the LED readout is `1F 42 16`, identifying the fitted AT25QL321 (32 Mbit / 4 MiB). D0-D7 initially display `0x1f`; BTN1 cycles through `0x42`, `0x16`, then `0x1f`; holding BTN2 displays byte indexes `0x81`, `0x82`, or `0x84`. The downloaded bitstream has SHA-256 `27fe241b5bbe0879e59168297d3d97a6e1850355f8dd1cf116c737181c928556`. Its SPI command is read-only (`0x9f`); it does not implement flash-content reads or DFU.
 
@@ -99,6 +102,7 @@ scripts/gdb/load-ulx4m-ld-85f-monitor.gdb
 ## Runtime notes
 
 - Keep `libftdi1.dll` and `libusb-1.0.dll` in this directory unless a tool-specific subdirectory already contains the required copy.
+- The Linux `openFPGALoader` binary requires compatible shared libraries, including libusb-1.0, libftdi1, libudev, zlib, and the C++ runtime. This WSL build was checked with `ldd` and `-V`; USB hardware access in WSL was not tested. Use the Windows `.exe` from WSL for the established Tigard workflow.
 - `dfu-util-static.exe` is provided as an alternative to `dfu-util.exe` when a self-contained build is preferable.
 - Do not install or replace a USB driver with Zadig unless the current driver is incompatible with the selected programming or debugging tool.
 - Close other FPGA programming, serial-terminal, or JTAG applications before starting OpenOCD if they might already have the target USB interface open.
