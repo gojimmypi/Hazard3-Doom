@@ -8,7 +8,11 @@ module CC_CFG_CTRL(
 endmodule
 
 module tb_ulx5m_cfg_probe;
+    `ifdef ULX5M_CFG_PROBE_DEST_RESET_RECONFIG
+    localparam integer SIZE = 3033;
+`else
     localparam integer SIZE = 3026;
+`endif
     reg clk25 = 0;
     always #20 clk25 = ~clk25;
     reg btn3_n = 0;
@@ -25,7 +29,13 @@ module tb_ulx5m_cfg_probe;
         .clk25(clk25), .btn3_n(btn3_n), .led_n(led_n)
     );
 
+`ifdef ULX5M_CFG_PROBE_DEST_RESET_RECONFIG
+    initial $readmemh("build-ulx5m-gs/cfg-probe-dest-reset-reconfig/walking-led-reset-reconfig.hex", expected);
+`elsif ULX5M_CFG_PROBE_DEST_RECONFIG
+    initial $readmemh("build-ulx5m-gs/cfg-probe-dest-reconfig/walking-led-reconfig.hex", expected);
+`else
     initial $readmemh("build-ulx5m-gs/cfg-probe/walking-led.hex", expected);
+`endif
 
     always @(posedge clk25) begin
         if (dut.en) begin
@@ -53,7 +63,7 @@ module tb_ulx5m_cfg_probe;
             if (accepted != SIZE || tail_cycles < 8)
                 $fatal(1, "Incomplete stream or EN tail: bytes=%0d tail=%0d",
                        accepted, tail_cycles);
-            $display("[PASS] 3026 exact configuration bytes, EN/VALID lead/gaps/tail");
+            $display("[PASS] %0d exact configuration bytes, EN/VALID lead/gaps/tail", SIZE);
             $display("[NOTE] CFG primitive stub; no physical reconfiguration occurred");
             $finish;
         end

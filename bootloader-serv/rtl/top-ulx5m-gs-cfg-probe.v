@@ -12,12 +12,22 @@ module top_ulx5m_gs_cfg_probe #(
     input wire btn3_n,
     output wire [7:0] led_n
 );
+    `ifdef ULX5M_CFG_PROBE_DEST_RESET_RECONFIG
+    localparam integer IMAGE_BYTES = 3033;
+`else
     localparam integer IMAGE_BYTES = 3026;
+`endif
     localparam [2:0] WAIT_BUTTON = 0, LEAD = 1, FETCH = 2,
                      GAP = 3, PULSE = 4, ADVANCE = 5,
                      TAIL = 6, FINISHED = 7;
     reg [7:0] image_rom [0:IMAGE_BYTES-1];
+`ifdef ULX5M_CFG_PROBE_DEST_RESET_RECONFIG
+    initial $readmemh("build-ulx5m-gs/cfg-probe-dest-reset-reconfig/walking-led-reset-reconfig.hex", image_rom);
+`elsif ULX5M_CFG_PROBE_DEST_RECONFIG
+    initial $readmemh("build-ulx5m-gs/cfg-probe-dest-reconfig/walking-led-reconfig.hex", image_rom);
+`else
     initial $readmemh("build-ulx5m-gs/cfg-probe/walking-led.hex", image_rom);
+`endif
 
     (* async_reg = "true" *) reg btn3_meta = 1'b1;
     (* async_reg = "true" *) reg btn3_sync = 1'b1;

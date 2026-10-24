@@ -8,7 +8,11 @@
 #define ULX5M_HW_FINISH_REQ 0x5eu
 #define ULX5M_HW_ARM_BYTES  16u
 #define ULX5M_HW_STATUS_BYTES 24u
-#ifdef ULX5M_FLASH_HW_QUAD_TEST
+#if defined(ULX5M_FLASH_HW_NATIVE_SLOT_TEST)
+/* Separate SRAM-only profile; cannot be mistaken for FWT3. */
+#define ULX5M_HW_MAX_BYTES 4096u
+#define ULX5M_HW_ARM_TOKEN  0xc01d2041u
+#elif defined(ULX5M_FLASH_HW_QUAD_TEST)
 #define ULX5M_HW_MAX_BYTES 16384u
 #define ULX5M_HW_ARM_TOKEN  0xc01d2028u
 #elif defined(ULX5M_FLASH_HW_MULTI_TEST)

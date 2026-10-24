@@ -28,7 +28,7 @@ class Btn2DfuIsolation(unittest.TestCase):
         self.assertRegex(
             TOP,
             r"`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT\s+"
-            r"wire usb_core_reset = fw_reset \| ~dfu_enable;\s+"
+            r"wire usb_core_reset = fw_reset \| ~dfu_selected;\s+"
             r"`else\s+wire usb_core_reset = fw_reset;\s+`endif",
         )
         self.assertIn(".rst(usb_core_reset)", TOP)

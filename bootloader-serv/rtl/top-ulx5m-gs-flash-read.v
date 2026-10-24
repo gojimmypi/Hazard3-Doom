@@ -192,9 +192,6 @@ module top_ulx5m_gs_flash_read (
         .RAM_AW(RAM_AW), .WB_N(WB_N),
         .WB_DW(WB_DW), .WB_AW(WB_AW), .WB_AI(2),
         .WB_REG(4), .BRAM_REG(1)
-`ifdef ULX5M_ENABLE_CFG_STREAM
-        , .WB_DECODE_RDATA(1)
-`endif
     ) bridge_i (
         .pb_addr(mem_addr), .pb_rdata(bridge_rdata),
         .pb_wdata(mem_wdata), .pb_wstrb(mem_wstrb),
@@ -211,10 +208,11 @@ module top_ulx5m_gs_flash_read (
     // Firmware is compiled into this word-addressed RAM image before
     // GateMate synthesis. No ECP5 ecpbram patching is needed.
 `ifdef ULX5M_USE_SERV
-`ifdef ULX5M_SERV_CFG_HANDOFF_OFFLINE
-    localparam FW_IMAGE = "build-ulx5m-gs/normal-boot-cfg-offline/fw_ulx5m_flash_read.hex";
-`elsif ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
+`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
     localparam FW_IMAGE = "build-ulx5m-gs/normal-boot/fw_ulx5m_flash_read.hex";
+`elsif ULX5M_SERV_DFU_HW_NATIVE_TEST
+    // Volatile BTN2-gated native application-sector test at 0x201000.
+    localparam FW_IMAGE = "build-ulx5m-gs/dfu-hw-native/fw_ulx5m_flash_read.hex";
 `elsif ULX5M_SERV_DFU_HW_QUAD_TEST
     // Volatile, explicitly armed four-sector test. NO boot selection.
     localparam FW_IMAGE = "build-ulx5m-gs/dfu-hw-quad/fw_ulx5m_flash_read.hex";
@@ -242,13 +240,6 @@ module top_ulx5m_gs_flash_read (
         .we(bram_we), .clk(clk48)
     );
 
-    // Prevent the latched boot-mode readback from contaminating later
-    // Wishbone reads (the bridge ORs all peripheral read-data buses).
-`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
-    wire [31:0] misc_rdata;
-    assign wb_rdata[0] = wb_cyc[0] ? misc_rdata : 32'h00000000;
-`endif
-
     // Peripheral 0: minimal LED/button register block, without ECP5 pads.
     soc_ulx5m_misc misc_i (
         .led_n(fw_led_n), .btn_n(btn_n), .locked(locked),
@@ -256,12 +247,7 @@ module top_ulx5m_gs_flash_read (
         .mode_valid(mode_valid), .dfu_selected(dfu_selected),
 `endif
         .bus_addr(wb_addr[3:0]), .bus_wdata(wb_wdata),
-`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
-        .bus_rdata(misc_rdata),
-`else
-        .bus_rdata(wb_rdata[0]),
-`endif
-        .bus_cyc(wb_cyc[0]),
+        .bus_rdata(wb_rdata[0]), .bus_cyc(wb_cyc[0]),
         .bus_ack(wb_ack[0]), .bus_we(wb_we),
         .clk(clk48), .rst(fw_reset)
     );
@@ -281,7 +267,7 @@ module top_ulx5m_gs_flash_read (
     wire ep_tx_we, ep_rx_re;
     wire usb_attach;
 `ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
-    wire usb_core_reset = fw_reset | ~dfu_enable;
+    wire usb_core_reset = fw_reset | ~dfu_selected;
 `else
     wire usb_core_reset = fw_reset;
 `endif

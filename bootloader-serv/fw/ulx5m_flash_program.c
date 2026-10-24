@@ -92,7 +92,10 @@ ulx5m_flash_program_begin(struct ulx5m_flash_program *s,
     if (!size || size > ULX5M_FLASH_CANDIDATE_BYTES)
         return fail(s, ULX5M_PROGRAM_RANGE);
 #ifdef ULX5M_FLASH_HW_TEST
-#ifdef ULX5M_FLASH_HW_QUAD_TEST
+#ifdef ULX5M_FLASH_HW_NATIVE_SLOT_TEST
+    if (size > ULX5M_FLASH_ERASE_BYTES)
+        return fail(s, ULX5M_PROGRAM_RANGE);
+#elif defined(ULX5M_FLASH_HW_QUAD_TEST)
     if (size > 4u * ULX5M_FLASH_ERASE_BYTES)
         return fail(s, ULX5M_PROGRAM_RANGE);
 #elif defined(ULX5M_FLASH_HW_MULTI_TEST)

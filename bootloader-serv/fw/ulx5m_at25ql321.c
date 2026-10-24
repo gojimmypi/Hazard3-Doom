@@ -173,7 +173,9 @@ static enum ulx5m_at25ql321_result candidate_range(
         len > ULX5M_FLASH_BYTES - address)
         return ULX5M_AT25_RANGE;
 #ifdef ULX5M_FLASH_HW_TEST
-#ifdef ULX5M_FLASH_HW_QUAD_TEST
+#ifdef ULX5M_FLASH_HW_NATIVE_SLOT_TEST
+    const unsigned allowed = 4096u;
+#elif defined(ULX5M_FLASH_HW_QUAD_TEST)
     const unsigned allowed = 16384u;
 #elif defined(ULX5M_FLASH_HW_MULTI_TEST)
     const unsigned allowed = 8192u;

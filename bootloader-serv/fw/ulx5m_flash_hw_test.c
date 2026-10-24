@@ -13,7 +13,8 @@
 #if !defined(ULX5M_FLASH_HW_TEST) || !defined(ULX5M_DFU_HW_TEST_ONLY)
 #error "Hardware writer is available only in opt-in experimental firmware"
 #endif
-#if defined(ULX5M_FLASH_HW_QUAD_TEST) && !defined(ULX5M_DFU_HW_QUAD_TEST_ONLY)
+#if defined(ULX5M_FLASH_HW_QUAD_TEST) && \
+    !defined(ULX5M_DFU_HW_QUAD_TEST_ONLY) && !defined(ULX5M_DFU_HW_NATIVE_TEST_ONLY)
 #error "Four-sector writer requires its isolated experimental profile"
 #endif
 #if defined(ULX5M_FLASH_HW_MULTI_TEST) && !defined(ULX5M_DFU_HW_MULTI_TEST_ONLY)
@@ -21,6 +22,16 @@
 #endif
 #if defined(ULX5M_FLASH_HW_MULTI_TEST) && defined(ULX5M_FLASH_HW_QUAD_TEST)
 #error "Four-sector and two-sector profiles are mutually exclusive"
+#endif
+#ifdef ULX5M_FLASH_HW_NATIVE_SLOT_TEST
+#if !defined(ULX5M_DFU_HW_NATIVE_TEST_ONLY) || \
+    !defined(ULX5M_FLASH_HW_QUAD_TEST) || defined(ULX5M_DFU_HW_QUAD_TEST_ONLY)
+#error "Native slot hardware profile must be isolated from FWT3"
+#endif
+_Static_assert(ULX5M_FLASH_CANDIDATE_START == 0x00201000u,
+               "Incorrect native program base");
+_Static_assert(ULX5M_AT25QL321_CANDIDATE_START == 0x00201000u,
+               "Incorrect native SPI address");
 #endif
 #if !defined(__riscv) && !defined(ULX5M_FLASH_HW_HOST_TEST)
 #error "Hardware writer host execution requires explicit host mock"
@@ -137,7 +148,9 @@ static bool arm_done(struct usb_xfer *xfer)
         xfer->len != ULX5M_HW_ARM_BYTES ||
         arm_buffer[0] != 'U' || arm_buffer[1] != '5' ||
         arm_buffer[2] != 'W' ||
-#ifdef ULX5M_FLASH_HW_QUAD_TEST
+#ifdef ULX5M_FLASH_HW_NATIVE_SLOT_TEST
+        arm_buffer[3] != 'N' ||
+#elif defined(ULX5M_FLASH_HW_QUAD_TEST)
         arm_buffer[3] != '3' ||
 #elif defined(ULX5M_FLASH_HW_MULTI_TEST)
         arm_buffer[3] != '2' ||
@@ -178,7 +191,9 @@ enum usb_fnd_resp ulx5m_flash_hw_test_req(struct usb_ctrl_req *req,
             return USB_FND_ERROR;
         xfer->data[0] = 'F'; xfer->data[1] = 'W';
         xfer->data[2] = 'T';
-#ifdef ULX5M_FLASH_HW_QUAD_TEST
+#ifdef ULX5M_FLASH_HW_NATIVE_SLOT_TEST
+        xfer->data[3] = 'N';
+#elif defined(ULX5M_FLASH_HW_QUAD_TEST)
         xfer->data[3] = '3';
 #elif defined(ULX5M_FLASH_HW_MULTI_TEST)
         xfer->data[3] = '2';

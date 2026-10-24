@@ -1,0 +1,188 @@
+# Hazard3-Doom Inventory
+
+This manifest identifies every Git-tracked file under `bootloader-serv/tests/`,
+except the generated `INVENTORY.*` manifest files themselves.
+Ignored and untracked local files are intentionally not inventoried.
+
+It is intended to support integrity verification, reproducibility, release
+auditing, and exact identification of tracked artifacts. A hash identifies
+the bytes in a file; it does not by itself establish provenance or intent.
+
+Project version: v0.2.1
+
+Git source: current index (`git ls-files --cached`)
+
+Files inventoried: 159
+
+Total bytes: 854454
+
+## Verification
+
+```bash
+(cd bootloader-serv/tests && sha256sum -c INVENTORY.sha256)
+```
+
+The `component` column is an identification aid. Any entry marked `REVIEW`
+should be identified before a public release.
+
+| Path | Bytes | SHA-256 | Component | Kind |
+|---|---:|---|---|---|
+| `analyze-ulx5m-gmpack-trailers.py` | 8919 | `8ba5e98f63e4211eefe5e362762b4572006fdfe0dc9953b186d3af8a7f0fe85f` | REVIEW | File |
+| `analyze-ulx5m-serv-flash-backup.py` | 8402 | `f242503da3da349e1ba4021d730e540a5fc1d655c9c4679977d1c4cc5dbee404` | REVIEW | File |
+| `audit-ulx5m-cfg-hardware-evidence.py` | 7018 | `9e7b0e263db3cc3a13af79a975707544b2d7b9d6fcbdff62d216c032f60d0e8c` | REVIEW | File |
+| `audit-ulx5m-conditional-spi-jump.py` | 8623 | `6c190265da248b40d38486bf1c9748cdeec9cd0065e7f889a09aa0783da437d2` | REVIEW | File |
+| `audit-ulx5m-internal-cfg-stream.py` | 7486 | `32a315e25920918e0b65d66f5aa2b541267d4d0c575dd15e293ade3ea33e563c` | REVIEW | File |
+| `audit-ulx5m-serv-boot-recovery.py` | 5745 | `2ce4ff2b7332e44b16ef40e665eb310c4991a9283f3b61bc0834f6f8b76bb784` | REVIEW | File |
+| `audit-ulx5m-spi-boot-layout.py` | 11805 | `ffe4fb92fd6b297aa64be6670914de46cda27b089fd00addd5f3df13dbaed196` | REVIEW | File |
+| `audit-ulx5m-spi-multiboot-commands.py` | 9053 | `66931920fe7b157f11d19ab1c5d8db6c5802efee52b5881f5ded692daa346f37` | REVIEW | File |
+| `audit-ulx5m-spi-recovery-gates.py` | 5873 | `72ce5e46429741276c8c4b6e4af336c0e83947c4e82e5e0a6181b4826ff159a1` | REVIEW | File |
+| `backup-ulx5m-serv-flash.py` | 11225 | `be83a1fe81284f2db4dedd50ed8765180e54823c19d87aed74a8daf0baaab0dc` | REVIEW | File |
+| `capture-ulx5m-serv-ep0-raw.py` | 6347 | `98663a5b4fc132aeb59397658682859da58049f7f2f987c44034662c84046544` | REVIEW | File |
+| `check-ulx5m-btn2-modes.py` | 7762 | `7934272079430c5736af1f97099b8eae847a902d603eb6ee7e4e1996ce2a783c` | REVIEW | File |
+| `check-ulx5m-gs-flash-jedec.py` | 1740 | `50b4653b18a870581fc3b600588f9ef10d7984b59e9aec6876fd1d05f561efb5` | REVIEW | File |
+| `check-ulx5m-gs-flash-read.py` | 3099 | `89c691c2fce5e4baed124554c8f284e0fa810c0a883b7b7adecdb1e12c840bee` | REVIEW | File |
+| `check-ulx5m-gs-port.py` | 2977 | `ec1e3b196f201ee093abcd59c7cbe01f9c949eccfac31f9ce6c043c36ca20974` | REVIEW | File |
+| `check-ulx5m-gs-probe.py` | 6472 | `b6f0de44a6a71e3e01c60b0fe88fcf42504bc3999af45e9434daaa3642db3fa0` | REVIEW | File |
+| `check-ulx5m-gs-serv.py` | 1879 | `803f63629fdb0381a1de274820a684518382b406c061215e482f7a5dccc8321e` | REVIEW | File |
+| `check-ulx5m-gs-usb.py` | 5555 | `9767ac7aef39473404cb06b7a32e1c5d066ff5bdbad1aa8a43de32007dc3f830` | REVIEW | File |
+| `check-ulx5m-serv-dfu-ram.py` | 1972 | `90558bae3c3d405bab7f633179a1e7d67e0bdbb19ea698768783183a89123ce1` | REVIEW | File |
+| `check-ulx5m-serv-epbuf-tx.py` | 3296 | `353717ffc688d54287a38e91ca3004247628786d6effb22cd0850010d301a417` | REVIEW | File |
+| `check-ulx5m-serv-jtag-recovery.py` | 8822 | `a2ebad62b876435752351c09ad9d83e222c8c892f429778f3b9bf3d3ceb41b3c` | REVIEW | File |
+| `check-ulx5m-serv-tx-waveform.py` | 7408 | `154e27db1d7a5d7892ded2d41787c1883ef47c15d43f8aeaf5bf42ae11b2583e` | REVIEW | File |
+| `compare-ulx5m-serv-usb-link.py` | 6237 | `9963b6cd7d2faea39da21e07f680afb3ce8709f0eda3fafdc9815bbb45a67c38` | REVIEW | File |
+| `decode-ulx5m-gmpack-tail-commands.py` | 9236 | `1ac8d4fe4bd92a6fbc83ef500a5566a32cb2ab7b2598e5d9e62d3e86dc61acb7` | REVIEW | File |
+| `diagnose-ulx5m-serv-at25-hw.py` | 4103 | `239f3b2fa60ab52b0deeaee19deb74169d7c72668fd391840f87fc5e3019e2a6` | REVIEW | File |
+| `diagnose-ulx5m-serv-dfu-hw-multi.py` | 9649 | `c03a05faf9471dbbb3e4dc1f54f34d4129343706475b85626df5bde1029f6d3a` | REVIEW | File |
+| `diagnose-ulx5m-serv-dfu-hw-native.py` | 9768 | `187d3a3d6b2f861f513d445cd75a9c30e24bb864f42c062ea19a443bb9a9067a` | REVIEW | File |
+| `diagnose-ulx5m-serv-dfu-hw-quad.py` | 9669 | `5369d121b44f5b9eade9388f2ee5199b6f3cb391381713f46c18754cea0112da` | REVIEW | File |
+| `diagnose-ulx5m-serv-dfu-hw-test.py` | 10152 | `0b86ba2c69b2b155769843ab911662b555b87421235ab6aba438bae7221dc6e5` | REVIEW | File |
+| `diagnose-ulx5m-serv-dfu-stage.py` | 11365 | `c447e7fdf6e459e7d4fa937c4210537b58096ed176d15728fae55f8a31ee8899` | REVIEW | File |
+| `diagnose-ulx5m-serv-dfu-stream.py` | 7109 | `9fff6fdc034ca908189f0f463320e3e179291deb089c0f90843cb226f5059ac1` | REVIEW | File |
+| `diagnose-ulx5m-serv-ep0.py` | 8407 | `c4aea537e4e846f9b604cb61a34ab36e15641a1a80c6f91f481d0ee93200df3a` | REVIEW | File |
+| `inspect-ulx5m-cfg-variants.py` | 7631 | `883724f1f3272a3ac4c7362f9b757b2c76ff9ebbcd744bfc0ae2044449db5196` | REVIEW | File |
+| `inspect-ulx5m-serv-factory-config.py` | 5693 | `552c05445b4d8ec96678662aed2555a1177e7b35edfeab52a08db4584f750618` | REVIEW | File |
+| `inspect-ulx5m-serv-gmunpack.py` | 14392 | `c5ab63645321481e61b97fa5e869023ec05942aba48d0d38a326b8a3f8fdb4b0` | REVIEW | File |
+| `plan-ulx5m-dfu-stage0.py` | 6056 | `21990a7d17e6236bcbbdf780671c57468d3872c63351807c10e93de88bf2d764` | REVIEW | File |
+| `prepare-ulx5m-cfg-probe-reconfig-rom.py` | 4165 | `ebd69a854e0b95047551f49800cb0b2e676bd59db78e38ecf58ea4c0d927525b` | REVIEW | File |
+| `prepare-ulx5m-cfg-probe-reset-reconfig-rom.py` | 4329 | `2db56f7cd876d34a186f2fca691ae3737307ba3e223a1f380f926a3fee0169e2` | REVIEW | File |
+| `prepare-ulx5m-cfg-probe-rom.py` | 1768 | `49625946434f3a3b0ac6bb2425772a3b2af0dc18e8752dcaad5bb4f2170ec503` | REVIEW | File |
+| `prepare-ulx5m-serv-iverilog.py` | 1866 | `71c27860a0e4273e71cc629c2b9f764e5c40c28dbc0fee729c74ac7f513de542` | REVIEW | File |
+| `probe-ulx5m-serv-jtag-mode.py` | 9241 | `0554a59f832c44f63cbeda945a8dc9d73c037c5277a816cc7e005ae47d8b324f` | REVIEW | File |
+| `probe-ulx5m-serv-normal-image.c` | 2149 | `9f14d842a8bb607b0fd74f0d7706fe565201ca355e4899bc4217b15ad536fec7` | REVIEW | File |
+| `qualify-ulx5m-normal-image-integration.py` | 7725 | `6aa98f93ccad3b8c3200b75cf50ea74aa189fab3af55430b9c4e55682045f7f9` | REVIEW | File |
+| `qualify-ulx5m-serv-jtag-write.py` | 14852 | `f446d9f7aa78a6a0ff901cb022b9ef9eeac6ce319fbae833c1341972f2433a3e` | REVIEW | File |
+| `read-ulx5m-flash.py` | 4126 | `f3a2deb4a67132ace05fc7eb121e139d5f960b92876780a9f9065f0a54e8206a` | REVIEW | File |
+| `restore-ulx5m-serv-candidate-multi.py` | 8250 | `50322b879f97014e1ddd4a8b1d460b8fa81162237dd0391bb80343e577af7da6` | REVIEW | File |
+| `restore-ulx5m-serv-candidate-quad.py` | 8275 | `cf9cf4f78ccdec46a7cd7e6aa56f40ca9a5d7cc4d947e147ea584bd7af66c5ff` | REVIEW | File |
+| `restore-ulx5m-serv-candidate-sector.py` | 7261 | `1975d0ff36df8bda0069cc98df9d91fe5bdfa70302e66f6df1150ca401ff2a7c` | REVIEW | File |
+| `stress-ulx5m-serv-ep0.py` | 2634 | `bc864f61e1b9b16dcb3a962f3eb94401257a55a4bccc1b13889165ce8f963aa9` | REVIEW | File |
+| `tb_soc_mem_response_reg.v` | 2963 | `3172818ce4c4a103fd24fb516cc10e8d4025798c0bd695c2eac40f1db824941f` | REVIEW | File |
+| `tb_ulx5m_btn2_boot_select.v` | 2110 | `df87d910d7da6b7e3b3289e325d57efc2c4520d6f0274e21cc74cb5060ae59c8` | REVIEW | File |
+| `tb_ulx5m_btn2_dfu_asyncreset.v` | 3516 | `8d4a387aab4f5a8e4b93c34c6e8fc3c11f4dd389fa81d4ddd5db980dd53ec710` | REVIEW | File |
+| `tb_ulx5m_btn2_dfu_gate.v` | 2594 | `00d7ba5205927b6c9a739908504a10c992f274aa664ef7315a53ddcd526c79c5` | REVIEW | File |
+| `tb_ulx5m_btn2_dfu_regreset.v` | 3449 | `e6b26ac2b36bf9b4d91dd4f0630596238dc054a0e7586248ab4393726ce96d28` | REVIEW | File |
+| `tb_ulx5m_button_polarity.v` | 1614 | `e2aaaee4b8d719aa39e23f2329dc4ad27dced2461fcf3a7d48802a7e943863cc` | REVIEW | File |
+| `tb_ulx5m_cfg_golden_stream.v` | 4236 | `b855c2f78c91c5672873a879c9ccc7775bbb5ca225a6b541bc2e166dea83a4b0` | REVIEW | File |
+| `tb_ulx5m_cfg_handoff_model.v` | 9742 | `77a6505938bf8e8d5c41fc109a9c8e6b3a628d6663c450f88e3bbd6c6a637f6f` | REVIEW | File |
+| `tb_ulx5m_cfg_probe.v` | 3462 | `7588cbe0cc49deaded7a84dd2ef96f41ecfd034137c9809547acacef06280712` | REVIEW | File |
+| `tb_ulx5m_cfg_stream_payload.v` | 6948 | `8e202d6e9c764068ab0c980ecd43603a95b503a113b43dff4ae49021df54cef9` | REVIEW | File |
+| `tb_ulx5m_cfg_stream_wb.v` | 6591 | `71707a9de8421b4ce37153ae969b2e804a3fe6ea9d5e560412573dcfb5b68a0c` | REVIEW | File |
+| `tb_ulx5m_flash_bram_pipe.v` | 7701 | `7e8bc93231a8fcf9bc97c529c24b5295785964c13b5a27b6070e34a4237346e5` | REVIEW | File |
+| `tb_ulx5m_flash_jedec.v` | 2895 | `bf18b26214e2e9286eb48c93b8051484d0aa16161e6741139dbdc97bbcb6d222` | REVIEW | File |
+| `tb_ulx5m_normal_boot_reset.v` | 1779 | `8dfd1c56369638c2ca3d0252460ae1ce9a0dd8335b7f3352e1d0b3d7e3d746e3` | REVIEW | File |
+| `tb_ulx5m_normal_boot_usb_gate.v` | 2433 | `ea9cd89177875fdcdc64fb5f7900054d1d80ed056bf29f03db419371a566213d` | REVIEW | File |
+| `tb_ulx5m_normal_boot_wb_decode.v` | 2741 | `610442148169f8f34a2a93a145916b9f5794a49550531fc58df094fd079166e4` | REVIEW | File |
+| `tb_ulx5m_normal_boot_wb_isolation.v` | 2116 | `c65f64450dc1ad812d16a819d0218a5805f1251c31b9c73c00f19f7b3326b219` | REVIEW | File |
+| `tb_ulx5m_probe_bus.v` | 6785 | `8a49f2499c802724abcbe93c76fd55e6c50269df1180279f48beda53858d7677` | REVIEW | File |
+| `tb_ulx5m_serv_ep0_ack_path.v` | 9035 | `a64c546e5d15b92f114a1f666fe96b84409066dad1a508c919a1552d81c512aa` | REVIEW | File |
+| `tb_ulx5m_serv_ep0_trace_csr.v` | 6461 | `3156300fcaf71d0ef4cbb4bad91854727a8f7b686d306be770afd5aa9b0d1600` | REVIEW | File |
+| `tb_ulx5m_serv_epbuf_tx.v` | 8591 | `7f2bbdebb5ffb27f45dfb1ec33484aa609c27b425a15a21fc8e7a722e43bb2f3` | REVIEW | File |
+| `tb_ulx5m_serv_firmware_boot.v` | 8020 | `cc05fb520b1c20fb1b8ff815b3e42df7505a97a8f4e38f96c7dd3210f32476a2` | REVIEW | File |
+| `tb_ulx5m_serv_flash_bram_pipe.v` | 7085 | `73e42278f1526050606bebd8068025e8f04d980a4f2df86fb8f23786c107b84b` | REVIEW | File |
+| `tb_ulx5m_serv_raw_capture.v` | 2498 | `69d4938d0df2ebc52e6b5824138e5ba0c4c1583a35a0c3f3666b12ee37e1dce8` | REVIEW | File |
+| `tb_ulx5m_serv_tx_packet.v` | 4437 | `3c5560a8df8752f18d4e1023044a98402d51d7c395c567baf24bd0bf5e620545` | REVIEW | File |
+| `tb_ulx5m_serv_usb_timeout.v` | 3586 | `d148c3482c3f66fb43226026e2b3934bd835efdcfa2439ef16c63aefa512bc49` | REVIEW | File |
+| `test-analyze-ulx5m-gmpack-trailers.py` | 7737 | `104a3d740661c12b4b36a66e3cc933d860e3d573ec37fbfb13b66bb5c669211d` | REVIEW | File |
+| `test-audit-ulx5m-cfg-hardware-evidence.py` | 5292 | `306b3d5066e14dd25f3fe84ecd280d7b10bea006f5f87238fc50a1e10c2cbb1a` | REVIEW | File |
+| `test-audit-ulx5m-conditional-spi-jump.py` | 7037 | `57290062dd2dd431d52ceeb98e459cb92aa8474dd2e3dce5c7986df32360b9fa` | REVIEW | File |
+| `test-audit-ulx5m-internal-cfg-stream.py` | 4476 | `4ff0eb3375e6d70ac3c55a7305fc21c7a9f807036839662e39fc4485c216a387` | REVIEW | File |
+| `test-audit-ulx5m-serv-boot-recovery.py` | 6853 | `ab6f44ecd12eba085ea15b819e944da18310165a373ab46b88db63057d933ad9` | REVIEW | File |
+| `test-audit-ulx5m-spi-boot-layout.py` | 7254 | `51bd55baab3bd9878f6224c7e5c27faac4ec5337f816b3d09caf68059869c4fa` | REVIEW | File |
+| `test-audit-ulx5m-spi-multiboot-commands.py` | 6490 | `e0ebfd3f802e0db6fcf5409549cf930bdff73abe809e0134280bd399164684b1` | REVIEW | File |
+| `test-check-ulx5m-btn2-modes.py` | 3983 | `c87d4cbafe2272b1bf21e73cf752de1e22a63f79ceafbf3e654faf0c8cdb0db2` | REVIEW | File |
+| `test-decode-ulx5m-gmpack-tail-commands.py` | 8004 | `047d94e36801e5687ba8ee681c1e5b008ef17e89fb76cb65b52243330d89347b` | REVIEW | File |
+| `test-inspect-ulx5m-cfg-variants.py` | 6680 | `83fd72701b4fd3c8c31a4d745cc18a2001e6008494d928775de743ff892c50b0` | REVIEW | File |
+| `test-plan-ulx5m-dfu-stage0.py` | 3169 | `25694a38820ddea8c84a5197b8c50671fadb441ab9ca855c08e92a46b366559e` | REVIEW | File |
+| `test-prepare-ulx5m-cfg-probe-reconfig-rom.py` | 4827 | `3326875d6fd5b66f43300cde3e8a0eaa276be970ac897fbeea7c7eec74e0435b` | REVIEW | File |
+| `test-prepare-ulx5m-cfg-probe-reset-reconfig-rom.py` | 4346 | `3406228cbaaa1ffcc05603d42e88e5b8ed593f8a2d48c8993aac3c3c4dbf204e` | REVIEW | File |
+| `test-prepare-ulx5m-cfg-probe-rom.py` | 2115 | `28afbd83c85300d97aa20ec280f62bd86f4e181e29becc5503855723e9c56380` | REVIEW | File |
+| `test-qualify-ulx5m-normal-image-integration.py` | 3397 | `3244755bf1d2cacb95a5d7a92884b9b203b9a424e25880b017713f2066c5651b` | REVIEW | File |
+| `test-ulx5m-cfg-golden-stream.py` | 2348 | `94a9f0787970c08edf3b6969571464a36dd6bb20d14ac19620ebd7af15955697` | REVIEW | File |
+| `test-ulx5m-cfg-handoff-policy.py` | 1960 | `6a1fe18e9d29ed31ed644b072aa47f9c3d7bacfca941ba785b17e0ce69a3f94e` | REVIEW | File |
+| `test-ulx5m-cfg-stream-driver.py` | 2526 | `5df484f39c1393cdc29d764a4c936a37d5704dd2870b030603579571cfafc0fb` | REVIEW | File |
+| `test-ulx5m-cfg-stream-payload.py` | 2784 | `f2f54fcf7313d004fd014831e0ca75519c48dc887e7f4edc4c8faf307a57627c` | REVIEW | File |
+| `test-ulx5m-dfu-native-profile.py` | 5195 | `a6a20868e380ca456a94354138d71552017b6d5ca61107d7222ff80cc792ca33` | REVIEW | File |
+| `test-ulx5m-dfu-stage.c` | 4546 | `2412d5ab304a85ba6762bb1b955b493eea0a30ab50215583e2230defc0b75e08` | REVIEW | File |
+| `test-ulx5m-dfu-stream.c` | 4254 | `88c904d229f3cb809e4e7da204a00512180fd0fb65d98e43ab4a9f26c9d67569` | REVIEW | File |
+| `test-ulx5m-gmpack-offline-driver.py` | 6856 | `37926267854ceb17531bd6d8ba4988a5cef7ed1d05104084a984266cef995de0` | REVIEW | File |
+| `test-ulx5m-normal-boot-build.py` | 2290 | `bf8b92d1e6c5ec868def5c26abc6f9b644a5ae29e8eb2be8f328bb4e61c3513e` | REVIEW | File |
+| `test-ulx5m-normal-boot-integration.c` | 4994 | `7a911b397a62e07b3e82da368b77cf32c9f938e6c2edea596ba27b8772e8c062` | REVIEW | File |
+| `test-ulx5m-normal-boot-wb-isolation.py` | 2397 | `049393e4183e003f6925fa976cba44ef3d881b61ef6ccfcf061b2a5bb00ea424` | REVIEW | File |
+| `test-ulx5m-normal-handoff-e2e.c` | 4906 | `4615aba97f404cb2212b81bc3fcbfd0ee548bf4235efd09128dce5c40fec9e6f` | REVIEW | File |
+| `test-ulx5m-normal-handoff-e2e.py` | 3985 | `65abd49db866b31ed089991a5659bc63718ce7976d6b42365000696ae29fdb46` | REVIEW | File |
+| `test-ulx5m-normal-handoff-offline.py` | 3469 | `be3dc47ec82c33bacc21902e4e142af99704f5f1e65954189307372635273d4f` | REVIEW | File |
+| `test-ulx5m-normal-handoff-payload.c` | 5137 | `11ce3c6b0fd7f397399b039a3608a3ec659f81de5f50989873c043cba1c2aa54` | REVIEW | File |
+| `test-ulx5m-normal-handoff-payload.py` | 1678 | `3d97eafcaf39bf74845b3a50d14fed482e3a4f9657c7a50d6d30b0ed412c9d7f` | REVIEW | File |
+| `test-ulx5m-serv-at25-hw-dispatch.c` | 3223 | `8330553cb9195b9d99f1810563ded6837d77c9eda83b05017ea326bc48842efa` | REVIEW | File |
+| `test-ulx5m-serv-at25-hw-host.py` | 2842 | `98b378b828b3bbd6a156d5e4537c39a1efbcf27baac3b52154f10b92eab3082f` | REVIEW | File |
+| `test-ulx5m-serv-at25-hw.c` | 3633 | `e7ddf096faa67839eda212d74eadb121d0491bacd30af93a84328ce4d8349699` | REVIEW | File |
+| `test-ulx5m-serv-at25-mmio-chain.c` | 7510 | `ba9edde421f872118824bbbf8310f04b90f371aee9836967338975e50ca412b3` | REVIEW | File |
+| `test-ulx5m-serv-at25-mmio-guards.py` | 1371 | `34b15e8083496e78c64dabb47675c309e39c7b8178d0a27130f7b4829332c5c1` | REVIEW | File |
+| `test-ulx5m-serv-at25ql321-chain.c` | 4566 | `9817c04c9d672daa43dc2bc3098fd1538b30ac1019c79b2533978dc2e6e414b3` | REVIEW | File |
+| `test-ulx5m-serv-at25ql321-protected.c` | 1062 | `929ce293f3db9e0e9a2cf9d68f2d11ef4dea15f955c3745570b5e12f432ba918` | REVIEW | File |
+| `test-ulx5m-serv-at25ql321.c` | 3562 | `b4019f4ac6d43b63c19980da2ed15c6259614602f161094b4bfec5627914408b` | REVIEW | File |
+| `test-ulx5m-serv-btn2-asyncreset-guards.py` | 2824 | `209ba29963ff6f0468519b43123df092c9c5109711d7f0e73490a27eb5b4317c` | REVIEW | File |
+| `test-ulx5m-serv-btn2-dfu-gate-guards.py` | 3376 | `66baae308ad1fa26712e1f7eacb01f67a4d899c8492bb3e0dc9aa5acd8116aed` | REVIEW | File |
+| `test-ulx5m-serv-btn2-regreset-guards.py` | 2490 | `6330db2b9cc755eb2882a87be3e789208a353303a4486bc7b781e4b9a8abf899` | REVIEW | File |
+| `test-ulx5m-serv-dfu-ep0.c` | 6762 | `ac5850b04f17493ace2c94e1ce18f1c8fbe84c0667dc4893f502a7200ff69bc4` | REVIEW | File |
+| `test-ulx5m-serv-dfu-host.py` | 4599 | `4e1235ad5b47b96ffdd6c44ca41b997331da0f9037b5a60ba6a208a02f21115a` | REVIEW | File |
+| `test-ulx5m-serv-dfu-hw-guards.py` | 1817 | `dec33da056ca47c11e3a2dbf51b7cb870532190c0a3d3f003093d9c5d42600e4` | REVIEW | File |
+| `test-ulx5m-serv-dfu-hw-host.py` | 11840 | `faf2405665413439895305e8d7fa6e6e6d7c1cbcd1e48d582a5f91ffe9797a09` | REVIEW | File |
+| `test-ulx5m-serv-dfu-hw-multi-guards.py` | 1853 | `0c2191340e7bc3d1f5edd51498e43918d562917a72480ccccd4b697035cdd690` | REVIEW | File |
+| `test-ulx5m-serv-dfu-hw-multi-host.py` | 10391 | `ad6ce6eeb6f1236ecd197fd5392048674bd17e58c673bdaecbf33eb543eef699` | REVIEW | File |
+| `test-ulx5m-serv-dfu-hw-multi.c` | 4558 | `36d5339f1d825b6df3f3c0cbf80335e21e1d126362636acfef093cc5f9606ac1` | REVIEW | File |
+| `test-ulx5m-serv-dfu-hw-native.c` | 5692 | `666712c222a0a4cd6090371f1d1756bc8d682619c0d845a927e156d71599b135` | REVIEW | File |
+| `test-ulx5m-serv-dfu-hw-quad-guards.py` | 1850 | `cfab0df128779bcebcfb68dff6aef34144dc7ee22e6ce50f27051df01c5bbde4` | REVIEW | File |
+| `test-ulx5m-serv-dfu-hw-quad-host.py` | 10428 | `d90ba444272c4a52403f380ca7a8fdd592bb4d3ee212e0b3bc9dc41db7726af6` | REVIEW | File |
+| `test-ulx5m-serv-dfu-hw-quad.c` | 5147 | `bc3b5d5a1c2c984aa7f8d76f372523847dfa0d7ae59e3d16f7ebe73437efbe11` | REVIEW | File |
+| `test-ulx5m-serv-dfu-hw-test.c` | 6131 | `ab8ce204c09dc4b6b4b8c632f5d958db663c8bd52a25cef5c7e937b33ffb74a7` | REVIEW | File |
+| `test-ulx5m-serv-dfu-stream-dispatch.c` | 1459 | `571e227b902d52db50af69163320c903d4b55fd8586b9bf19260572317de3f94` | REVIEW | File |
+| `test-ulx5m-serv-dfu-stream-ep0.c` | 6790 | `8880f0b28bf05676a77e3e511252427fed0175b1ac91323fc7e511ce407379ff` | REVIEW | File |
+| `test-ulx5m-serv-dfu-stream-host.py` | 4161 | `99673ee79d48808815068b86f74a833f1087f99440f1a19eccb3e9b00496a217` | REVIEW | File |
+| `test-ulx5m-serv-dfu-to-flash-emulator.c` | 4734 | `03d56b2cc94313175a269ea2b3bee711007aa9d56a907db3c93ced6d2c6474a0` | REVIEW | File |
+| `test-ulx5m-serv-ep0-diag.py` | 7830 | `f733ac48025daa5ead75b9571cce91d3a9e30087047ad63f16dc7558ba1547a7` | REVIEW | File |
+| `test-ulx5m-serv-ep0-trace-decoder.py` | 2099 | `82bbb06b62b3315f32d36efbbad83b0066b11f38f62ecf9de986df191421cde7` | REVIEW | File |
+| `test-ulx5m-serv-factory-config.py` | 3603 | `d663d6592ca1be3ed3b85f2449c8b39ec8ba2529e5d25c5ecee1bfee9b12ab2b` | REVIEW | File |
+| `test-ulx5m-serv-flash-analysis.py` | 6959 | `ee4c27bad8e5eee63102e250e9996ccd73d34899d5d9ae1b6da7b8aaa3ac7d45` | REVIEW | File |
+| `test-ulx5m-serv-flash-backup.py` | 7054 | `49ac25eb738f60f27a3b4915f28f54c689022752cce047de6da181b778b00f51` | REVIEW | File |
+| `test-ulx5m-serv-flash-layout-ep0.c` | 1598 | `f759df5068d48da9e706bf6f2006874d3300ae6b1b5c3a02f8141dc4ed736baf` | REVIEW | File |
+| `test-ulx5m-serv-flash-layout-host.py` | 1976 | `e258910acff8aa84324ef8389cf829b3907fa6108f4d6daa435bbbc68faff58b` | REVIEW | File |
+| `test-ulx5m-serv-flash-layout.c` | 3060 | `c9dd6f96479e3b057d1b753c0285e83bf9ca06ceaf1eb270630aafff5cc51a7b` | REVIEW | File |
+| `test-ulx5m-serv-flash-program-protected.c` | 1606 | `69d6dc7de59ab1690798a977aebaea51e1d97237e0015e698301f346bd2d5163` | REVIEW | File |
+| `test-ulx5m-serv-flash-program.c` | 8051 | `e3748a655a370e78ed666dd1e66e77a49e5fc3e7c59b7853d01ca7859f4e41c9` | REVIEW | File |
+| `test-ulx5m-serv-gmunpack.py` | 14629 | `e9858371457803bb83b2eff155adae4d2523c8157e15d3e43c94057fa09f0d7b` | REVIEW | File |
+| `test-ulx5m-serv-jtag-mode.py` | 10126 | `96b973e06d3333ae0aa89efdaabb472d7ceb4f609e0bba977c39f09f0357182d` | REVIEW | File |
+| `test-ulx5m-serv-jtag-recovery.py` | 7766 | `74ecdeb34d02a6ec879db81a7642a1dbe77cb2a18d735bb026d8dbcf033e7710` | REVIEW | File |
+| `test-ulx5m-serv-jtag-write.py` | 7818 | `a651e6e2b796673ae47fa1471b202491ac30989e39e5e7b133b3761303babab9` | REVIEW | File |
+| `test-ulx5m-serv-normal-image.c` | 5626 | `5c8eaeae62737ab2c1811e832d18d07bdb17d2c88e4b15b81a89273bf81727d6` | REVIEW | File |
+| `test-ulx5m-serv-normal-image.py` | 2673 | `89e4bd74eab6a206d844625025e81f4cca3063105e53f197dfe0b0c377bd16f8` | REVIEW | File |
+| `test-ulx5m-serv-usb-copy.py` | 2255 | `f30984dee356461eb337ea12f0369cd7cc7414db434f2ceabbfa9e104b348476` | REVIEW | File |
+| `test-ulx5m-serv-usb-timeout.py` | 2078 | `3e61d2adb37486c9cca93b771f48b34485275de96833d733d1359d05760647ec` | REVIEW | File |
+| `test-ulx5m-spi-boot-preflight.c` | 5011 | `59b1b2cc3c92d88e191036cf093d224f71083c2bbbe4e7218949a050015bc1bd` | REVIEW | File |
+| `test-ulx5m-spi-boot-preflight.py` | 2949 | `4b485ebdf02ce100ed2057828ae84fb537a00f25919bc308a85e4e9af3f2411d` | REVIEW | File |
+| `test-ulx5m-spi-native-writer.c` | 7773 | `964b98067418f84a31ef0560d492f060d0c68e27ca23c88e8c64c0bb86d10be9` | REVIEW | File |
+| `test-ulx5m-spi-native-writer.py` | 2940 | `a6b8f768c278808830013f2f1694ac16a930342650da788a8e0375dbdf26cb32` | REVIEW | File |
+| `test-ulx5m-spi-recovery-gates.c` | 3265 | `1f9a5e5b3f127b6dec2294ab2e33a908689fd016524e7759ddc769292a9fdb59` | REVIEW | File |
+| `test-ulx5m-spi-recovery-gates.py` | 4095 | `96b773d3da0c7c6a95d3228cd97798c485ba344030300601f2406d6cc2c10b18` | REVIEW | File |
+| `ulx5m-at25ql321-mock.c` | 4185 | `30ada14a13d6f1306558a729c14bab54e39f7b7628abf6a118f92925937284ae` | REVIEW | File |
+| `ulx5m-at25ql321-mock.h` | 799 | `696efd553b06cd9f6188b7d0d37b86850d788e78657a9ffdde6cfa0205f50aeb` | REVIEW | File |

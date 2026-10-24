@@ -1,9 +1,17 @@
-name: ULX5M-GS BTN2 FWT3 timing sweep
-run-name: BTN2 FWT3 seeds ${{ inputs.seed_first }}-${{ inputs.seed_last }}
+name: ULX5M-GS BTN2 DFU timing sweep
+run-name: BTN2 ${{ inputs.target }} seeds ${{ inputs.seed_first }}-${{ inputs.seed_last }}
 
 on:
   workflow_dispatch:
     inputs:
+      target:
+        description: BTN2 DFU firmware profile (FWT3 four-sector or v41 FWTN native)
+        required: true
+        type: choice
+        default: dfu-hw-quad-btn2
+        options:
+          - dfu-hw-quad-btn2
+          - dfu-hw-native-btn2
       seed_first:
         description: First routing seed
         required: true
@@ -48,7 +56,7 @@ permissions:
   contents: read
 
 env:
-  TARGET: dfu-hw-quad-btn2
+  TARGET: ${{ inputs.target }}
   FIRST: ${{ inputs.seed_first }}
   LAST: ${{ inputs.seed_last }}
   PER_JOB: ${{ inputs.seeds_per_job }}
@@ -60,7 +68,7 @@ env:
 
 jobs:
   prepare:
-    name: Freeze BTN2-gated FWT3 netlist
+    name: Freeze BTN2-gated ${{ inputs.target }} netlist
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     outputs:
@@ -124,19 +132,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          case "$TARGET" in
+            dfu-hw-quad-btn2) makefile=Makefile.ulx5m-gs ;;
+            dfu-hw-native-btn2) makefile=Makefile.ulx5m-native-dfu ;;
+            *) echo "Unsupported BTN2 DFU target: $TARGET" >&2; exit 2 ;;
+          esac
+          design="top_ulx5m_gs_flash_read-serv-${TARGET}"
           yosys --version
-          make -C bootloader-serv -f Makefile.ulx5m-gs \
-            build-ulx5m-gs/top_ulx5m_gs_flash_read-serv-dfu-hw-quad-btn2.json
+          make -C bootloader-serv -f "$makefile" "build-ulx5m-gs/${design}.json"
           mkdir -p frozen
-          cp bootloader-serv/build-ulx5m-gs/top_ulx5m_gs_flash_read-serv-dfu-hw-quad-btn2.json frozen/netlist.json
+          cp "bootloader-serv/build-ulx5m-gs/${design}.json" frozen/netlist.json
           cp bootloader-serv/data/top-ulx5m-gs-flash-read.ccf frozen/constraints.ccf
           cp bootloader-serv/data/top-ulx5m-gs-flash-read.sdc frozen/constraints.sdc
           (cd frozen && sha256sum netlist.json constraints.ccf constraints.sdc > SHA256SUMS)
           {
             printf 'commit=%s\n' "$GITHUB_SHA"
             printf 'target=%s\n' "$TARGET"
-            printf 'design=%s\n' top_ulx5m_gs_flash_read-serv-dfu-hw-quad-btn2
-            printf 'make_target=%s\n' build-ulx5m-gs/top_ulx5m_gs_flash_read-serv-dfu-hw-quad-btn2.json
+            printf 'design=%s\n' "$design"
+            printf 'makefile=%s\n' "$makefile"
+            printf 'make_target=build-ulx5m-gs/%s.json\n' "$design"
+            printf 'netlist_sha256=%s\n' "$(sha256sum frozen/netlist.json | cut -d ' ' -f 1)"
             printf 'synthesis_suite=%s\nroute_suite=%s\n' "$SUITE" "$SUITE"
             printf 'heap_beta=%s\nrouter=router2\n' "$HEAP_BETA"
             printf 'riscv_toolchain=%s\n' "$XPACK_VERSION"
@@ -197,7 +212,7 @@ jobs:
           (cd frozen && sha256sum --check SHA256SUMS)
           grep -Fx "target=${TARGET}" frozen/metadata.txt
           grep -Fx "commit=${GITHUB_SHA}" frozen/metadata.txt
-          grep -Fx 'design=top_ulx5m_gs_flash_read-serv-dfu-hw-quad-btn2' frozen/metadata.txt
+          grep -Fx "design=top_ulx5m_gs_flash_read-serv-${TARGET}" frozen/metadata.txt
           nextpnr-himbaechel --version
           mkdir -p group-results
           cp frozen/SHA256SUMS group-results/inputs.sha256
@@ -256,7 +271,7 @@ jobs:
           compression-level: 0
 
   summarize:
-    name: Rank BTN2 FWT3 results
+    name: Rank BTN2 ${{ inputs.target }} results
     needs: [prepare, route]
     if: ${{ always() && needs.prepare.result == 'success' }}
     runs-on: ubuntu-24.04

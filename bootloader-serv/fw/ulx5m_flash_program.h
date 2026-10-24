@@ -8,7 +8,11 @@
 #include <stdint.h>
 #include "ulx5m_flash_layout.h"
 
+#if defined(ULX5M_FLASH_HW_NATIVE_SLOT_TEST)
+#define ULX5M_FLASH_CANDIDATE_START 0x00201000u
+#else
 #define ULX5M_FLASH_CANDIDATE_START 0x00200000u
+#endif
 #define ULX5M_FLASH_CANDIDATE_BYTES 0x00200000u
 #define ULX5M_FLASH_STREAM_BLOCK_BYTES 64u
 

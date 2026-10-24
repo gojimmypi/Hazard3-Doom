@@ -10,7 +10,11 @@
 #define ULX5M_AT25QL321_JEDEC0 0x1fu
 #define ULX5M_AT25QL321_JEDEC1 0x42u
 #define ULX5M_AT25QL321_JEDEC2 0x16u
+#if defined(ULX5M_FLASH_HW_NATIVE_SLOT_TEST)
+#define ULX5M_AT25QL321_CANDIDATE_START 0x00201000u
+#else
 #define ULX5M_AT25QL321_CANDIDATE_START 0x00200000u
+#endif
 #define ULX5M_AT25QL321_MAX_POLLS 4096u
 
 /* Send one byte, optionally returning the simultaneously received byte.

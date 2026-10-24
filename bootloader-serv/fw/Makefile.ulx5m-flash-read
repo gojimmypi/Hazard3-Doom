@@ -38,18 +38,6 @@ CFLAGS += -DULX5M_NORMAL_BOOT_EXPERIMENT=1
 SRCS += ulx5m_normal_image.c ulx5m_normal_boot.c
 endif
 
-# Separate OFFLINE-ONLY integrated handoff firmware. The parent make target
-# synthesizes a JSON netlist and intentionally has no bitstream target.
-ifeq ($(CFG_STREAM_ENABLE),1)
-ifneq ($(NORMAL_BOOT_EXPERIMENT),1)
-$(error CFG_STREAM_ENABLE requires NORMAL_BOOT_EXPERIMENT=1)
-endif
-ifeq ($(findstring normal-boot-cfg-offline,$(BUILD_DIR)),)
-$(error CFG_STREAM_ENABLE requires isolated normal-boot-cfg-offline BUILD_DIR)
-endif
-CFLAGS += -DULX5M_ENABLE_CFG_STREAM=1
-endif
-
 
 # Opt-in RAM-only DFU receiver. Use a SEPARATE BUILD_DIR for this profile.
 ifeq ($(DFU_STAGE_ONLY),1)
@@ -87,19 +75,32 @@ $(error DFU_HW_QUAD_TEST_ONLY requires an isolated dfu-hw-quad BUILD_DIR)
 endif
 endif
 
+# Separate SRAM-only writer for native SPI application sector.
+ifeq ($(DFU_HW_NATIVE_TEST_ONLY),1)
+ifneq ($(DFU_HW_TEST_ONLY),1)
+$(error DFU_HW_NATIVE_TEST_ONLY requires DFU_HW_TEST_ONLY=1)
+endif
+ifneq ($(DFU_HW_MULTI_TEST_ONLY)$(DFU_HW_QUAD_TEST_ONLY),)
+$(error Native slot profile must not mix with other hardware profiles)
+endif
+ifeq ($(findstring dfu-hw-native,$(BUILD_DIR)),)
+$(error Native slot profile requires isolated dfu-hw-native BUILD_DIR)
+endif
+endif
+
 # Separate discard-only DFU streaming profile: no image retention or writes.
 ifeq ($(DFU_STREAM_ONLY),1)
 ifneq ($(DFU_STAGE_ONLY),)
 $(error DFU_STREAM_ONLY cannot be combined with DFU_STAGE_ONLY)
 endif
-ifeq ($(findstring dfu-stream,$(BUILD_DIR))$(findstring dfu-hw-test,$(BUILD_DIR))$(findstring dfu-hw-multi,$(BUILD_DIR))$(findstring dfu-hw-quad,$(BUILD_DIR))$(findstring normal-boot,$(BUILD_DIR)),)
+ifeq ($(findstring dfu-stream,$(BUILD_DIR))$(findstring dfu-hw-test,$(BUILD_DIR))$(findstring dfu-hw-multi,$(BUILD_DIR))$(findstring dfu-hw-quad,$(BUILD_DIR))$(findstring dfu-hw-native,$(BUILD_DIR))$(findstring normal-boot,$(BUILD_DIR)),)
 $(error DFU_STREAM_ONLY requires separate dfu-stream or dfu-hw-test BUILD_DIR)
 endif
 CFLAGS += -DULX5M_DFU_STREAM_ONLY=1
 SRCS += ulx5m_dfu_stream.c ulx5m_flash_layout.c \
   ulx5m_at25ql321.c ulx5m_at25ql321_hw.c
 ifeq ($(DFU_HW_TEST_ONLY),1)
-ifeq ($(findstring dfu-hw-test,$(BUILD_DIR))$(findstring dfu-hw-multi,$(BUILD_DIR))$(findstring dfu-hw-quad,$(BUILD_DIR)),)
+ifeq ($(findstring dfu-hw-test,$(BUILD_DIR))$(findstring dfu-hw-multi,$(BUILD_DIR))$(findstring dfu-hw-quad,$(BUILD_DIR))$(findstring dfu-hw-native,$(BUILD_DIR)),)
 $(error DFU_HW_TEST_ONLY requires an isolated dfu-hw-test or dfu-hw-multi BUILD_DIR)
 endif
 CFLAGS += -DULX5M_FLASH_HW_TEST=1 -DULX5M_DFU_HW_TEST_ONLY=1
@@ -108,6 +109,10 @@ CFLAGS += -DULX5M_FLASH_HW_MULTI_TEST=1 -DULX5M_DFU_HW_MULTI_TEST_ONLY=1
 endif
 ifeq ($(DFU_HW_QUAD_TEST_ONLY),1)
 CFLAGS += -DULX5M_FLASH_HW_QUAD_TEST=1 -DULX5M_DFU_HW_QUAD_TEST_ONLY=1
+endif
+ifeq ($(DFU_HW_NATIVE_TEST_ONLY),1)
+CFLAGS += -DULX5M_FLASH_HW_QUAD_TEST=1 \
+  -DULX5M_FLASH_HW_NATIVE_SLOT_TEST=1 -DULX5M_DFU_HW_NATIVE_TEST_ONLY=1
 endif
 SRCS += ulx5m_flash_program.c ulx5m_flash_hw_test.c
 endif
