@@ -12,9 +12,9 @@ Project version: v0.2.1
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 159
+Files inventoried: 174
 
-Total bytes: 854454
+Total bytes: 931517
 
 ## Verification
 
@@ -39,6 +39,7 @@ should be identified before a public release.
 | `backup-ulx5m-serv-flash.py` | 11225 | `be83a1fe81284f2db4dedd50ed8765180e54823c19d87aed74a8daf0baaab0dc` | REVIEW | File |
 | `capture-ulx5m-serv-ep0-raw.py` | 6347 | `98663a5b4fc132aeb59397658682859da58049f7f2f987c44034662c84046544` | REVIEW | File |
 | `check-ulx5m-btn2-modes.py` | 7762 | `7934272079430c5736af1f97099b8eae847a902d603eb6ee7e4e1996ce2a783c` | REVIEW | File |
+| `check-ulx5m-fwtn-jtag-raw.py` | 6116 | `9193a20e0b6fd0a9600684002702ed411149caf6bd5646b948b0ff9c93ac3bd2` | REVIEW | File |
 | `check-ulx5m-gs-flash-jedec.py` | 1740 | `50b4653b18a870581fc3b600588f9ef10d7984b59e9aec6876fd1d05f561efb5` | REVIEW | File |
 | `check-ulx5m-gs-flash-read.py` | 3099 | `89c691c2fce5e4baed124554c8f284e0fa810c0a883b7b7adecdb1e12c840bee` | REVIEW | File |
 | `check-ulx5m-gs-port.py` | 2977 | `ec1e3b196f201ee093abcd59c7cbe01f9c949eccfac31f9ce6c043c36ca20974` | REVIEW | File |
@@ -62,15 +63,19 @@ should be identified before a public release.
 | `inspect-ulx5m-cfg-variants.py` | 7631 | `883724f1f3272a3ac4c7362f9b757b2c76ff9ebbcd744bfc0ae2044449db5196` | REVIEW | File |
 | `inspect-ulx5m-serv-factory-config.py` | 5693 | `552c05445b4d8ec96678662aed2555a1177e7b35edfeab52a08db4584f750618` | REVIEW | File |
 | `inspect-ulx5m-serv-gmunpack.py` | 14392 | `c5ab63645321481e61b97fa5e869023ec05942aba48d0d38a326b8a3f8fdb4b0` | REVIEW | File |
+| `inspect-ulx5m-v47-primary.py` | 1722 | `2261a110627543de37eba3bc9a2cccd8af93a7c37ed3006bf8ac7f7a2bfdb042` | REVIEW | File |
 | `plan-ulx5m-dfu-stage0.py` | 6056 | `21990a7d17e6236bcbbdf780671c57468d3872c63351807c10e93de88bf2d764` | REVIEW | File |
 | `prepare-ulx5m-cfg-probe-reconfig-rom.py` | 4165 | `ebd69a854e0b95047551f49800cb0b2e676bd59db78e38ecf58ea4c0d927525b` | REVIEW | File |
 | `prepare-ulx5m-cfg-probe-reset-reconfig-rom.py` | 4329 | `2db56f7cd876d34a186f2fca691ae3737307ba3e223a1f380f926a3fee0169e2` | REVIEW | File |
 | `prepare-ulx5m-cfg-probe-rom.py` | 1768 | `49625946434f3a3b0ac6bb2425772a3b2af0dc18e8752dcaad5bb4f2170ec503` | REVIEW | File |
+| `prepare-ulx5m-jtag-secondary-probe.py` | 6329 | `c43e655d2f746dcaba2d32fe071af3ea5095c7db7b779265861cfa3babb99f59` | REVIEW | File |
 | `prepare-ulx5m-serv-iverilog.py` | 1866 | `71c27860a0e4273e71cc629c2b9f764e5c40c28dbc0fee729c74ac7f513de542` | REVIEW | File |
 | `probe-ulx5m-serv-jtag-mode.py` | 9241 | `0554a59f832c44f63cbeda945a8dc9d73c037c5277a816cc7e005ae47d8b324f` | REVIEW | File |
 | `probe-ulx5m-serv-normal-image.c` | 2149 | `9f14d842a8bb607b0fd74f0d7706fe565201ca355e4899bc4217b15ad536fec7` | REVIEW | File |
 | `qualify-ulx5m-normal-image-integration.py` | 7725 | `6aa98f93ccad3b8c3200b75cf50ea74aa189fab3af55430b9c4e55682045f7f9` | REVIEW | File |
 | `qualify-ulx5m-serv-jtag-write.py` | 14852 | `f446d9f7aa78a6a0ff901cb022b9ef9eeac6ce319fbae833c1341972f2433a3e` | REVIEW | File |
+| `qualify-ulx5m-v45-recovery.py` | 8656 | `7963c3c3c638a2b97b2833f72085403f0488290ec8fe8233bdce2328332eb871` | REVIEW | File |
+| `qualify-ulx5m-v49-seed10.py` | 5463 | `bddf811d616de7ab84db8d3939f37936cdf8e57939e205f33e30de1fc4a58e30` | REVIEW | File |
 | `read-ulx5m-flash.py` | 4126 | `f3a2deb4a67132ace05fc7eb121e139d5f960b92876780a9f9065f0a54e8206a` | REVIEW | File |
 | `restore-ulx5m-serv-candidate-multi.py` | 8250 | `50322b879f97014e1ddd4a8b1d460b8fa81162237dd0391bb80343e577af7da6` | REVIEW | File |
 | `restore-ulx5m-serv-candidate-quad.py` | 8275 | `cf9cf4f78ccdec46a7cd7e6aa56f40ca9a5d7cc4d947e147ea584bd7af66c5ff` | REVIEW | File |
@@ -102,6 +107,7 @@ should be identified before a public release.
 | `tb_ulx5m_serv_raw_capture.v` | 2498 | `69d4938d0df2ebc52e6b5824138e5ba0c4c1583a35a0c3f3666b12ee37e1dce8` | REVIEW | File |
 | `tb_ulx5m_serv_tx_packet.v` | 4437 | `3c5560a8df8752f18d4e1023044a98402d51d7c395c567baf24bd0bf5e620545` | REVIEW | File |
 | `tb_ulx5m_serv_usb_timeout.v` | 3586 | `d148c3482c3f66fb43226026e2b3934bd835efdcfa2439ef16c63aefa512bc49` | REVIEW | File |
+| `tb_ulx5m_spi_active_reboot.v` | 3017 | `7aaecaeb11fb931cc4575d2a0403a4f1707bf9ed64003e3d738755065aa5d18f` | REVIEW | File |
 | `test-analyze-ulx5m-gmpack-trailers.py` | 7737 | `104a3d740661c12b4b36a66e3cc933d860e3d573ec37fbfb13b66bb5c669211d` | REVIEW | File |
 | `test-audit-ulx5m-cfg-hardware-evidence.py` | 5292 | `306b3d5066e14dd25f3fe84ecd280d7b10bea006f5f87238fc50a1e10c2cbb1a` | REVIEW | File |
 | `test-audit-ulx5m-conditional-spi-jump.py` | 7037 | `57290062dd2dd431d52ceeb98e459cb92aa8474dd2e3dce5c7986df32360b9fa` | REVIEW | File |
@@ -110,13 +116,16 @@ should be identified before a public release.
 | `test-audit-ulx5m-spi-boot-layout.py` | 7254 | `51bd55baab3bd9878f6224c7e5c27faac4ec5337f816b3d09caf68059869c4fa` | REVIEW | File |
 | `test-audit-ulx5m-spi-multiboot-commands.py` | 6490 | `e0ebfd3f802e0db6fcf5409549cf930bdff73abe809e0134280bd399164684b1` | REVIEW | File |
 | `test-check-ulx5m-btn2-modes.py` | 3983 | `c87d4cbafe2272b1bf21e73cf752de1e22a63f79ceafbf3e654faf0c8cdb0db2` | REVIEW | File |
+| `test-check-ulx5m-fwtn-jtag-raw.py` | 3748 | `6d35bcca234a73ec7ca013c828834730b536ea4c7eebf553a6b3f3d968c3448a` | REVIEW | File |
 | `test-decode-ulx5m-gmpack-tail-commands.py` | 8004 | `047d94e36801e5687ba8ee681c1e5b008ef17e89fb76cb65b52243330d89347b` | REVIEW | File |
 | `test-inspect-ulx5m-cfg-variants.py` | 6680 | `83fd72701b4fd3c8c31a4d745cc18a2001e6008494d928775de743ff892c50b0` | REVIEW | File |
 | `test-plan-ulx5m-dfu-stage0.py` | 3169 | `25694a38820ddea8c84a5197b8c50671fadb441ab9ca855c08e92a46b366559e` | REVIEW | File |
 | `test-prepare-ulx5m-cfg-probe-reconfig-rom.py` | 4827 | `3326875d6fd5b66f43300cde3e8a0eaa276be970ac897fbeea7c7eec74e0435b` | REVIEW | File |
 | `test-prepare-ulx5m-cfg-probe-reset-reconfig-rom.py` | 4346 | `3406228cbaaa1ffcc05603d42e88e5b8ed593f8a2d48c8993aac3c3c4dbf204e` | REVIEW | File |
 | `test-prepare-ulx5m-cfg-probe-rom.py` | 2115 | `28afbd83c85300d97aa20ec280f62bd86f4e181e29becc5503855723e9c56380` | REVIEW | File |
+| `test-prepare-ulx5m-jtag-secondary-probe.py` | 5874 | `dc89e3e3dbfd6ad4f319e4dfb6b09791cb30026799143b36128ed685c5a511ad` | REVIEW | File |
 | `test-qualify-ulx5m-normal-image-integration.py` | 3397 | `3244755bf1d2cacb95a5d7a92884b9b203b9a424e25880b017713f2066c5651b` | REVIEW | File |
+| `test-qualify-ulx5m-v45-recovery.py` | 8985 | `0a053bdf7369619819299bddea580663ede6ea8907a755604538057b30b322dd` | REVIEW | File |
 | `test-ulx5m-cfg-golden-stream.py` | 2348 | `94a9f0787970c08edf3b6969571464a36dd6bb20d14ac19620ebd7af15955697` | REVIEW | File |
 | `test-ulx5m-cfg-handoff-policy.py` | 1960 | `6a1fe18e9d29ed31ed644b072aa47f9c3d7bacfca941ba785b17e0ce69a3f94e` | REVIEW | File |
 | `test-ulx5m-cfg-stream-driver.py` | 2526 | `5df484f39c1393cdc29d764a4c936a37d5704dd2870b030603579571cfafc0fb` | REVIEW | File |
@@ -125,6 +134,8 @@ should be identified before a public release.
 | `test-ulx5m-dfu-stage.c` | 4546 | `2412d5ab304a85ba6762bb1b955b493eea0a30ab50215583e2230defc0b75e08` | REVIEW | File |
 | `test-ulx5m-dfu-stream.c` | 4254 | `88c904d229f3cb809e4e7da204a00512180fd0fb65d98e43ab4a9f26c9d67569` | REVIEW | File |
 | `test-ulx5m-gmpack-offline-driver.py` | 6856 | `37926267854ceb17531bd6d8ba4988a5cef7ed1d05104084a984266cef995de0` | REVIEW | File |
+| `test-ulx5m-native-v41-image.c` | 3396 | `7df2fa250d95f5c4b472262199cbcda8faa059150d950e0b201e7a827eaa7cf7` | REVIEW | File |
+| `test-ulx5m-native-v41-image.py` | 3338 | `b0e20f8d8542e9aaeb43ca77431f4c9b2be8c9cf6377bda990a4be132a0a794f` | REVIEW | File |
 | `test-ulx5m-normal-boot-build.py` | 2290 | `bf8b92d1e6c5ec868def5c26abc6f9b644a5ae29e8eb2be8f328bb4e61c3513e` | REVIEW | File |
 | `test-ulx5m-normal-boot-integration.c` | 4994 | `7a911b397a62e07b3e82da368b77cf32c9f938e6c2edea596ba27b8772e8c062` | REVIEW | File |
 | `test-ulx5m-normal-boot-wb-isolation.py` | 2397 | `049393e4183e003f6925fa976cba44ef3d881b61ef6ccfcf061b2a5bb00ea424` | REVIEW | File |
@@ -184,5 +195,9 @@ should be identified before a public release.
 | `test-ulx5m-spi-native-writer.py` | 2940 | `a6b8f768c278808830013f2f1694ac16a930342650da788a8e0375dbdf26cb32` | REVIEW | File |
 | `test-ulx5m-spi-recovery-gates.c` | 3265 | `1f9a5e5b3f127b6dec2294ab2e33a908689fd016524e7759ddc769292a9fdb59` | REVIEW | File |
 | `test-ulx5m-spi-recovery-gates.py` | 4095 | `96b773d3da0c7c6a95d3228cd97798c485ba344030300601f2406d6cc2c10b18` | REVIEW | File |
+| `test-ulx5m-v46-handoff-roadblocks.py` | 3738 | `b93ff6218fcd843953a6a10915f8c7cc5ead064d764cf17db9e256888a106b4e` | REVIEW | File |
+| `test-ulx5m-v47-spi-active-boot.c` | 3385 | `cdea1cdeac49f74faac2dbd63cc1898f1ba204c3fac2f958462653a61e245973` | REVIEW | File |
+| `test-ulx5m-v47-spi-secondary.py` | 6147 | `d1479f904a7c7082ea105ecc34867e371a878fab8e994a516f834caa4e412553` | REVIEW | File |
+| `test-ulx5m-v49-seed10.py` | 7149 | `0d44a3a62801b49fcec09bdd2f90bd653fb74b09fda983589b292290a507c3f2` | REVIEW | File |
 | `ulx5m-at25ql321-mock.c` | 4185 | `30ada14a13d6f1306558a729c14bab54e39f7b7628abf6a118f92925937284ae` | REVIEW | File |
 | `ulx5m-at25ql321-mock.h` | 799 | `696efd553b06cd9f6188b7d0d37b86850d788e78657a9ffdde6cfa0205f50aeb` | REVIEW | File |

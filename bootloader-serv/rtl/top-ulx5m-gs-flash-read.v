@@ -208,7 +208,9 @@ module top_ulx5m_gs_flash_read (
     // Firmware is compiled into this word-addressed RAM image before
     // GateMate synthesis. No ECP5 ecpbram patching is needed.
 `ifdef ULX5M_USE_SERV
-`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
+`ifdef ULX5M_SERV_SPI_ACTIVE_SECONDARY
+    localparam FW_IMAGE = "build-ulx5m-gs/normal-boot-dfu-hw-native/fw_ulx5m_flash_read.hex";
+`elsif ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
     localparam FW_IMAGE = "build-ulx5m-gs/normal-boot/fw_ulx5m_flash_read.hex";
 `elsif ULX5M_SERV_DFU_HW_NATIVE_TEST
     // Volatile BTN2-gated native application-sector test at 0x201000.
@@ -339,10 +341,13 @@ module top_ulx5m_gs_flash_read (
     );
 
 `ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
-    // Peripheral 5: firmware-driven configuration stream controller.
-    // The normal build contains NO live CC_CFG_CTRL unless separately
-    // compiled with ULX5M_ENABLE_CFG_STREAM after physical recovery passes.
+    // Peripheral 5: legacy stream or v47 RECFG-only controller.
+    // The v47 branch never sends configuration bytes to CC_CFG_CTRL.
+`ifdef ULX5M_SERV_SPI_ACTIVE_SECONDARY
+    ulx5m_spi_active_reboot_wb cfg_stream_i (
+`else
     ulx5m_cfg_stream_wb cfg_stream_i (
+`endif
         .clk(clk48), .rst(fw_reset),
         .normal_mode(mode_valid && !dfu_selected),
         .spi_idle(spi_cs_o[0]),

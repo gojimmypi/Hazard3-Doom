@@ -12,9 +12,9 @@ Project version: v0.2.1
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 96
+Files inventoried: 97
 
-Total bytes: 790607
+Total bytes: 797770
 
 ## Verification
 
@@ -115,6 +115,7 @@ should be identified before a public release.
 | `sweep-ulx5m-bootloader-ci.py` | 12374 | `5138fde6539f428c14073627cbab754871b8bf07a8e1d825519945857e10799d` | REVIEW | File |
 | `sweep-ulx5m-bootloader.sh` | 11177 | `bdd36601cbd182701e27e3040a20cb0b31329ded532b8bfbf3081495d8dc8f26` | REVIEW | Shell script |
 | `sweep-ulx5m-gs.sh` | 12266 | `2d2aecc0201f94b243328562c9296f55b3eee212a3b5ee194b2c7dca661cf05c` | REVIEW | Shell script |
+| `sweep-ulx5m-spi-secondary.sh` | 7163 | `8a8b7466f12802cb0483159a2c22f6012a005d42d505df5278202bafec9ce95d` | REVIEW | Shell script |
 | `sweep.sh` | 980 | `0ea3290a5ef9f6fe7a386d46add42cf7bb0e217023beb2b79713a463aa92f9d6` | REVIEW | Shell script |
 | `test-readthedocs.sh` | 11128 | `cb4c49cf3e3065fdc851d66c193b23966d615c10721cdb889e7ae4cdd0d70f4b` | REVIEW | Shell script |
 | `test-scripts.sh` | 27886 | `3c2e4cffae7336293d0f23836a790b4adce0a6f46492054abed3e90bd07c15f4` | REVIEW | Shell script |

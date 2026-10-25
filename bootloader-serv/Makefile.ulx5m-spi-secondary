@@ -1,0 +1,36 @@
+# Volatile-build-only candidate for the vendor-documented SPI-active RECFG path.
+# Does NOT contain a flash write/program target. Test offline before use.
+include Makefile.ulx5m-native-dfu
+
+SPI_SECONDARY_SEED ?= 10
+SPI_SECONDARY_ADDR := 2101248
+SPI_SECONDARY_DIR := $(BUILD_DIR)/normal-boot-dfu-hw-native
+SPI_SECONDARY_FW := $(SPI_SECONDARY_DIR)/fw_ulx5m_flash_read.hex
+SPI_SECONDARY_JSON := $(SPI_SECONDARY_DIR)/spi-secondary.json
+SPI_SECONDARY_IMPL := $(SPI_SECONDARY_DIR)/spi-secondary-seed$(SPI_SECONDARY_SEED).txt
+SPI_SECONDARY_BIT := $(SPI_SECONDARY_DIR)/spi-secondary-spi-primary-seed$(SPI_SECONDARY_SEED).bit
+SPI_SECONDARY_SRC := $(BTN2_DFU_QUAD_SRC) rtl/ulx5m_normal_boot_reset.v \
+  rtl/ulx5m_cfg_stream_wb.v rtl/ulx5m_spi_active_reboot_wb.v
+
+# Failed nextpnr runs must not leave a target that make treats as current.
+.DELETE_ON_ERROR: $(SPI_SECONDARY_IMPL) $(SPI_SECONDARY_BIT)
+
+.PHONY: spi-secondary-build spi-secondary-firmware
+spi-secondary-build: $(SPI_SECONDARY_BIT)
+spi-secondary-firmware: $(SPI_SECONDARY_FW)
+
+$(SPI_SECONDARY_FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S fw/lnk-app.lds fw/Makefile.ulx5m-flash-read
+	$(MAKE) -C fw -f Makefile.ulx5m-flash-read \
+	  BUILD_DIR=../$(SPI_SECONDARY_DIR) SERV=1 NORMAL_BOOT_EXPERIMENT=1 \
+	  NATIVE_SPI_SECONDARY=1 DFU_STREAM_ONLY=1 DFU_HW_TEST_ONLY=1 \
+	  DFU_HW_NATIVE_TEST_ONLY=1
+
+$(SPI_SECONDARY_JSON): $(SPI_SECONDARY_FW) $(PROBE_MC) $(SERV_STAMP) $(SPI_SECONDARY_SRC) $(FLASH_CCF) $(FLASH_SDC)
+	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_NORMAL_BOOT_EXPERIMENT -DULX5M_SERV_DFU_HW_NATIVE_TEST -DULX5M_SERV_BTN2_DFU_GATE -DULX5M_SERV_SPI_ACTIVE_SECONDARY -Icores/usb/rtl $(SPI_SECONDARY_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(SPI_SECONDARY_DIR)/synth.log
+
+$(SPI_SECONDARY_IMPL): $(SPI_SECONDARY_JSON) $(FLASH_CCF) $(FLASH_SDC)
+	$(NEXTPNR) --device $(DEVICE) --json $(abspath $<) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(SPI_SECONDARY_SEED) -l $(abspath $(SPI_SECONDARY_DIR)/pnr-seed$(SPI_SECONDARY_SEED).log)
+
+$(SPI_SECONDARY_BIT): $(SPI_SECONDARY_IMPL)
+	$(GMPACK) --bootaddr $(SPI_SECONDARY_ADDR) $(abspath $<) $(abspath $@)
+	python3 tests/inspect-ulx5m-v47-primary.py $(abspath $@)

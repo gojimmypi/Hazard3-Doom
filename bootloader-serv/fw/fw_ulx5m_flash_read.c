@@ -8,6 +8,9 @@
 #include "usb_dfu_proto.h"
 #ifdef ULX5M_NORMAL_BOOT_EXPERIMENT
 #include "ulx5m_normal_boot.h"
+#ifdef ULX5M_NATIVE_SPI_SECONDARY
+#include "ulx5m_spi_active_boot.h"
+#endif
 #endif
 #ifdef ULX5M_DFU_STAGE_ONLY
 #include "ulx5m_dfu_stage.h"
@@ -350,6 +353,7 @@ static int normal_read(void *ctx, uint32_t addr, uint8_t *data, unsigned n)
         return -1;
     return flash_read_bytes(addr, data, n) ? 0 : -1;
 }
+#ifndef ULX5M_NATIVE_SPI_SECONDARY
 static int cfg_wait(uint32_t mask)
 {
     for (unsigned count = 0; count < CFG_POLL_LIMIT; ++count) {
@@ -391,9 +395,45 @@ static void normal_abort(void *ctx)
     (void)ctx;
     CFG_CONTROL = CFG_ABORT;
 }
+#else
+#define CFG_REBOOT_ARM (*(volatile uint32_t *)(uintptr_t)(CFG_BASE + 4u))
+#define CFG_REBOOT_EXEC (*(volatile uint32_t *)(uintptr_t)(CFG_BASE + 8u))
+static void reboot_release_flash(void *ctx)
+{
+    (void)ctx;
+    flash_end();
+}
+static uint32_t reboot_status(void *ctx)
+{
+    (void)ctx;
+    return CFG_STATUS;
+}
+static void reboot_arm(void *ctx, uint32_t key)
+{
+    (void)ctx;
+    CFG_REBOOT_ARM = key;
+}
+static void reboot_execute(void *ctx, uint32_t key)
+{
+    (void)ctx;
+    CFG_REBOOT_EXEC = key;
+}
+#endif
 static void normal_mode_main(void)
 {
     struct ulx5m_normal_image_reader image_reader = {0, normal_read};
+#ifdef ULX5M_NATIVE_SPI_SECONDARY
+    const struct ulx5m_spi_active_boot_gate gate = {
+        0, reboot_release_flash, reboot_status, reboot_arm, reboot_execute
+    };
+    enum ulx5m_spi_active_boot_result result =
+        ulx5m_spi_active_boot_run(&image_reader, &gate, 0);
+    // REQUESTED is not hardware takeover; each error has a distinct LED.
+    // D1:D0: 01=gate failed, 10=bad sector, 11=RECFG fired/read back.
+    MISC_LEDS = (result == ULX5M_SPI_BOOT_INVALID) ? 2u :
+                (result == ULX5M_SPI_BOOT_REQUESTED) ? 3u : 1u;
+    while (1) { }
+#else
     struct ulx5m_normal_boot_transport output = {
         0, normal_prepare, normal_send, normal_finish, normal_abort
     };
@@ -415,6 +455,7 @@ static void normal_mode_main(void)
     MISC_LEDS = (result == ULX5M_BOOT_NO_IMAGE) ? 1u :
                 (result == ULX5M_BOOT_INVALID) ? 2u : 3u;
     while (1) { }
+#endif
 }
 #endif
 

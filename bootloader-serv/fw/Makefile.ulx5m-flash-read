@@ -36,6 +36,13 @@ $(error NORMAL_BOOT_EXPERIMENT requires isolated normal-boot BUILD_DIR)
 endif
 CFLAGS += -DULX5M_NORMAL_BOOT_EXPERIMENT=1
 SRCS += ulx5m_normal_image.c ulx5m_normal_boot.c
+ifeq ($(NATIVE_SPI_SECONDARY),1)
+ifneq ($(DFU_HW_NATIVE_TEST_ONLY),1)
+$(error NATIVE_SPI_SECONDARY needs the isolated native DFU profile)
+endif
+CFLAGS += -DULX5M_NATIVE_SPI_SECONDARY=1
+SRCS += ulx5m_native_v41_image.c ulx5m_spi_active_boot.c
+endif
 endif
 
 

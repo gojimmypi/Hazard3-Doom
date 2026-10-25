@@ -6,12 +6,13 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: Design (normal-boot = BTN2 SERV; flash-read-serv = diagnostic)
+        description: Design (spi-secondary = v47 RECFG primary; normal-boot = legacy BTN2 SERV)
         type: choice
         required: true
         default: normal-boot
         options:
           - normal-boot
+          - spi-secondary
           - flash-read-serv
           - usb-probe
           - flash-read-probe
@@ -121,11 +122,13 @@ jobs:
             exit 2
           fi
           case "${SWEEP_TARGET}" in
-            normal-boot|flash-read-serv|usb-probe|flash-read-probe) ;;
+            normal-boot|spi-secondary|flash-read-serv|usb-probe|flash-read-probe) ;;
             *) echo 'ERROR: invalid design.' >&2; exit 2 ;;
           esac
           bash -n scripts/sweep-ulx5m-bootloader.sh
+          bash -n scripts/sweep-ulx5m-spi-secondary.sh
           python3 .github/scripts/test-ulx5m-bootloader-targets.py
+          python3 .github/scripts/test-ulx5m-spi-secondary-sweep.py
           python3 -m py_compile scripts/sweep-ulx5m-bootloader-ci.py
           python3 scripts/sweep-ulx5m-bootloader-ci.py matrix \
             --first "${SWEEP_FIRST}" --last "${SWEEP_LAST}" --per-job "${SWEEP_PER_JOB}" > /dev/null
@@ -186,6 +189,12 @@ jobs:
         run: |
           set -euo pipefail
           case "${SWEEP_TARGET}" in
+            spi-secondary)
+              source_dir=bootloader-serv
+              design=normal-boot-dfu-hw-native/spi-secondary
+              constraint=top-ulx5m-gs-flash-read
+              makefile=Makefile.ulx5m-spi-secondary
+              ;;
             normal-boot)
               source_dir=bootloader-serv
               design=top_ulx5m_gs_flash_read-normal-boot
@@ -207,9 +216,12 @@ jobs:
               constraint=top-ulx5m-gs-flash-read
               ;;
           esac
-          printf 'Selected: %s (source=%s, design=%s)\n' "${SWEEP_TARGET}" "${source_dir}" "${design}"
+          if [[ "${SWEEP_TARGET}" != spi-secondary ]]; then
+            makefile=Makefile.ulx5m-gs
+          fi
+          printf 'Selected: %s (source=%s, design=%s, makefile=%s)\n' "${SWEEP_TARGET}" "${source_dir}" "${design}" "${makefile}"
           yosys --version
-          make -C "${source_dir}" -f Makefile.ulx5m-gs "build-ulx5m-gs/${design}.json"
+          make -C "${source_dir}" -f "${makefile}" "build-ulx5m-gs/${design}.json"
           mkdir -p frozen
           cp "${source_dir}/build-ulx5m-gs/${design}.json" frozen/netlist.json
           cp "${source_dir}/data/${constraint}.ccf" frozen/constraints.ccf
@@ -223,6 +235,10 @@ jobs:
             printf 'target=%s\n' "${SWEEP_TARGET}"
             printf 'source_dir=%s\n' "${source_dir}"
             printf 'design=%s\n' "${design}"
+            printf 'makefile=%s\n' "${makefile}"
+            if [[ "${SWEEP_TARGET}" == spi-secondary ]]; then
+              printf 'gmpack_bootaddr=0x201000\n'
+            fi
             printf 'synthesis_suite=%s\n' "${SYNTH_SUITE}"
             printf 'route_suite=%s\n' "${ROUTE_SUITE}"
             printf 'placer=heap\nrouter=router2\n'
@@ -365,9 +381,14 @@ jobs:
           if [[ "${RETAIN_BITSTREAMS}" == true ]]; then
             export SWEEP_RETAIN_BITSTREAMS=1
           fi
-          bash scripts/sweep-ulx5m-bootloader.sh \
-            "${SWEEP_TARGET}" "${GROUP_FIRST}" \
-            "$((GROUP_LAST - GROUP_FIRST + 1))" "${SWEEP_TIMEOUT}"
+          if [[ "${SWEEP_TARGET}" == spi-secondary ]]; then
+            bash scripts/sweep-ulx5m-spi-secondary.sh \
+              "${GROUP_FIRST}" "$((GROUP_LAST - GROUP_FIRST + 1))" "${SWEEP_TIMEOUT}"
+          else
+            bash scripts/sweep-ulx5m-bootloader.sh \
+              "${SWEEP_TARGET}" "${GROUP_FIRST}" \
+              "$((GROUP_LAST - GROUP_FIRST + 1))" "${SWEEP_TIMEOUT}"
+          fi
 
       - name: Publish group progress
         if: always()

@@ -22,7 +22,7 @@ class SweepTargetTests(unittest.TestCase):
         source = WORKFLOW.read_text(encoding="ascii")
         self.assertIn("default: normal-boot", source)
         self.assertRegex(source, r"(?m)^\s+- normal-boot$")
-        self.assertIn("normal-boot|flash-read-serv|usb-probe|flash-read-probe)", source)
+        self.assertIn("normal-boot|spi-secondary|flash-read-serv|usb-probe|flash-read-probe)", source)
         self.assertIn("test-ulx5m-bootloader-targets.py", source)
         self.assertIn("design=top_ulx5m_gs_flash_read-normal-boot", source)
         self.assertIn("source_dir=bootloader-serv", source)
