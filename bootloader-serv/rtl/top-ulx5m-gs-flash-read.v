@@ -330,6 +330,10 @@ module top_ulx5m_gs_flash_read (
     wire [3:0] spi_io_i, spi_io_o, spi_io_t;
     wire spi_sck_o;
     wire [0:0] spi_cs_o;
+    wire release_spi_for_config;
+`ifndef ULX5M_SERV_SPI_ACTIVE_SECONDARY
+    assign release_spi_for_config = 1'b0;
+`endif
     qspi_master_wb #(.N_CS(1)) flash_master_i (
         .spi_io_i(spi_io_i), .spi_io_o(spi_io_o), .spi_io_t(spi_io_t),
         .spi_sck_o(spi_sck_o), .spi_cs_o(spi_cs_o),
@@ -342,6 +346,7 @@ module top_ulx5m_gs_flash_read (
         .spi_io(flash_io), .spi_cs(flash_cs_n), .spi_sck(flash_sck),
         .spi_io_i(spi_io_i), .spi_io_o(spi_io_o), .spi_io_t(spi_io_t),
         .spi_sck_o(spi_sck_o), .spi_cs_o(spi_cs_o),
+        .release_to_config(release_spi_for_config),
         .clk(clk48), .rst(fw_reset)
     );
 
@@ -350,6 +355,7 @@ module top_ulx5m_gs_flash_read (
     // The v47 branch never sends configuration bytes to CC_CFG_CTRL.
 `ifdef ULX5M_SERV_SPI_ACTIVE_SECONDARY
     ulx5m_spi_active_reboot_wb cfg_stream_i (
+        .release_spi(release_spi_for_config),
 `else
     ulx5m_cfg_stream_wb cfg_stream_i (
 `endif

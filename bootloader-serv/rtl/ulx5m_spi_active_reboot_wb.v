@@ -12,7 +12,8 @@ module ulx5m_spi_active_reboot_wb (
     input wire [31:0] bus_wdata,
     output reg [31:0] bus_rdata = 32'd0,
     input wire bus_cyc, bus_we,
-    output reg bus_ack = 1'b0
+    output reg bus_ack = 1'b0,
+    output reg release_spi = 1'b0
 );
     localparam [31:0] ARM_KEY = 32'h41524d31; /* ARM1 */
     localparam [31:0] BOOT_KEY = 32'h424f4f54; /* BOOT */
@@ -21,6 +22,7 @@ module ulx5m_spi_active_reboot_wb (
     reg fired = 1'b0;
     reg error = 1'b0;
     reg recfg = 1'b0;
+    reg handoff_pending = 1'b0;
     wire qualified = normal_mode && spi_idle && (&spi_idle_cycles);
     wire write_req = bus_cyc && !bus_ack && bus_we;
     wire read_req = bus_cyc && !bus_ack && !bus_we;
@@ -39,10 +41,18 @@ module ulx5m_spi_active_reboot_wb (
             fired <= 0;
             error <= 0;
             recfg <= 0;
+            release_spi <= 0;
+            handoff_pending <= 0;
             bus_ack <= 0;
             bus_rdata <= 0;
         end else begin
             bus_ack <= bus_cyc && !bus_ack;
+            // Release fabric drivers before asking the configuration engine
+            // to take over the shared flash pins on the following cycle.
+            if (handoff_pending) begin
+                recfg <= 1'b1;
+                handoff_pending <= 1'b0;
+            end
             if (!spi_idle) begin
                 spi_idle_cycles <= 0;
                 if (armed)
@@ -64,7 +74,8 @@ module ulx5m_spi_active_reboot_wb (
                     armed <= 1'b1;
                 end else if (bus_addr == 3'd2 && bus_wdata == BOOT_KEY &&
                              armed && qualified && !error) begin
-                    recfg <= 1'b1;
+                    release_spi <= 1'b1;
+                    handoff_pending <= 1'b1;
                     fired <= 1'b1;
                     armed <= 1'b0;
                 end else begin

@@ -23,12 +23,19 @@ module tb_ulx5m_spi_active_reboot;
     reg bus_cyc = 0, bus_we = 0;
     wire [31:0] bus_rdata;
     wire bus_ack;
+    wire release_spi;
+    reg release_seen_on_previous_clock = 1'b0;
+    always @(posedge clk) release_seen_on_previous_clock <= release_spi;
+    always @(posedge dut.recfg)
+        if (!release_seen_on_previous_clock)
+            $fatal(1, "RECFG asserted before SPI pins were released");
     integer seen;
     ulx5m_spi_active_reboot_wb dut (
         .clk(clk), .rst(rst), .normal_mode(normal_mode),
         .spi_idle(spi_idle), .bus_addr(bus_addr),
         .bus_wdata(bus_wdata), .bus_rdata(bus_rdata),
-        .bus_cyc(bus_cyc), .bus_we(bus_we), .bus_ack(bus_ack)
+        .bus_cyc(bus_cyc), .bus_we(bus_we), .bus_ack(bus_ack),
+        .release_spi(release_spi)
     );
     task wb_write;
         input [2:0] addr;
@@ -55,7 +62,7 @@ module tb_ulx5m_spi_active_reboot;
         // DFU selection: writes cannot reconfigure the FPGA.
         wb_write(1, 32'h41524d31);
         wb_write(2, 32'h424f4f54);
-        if (dut.recfg || dut.fired) $fatal(1, "DFU mode rebooted");
+        if (dut.recfg || dut.fired || release_spi) $fatal(1, "DFU mode rebooted");
         normal_mode = 1;
         repeat (40) @(negedge clk);
         // An unarmed request fails closed.
@@ -77,12 +84,12 @@ module tb_ulx5m_spi_active_reboot;
         if (!dut.qualified) $fatal(1, "Expected stable idle");
         wb_write(1, 32'h41524d31);
         wb_write(2, 32'h424f4f54);
-        if (!dut.recfg || !dut.fired || dut.cfg_i.rises != 1)
+        if (!dut.recfg || !dut.fired || !release_spi || dut.cfg_i.rises != 1)
             $fatal(1, "No single RECFG event");
         wb_write(2, 32'h424f4f54);
         if (dut.cfg_i.rises != 1) $fatal(1, "Repeated RECFG");
         restart();
-        if (dut.recfg || dut.fired) $fatal(1, "Reboot request not reset");
+        if (dut.recfg || dut.fired || release_spi) $fatal(1, "Reboot request not reset");
         $display("[PASS] v47 SPI-active RECFG controller, six scenarios");
         $finish;
     end

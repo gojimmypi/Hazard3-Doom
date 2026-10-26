@@ -16,6 +16,7 @@ module qspi_phy_gatemate #(
     input  wire [3:0] spi_io_t,
     input  wire spi_sck_o,
     input  wire [N_CS-1:0] spi_cs_o,
+    input  wire release_to_config,
     input  wire clk,
     input  wire rst
 );
@@ -28,11 +29,25 @@ module qspi_phy_gatemate #(
     genvar i;
     generate for (i = 0; i < 4; i = i + 1) begin : g_io
         CC_IOBUF #(.V_IO("1.8"), .PULLUP(1'b0), .PULLDOWN(1'b0)) pad_i (
-            .IO(spi_io[i]), .A(io_out[i]), .T(io_tristate[i]), .Y(io_in[i])
+            .IO(spi_io[i]), .A(io_out[i]), .T(io_tristate[i] | release_to_config), .Y(io_in[i])
         );
     end endgenerate
+`ifdef ULX5M_SERV_SPI_ACTIVE_SECONDARY
+    // Dedicated configuration flash pins must stop being fabric outputs
+    // BEFORE CC_CFG_CTRL.RECFG requests an SPI-active reread.
+    genvar j;
+    generate for (j = 0; j < N_CS; j = j + 1) begin : g_cs
+        CC_TOBUF #(.V_IO("1.8")) cs_pad_i (
+            .A(cs_out[j]), .T(release_to_config), .O(spi_cs[j])
+        );
+    end endgenerate
+    CC_TOBUF #(.V_IO("1.8")) sck_pad_i (
+        .A(sck_out), .T(release_to_config), .O(spi_sck)
+    );
+`else
     assign spi_cs = cs_out;
     assign spi_sck = sck_out;
+`endif
 
     always @(posedge clk) begin
         if (rst) begin
