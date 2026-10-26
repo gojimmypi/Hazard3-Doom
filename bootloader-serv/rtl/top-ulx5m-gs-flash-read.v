@@ -192,6 +192,11 @@ module top_ulx5m_gs_flash_read (
         .RAM_AW(RAM_AW), .WB_N(WB_N),
         .WB_DW(WB_DW), .WB_AW(WB_AW), .WB_AI(2),
         .WB_REG(4), .BRAM_REG(1)
+`ifdef ULX5M_SERV_SPI_ACTIVE_SECONDARY
+        // The misc mode register retains 0x3 after a BTN2 DFU read.
+        // Mask inactive peripherals so stale data cannot alter USB CSR bits.
+        , .WB_DECODE_RDATA(1)
+`endif
     ) bridge_i (
         .pb_addr(mem_addr), .pb_rdata(bridge_rdata),
         .pb_wdata(mem_wdata), .pb_wstrb(mem_wstrb),
