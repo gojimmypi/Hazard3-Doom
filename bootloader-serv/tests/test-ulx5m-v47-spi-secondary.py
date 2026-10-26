@@ -49,7 +49,7 @@ class V47(unittest.TestCase):
     def test_normal_mode_uses_hardware_not_old_streamer(self):
         rtl = text("rtl/top-ulx5m-gs-flash-read.v")
         self.assertIn("`ifdef ULX5M_SERV_SPI_ACTIVE_SECONDARY", rtl)
-        self.assertIn("ulx5m_spi_active_reboot_wb cfg_stream_i", rtl)
+        self.assertRegex(rtl, r"ulx5m_spi_active_reboot_wb\s*(?:#\s*\([^;]*\))?\s*cfg_stream_i\s*\(")
         self.assertIn("ulx5m_cfg_stream_wb cfg_stream_i", rtl)
         self.assertIn("usb_core_reset = fw_reset | ~dfu_selected", rtl)
 

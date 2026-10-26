@@ -33,7 +33,8 @@ The monitor ELF is intentionally not duplicated in `bin/`. Load the board-specif
 | `libftdi1.dll` | Runtime library used by tools that communicate with FTDI USB devices. Keep it beside the executable that requires it. |
 | `libusb-1.0.dll` | Runtime library used for USB communication. Keep it beside the executable that requires it. |
 | `openFPGALoader` | Linux x86-64 ELF executable, modified v1.2.0-ulx5m-rxfix.1; dynamically linked. Source: [fork commit c1c588e](https://github.com/gojimmypi/openFPGALoader/commit/c1c588ee29b8a03dceacf395f4dd361f0216e586). Linux build and dependencies checked under WSL; native Linux hardware operation not yet tested. |
-| `openFPGALoader.exe` | Windows executable, modified v1.2.0-ulx5m-rxfix.1. Source: [fork commit c1c588e](https://github.com/gojimmypi/openFPGALoader/commit/c1c588ee29b8a03dceacf395f4dd361f0216e586). GateMate/Tigard JTAG-SPI flash read verified; modified flash writes not qualified. |
+| `openFPGALoader.exe` | v1.2.0 compiled from [tag/v1.2.0](https://github.com/trabucayre/openFPGALoader/releases/tag/v1.2.0)  Source: https://github.com/trabucayre/openFPGALoader |
+| `openFPGALoader-v1.2.0-ulx5m-rxfix.1.exe` | Windows executable, modified v1.2.0-ulx5m-rxfix.1. Source: [fork commit c1c588e](https://github.com/gojimmypi/openFPGALoader/commit/c1c588ee29b8a03dceacf395f4dd361f0216e586). GateMate/Tigard JTAG-SPI flash read verified; modified flash writes not qualified. |
 | `openFPGALoader-v1.1.1.exe` | v1.1.1 compiled from [tag/v1.1.1](https://github.com/trabucayre/openFPGALoader/releases/tag/v1.1.1)  Source: https://github.com/trabucayre/openFPGALoader |
 | `openFPGALoader-v1.2.0.exe` | v1.2.0 compiled from [tag/v1.2.0](https://github.com/trabucayre/openFPGALoader/releases/tag/v1.2.0)  Source: https://github.com/trabucayre/openFPGALoader |
 | `openocd.exe` | OpenOCD JTAG debug server. It provides the connection between the FPGA JTAG interface and RISC-V GDB. |

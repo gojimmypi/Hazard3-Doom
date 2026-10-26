@@ -14,7 +14,7 @@ Git source: current index (`git ls-files --cached`)
 
 Files inventoried: 36
 
-Total bytes: 60313225
+Total bytes: 63775632
 
 ## Verification
 
@@ -27,7 +27,7 @@ should be identified before a public release.
 
 | Path | Bytes | SHA-256 | Component | Kind |
 |---|---:|---|---|---|
-| `README.md` | 9783 | `2fcc9627c4db4b1433923287f70e6d1861dd31af2254a8a7b96acdd0d2b65292` | REVIEW | Markdown documentation |
+| `README.md` | 9985 | `e7c6ff4d369ad2626b3e742cbb6a0cfb9b05952df4f03b1b59d3ec459e1e1cd8` | REVIEW | Markdown documentation |
 | `dfu-prefix.exe` | 178765 | `96f1d24e00d1772e2c2721e100d86da4f7489af82fef1481819705bd0636d42e` | REVIEW | Windows executable |
 | `dfu-suffix.exe` | 179276 | `22946fa4cea2fd1396d5716af43b40e89e0096245135ae8080a09309880e4f0c` | REVIEW | Windows executable |
 | `dfu-util-static.exe` | 799602 | `1f4687d0f11f0eede72d582fb5174537d5820de515862a8041ac9506b4a6fa1e` | REVIEW | Windows executable |
@@ -55,10 +55,10 @@ should be identified before a public release.
 | `hazard3-doom-ulx4m-ld.h3img` | 591008 | `b750a50829717871f71363eabe368cfc0b515640f17de8d73a61ad8f971c1707` | Hazard3-Doom project output | Hazard3-Doom image |
 | `libftdi1.dll` | 272504 | `a78e1a41e18ae01b1a8e78dd16bfb6ed21a2b35809f18dec65a888ccede093ac` | libftdi | Windows DLL |
 | `libusb-1.0.dll` | 234930 | `e811df196a8e4e2ee18bcd224d7f6421736fafc78fe20419d76165692668926b` | libusb | Windows DLL |
-| `openFPGALoader` | 3577440 | `defe7b880ccd630ad4034592e965e7d84b74ca3c8a299e40d08238cffee45429` | REVIEW | File |
 | `openFPGALoader-v1.1.1.exe` | 6967851 | `88f6755a08fea726204002c0c47e275c3f322092e633142e7fe5360c3de52519` | REVIEW | Windows executable |
+| `openFPGALoader-v1.2.0-ulx5m-rxfix.1.exe` | 7039645 | `04ce92d82d72ae1072e4495aff064a4b933b939d6cb2c0daa97d4ee0a0ffab85` | REVIEW | Windows executable |
 | `openFPGALoader-v1.2.0.exe` | 7039645 | `9be9dcdb6e00e6d473f1031a459658561c95630584b1a5739aa2b8788237adea` | REVIEW | Windows executable |
-| `openFPGALoader.exe` | 7039645 | `04ce92d82d72ae1072e4495aff064a4b933b939d6cb2c0daa97d4ee0a0ffab85` | openFPGALoader | Windows executable |
+| `openFPGALoader.exe` | 7039645 | `9be9dcdb6e00e6d473f1031a459658561c95630584b1a5739aa2b8788237adea` | openFPGALoader | Windows executable |
 | `openocd.exe` | 4490254 | `10567f01d37c66a0975537960d66e61f7b4e2a17eb2c9637e2c2cbc569f70c79` | OpenOCD | Windows executable |
 | `putty.exe` | 1647912 | `fc6f9dbdf4b9f8dd1f5f3a74cb6e55119d3fe2c9db52436e10ba07842e6c3d7c` | PuTTY | Windows executable |
 | `usbview.exe` | 842072 | `0e3fc15abc73d204b9b72e4bc286b14992f7d8726075aa19126d48801423d818` | REVIEW | Windows executable |
