@@ -380,8 +380,8 @@ static int is_ulx5m_gs_build(uint32_t fpga_build_id)
 
 static int is_native_sdr_sdram_build(uint32_t fpga_build_id)
 {
-    return is_ulx3s_build(fpga_build_id) ||
-        is_ulx5m_gs_build(fpga_build_id);
+    return (is_ulx3s_build(fpga_build_id) != 0) ||
+        (is_ulx5m_gs_build(fpga_build_id) != 0);
 }
 
 static int build_ids_match(uint32_t fpga_build_id,
@@ -2101,6 +2101,11 @@ static void timer_init(void)
     timer_next_compare = timer_read() + TIMER_PERIOD_US;
     timer_set_compare(timer_next_compare);
 
+    /* Enable interrupts globally
+     * mie 7 (MTIE) Enable machine timer interrupts
+     *
+     *   li   a5, 128  # MIE_MTIE = 0x80
+     *   csrs mie, a5  */
     mask = MIE_MTIE;
     __asm__ volatile (
         "csrs mie, %0"
@@ -2109,6 +2114,10 @@ static void timer_init(void)
         : "memory"
     );
 
+    /* Enable machine timer interrupts
+     * mie 7 (MTIE) Enable machine timer interrupts
+     *   li   a5, 8    # MSTATUS_MIE = 0x08
+     *   csrs mstatus, a5 */
     mask = MSTATUS_MIE;
     __asm__ volatile (
         "csrs mstatus, %0"
