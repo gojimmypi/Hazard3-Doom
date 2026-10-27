@@ -2,7 +2,7 @@
 # Does NOT contain a flash write/program target. Test offline before use.
 include Makefile.ulx5m-native-dfu
 
-SPI_SECONDARY_SEED ?= 10
+SPI_SECONDARY_SEED ?= 302
 SPI_SECONDARY_ADDR := 2101248
 SPI_SECONDARY_DIR := $(BUILD_DIR)/normal-boot-dfu-hw-native
 SPI_SECONDARY_FW := $(SPI_SECONDARY_DIR)/fw_ulx5m_flash_read.hex
