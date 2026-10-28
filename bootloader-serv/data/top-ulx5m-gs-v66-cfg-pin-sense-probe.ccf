@@ -1,0 +1,18 @@
+# ULX5M-GS V005; READ-ONLY six config-flash pin input-sense diagnostic.
+Pin_in  "clk25"       Loc = "IO_SB_A8" | SCHMITT_TRIGGER=true;
+Pin_out "led_n[0]"    Loc = "IO_SB_A0";
+Pin_out "led_n[1]"    Loc = "IO_SB_B0";
+Pin_out "led_n[2]"    Loc = "IO_SB_A1";
+Pin_out "led_n[3]"    Loc = "IO_SB_B1";
+Pin_out "led_n[4]"    Loc = "IO_SB_B2";
+Pin_out "led_n[5]"    Loc = "IO_SB_A2";
+Pin_out "led_n[6]"    Loc = "IO_SB_B3";
+Pin_out "led_n[7]"    Loc = "IO_SB_A3";
+
+# Dedicated SPI configuration flash pads: INPUT ONLY, no drive/output enable.
+Pin_in "flash_cs_n"  Loc = "IO_WA_A8";
+Pin_in "flash_sck"   Loc = "IO_WA_B8";
+Pin_in "flash_io[0]" Loc = "IO_WA_B7";
+Pin_in "flash_io[1]" Loc = "IO_WA_A7";
+Pin_in "flash_io[2]" Loc = "IO_WA_B6";
+Pin_in "flash_io[3]" Loc = "IO_WA_A6";
