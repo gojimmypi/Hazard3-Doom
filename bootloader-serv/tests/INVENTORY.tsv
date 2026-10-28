@@ -9,6 +9,7 @@ audit-ulx5m-spi-boot-layout.py	11805	ffe4fb92fd6b297aa64be6670914de46cda27b089fd
 audit-ulx5m-spi-multiboot-commands.py	9053	66931920fe7b157f11d19ab1c5d8db6c5802efee52b5881f5ded692daa346f37	REVIEW	File
 audit-ulx5m-spi-recovery-gates.py	5873	72ce5e46429741276c8c4b6e4af336c0e83947c4e82e5e0a6181b4826ff159a1	REVIEW	File
 audit-ulx5m-v63-config-bank.py	9390	f17b0321432edee04c4399130d7d8f0266e854e1d6612824afed851c11c28df9	REVIEW	File
+audit-ulx5m-v70-tinydfu-compat.py	6044	3e2266a98409656ba1472619d7d912607ac2d442038b923e935481096a25cf89	REVIEW	File
 backup-ulx5m-serv-flash.py	11225	be83a1fe81284f2db4dedd50ed8765180e54823c19d87aed74a8daf0baaab0dc	REVIEW	File
 capture-ulx5m-serv-ep0-raw.py	6347	98663a5b4fc132aeb59397658682859da58049f7f2f987c44034662c84046544	REVIEW	File
 check-ulx5m-btn2-modes.py	7762	7934272079430c5736af1f97099b8eae847a902d603eb6ee7e4e1996ce2a783c	REVIEW	File
@@ -37,6 +38,7 @@ inspect-ulx5m-cfg-variants.py	7631	883724f1f3272a3ac4c7362f9b757b2c76ff9ebbcd744
 inspect-ulx5m-serv-factory-config.py	5693	552c05445b4d8ec96678662aed2555a1177e7b35edfeab52a08db4584f750618	REVIEW	File
 inspect-ulx5m-serv-gmunpack.py	14392	c5ab63645321481e61b97fa5e869023ec05942aba48d0d38a326b8a3f8fdb4b0	REVIEW	File
 inspect-ulx5m-v47-primary.py	1722	2261a110627543de37eba3bc9a2cccd8af93a7c37ed3006bf8ac7f7a2bfdb042	REVIEW	File
+mk-ulx5m-v72-cmd.py	2607	d16747e0abc7b9b373e0d2de8567f32af65aaed41ace552aeded94bda7065dd6	REVIEW	File
 plan-ulx5m-dfu-stage0.py	6056	21990a7d17e6236bcbbdf780671c57468d3872c63351807c10e93de88bf2d764	REVIEW	File
 prepare-ulx5m-cfg-probe-reconfig-rom.py	4165	ebd69a854e0b95047551f49800cb0b2e676bd59db78e38ecf58ea4c0d927525b	REVIEW	File
 prepare-ulx5m-cfg-probe-reset-reconfig-rom.py	4329	2db56f7cd876d34a186f2fca691ae3737307ba3e223a1f380f926a3fee0169e2	REVIEW	File
@@ -63,6 +65,10 @@ qualify-ulx5m-v66b-cfg-bank-ab.py	15089	75a9de650f0c872ec5e028e14e7fba25f26f68e8
 qualify-ulx5m-v67b-bank-mode-ab.py	15184	11dfc86466f985c4b4482238b393befd15d0099e76377dff029bee6cf5cfafe3	REVIEW	File
 qualify-ulx5m-v68-cfg-runtime-clear.py	6337	9d4e6ec8b28b1b09d0de5cc7321e6a77a97237610a77092a6302fd5605526eed	REVIEW	File
 qualify-ulx5m-v68b-runtime-clear-ab.py	15306	38c894a342f7b3a334ae40ef47b8fbce428e30c08dc1cd1486b084f348604657	REVIEW	File
+qualify-ulx5m-v70-cfg-runtime-clear.py	6940	a1df904001a7309ec5dbf4165d3ad8f5db8638f0fc8d6480e7bd6ef20e7ac671	REVIEW	File
+qualify-ulx5m-v70b-runtime-clear-ab.py	15817	af230b12657b1b755499c30ba6f0a4f6e14e0e081edf599ce63b89fe8a92c12c	REVIEW	File
+qualify-ulx5m-v72-cfg-registered.py	5082	a0239adbfeb72255cf5eea0d5738a0ac31fff99c93df0efdbfaa619eefd0c066	REVIEW	File
+qualify-ulx5m-v72c-registered-ab.py	17645	6c356ff6e518e1647d6e2235a38fe2e18217d1d6ebcd59814d2b0f3404fb4594	REVIEW	File
 read-ulx5m-flash.py	4126	f3a2deb4a67132ace05fc7eb121e139d5f960b92876780a9f9065f0a54e8206a	REVIEW	File
 restore-ulx5m-serv-candidate-multi.py	8250	50322b879f97014e1ddd4a8b1d460b8fa81162237dd0391bb80343e577af7da6	REVIEW	File
 restore-ulx5m-serv-candidate-quad.py	8275	cf9cf4f78ccdec46a7cd7e6aa56f40ca9a5d7cc4d947e147ea584bd7af66c5ff	REVIEW	File
@@ -101,6 +107,8 @@ tb_ulx5m_v63b_cfg_bank_command_stream.v	4821	82bfe41be96f8acdda52064943653ab6b59
 tb_ulx5m_v65_multiboot_probe.v	1567	3f30bd676e29edebe55a1752ec58b0cb16fc861ae6c3b9291d9895cc60cb9104	REVIEW	File
 tb_ulx5m_v66_cfg_pin_sense_probe.v	1892	baf4be5415702493ac6f07843c1d702f210588c1361e7bc1534e2297fbe33d11	REVIEW	File
 tb_ulx5m_v68_cfg_runtime_clear.v	3218	06fbfe4b3f6c30c37a90713fa865fdbca6e566fc74d4e59fc79009033092a51a	REVIEW	File
+tb_ulx5m_v70_cfg_runtime_clear.v	3218	fe8a6bd879f55165c09e6cb49fe5d9eee6f6c9e8f725576f9c0a6fe5313f664e	REVIEW	File
+tb_ulx5m_v72_cfg_registered.v	2473	ba44aa2f33498bcc95f982b3ac6a088db14561c147fede082fe003fbb523c981	REVIEW	File
 test-analyze-ulx5m-gmpack-trailers.py	7737	104a3d740661c12b4b36a66e3cc933d860e3d573ec37fbfb13b66bb5c669211d	REVIEW	File
 test-audit-ulx5m-cfg-hardware-evidence.py	5292	306b3d5066e14dd25f3fe84ecd280d7b10bea006f5f87238fc50a1e10c2cbb1a	REVIEW	File
 test-audit-ulx5m-conditional-spi-jump.py	7037	57290062dd2dd431d52ceeb98e459cb92aa8474dd2e3dce5c7986df32360b9fa	REVIEW	File
@@ -209,5 +217,10 @@ test-ulx5m-v66b-cfg-bank-ab.py	11217	8f8bfbe18ade2ca8fd2d50a59c6c6b86a2c407328b6
 test-ulx5m-v67-bank-mode-ab.py	8954	53b41ce74794cd5b3aeeb2f72998a17fa64faad508394b1b8ffba6533fffce20	REVIEW	File
 test-ulx5m-v68-cfg-runtime-clear.py	2860	8a5fe8ae07c9e629ad579fb2acea10f73cb7bb7b93e18e8d4bdcf3c7142cbc34	REVIEW	File
 test-ulx5m-v68b-runtime-clear-ab.py	10832	ec76b0ab56cd50a99086d9b828005976b3926a43dc2a2f8cae35c55415a831c0	REVIEW	File
+test-ulx5m-v70-cfg-runtime-clear.py	3283	fbc7a1325610111c072e9bac27ec9b3b828208e49fabcb8d7cea9adcb6235d43	REVIEW	File
+test-ulx5m-v70-tinydfu-compat.py	2326	39144191c31f044904ba36e3802cff9bc35d064846dd509013dc6abc8f766f78	REVIEW	File
+test-ulx5m-v70b-runtime-clear-ab.py	11597	8a3a0ba46720fdbfa0bf19802a4f05fb7b478effa569c8ccf2dbf72d9aef5263	REVIEW	File
+test-ulx5m-v72-cfg-registered.py	4712	751725a44483649189c2c061372ed50cda51287c809df3ce6118abb02e17e8d3	REVIEW	File
+test-ulx5m-v72c-registered-ab.py	10246	9f7af022a6d4b294e03247efb07b9bbe38880bf7204d538a2bcfcc4b44d292b0	REVIEW	File
 ulx5m-at25ql321-mock.c	4185	30ada14a13d6f1306558a729c14bab54e39f7b7628abf6a118f92925937284ae	REVIEW	File
 ulx5m-at25ql321-mock.h	799	696efd553b06cd9f6188b7d0d37b86850d788e78657a9ffdde6cfa0205f50aeb	REVIEW	File

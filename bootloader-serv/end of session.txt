@@ -1,0 +1,88 @@
+ULX5M-GS — October 28, 2026: engineering assessment
+I recommend starting a fresh session after this handoff. We've accumulated too many experimental versions, and the investigation needs a stricter process before another flash write.
+
+You did not make a mistake in v70. Your log shows:
+- All seven v70 RTL tests and eleven installer tests passed.
+- Local synthesis, routing and packing passed, with 88.68 MHz final timing against 25 MHz.
+- The exact v70 candidate was installed and the entire flash verified.
+- Normal cold boot produced D6 on and D7 blinking, but no walking LEDs.
+- The exact v63c image was restored and independently verified against the 4 MiB SHA-256 644c7c1b26e4cc2ba419a59a53ca8ffbbc02e808920d68336e84ac886d81cb02.
+- BTN2-selected USB DFU passed again after restoration.
+What we actually proved
+Test	Result	What it establishes
+v65	PASS	GateMate SPI-active secondary boot works on this board
+v66	FAIL	Assigning the six flash pins as user inputs blocks that handoff
+v67	PASS	Clearing the bank-ownership status bit at packing time restores takeover, with the same routed fabric
+v68	FAIL	The initial runtime-command sequence did not produce a valid secondary boot
+v70	FAIL	The TinyDFU-derived runtime status change was also insufficient
+
+v67 remains our strongest result. We have proved the critical configuration-bank status bit matters. We have not proved that our custom runtime command correctly switches the bank or resumes configuration.
+
+That is real progress, but the last two experiments have not moved the production bootloader closer to completion. We should stop treating passing CRC checks and simulations as evidence that the GateMate configuration controller has accepted a command.
+The most important TinyDFU finding
+I inspected three current upstream files directly: mkcmd.py, tinydfu_ulx5m.v, and the ULX5M Makefile.
+GitHub+2
+
+
+There are two specific differences worth resolving before another hardware experiment.
+Detail	Our v70	TinyDFU source
+Runtime command	Hard-coded 27-byte ROM	Generated from actual packed primary
+Status transformation	Clears both control bits	Clears both control bits
+Clock after final byte	Eight enabled tail clocks, then short delay	Separate 16-count wait with EN low
+CC_CFG_CTRL signals	Primarily combinational FSM outputs	Registered EN, VALID, DATA
+Command clock	25 MHz	PLL-derived 12 MHz
+Runtime handoff	Hardware FAIL	Source implementation exists; not yet qualified on our board
+
+The 16-count post-command wait is a concrete difference we missed. It may matter because changing the configuration-bank mode is not necessarily instantaneous.
+
+The bigger issue is that we copied TinyDFU's command content without faithfully reproducing its entire command-delivery and restart sequence. That made v70 less decisive than we intended.
+
+We should not declare this timing difference the root cause yet. But it is a far better engineering lead than another arbitrary delay or status-bit experiment.
+New v71a deliverable — handoff and read-only audit
+Download ULX5M-GS v71a — Evidence Handoff and TinyDFU Audit
+
+The ZIP contains three complete files:
+- bootloader-serv/README_ULX5M_GS_V71A_EVIDENCE_HANDOFF_20261028.md — full technical history, successful and failed experiments, current recovery state, source references, and the next engineering plan.
+- bootloader-serv/tests/audit-ulx5m-v70-tinydfu-compat.py — read-only comparison of the actual packed v70 status commands with the command embedded in its RTL.
+- bootloader-serv/tests/test-ulx5m-v70-tinydfu-compat.py — regression tests.
+I ran all five audit regression tests successfully using the supplied v70 source. I also checked the decoder against an actual previously packed v43 image. The full audit against your 16,123-byte v70 image must still run in WSL.
+Run this before starting the new session
+Review and extract the ZIP at your repository root. Then:
+cd /mnt/c/workspace/Hazard3-Doom/bootloader-serv
+
+python3 tests/test-ulx5m-v70-tinydfu-compat.py
+
+python3 tests/audit-ulx5m-v70-tinydfu-compat.py
+
+
+The audit checks the exact v70 bitstream SHA-256, decodes its terminal configuration records, derives TinyDFU's expected runtime command, compares all 27 bytes, and reports the known sequencing difference.
+
+Neither command accesses JTAG, programs the FPGA, or writes flash.
+The engineering plan from here
+I recommend one focused development cycle rather than immediately starting v71, v72, and v73 hardware experiments.
+1. Establish whether v70's actual command bytes match the final packed image. If so, stop changing status payloads.
+2. Implement TinyDFU's complete command-state-machine sequence in a minimal probe, including its registered signal timing and 16-count settle interval, while generating the command from the actual final packed image.
+3. Verify the actual byte stream, timing, and RECFG sequencing in simulation. Then test one qualified minimal hardware candidate with the existing guarded rollback.
+4. Only after minimal hardware takeover succeeds, integrate that mechanism into the SERV normal-boot path, preserving the current BTN2 DFU logic and SPI flash driver.
+5. Build the production primary locally at 48 MHz and perform a separately guarded upgrade from the current v63c baseline. Require normal walking-LED takeover and BTN2-selected persistent DFU.
+We should not replace our already-working USB DFU implementation with TinyDFU. The relevant thing to adopt is the proven configuration-handoff mechanism, once we validate it ourselves.
+Fresh-session starting point
+Start a new ChatGPT conversation and attach the v71a ZIP together with the output of the two commands above. Use this opening instruction:
+Continue Hazard3-Doom ULX5M-GS SERV DFU bootloader development from the attached v71a handoff.
+
+The current v63c primary is restored and verified. USB DFU works; normal secondary takeover does not.
+
+Hardware experiments v65 and v67 successfully executed the secondary walking-LED application. v66, v68 and v70 failed. Do not repeat those experiments or assume passing simulation means the GateMate configuration controller accepted a command.
+
+We need a production-quality solution based on the actual TinyDFU ULX5M configuration-handoff source, not more guessed command bytes.
+
+First audit v70's packed command and compare the exact CC_CFG_CTRL timing against TinyDFU, especially its 16-count post-command wait and registered signal sequence.
+
+Then implement and verify one minimal, source-derived correction. Preserve the current v63c flash image, all rollback archives, existing SERV USB DFU, BTN2 startup selection, and the secondary image at 0x201000.
+
+Use local WSL synthesis and routing. Deliver complete changed files in a versioned ZIP with repository-relative paths. No patches. Show all test instructions in chat. Do not authorize hardware flashing before exact source, timing, SHA and rollback qualification.
+
+
+
+
+My assessment: Starting fresh is worthwhile. The project is not back at square one: we have an operational DFU primary, working flash programming and rollback, verified multiboot, and a physically isolated configuration-bank blocker. What remains is a trustworthy runtime transition. The next session should concentrate exclusively on that mechanism until it is demonstrated, rather than continuing the sequence of partially equivalent tests.
