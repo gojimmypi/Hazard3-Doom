@@ -216,19 +216,41 @@ ULX5M-GS V005 bootloader port (in development)
 
 .. note::
 
-   The probe description below documents the earlier PicoRV32 JTAG/SRAM
-   stage. Later SERV-based experiments verified limited DFU flash writes
-   and BTN2 startup selection, but not persistent application handoff.
+   The probe description below records the earlier PicoRV32 JTAG/SRAM
+   stage. The separate active ``bootloader-serv/`` implementation later
+   demonstrated native USB DFU flash writes and BTN2 startup selection.
+   On October 26, 2026 a guarded installer wrote the SERV SPI-primary image
+   at flash offset ``0x000000`` and verified the complete 4 MiB flash.
+   **SPI-active cold boot and secondary takeover are not yet verified.**
    See :doc:`../hardware/ulx5m/bringup` for the dated results.
 
 .. warning::
 
-   The ULX5M-GS port is **not a persistent DFU bootloader**. Its verified
-   JTAG-loaded diagnostics cover hardware bring-up, USB enumeration, SPI
-   flash identification, and read-only flash-content access. They cannot
-   program configuration flash or boot a stored user image. ULX4M flash layouts
-   and DFU recovery commands do not
-   apply. Removing board power erases these SRAM-loaded images.
+   The ULX5M-GS persistent DFU bootloader is **not yet qualified by a cold
+   SPI-active hardware test**. The older PicoRV32 probe documented below runs
+   only from JTAG-loaded SRAM, whereas the newer SERV image has been written
+   to configuration flash but has not yet been observed booting from it.
+   Do not apply ULX4M flash layouts or DFU recovery commands to ULX5M.
+
+ULX5M-GS V005 SW1 and BTN2 startup selection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The physical SW1 DIP switches choose the GateMate hardware configuration
+source at reset. On this V005 board, **ON/ON** ties ``CFG_MD2`` and
+``CFG_MD3`` HIGH (JTAG, ``0xC``), while **OFF/OFF** lets both pins be pulled
+LOW (SPI-active boot, ``0x0``). ``CFG_MD1`` and ``CFG_MD0`` stay LOW. Mixed
+switch positions are not valid for the intended primary flash boot.
+
+SW1 must be changed with the FPGA **powered off**, followed by a cold
+power-on. GateMate samples ``CFG_MD`` at reset; the SERV RTL does not select
+this hardware boot source. Once the primary configuration is loaded, BTN2
+selects its firmware behavior: hold BTN2 during startup for USB DFU and
+release after enumeration, or leave BTN2 released for the normal secondary
+boot path. BTN2 cannot rescue an invalid primary image at flash zero.
+
+See :doc:`../hardware/ulx5m/index` for the V005 pin-level mapping, full SW1
+table, and recovery distinction. As of October 26 the SPI-active and BTN2
+cold-boot behaviors remain **untested after the v55 primary installation**.
 
 The port targets the Intergalaktik ULX5M-GS V005 with a Cologne Chip GateMate
 CCGM1A1. It retains the ULX4M bootloader's PicoRV32/USB architecture but uses
@@ -347,8 +369,8 @@ and ``openFPGALoader.exe``. The board is powered only by its USB-C connection;
 Tigard is powered separately through its own USB connection. The JTAG adapter
 does not supply target power.
 
-* Set SW1 to JTAG configuration mode. The tested ``CFG_MD2`` and ``CFG_MD3``
-  signals measured approximately 1.8 V each.
+* Set both SW1 DIP switches ON for JTAG configuration mode (``0xC``). The
+  tested ``CFG_MD2`` and ``CFG_MD3`` pins measured approximately 1.8 V each.
 * Set Tigard to JTAG mode and 1.8 V I/O. Leave Tigard ``VTGT`` disconnected.
   On Windows, Tigard FT2232H Interface 1 uses ``libusbK`` for JTAG; Interface 0
   remains on the FTDI UART driver.

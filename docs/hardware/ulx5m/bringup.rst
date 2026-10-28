@@ -80,6 +80,24 @@ SERV DFU and flash safety
   of invalid or BTN2-DFU candidates. A passing simulation-only model is
   **not** hardware proof of GateMate reconfiguration or application boot.
 
+October 26, 2026: persistent primary installation
+-------------------------------------------------
+
+* The physical V005 SW1 mapping was already measured on October 17: ON/ON
+  raised ``CFG_MD2`` and ``CFG_MD3`` to approximately 1.8 V (JTAG ``0xC``).
+  The V005 schematic shows OFF/OFF pulls both LOW (SPI-active ``0x0``).
+  See :doc:`index` for the full switch table. No RTL register sets this
+  power-on configuration mode.
+* The SERV v50 seed-7 image was locally routed at 48.57 MHz. With SW1 ON/ON,
+  JTAG SRAM configuration supported BTN2 DFU, USB enumeration ``1D50:614B``,
+  and read-only verification of the secondary sector. The normal-mode firmware
+  reported ``RECFG`` requested; this did **not** establish secondary takeover.
+* The guarded v55 install reported all seven 64 KiB primary blocks at
+  ``0x000000..0x06FFFF`` verified, followed by an exact full 4 MiB flash hash
+  ``bf0db6395ac728aa51c424052087e627b51163941530b5419e2f5c41e490fc28``.
+  Factory recovery data was preserved. SPI-active cold boot (SW1 OFF/OFF) and
+  BTN2-held **persistent** DFU boot have **not yet been physically tested**.
+
 Configuration handoff and next steps
 ------------------------------------
 

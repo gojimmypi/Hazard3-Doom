@@ -7,6 +7,12 @@ original I2CDriver firmware is written in MyForth. Hazard3-Doom reuses the
 project's existing FPGA SAO I2C controller for bus transactions and renders an
 I2CDriver-style interface through the existing 320x200 indexed HDMI path.
 
+.. figure:: ../images/hazard3-doom-hdmi-i2cdriver.png
+   :alt: Hazaard3 Doom I2CDriver HDMI interface
+
+   Hazaard3 Doom I2CDriver HDMI interface screen.
+
+
 The feature is implemented primarily by:
 
 .. code-block:: text

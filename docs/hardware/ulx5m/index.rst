@@ -196,15 +196,67 @@ mechanical retention, and GND before soldering an adapter. See
 :doc:`../../user-guide/bootloader` for the tested Tigard sequence and
 :doc:`../../troubleshooting` for the required cold-start recovery procedure.
 
+SW1 hardware boot selection (V005)
+----------------------------------
+
+SW1 is the two-position DIP switch in ``config.kicad_sch`` (sheet 5 of the
+:download:`V005 schematic <../../ulx5m-gs.pdf>`). Its positions select the
+GateMate configuration source at reset; they do not select the SERV firmware
+mode. The bootloader RTL cannot change the power-on ``CFG_MD`` strap values.
+
+SW1 connects ``+1V8`` to ``CFG_MD2`` (upper switch, pins 1-4) and ``CFG_MD3``
+(lower switch, pins 2-3) when ON. ``R25`` and ``R24`` respectively pull these
+signals to GND when OFF. ``CFG_MD0`` and ``CFG_MD1`` are fixed LOW through
+``R27`` and ``R29``; optional pull-ups ``R26`` and ``R28`` are DNP. The tested
+V005 board measured both ``CFG_MD2`` and ``CFG_MD3`` near 1.8 V with SW1 ON/ON.
+
+.. list-table:: ULX5M-GS V005 SW1 configuration-mode settings
+   :header-rows: 1
+   :widths: 20 25 20 35
+
+   * - SW1 upper / lower
+     - ``CFG_MD[3:0]``
+     - GateMate mode
+     - Use
+   * - ON / ON
+     - ``1100`` (``0xC``)
+     - JTAG
+     - Tigard SRAM programming and JTAG-SPI flash access
+   * - OFF / OFF
+     - ``0000`` (``0x0``)
+     - SPI active (mode 0)
+     - Cold boot from the onboard AT25QL321 flash
+   * - ON / OFF
+     - ``0100`` (``0x4``)
+     - SPI passive
+     - Not used for autonomous flash boot
+   * - OFF / ON
+     - ``1000`` (``0x8``)
+     - Unsupported
+     - Do not select
+
+Set both switches with FPGA power removed. Power-cycle the FPGA to sample
+``CFG_MD[3:0]``; do not change SW1 while powered. ``BTN2`` is a separate,
+latched **firmware** choice after the primary FPGA configuration loads:
+hold BTN2 at startup for USB DFU, or leave it released for normal secondary
+boot. BTN2 cannot recover an invalid primary configuration at flash offset
+``0x000000``. Return SW1 to ON/ON and use Tigard/JTAG recovery if SPI-active
+startup fails. This is a V005 schematic mapping; check other board revisions.
+
+Cologne Chip DS1001, Table 3.1, defines ``0x0`` as SPI-active CPOL=0/CPHA=0
+and ``0xC`` as JTAG. See :doc:`bringup` for the current SERV boot test status.
+
 Configuration flash and development status
 ------------------------------------------
 
 The tested board's SPI flash returned JEDEC ID ``1f 42 16`` (AT25QL321,
-4 MiB). The existing project diagnostic can read flash without writing it;
-the original image was backed up in 64 KiB chunks. The ULX5M port is still
-experimental: programming FPGA SRAM through JTAG does not create a persistent
-DFU bootloader and power loss removes the running image. Do not apply ULX4M
-flash layouts or recovery commands to ULX5M.
+4 MiB). Two full factory backups were independently verified. On October 26,
+2026 the SERV v50 seed-7 SPI-primary image was programmed into flash offset
+``0x000000`` through the guarded v55 installer. Seven 64 KiB blocks and the
+entire 4 MiB flash were verified after writing; the v41 secondary image at
+``0x201000`` was preserved. **This verifies flash installation, not SPI-active
+cold boot or secondary takeover.** The earlier JTAG/SRAM test image remains
+volatile. Do not apply ULX4M flash layouts or recovery commands to ULX5M.
 
 Development notes and tested configurations
 -------------------------------------------
