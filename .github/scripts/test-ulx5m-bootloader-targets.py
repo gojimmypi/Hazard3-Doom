@@ -21,8 +21,24 @@ class SweepTargetTests(unittest.TestCase):
     def test_workflow_menu_and_validation(self):
         source = WORKFLOW.read_text(encoding="ascii")
         self.assertIn("default: normal-boot", source)
-        self.assertRegex(source, r"(?m)^\s+- normal-boot$")
-        self.assertIn("normal-boot|spi-secondary|flash-read-serv|usb-probe|flash-read-probe)", source)
+        # Keep the workflow dispatch menu and shell allowlist synchronized.
+        # Checking one literal case arm broke when v73-integrated was added.
+        target_block = re.search(
+            r"(?ms)^      target:\n(.*?)(?=^      seed_first:)", source
+        )
+        self.assertIsNotNone(target_block)
+        menu = set(re.findall(r"(?m)^\s+- ([a-z0-9-]+)$", target_block.group(1)))
+        allowlist = re.search(
+            r'(?m)^\s+(normal-boot(?:\|[a-z0-9-]+)+)\) ;;$', source
+        )
+        self.assertIsNotNone(allowlist)
+        allowed = set(allowlist.group(1).split("|"))
+        required = {
+            "normal-boot", "v73-integrated", "spi-secondary",
+            "flash-read-serv", "usb-probe", "flash-read-probe",
+        }
+        self.assertTrue(required.issubset(menu))
+        self.assertEqual(menu, allowed)
         self.assertIn("test-ulx5m-bootloader-targets.py", source)
         self.assertIn("design=top_ulx5m_gs_flash_read-normal-boot", source)
         self.assertIn("source_dir=bootloader-serv", source)

@@ -221,16 +221,20 @@ ULX5M-GS V005 bootloader port (in development)
    demonstrated native USB DFU flash writes and BTN2 startup selection.
    On October 26, 2026 a guarded installer wrote the SERV SPI-primary image
    at flash offset ``0x000000`` and verified the complete 4 MiB flash.
-   **SPI-active cold boot and secondary takeover are not yet verified.**
-   See :doc:`../hardware/ulx5m/bringup` for the dated results.
+   On October 28, an independent v72 diagnostic primary physically
+   demonstrated **SPI-active secondary takeover** into the v41 walking-LED
+   image at ``0x201000``. That primary has no DFU support; full SERV/BTN2
+   integration is still pending. See :doc:`../hardware/ulx5m/multiboot-v72`
+   for the dated hardware evidence and recovery status.
 
 .. warning::
 
-   The ULX5M-GS persistent DFU bootloader is **not yet qualified by a cold
-   SPI-active hardware test**. The older PicoRV32 probe documented below runs
-   only from JTAG-loaded SRAM, whereas the newer SERV image has been written
-   to configuration flash but has not yet been observed booting from it.
-   Do not apply ULX4M flash layouts or DFU recovery commands to ULX5M.
+   The ULX5M-GS **combined persistent DFU/normal bootloader is not yet
+   qualified**. The isolated v72 primary did cold-boot from SPI and run the
+   secondary application, but it has no DFU. The SERV BTN2/DFU branch and
+   registered normal-boot handoff have not yet been proven together in one
+   persistent 48 MHz image. Do not apply ULX4M flash layouts or DFU recovery
+   commands to ULX5M.
 
 ULX5M-GS V005 SW1 and BTN2 startup selection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -249,8 +253,10 @@ release after enumeration, or leave BTN2 released for the normal secondary
 boot path. BTN2 cannot rescue an invalid primary image at flash zero.
 
 See :doc:`../hardware/ulx5m/index` for the V005 pin-level mapping, full SW1
-table, and recovery distinction. As of October 26 the SPI-active and BTN2
-cold-boot behaviors remain **untested after the v55 primary installation**.
+table, and recovery distinction. The October 26 v55 result is historical. On October 28, the isolated v72
+primary passed SPI-active cold boot and secondary takeover with BTN2 released.
+Persistent BTN2-selected DFU **in that same bootable primary** is not yet
+verified; v72 itself deliberately has no DFU.
 
 The port targets the Intergalaktik ULX5M-GS V005 with a Cologne Chip GateMate
 CCGM1A1. It retains the ULX4M bootloader's PicoRV32/USB architecture but uses

@@ -1,0 +1,32 @@
+# Local, offline v73 integrated SERV seed sweep. Reuses a frozen synthesized
+# netlist from v73-build; no JTAG, USB DFU, gmpack, or flash commands.
+# Run from bootloader-serv. Does NOT modify Makefile.ulx5m-v73-integrated.
+include Makefile.ulx5m-v73-integrated
+.DEFAULT_GOAL := v73-sweep-help
+
+V73_SWEEP_FIRST ?= 1
+V73_SWEEP_LAST ?= 64
+V73_SWEEP_JOBS ?= 2
+V73_SWEEP_TIMEOUT ?= 600
+V73_SWEEP_DIR ?= $(V73_DIR)/sweep-seeds-$(V73_SWEEP_FIRST)-$(V73_SWEEP_LAST)
+
+.PHONY: v73-sweep-help v73-sweep-existing v73-sweep-test
+v73-sweep-help:
+	@echo 'Offline 48MHz v73 sweep over the EXISTING synthesized v73 netlist.'
+	@echo 'make -f Makefile.ulx5m-v73-sweep v73-sweep-test'
+	@echo 'make -f Makefile.ulx5m-v73-sweep v73-sweep-existing V73_SWEEP_FIRST=1 V73_SWEEP_LAST=64 V73_SWEEP_JOBS=2'
+	@echo 'Uses HeAP beta 0.6 and router2, matching v73-build exactly.'
+	@echo 'Result: $(V73_SWEEP_DIR)/summary.md'
+
+v73-sweep-test:
+	python3 tests/test-ulx5m-v73-sweep.py
+
+# v73-build may have failed timing while still producing the JSON and source.sha256.
+# Only route frozen copies of the existing synthesis, never synthesize per seed.
+v73-sweep-existing: v73-test v73-sweep-test
+	python3 tests/sweep-ulx5m-v73-local.py \
+	  --netlist $(V73_JSON) --ccf $(FLASH_CCF) --sdc $(FLASH_SDC) \
+	  --source-sha $(V73_SOURCE) \
+	  --first $(V73_SWEEP_FIRST) --last $(V73_SWEEP_LAST) \
+	  --jobs $(V73_SWEEP_JOBS) --timeout $(V73_SWEEP_TIMEOUT) \
+	  --beta 0.6 --mhz 48.0 --output $(V73_SWEEP_DIR)

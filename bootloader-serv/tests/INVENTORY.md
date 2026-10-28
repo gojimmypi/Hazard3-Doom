@@ -12,9 +12,9 @@ Project version: v0.2.1
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 225
+Files inventoried: 241
 
-Total bytes: 1326316
+Total bytes: 1438023
 
 ## Verification
 
@@ -37,7 +37,7 @@ should be identified before a public release.
 | `audit-ulx5m-spi-multiboot-commands.py` | 9053 | `66931920fe7b157f11d19ab1c5d8db6c5802efee52b5881f5ded692daa346f37` | REVIEW | File |
 | `audit-ulx5m-spi-recovery-gates.py` | 5873 | `72ce5e46429741276c8c4b6e4af336c0e83947c4e82e5e0a6181b4826ff159a1` | REVIEW | File |
 | `audit-ulx5m-v63-config-bank.py` | 9390 | `f17b0321432edee04c4399130d7d8f0266e854e1d6612824afed851c11c28df9` | REVIEW | File |
-| `audit-ulx5m-v70-tinydfu-compat.py` | 6044 | `3e2266a98409656ba1472619d7d912607ac2d442038b923e935481096a25cf89` | REVIEW | File |
+| `audit-ulx5m-v70-tinydfu-compat.py` | 6768 | `37b9b85ee268b83791394347c74419b0b2d7c5bef7722614804e22c9bf6472d8` | REVIEW | File |
 | `backup-ulx5m-serv-flash.py` | 11225 | `be83a1fe81284f2db4dedd50ed8765180e54823c19d87aed74a8daf0baaab0dc` | REVIEW | File |
 | `capture-ulx5m-serv-ep0-raw.py` | 6347 | `98663a5b4fc132aeb59397658682859da58049f7f2f987c44034662c84046544` | REVIEW | File |
 | `check-ulx5m-btn2-modes.py` | 7762 | `7934272079430c5736af1f97099b8eae847a902d603eb6ee7e4e1996ce2a783c` | REVIEW | File |
@@ -97,11 +97,16 @@ should be identified before a public release.
 | `qualify-ulx5m-v70b-runtime-clear-ab.py` | 15817 | `af230b12657b1b755499c30ba6f0a4f6e14e0e081edf599ce63b89fe8a92c12c` | REVIEW | File |
 | `qualify-ulx5m-v72-cfg-registered.py` | 5082 | `a0239adbfeb72255cf5eea0d5738a0ac31fff99c93df0efdbfaa619eefd0c066` | REVIEW | File |
 | `qualify-ulx5m-v72c-registered-ab.py` | 17645 | `6c356ff6e518e1647d6e2235a38fe2e18217d1d6ebcd59814d2b0f3404fb4594` | REVIEW | File |
+| `qualify-ulx5m-v73-guarded-ab.py` | 14676 | `8459f2c3c0f3b94556bd19a8d2f06c00edf2bc33bd6b37d91635c72a26ac0ac8` | REVIEW | File |
+| `qualify-ulx5m-v73-integrated.py` | 8317 | `f4744615467981b19925027edc293fa6df47a85ff5505fe672f42754456e4e0b` | REVIEW | File |
+| `qualify-ulx5m-v75-512k-guarded-ab.py` | 14980 | `81e1bad075356f459f1c5c6eb584c90ae6bfac802d62c4e774e985ce8139a8b1` | REVIEW | File |
 | `read-ulx5m-flash.py` | 4126 | `f3a2deb4a67132ace05fc7eb121e139d5f960b92876780a9f9065f0a54e8206a` | REVIEW | File |
 | `restore-ulx5m-serv-candidate-multi.py` | 8250 | `50322b879f97014e1ddd4a8b1d460b8fa81162237dd0391bb80343e577af7da6` | REVIEW | File |
 | `restore-ulx5m-serv-candidate-quad.py` | 8275 | `cf9cf4f78ccdec46a7cd7e6aa56f40ca9a5d7cc4d947e147ea584bd7af66c5ff` | REVIEW | File |
 | `restore-ulx5m-serv-candidate-sector.py` | 7261 | `1975d0ff36df8bda0069cc98df9d91fe5bdfa70302e66f6df1150ca401ff2a7c` | REVIEW | File |
 | `stress-ulx5m-serv-ep0.py` | 2634 | `bc864f61e1b9b16dcb3a962f3eb94401257a55a4bccc1b13889165ce8f963aa9` | REVIEW | File |
+| `sweep-ulx5m-v73-gh.py` | 7768 | `491cd68cd59aa04aa0dd684460ce2479e9c767115ac1ac5da1aab46d9276cd8c` | REVIEW | File |
+| `sweep-ulx5m-v73-local.py` | 10140 | `f51c06d4bc0f057c1ba2ee6e91218a0f5a491c9cb2404cde8bc68396c289e11f` | REVIEW | File |
 | `tb_soc_mem_response_reg.v` | 2963 | `3172818ce4c4a103fd24fb516cc10e8d4025798c0bd695c2eac40f1db824941f` | REVIEW | File |
 | `tb_ulx5m_btn2_boot_select.v` | 2110 | `df87d910d7da6b7e3b3289e325d57efc2c4520d6f0274e21cc74cb5060ae59c8` | REVIEW | File |
 | `tb_ulx5m_btn2_dfu_asyncreset.v` | 3516 | `8d4a387aab4f5a8e4b93c34c6e8fc3c11f4dd389fa81d4ddd5db980dd53ec710` | REVIEW | File |
@@ -137,6 +142,9 @@ should be identified before a public release.
 | `tb_ulx5m_v68_cfg_runtime_clear.v` | 3218 | `06fbfe4b3f6c30c37a90713fa865fdbca6e566fc74d4e59fc79009033092a51a` | REVIEW | File |
 | `tb_ulx5m_v70_cfg_runtime_clear.v` | 3218 | `fe8a6bd879f55165c09e6cb49fe5d9eee6f6c9e8f725576f9c0a6fe5313f664e` | REVIEW | File |
 | `tb_ulx5m_v72_cfg_registered.v` | 2473 | `ba44aa2f33498bcc95f982b3ac6a088db14561c147fede082fe003fbb523c981` | REVIEW | File |
+| `tb_ulx5m_v73_integrated.v` | 4058 | `563fca5375f2a06184109620b1f0078671e669b989e954511829cd8d2733d21e` | REVIEW | File |
+| `tb_ulx5m_v74_abort.v` | 1964 | `b099921ca0a0e60131da66b256340fbdc4d767bec95c7337d50c74b4084704bb` | REVIEW | File |
+| `tb_ulx5m_v76_hw_normal_boot.v` | 3974 | `bf4720194486305b17d53b3f8dfae9dddfff9e82b92bed931e3d54e2005573fb` | REVIEW | File |
 | `test-analyze-ulx5m-gmpack-trailers.py` | 7737 | `104a3d740661c12b4b36a66e3cc933d860e3d573ec37fbfb13b66bb5c669211d` | REVIEW | File |
 | `test-audit-ulx5m-cfg-hardware-evidence.py` | 5292 | `306b3d5066e14dd25f3fe84ecd280d7b10bea006f5f87238fc50a1e10c2cbb1a` | REVIEW | File |
 | `test-audit-ulx5m-conditional-spi-jump.py` | 7037 | `57290062dd2dd431d52ceeb98e459cb92aa8474dd2e3dce5c7986df32360b9fa` | REVIEW | File |
@@ -250,5 +258,13 @@ should be identified before a public release.
 | `test-ulx5m-v70b-runtime-clear-ab.py` | 11597 | `8a3a0ba46720fdbfa0bf19802a4f05fb7b478effa569c8ccf2dbf72d9aef5263` | REVIEW | File |
 | `test-ulx5m-v72-cfg-registered.py` | 4712 | `751725a44483649189c2c061372ed50cda51287c809df3ce6118abb02e17e8d3` | REVIEW | File |
 | `test-ulx5m-v72c-registered-ab.py` | 10246 | `9f7af022a6d4b294e03247efb07b9bbe38880bf7204d538a2bcfcc4b44d292b0` | REVIEW | File |
+| `test-ulx5m-v73-gh-sweep.py` | 8377 | `ff018e1c896b92c0b91b081710509803b6bf820c2788bf76538dad4a30836b8d` | REVIEW | File |
+| `test-ulx5m-v73-guarded-ab.py` | 7784 | `ca3ea53b7c431c9990f95fe58437edbe6aa34a31afd4704b3de62d40f1cdf85c` | REVIEW | File |
+| `test-ulx5m-v73-integrated.py` | 4893 | `8eacc44c94c615e45484010898d1ec9ea2f8f2c9efdfdee3789d4e2fa2cf8319` | REVIEW | File |
+| `test-ulx5m-v73-sweep.py` | 5735 | `019ea8b584f079d0ec3dda1512d5a8d95fe98f3c9cc0902ad78c06a74c4664a8` | REVIEW | File |
+| `test-ulx5m-v73e-pack-parser.py` | 3463 | `e01d01e70c3b28e42872823735053750d4a1f78091f0152d43ff3e5d5e11f158` | REVIEW | File |
+| `test-ulx5m-v73f-full-serv-rom.py` | 3623 | `4db30c3b1ed5cd4f56339d7beb518c0f55821c1bc3acac8e1d31e5eabbbf52d6` | REVIEW | File |
+| `test-ulx5m-v75-512k-guarded-ab.py` | 9185 | `31c703246774d0017c3ce17a2d959d95024806386d5f219f054482828b84e275` | REVIEW | File |
 | `ulx5m-at25ql321-mock.c` | 4185 | `30ada14a13d6f1306558a729c14bab54e39f7b7628abf6a118f92925937284ae` | REVIEW | File |
 | `ulx5m-at25ql321-mock.h` | 799 | `696efd553b06cd9f6188b7d0d37b86850d788e78657a9ffdde6cfa0205f50aeb` | REVIEW | File |
+| `v73-gh-bootstrap-rom.py` | 2046 | `81437dba529eccbe13a06f7f34332ab1a59b32892500f9384517bd409d99abaf` | REVIEW | File |

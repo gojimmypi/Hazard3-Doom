@@ -93,6 +93,11 @@ module top_ulx5m_gs_flash_read (
         .fw_reset(fw_reset)
     );
     assign dfu_enable = mode_valid && dfu_selected && !reset;
+`ifdef ULX5M_V76_HW_NORMAL_BOOT
+    // Mirror v72: reserve the configuration bank for the hardware handoff.
+    // BTN2 DFU mode still gets the normal fabric-owned SPI interface.
+    wire v76_hardware_boot = mode_valid && !dfu_selected;
+`endif
 `else
     ulx5m_btn2_dfu_gate #(.REGISTERED_RELEASE(BTN2_REGISTERED_RELEASE)) gate_i (
         .clk(clk48), .rst(reset), .btn2_n(btn_n[1]),
@@ -213,7 +218,9 @@ module top_ulx5m_gs_flash_read (
     // Firmware is compiled into this word-addressed RAM image before
     // GateMate synthesis. No ECP5 ecpbram patching is needed.
 `ifdef ULX5M_USE_SERV
-`ifdef ULX5M_SERV_SPI_ACTIVE_SECONDARY
+`ifdef ULX5M_V73_REGISTERED_REBOOT
+    localparam FW_IMAGE = "build-ulx5m-gs/v73-normal-boot-dfu-hw-native/fw_ulx5m_flash_read.hex";
+`elsif ULX5M_SERV_SPI_ACTIVE_SECONDARY
     localparam FW_IMAGE = "build-ulx5m-gs/normal-boot-dfu-hw-native/fw_ulx5m_flash_read.hex";
 `elsif ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
     localparam FW_IMAGE = "build-ulx5m-gs/normal-boot/fw_ulx5m_flash_read.hex";
@@ -248,13 +255,22 @@ module top_ulx5m_gs_flash_read (
     );
 
     // Peripheral 0: minimal LED/button register block, without ECP5 pads.
+`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
+    wire [31:0] misc_rdata;
+    assign wb_rdata[0] = wb_cyc[0] ? misc_rdata : 32'h00000000;
+`endif
     soc_ulx5m_misc misc_i (
         .led_n(fw_led_n), .btn_n(btn_n), .locked(locked),
 `ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
         .mode_valid(mode_valid), .dfu_selected(dfu_selected),
 `endif
         .bus_addr(wb_addr[3:0]), .bus_wdata(wb_wdata),
-        .bus_rdata(wb_rdata[0]), .bus_cyc(wb_cyc[0]),
+`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
+        .bus_rdata(misc_rdata),
+`else
+        .bus_rdata(wb_rdata[0]),
+`endif
+        .bus_cyc(wb_cyc[0]),
         .bus_ack(wb_ack[0]), .bus_we(wb_we),
         .clk(clk48), .rst(fw_reset)
     );
@@ -274,7 +290,7 @@ module top_ulx5m_gs_flash_read (
     wire ep_tx_we, ep_rx_re;
     wire usb_attach;
 `ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
-    wire usb_core_reset = fw_reset | ~dfu_selected;
+    wire usb_core_reset = fw_reset | ~dfu_enable;
 `else
     wire usb_core_reset = fw_reset;
 `endif
@@ -340,19 +356,25 @@ module top_ulx5m_gs_flash_read (
         .bus_addr(wb_addr[1:0]), .bus_wdata(wb_wdata),
         .bus_rdata(wb_rdata[4]), .bus_cyc(wb_cyc[4]),
         .bus_ack(wb_ack[4]), .bus_we(wb_we),
-        .clk(clk48), .rst(fw_reset)
+        .clk(clk48),
+        // Normal mode isolates the physical flash pads at the PHY. Keep
+        // QSPI reset independent of BTN2 selection to avoid a mode-to-BRAM path.
+        .rst(fw_reset)
     );
     qspi_phy_gatemate #(.N_CS(1)) flash_phy_i (
         .spi_io(flash_io), .spi_cs(flash_cs_n), .spi_sck(flash_sck),
         .spi_io_i(spi_io_i), .spi_io_o(spi_io_o), .spi_io_t(spi_io_t),
         .spi_sck_o(spi_sck_o), .spi_cs_o(spi_cs_o),
+`ifdef ULX5M_V76_HW_NORMAL_BOOT
+        .release_to_config(release_spi_for_config | v76_hardware_boot),
+`else
         .release_to_config(release_spi_for_config),
+`endif
         .clk(clk48), .rst(fw_reset)
     );
 
 `ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
-    // Peripheral 5: legacy stream or v47 RECFG-only controller.
-    // The v47 branch never sends configuration bytes to CC_CFG_CTRL.
+    // Peripheral 5: v73 registered handoff or legacy RECFG/stream controller.
 `ifdef ULX5M_SERV_SPI_ACTIVE_SECONDARY
     ulx5m_spi_active_reboot_wb cfg_stream_i (
         .release_spi(release_spi_for_config),
@@ -361,7 +383,13 @@ module top_ulx5m_gs_flash_read (
 `endif
         .clk(clk48), .rst(fw_reset),
         .normal_mode(mode_valid && !dfu_selected),
+`ifdef ULX5M_V76_HW_NORMAL_BOOT
+        // The released flash pads cannot be driven by the fabric SPI master.
+        // Autonomous normal boot does not need firmware's idle handshake.
+        .spi_idle(1'b1),
+`else
         .spi_idle(spi_cs_o[0]),
+`endif
         .bus_addr(wb_addr[2:0]), .bus_wdata(wb_wdata),
         .bus_rdata(wb_rdata[5]), .bus_cyc(wb_cyc[5]),
         .bus_ack(wb_ack[5]), .bus_we(wb_we)

@@ -6,12 +6,13 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: Design (spi-secondary = v47 RECFG primary; normal-boot = legacy BTN2 SERV)
+        description: Design (v73-integrated = current SERV+DFU+reconfig; normal-boot = legacy)
         type: choice
         required: true
         default: normal-boot
         options:
           - normal-boot
+          - v73-integrated
           - spi-secondary
           - flash-read-serv
           - usb-probe
@@ -122,7 +123,7 @@ jobs:
             exit 2
           fi
           case "${SWEEP_TARGET}" in
-            normal-boot|spi-secondary|flash-read-serv|usb-probe|flash-read-probe) ;;
+            normal-boot|v73-integrated|spi-secondary|flash-read-serv|usb-probe|flash-read-probe) ;;
             *) echo 'ERROR: invalid design.' >&2; exit 2 ;;
           esac
           bash -n scripts/sweep-ulx5m-bootloader.sh
@@ -130,6 +131,20 @@ jobs:
           python3 .github/scripts/test-ulx5m-bootloader-targets.py
           python3 .github/scripts/test-ulx5m-spi-secondary-sweep.py
           python3 -m py_compile scripts/sweep-ulx5m-bootloader-ci.py
+          if [[ "${SWEEP_TARGET}" == v73-integrated ]]; then
+            test -s bootloader-serv/Makefile.ulx5m-v73-integrated
+            test -s bootloader-serv/Makefile.ulx5m-v73-gh-sweep
+            test -s bootloader-serv/tests/v73-gh-bootstrap-rom.py
+            test -s bootloader-serv/tests/sweep-ulx5m-v73-gh.py
+            test -s bootloader-serv/tests/tb_ulx5m_v73_integrated.v
+            python3 bootloader-serv/tests/test-ulx5m-v73-gh-sweep.py
+            python3 -m py_compile bootloader-serv/tests/v73-gh-bootstrap-rom.py \
+              bootloader-serv/tests/sweep-ulx5m-v73-gh.py
+            [[ "${SWEEP_HEAP_BETA}" == 0.6 && -z "${SWEEP_NEXTPNR_EXTRA_ARGS}" ]] || {
+              echo 'ERROR: v73 current sweep requires heap beta 0.6 and no extra nextpnr arguments.' >&2
+              exit 2
+            }
+          fi
           python3 scripts/sweep-ulx5m-bootloader-ci.py matrix \
             --first "${SWEEP_FIRST}" --last "${SWEEP_LAST}" --per-job "${SWEEP_PER_JOB}" > /dev/null
 
@@ -189,46 +204,78 @@ jobs:
         run: |
           set -euo pipefail
           case "${SWEEP_TARGET}" in
-            spi-secondary)
+            v73-integrated)
+              # v73 is the existing SERV+DFU RTL, NOT the legacy normal-boot target.
+              # CI uses the proven v72 command only to freeze a timing-search JSON.
+              # No packing or flashing; local v73-build must derive its own final ROM.
               source_dir=bootloader-serv
-              design=normal-boot-dfu-hw-native/spi-secondary
+              design=v73-normal-boot-dfu-hw-native/top_ulx5m_gs_flash_read
               constraint=top-ulx5m-gs-flash-read
-              makefile=Makefile.ulx5m-spi-secondary
+              makefile=Makefile.ulx5m-v73-gh-sweep
+              python3 bootloader-serv/tests/v73-gh-bootstrap-rom.py \
+                --output bootloader-serv/build-ulx5m-gs/v73-normal-boot-dfu-hw-native/cmd.hex
+              (
+                cd bootloader-serv
+                iverilog -g2012 -DULX5M_V73_REGISTERED_REBOOT \
+                  -s tb_ulx5m_v73_integrated -o /tmp/v73-existing-sweep.vvp \
+                  rtl/ulx5m_spi_active_reboot_wb.v tests/tb_ulx5m_v73_integrated.v
+                vvp /tmp/v73-existing-sweep.vvp
+              )
+              make -C "${source_dir}" -f "${makefile}" v73-gh-synth
               ;;
-            normal-boot)
-              source_dir=bootloader-serv
-              design=top_ulx5m_gs_flash_read-normal-boot
-              constraint=top-ulx5m-gs-flash-read
-              ;;
-            flash-read-serv)
-              source_dir=bootloader-serv
-              design=top_ulx5m_gs_flash_read-serv
-              constraint=top-ulx5m-gs-flash-read
-              ;;
-            usb-probe)
-              source_dir=bootloader
-              design=top_ulx5m_gs_usb_probe
-              constraint=top-ulx5m-gs-usb-probe
-              ;;
-            flash-read-probe)
-              source_dir=bootloader
-              design=top_ulx5m_gs_flash_read
-              constraint=top-ulx5m-gs-flash-read
+            *)
+              case "${SWEEP_TARGET}" in
+                spi-secondary)
+                  source_dir=bootloader-serv
+                  design=normal-boot-dfu-hw-native/spi-secondary
+                  constraint=top-ulx5m-gs-flash-read
+                  makefile=Makefile.ulx5m-spi-secondary
+                  ;;
+                normal-boot)
+                  source_dir=bootloader-serv
+                  design=top_ulx5m_gs_flash_read-normal-boot
+                  constraint=top-ulx5m-gs-flash-read
+                  ;;
+                flash-read-serv)
+                  source_dir=bootloader-serv
+                  design=top_ulx5m_gs_flash_read-serv
+                  constraint=top-ulx5m-gs-flash-read
+                  ;;
+                usb-probe)
+                  source_dir=bootloader
+                  design=top_ulx5m_gs_usb_probe
+                  constraint=top-ulx5m-gs-usb-probe
+                  ;;
+                flash-read-probe)
+                  source_dir=bootloader
+                  design=top_ulx5m_gs_flash_read
+                  constraint=top-ulx5m-gs-flash-read
+                  ;;
+              esac
+              if [[ "${SWEEP_TARGET}" != spi-secondary ]]; then
+                makefile=Makefile.ulx5m-gs
+              fi
+              make -C "${source_dir}" -f "${makefile}" "build-ulx5m-gs/${design}.json"
               ;;
           esac
-          if [[ "${SWEEP_TARGET}" != spi-secondary ]]; then
-            makefile=Makefile.ulx5m-gs
-          fi
           printf 'Selected: %s (source=%s, design=%s, makefile=%s)\n' "${SWEEP_TARGET}" "${source_dir}" "${design}" "${makefile}"
           yosys --version
-          make -C "${source_dir}" -f "${makefile}" "build-ulx5m-gs/${design}.json"
           mkdir -p frozen
           cp "${source_dir}/build-ulx5m-gs/${design}.json" frozen/netlist.json
           cp "${source_dir}/data/${constraint}.ccf" frozen/constraints.ccf
           cp "${source_dir}/data/${constraint}.sdc" frozen/constraints.sdc
+          if [[ "${SWEEP_TARGET}" == v73-integrated ]]; then
+            cp "${source_dir}/build-ulx5m-gs/${design%/*}/cmd.hex" frozen/bootstrap-cmd.hex
+            cp "${source_dir}/build-ulx5m-gs/${design%/*}/source.sha256" frozen/source.sha256
+          fi
           (
             cd frozen
-            sha256sum netlist.json constraints.ccf constraints.sdc > SHA256SUMS
+            if [[ "${SWEEP_TARGET}" == v73-integrated ]]; then
+              sha256sum netlist.json constraints.ccf constraints.sdc \
+                bootstrap-cmd.hex source.sha256 > SHA256SUMS
+            else
+              sha256sum netlist.json constraints.ccf constraints.sdc > SHA256SUMS
+            fi
           )
           {
             printf 'commit=%s\n' "${GITHUB_SHA}"
@@ -238,6 +285,9 @@ jobs:
             printf 'makefile=%s\n' "${makefile}"
             if [[ "${SWEEP_TARGET}" == spi-secondary ]]; then
               printf 'gmpack_bootaddr=0x201000\n'
+            elif [[ "${SWEEP_TARGET}" == v73-integrated ]]; then
+              printf 'bootstrap=full-serv-v63c-status-command-unqualified\n'
+              printf 'final_bitstream_qualified=false\n'
             fi
             printf 'synthesis_suite=%s\n' "${SYNTH_SUITE}"
             printf 'route_suite=%s\n' "${ROUTE_SUITE}"
@@ -381,7 +431,13 @@ jobs:
           if [[ "${RETAIN_BITSTREAMS}" == true ]]; then
             export SWEEP_RETAIN_BITSTREAMS=1
           fi
-          if [[ "${SWEEP_TARGET}" == spi-secondary ]]; then
+          if [[ "${SWEEP_TARGET}" == v73-integrated ]]; then
+            python3 bootloader-serv/tests/sweep-ulx5m-v73-gh.py route \
+              --first "${GROUP_FIRST}" --last "${GROUP_LAST}" \
+              --netlist "${SWEEP_JSON}" --ccf "${SWEEP_CCF}" \
+              --sdc "${SWEEP_SDC}" --timeout "${SWEEP_TIMEOUT}" \
+              --output "${SWEEP_OUTPUT_DIR}"
+          elif [[ "${SWEEP_TARGET}" == spi-secondary ]]; then
             bash scripts/sweep-ulx5m-spi-secondary.sh \
               "${GROUP_FIRST}" "$((GROUP_LAST - GROUP_FIRST + 1))" "${SWEEP_TIMEOUT}"
           else
@@ -412,6 +468,30 @@ jobs:
           mkdir -p group-results
           status_file="group-results/group-status-${{ matrix.group }}.csv"
           printf 'seed,timing_status,seconds,route_exit_status\n' > "${status_file}"
+          if [[ "${SWEEP_TARGET}" == v73-integrated ]]; then
+            # Convert v73 routed results into the existing live-watcher format.
+            python3 - "${GROUP_FIRST}" "${GROUP_LAST}" "${status_file}" <<'PYSTATUS'
+          import csv
+          import pathlib
+          import sys
+          first, last = map(int, sys.argv[1:3])
+          output = pathlib.Path(sys.argv[3])
+          source = pathlib.Path('group-results/results.csv')
+          rows = {}
+          if source.is_file():
+              with source.open(newline='', encoding='ascii') as fp:
+                  rows = {int(row['seed']): row for row in csv.DictReader(fp)}
+          with output.open('a', encoding='ascii') as fp:
+              for seed in range(first, last + 1):
+                  row = rows.get(seed, {})
+                  status = row.get('status', 'INCOMPLETE')
+                  code = row.get('exit_code', 'missing') or 'missing'
+                  fp.write(f'{seed},{status},NA,{code}\n')
+                  pathlib.Path(f'group-results/result-seed-{seed}.csv').write_text(
+                      f"{seed},{row.get('fmax_mhz', '') or 'NA'}\n", encoding='ascii')
+          PYSTATUS
+            exit 0
+          fi
           for ((seed = GROUP_FIRST; seed <= GROUP_LAST; seed++)); do
             row=''
             if [[ -s group-results/results.tsv ]]; then
@@ -476,13 +556,21 @@ jobs:
         shell: bash
         run: |
           set +e
-          python3 scripts/sweep-ulx5m-bootloader-ci.py summarize \
-            --target "${SWEEP_TARGET}" --first "${SWEEP_FIRST}" \
-            --last "${SWEEP_LAST}" --groups final/groups \
-            --frozen final/frozen --out final/report
+          if [[ "${SWEEP_TARGET}" == v73-integrated ]]; then
+            python3 bootloader-serv/tests/sweep-ulx5m-v73-gh.py summarize \
+              --first "${SWEEP_FIRST}" --last "${SWEEP_LAST}" \
+              --groups final/groups --output final/report
+          else
+            python3 scripts/sweep-ulx5m-bootloader-ci.py summarize \
+              --target "${SWEEP_TARGET}" --first "${SWEEP_FIRST}" \
+              --last "${SWEEP_LAST}" --groups final/groups \
+              --frozen final/frozen --out final/report
+          fi
           result=$?
           set -e
-          cat final/report/summary.md >> "${GITHUB_STEP_SUMMARY}"
+          if [[ -s final/report/summary.md ]]; then
+            cat final/report/summary.md >> "${GITHUB_STEP_SUMMARY}"
+          fi
           printf 'exit_status=%s\n' "${result}" >> "${GITHUB_OUTPUT}"
 
       - name: Upload complete sweep summary

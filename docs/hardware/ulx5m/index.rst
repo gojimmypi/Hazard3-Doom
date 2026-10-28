@@ -254,21 +254,28 @@ The tested board's SPI flash returned JEDEC ID ``1f 42 16`` (AT25QL321,
 2026 the SERV v50 seed-7 SPI-primary image was programmed into flash offset
 ``0x000000`` through the guarded v55 installer. Seven 64 KiB blocks and the
 entire 4 MiB flash were verified after writing; the v41 secondary image at
-``0x201000`` was preserved. **This verifies flash installation, not SPI-active
-cold boot or secondary takeover.** The earlier JTAG/SRAM test image remains
-volatile. Do not apply ULX4M flash layouts or recovery commands to ULX5M.
+``0x201000`` was preserved. That v55 test verified flash installation, not
+secondary takeover. On October 28, an isolated v72c primary (not SERV/DFU)
+was installed at ``0x000000..0x00ffff``. With SW1 OFF/OFF and BTN2 released,
+its registered runtime configuration command successfully started the v41
+walking-LED application at ``0x201000``. This is physical proof of SPI-active
+secondary takeover, **not** qualification of a combined BTN2/DFU bootloader.
+See :doc:`multiboot-v72` and :doc:`bringup`. Do not apply ULX4M flash layouts
+or recovery commands to ULX5M.
 
 Development notes and tested configurations
 -------------------------------------------
 
 The October 2026 development record covers SERV DFU, flash backups, BTN2
 selection, toolchain, timing and USB-port results. These are development
-checkpoints, not an assertion that persistent boot is complete.
+checkpoints. Minimal v72 secondary takeover is now physically confirmed,
+but combined persistent DFU plus normal application boot is not complete.
 
 .. toctree::
    :maxdepth: 1
 
    bringup
+   multiboot-v72
 
 Sources and revision checks
 ---------------------------

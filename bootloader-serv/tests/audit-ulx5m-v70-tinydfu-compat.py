@@ -42,7 +42,12 @@ def packet(cmd, data):
 
 
 def parse_commands(bit):
-    """TinyDFU-compatible frame parsing; CRC-check terminal status/reset/jump."""
+    """TinyDFU-compatible frame parsing; CRC-check terminal status/reset/jump.
+
+    Interior configuration records may contain reserved/zero CRC fields.
+    Only the final three configuration commands use the compact CRC rules
+    required for the runtime handoff. Check those strictly.
+    """
     i, records = 0, []
     while i < len(bit):
         cmd = bit[i]
@@ -57,20 +62,29 @@ def parse_commands(bit):
         end = start + size
         if end + 2 > len(bit):
             raise ValueError('Truncated command at 0x%x' % i)
-        header = bit[i:i+header_len]
-        header_crc = bit[i+header_len:start]
-        expected_header = bytes([~crc16(header) & 0xff, (~crc16(header) >> 8) & 0xff])
-        if cmd in (CMD_CHG_STATUS, CMD_CFGRST, CMD_JUMP) and header_crc != expected_header:
-            raise ValueError('Header CRC mismatch at 0x%x' % i)
-        frame_data = bit[i:end]
-        data_crc = bit[end:end+2]
-        expected_data = bytes([~crc16(frame_data) & 0xff, (~crc16(frame_data) >> 8) & 0xff])
-        if cmd in (CMD_CHG_STATUS, CMD_CFGRST, CMD_JUMP) and data_crc != expected_data:
-            raise ValueError('Compact-command data CRC mismatch at 0x%x' % i)
         # Other configuration commands have command-specific CRC formats.
         # Audit only the terminal status/reset/jump records here.
         records.append((i, cmd, bit[start:end]))
         i = end + 2
+    # Intermediate CHG_STATUS packets can be non-compact configuration records.
+    # CRC-check only the terminal CHG_STATUS/CFGRST/JUMP packets, exactly as
+    # the packed runtime handoff requires. Offsets and payload bounds above
+    # were checked for every command, including the intermediate packets.
+    if len(records) >= 3 and [c for _, c, _ in records[-3:]] == [
+            CMD_CHG_STATUS, CMD_CFGRST, CMD_JUMP]:
+        for offset, cmd, payload in records[-3:]:
+            header = bit[offset:offset + 2]
+            header_crc = bit[offset + 2:offset + 4]
+            calc_h = crc16(header)
+            expected_h = bytes([~calc_h & 0xff, (~calc_h >> 8) & 0xff])
+            if header_crc != expected_h:
+                raise ValueError('Header CRC mismatch at 0x%x' % offset)
+            frame = bit[offset:offset + 4 + len(payload)]
+            data_crc = bit[offset + 4 + len(payload):offset + 6 + len(payload)]
+            calc_d = crc16(frame)
+            expected_d = bytes([~calc_d & 0xff, (~calc_d >> 8) & 0xff])
+            if data_crc != expected_d:
+                raise ValueError('Compact-command data CRC mismatch at 0x%x' % offset)
     return records
 
 

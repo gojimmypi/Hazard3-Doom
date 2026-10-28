@@ -32,16 +32,19 @@ Toolchain, synthesis and timing
 JTAG, USB and repeatability
 ---------------------------
 
-* Power Tigard first, then the ULX5M. Load SRAM only from WSL by invoking
-  the Windows executable, for example:
+* Use the startup order that yields reliable Tigard detection on the
+  actual bench. On October 28, powering the ULX5M before Tigard resolved
+  one initial JEDEC-detection failure; earlier experiments sometimes
+  favored the opposite order. Do not treat either order as guaranteed.
+  Load SRAM from WSL by invoking the Windows executable, for example:
 
   .. code-block:: bash
 
      ./bin/openFPGALoader.exe -c tigard --freq 1000k -m path/to/image.bit
 
   The ``-m`` RAM configuration is volatile and does not write configuration
-  flash. On the tested setup, powering Tigard first resolved initial FTDI
-  failures; a cold restart can be necessary after unsuccessful transfers.
+  flash. A cold restart can be necessary after unsuccessful transfers.
+  Require a valid JTAG IDCODE and flash JEDEC before trusting any readback.
 * The USB test identity is ``1D50:614B``; a cached Windows friendly name
   can still say ULX4M. Check the device-reported description and USB
   descriptors rather than relying on the friendly name.
@@ -98,16 +101,49 @@ October 26, 2026: persistent primary installation
   Factory recovery data was preserved. SPI-active cold boot (SW1 OFF/OFF) and
   BTN2-held **persistent** DFU boot have **not yet been physically tested**.
 
-Configuration handoff and next steps
-------------------------------------
+October 28, 2026: v72 runtime secondary takeover on silicon
+-----------------------------------------------------------
 
-The target design keeps a recoverable DFU entry path and starts a verified
-normal image only after validating selection and safety policy. GateMate
-configuration/reconfiguration is a distinct mechanism from firmware jumping
-to a new instruction address. Before treating it as finished, validate the
-actual configuration interface, flash image boundaries, persistent startup,
-and power-cycle recovery on hardware. Prefer JTAG SRAM tests until those
-checks are complete.
+* The isolated v72b RTL simulation and seven regression checks passed in WSL.
+  The 25 MHz seed-302 v72 primary routed at 79.26 MHz. The 27-byte command
+  was checked against its exact final packed image, not just a hand-coded
+  constant. Bitstream size was 14,987 bytes; SHA-256 was
+  ``839696d7c8a4ecdf63dff904c01ce85aea280bd885eda4309c7e5d25800e3aa0``.
+* The v72c guarded install verified JTAG IDCODE ``0x20000001``, flash JEDEC
+  ``1f 42 16`` and the original v63c full 4 MiB flash twice before writing.
+  The pre-install full-flash SHA-256 was
+  ``644c7c1b26e4cc2ba419a59a53ca8ffbbc02e808920d68336e84ac886d81cb02``.
+  Only the first 64 KiB was replaced. The protected remainder and secondary
+  application were verified; an exact v63c backup was saved.
+* With SW1 OFF/OFF (SPI-active), BTN2 released and a new power-on, the user
+  observed the v72 primary LED witness (D6 on, D7 blinking), followed by
+  D0 blinking and the D1-D7 walking-LED pattern of the secondary v41 app
+  at ``0x201000``. **Physical secondary takeover PASSED.** JTAG was not used
+  to configure the FPGA during the observed SPI-active boot.
+* The successful v72 primary deliberately has **no USB DFU**. The v63c
+  recovery session is
+  ``bootloader-serv/build-ulx5m-gs/v72c-registered-ab-20261028T193955726442Z-508``.
+  Preserve that directory and the v72 bitstream. v72 is an experiment, not
+  a replacement for the real SERV/BTN2 bootloader.
+
+Configuration handoff and remaining work
+----------------------------------------
+
+The v65/v67 results demonstrated that the packed configuration-bank ownership
+bit matters. The v70 command bytes matched TinyDFU's algorithm but v70
+failed physically. v72 succeeded using registered EN/VALID/DATA, a minimum
+three-clock EN lead, interbyte idle clocks, at least eight EN-high clocks
+following the last byte, a 16-count EN-low wait, and RECFG. This proves
+that the **complete v72 sequence** works on this board; it does not prove
+which individual timing difference made v70 fail.
+
+Integrate this engine into ``bootloader-serv/rtl/ulx5m_spi_active_reboot_wb.v``
+while retaining existing SPI-idle/flash-pin release, ARM/BOOT Wishbone gating,
+BTN2 selection, and native v41-sector validation. Generate the command from
+the final full SERV packed primary (not v72's minimal ``cmd.hex``), route the
+combined design locally at 48 MHz, and independently qualify both power-on
+paths before considering production readiness. Full details, hashes and
+recovery constraints are recorded in :doc:`multiboot-v72`.
 
 For GateMate bitstream and reconfiguration options see the `Cologne Chip
 GateMate toolchain quickstart

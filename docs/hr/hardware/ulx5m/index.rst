@@ -167,3 +167,4 @@ Development record (English translation pending)
    :maxdepth: 1
 
    bringup
+   multiboot-v72
