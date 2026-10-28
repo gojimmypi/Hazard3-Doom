@@ -12,9 +12,9 @@ Project version: v0.2.1
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 207
+Files inventoried: 212
 
-Total bytes: 1195773
+Total bytes: 1234326
 
 ## Verification
 
@@ -89,6 +89,8 @@ should be identified before a public release.
 | `qualify-ulx5m-v66-cfg-pin-sense-probe.py` | 3031 | `107410adca158c8f49b063768821910fd4164834931461d5dd6b2e333f236755` | REVIEW | File |
 | `qualify-ulx5m-v66b-cfg-bank-ab.py` | 15089 | `75a9de650f0c872ec5e028e14e7fba25f26f68e8fd35631379150d1ae71e6d2b` | REVIEW | File |
 | `qualify-ulx5m-v67b-bank-mode-ab.py` | 15184 | `11dfc86466f985c4b4482238b393befd15d0099e76377dff029bee6cf5cfafe3` | REVIEW | File |
+| `qualify-ulx5m-v68-cfg-runtime-clear.py` | 6337 | `9d4e6ec8b28b1b09d0de5cc7321e6a77a97237610a77092a6302fd5605526eed` | REVIEW | File |
+| `qualify-ulx5m-v68b-runtime-clear-ab.py` | 15306 | `38c894a342f7b3a334ae40ef47b8fbce428e30c08dc1cd1486b084f348604657` | REVIEW | File |
 | `read-ulx5m-flash.py` | 4126 | `f3a2deb4a67132ace05fc7eb121e139d5f960b92876780a9f9065f0a54e8206a` | REVIEW | File |
 | `restore-ulx5m-serv-candidate-multi.py` | 8250 | `50322b879f97014e1ddd4a8b1d460b8fa81162237dd0391bb80343e577af7da6` | REVIEW | File |
 | `restore-ulx5m-serv-candidate-quad.py` | 8275 | `cf9cf4f78ccdec46a7cd7e6aa56f40ca9a5d7cc4d947e147ea584bd7af66c5ff` | REVIEW | File |
@@ -126,6 +128,7 @@ should be identified before a public release.
 | `tb_ulx5m_v63b_cfg_bank_command_stream.v` | 4821 | `82bfe41be96f8acdda52064943653ab6b598877de8e00396ebe5be7bede3af49` | REVIEW | File |
 | `tb_ulx5m_v65_multiboot_probe.v` | 1567 | `3f30bd676e29edebe55a1752ec58b0cb16fc861ae6c3b9291d9895cc60cb9104` | REVIEW | File |
 | `tb_ulx5m_v66_cfg_pin_sense_probe.v` | 1892 | `baf4be5415702493ac6f07843c1d702f210588c1361e7bc1534e2297fbe33d11` | REVIEW | File |
+| `tb_ulx5m_v68_cfg_runtime_clear.v` | 3218 | `06fbfe4b3f6c30c37a90713fa865fdbca6e566fc74d4e59fc79009033092a51a` | REVIEW | File |
 | `test-analyze-ulx5m-gmpack-trailers.py` | 7737 | `104a3d740661c12b4b36a66e3cc933d860e3d573ec37fbfb13b66bb5c669211d` | REVIEW | File |
 | `test-audit-ulx5m-cfg-hardware-evidence.py` | 5292 | `306b3d5066e14dd25f3fe84ecd280d7b10bea006f5f87238fc50a1e10c2cbb1a` | REVIEW | File |
 | `test-audit-ulx5m-conditional-spi-jump.py` | 7037 | `57290062dd2dd431d52ceeb98e459cb92aa8474dd2e3dce5c7986df32360b9fa` | REVIEW | File |
@@ -232,5 +235,7 @@ should be identified before a public release.
 | `test-ulx5m-v66-cfg-pin-sense-probe.py` | 6585 | `1827509fc213a13eadc32bfb8b3d90cef28fbece2bb73f384dda9baacec3a985` | REVIEW | File |
 | `test-ulx5m-v66b-cfg-bank-ab.py` | 11217 | `8f8bfbe18ade2ca8fd2d50a59c6c6b86a2c407328b6d0e18f0b850a17e386ffa` | REVIEW | File |
 | `test-ulx5m-v67-bank-mode-ab.py` | 8954 | `53b41ce74794cd5b3aeeb2f72998a17fa64faad508394b1b8ffba6533fffce20` | REVIEW | File |
+| `test-ulx5m-v68-cfg-runtime-clear.py` | 2860 | `8a5fe8ae07c9e629ad579fb2acea10f73cb7bb7b93e18e8d4bdcf3c7142cbc34` | REVIEW | File |
+| `test-ulx5m-v68b-runtime-clear-ab.py` | 10832 | `ec76b0ab56cd50a99086d9b828005976b3926a43dc2a2f8cae35c55415a831c0` | REVIEW | File |
 | `ulx5m-at25ql321-mock.c` | 4185 | `30ada14a13d6f1306558a729c14bab54e39f7b7628abf6a118f92925937284ae` | REVIEW | File |
 | `ulx5m-at25ql321-mock.h` | 799 | `696efd553b06cd9f6188b7d0d37b86850d788e78657a9ffdde6cfa0205f50aeb` | REVIEW | File |
