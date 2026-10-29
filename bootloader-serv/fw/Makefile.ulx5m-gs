@@ -1,6 +1,6 @@
-# USB enumeration probe only; separate from existing DFU firmware Makefile.
-# Use a toolchain from PATH, a local xPack installation, or CROSS= explicitly.
-# Paths are relative to bootloader/fw (make is invoked with -C fw).
+# Canonical ULX5M-GS SERV/DFU firmware, built for local GateMate qualification.
+# This is an explicitly limited native application-sector test profile.
+# No other ULX5M firmware profiles are supported by this Makefile.
 RISCV_PATH_CROSS := $(shell for p in riscv-none-elf- riscv32-unknown-elf- riscv64-unknown-elf- riscv-none-embed-; do \
     if command -v "$${p}gcc" >/dev/null 2>&1; then printf '%s' "$$p"; break; fi; \
     done)
@@ -8,44 +8,58 @@ RISCV_LOCAL_GCC := $(firstword \
     $(wildcard $(HOME)/.local/xPacks/@xpack-dev-tools/riscv-none-elf-gcc/*/.content/bin/riscv-none-elf-gcc) \
     $(wildcard $(HOME)/.local/xPacks/riscv-none-elf-gcc/*/.content/bin/riscv-none-elf-gcc) \
     $(wildcard ../../bin/riscv-gcc/bin/riscv-none-elf-gcc) \
-    $(wildcard ../../bin/riscv-gcc/*/bin/riscv-none-elf-gcc))
+    $(wildcard ../../bin/riscv-gcc/*/bin/riscv-none-elf-gcc) \
+    $(wildcard /opt/riscv/bin/riscv32-unknown-elf-gcc) \
+    $(wildcard /opt/riscv/bin/riscv-none-elf-gcc))
 RISCV_LOCAL_CROSS := $(patsubst %gcc,%,$(RISCV_LOCAL_GCC))
 CROSS ?= $(or $(RISCV_PATH_CROSS),$(RISCV_LOCAL_CROSS),riscv-none-elf-)
+EXPECTED_GCC_VERSION ?= 12.2.0
 CC := $(CROSS)gcc
 OBJCOPY := $(CROSS)objcopy
-BUILD_DIR ?= ../build-ulx5m-gs
+BUILD_DIR ?= ../build-ulx5m-gs/bootloader
 
 CFLAGS := -DBOARD_ULX5M_GS=1 -Wall -Wextra -Os -march=rv32i -mabi=ilp32 \
   -ffreestanding -fno-builtin -fno-pic -fomit-frame-pointer \
-  -ffunction-sections -fdata-sections -nostartfiles
+  -ffunction-sections -fdata-sections -nostartfiles \
+  -DULX5M_SERV_TEST=1 -DULX5M_NORMAL_MODE=1 \
+  -DULX5M_DFU_STREAM_ONLY=1 \
+  -DULX5M_FLASH_HW_TEST=1 -DULX5M_DFU_HW_TEST_ONLY=1 \
+  -DULX5M_FLASH_HW_QUAD_TEST=1 -DULX5M_FLASH_HW_NATIVE_SLOT_TEST=1 \
+  -DULX5M_DFU_HW_NATIVE_TEST_ONLY=1
 LDFLAGS := -Wl,-Bstatic,-T,lnk-app.lds,--gc-sections
-
-SRCS := start.S fw_ulx5m_probe.c usb_desc_ulx5m_probe.c \
-  usb.c usb_ctrl_ep0.c usb_ctrl_std.c console.c mini-printf.c
+SRCS := start.S ulx5m_bootloader.c usb_desc_ulx5m.c usb.c \
+  usb_ctrl_ep0.c usb_ctrl_std.c console.c mini-printf.c \
+  ulx5m_dfu_stream.c ulx5m_flash_layout.c ulx5m_at25ql321.c \
+  ulx5m_at25ql321_hw.c ulx5m_flash_program.c ulx5m_flash_hw_test.c
 
 .DEFAULT_GOAL := all
 .PHONY: all check-toolchain
-all: $(BUILD_DIR)/fw_ulx5m_probe.hex
+all: $(BUILD_DIR)/ulx5m_bootloader.hex
 
 $(BUILD_DIR):
 	mkdir -p $@
 
 check-toolchain:
 	@command -v '$(CC)' >/dev/null 2>&1 || { \
-		echo "ERROR: RISC-V GCC not found: $(CC)" >&2; \
-		echo 'Set CROSS=/path/to/bin/riscv-none-elf- or add xPack bin to PATH.' >&2; \
+		echo '[FAIL] RISC-V GCC not found: $(CC)' >&2; \
+		echo 'Supply CROSS=/path/to/riscv-none-elf- or add xPack bin to PATH.' >&2; \
 		exit 1; \
 	}
 	@command -v '$(OBJCOPY)' >/dev/null 2>&1 || { \
-		echo "ERROR: RISC-V objcopy not found: $(OBJCOPY)" >&2; \
-		exit 1; \
+		echo '[FAIL] RISC-V objcopy not found: $(OBJCOPY)' >&2; exit 1; \
 	}
+	@actual=$$('$(CC)' -dumpfullversion); \
+		if [ "$$actual" != '$(EXPECTED_GCC_VERSION)' ]; then \
+			echo "[FAIL] RISC-V GCC $$actual differs from CI $(EXPECTED_GCC_VERSION): $(CC)" >&2; \
+			exit 1; \
+		fi; \
+		echo "[INPUT] RISC-V GCC $$actual: $(CC)"
 
-$(BUILD_DIR)/fw_ulx5m_probe.elf: $(SRCS) lnk-app.lds Makefile.ulx5m-gs | $(BUILD_DIR) check-toolchain
+$(BUILD_DIR)/ulx5m_bootloader.elf: $(SRCS) $(wildcard *.h) lnk-app.lds Makefile.ulx5m-gs | $(BUILD_DIR) check-toolchain
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRCS)
 
-$(BUILD_DIR)/fw_ulx5m_probe.bin: $(BUILD_DIR)/fw_ulx5m_probe.elf
+$(BUILD_DIR)/ulx5m_bootloader.bin: $(BUILD_DIR)/ulx5m_bootloader.elf
 	$(OBJCOPY) -O binary $< $@
 
-$(BUILD_DIR)/fw_ulx5m_probe.hex: $(BUILD_DIR)/fw_ulx5m_probe.bin bin2hex.py
+$(BUILD_DIR)/ulx5m_bootloader.hex: $(BUILD_DIR)/ulx5m_bootloader.bin bin2hex.py
 	python3 bin2hex.py $< $@

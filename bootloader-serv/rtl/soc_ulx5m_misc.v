@@ -1,15 +1,13 @@
-/* Minimal register-compatible status/LED peripheral for USB probe only.
- * Does not instantiate ECP5 TRELLIS_IO/IFS primitives or reboot logic.
+/* Minimal GateMate register-compatible status/LED peripheral.
+ * No ECP5 primitives or firmware-controlled reconfiguration.
  */
 `default_nettype none
 module soc_ulx5m_misc (
     output wire [7:0] led_n,
     input  wire [2:0] btn_n,
     input  wire locked,
-`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
     input wire mode_valid,
     input wire dfu_selected,
-`endif
     input  wire [3:0] bus_addr,
     input  wire [31:0] bus_wdata,
     output reg  [31:0] bus_rdata,
@@ -39,15 +37,13 @@ module soc_ulx5m_misc (
             if (bus_cyc && !ack && !bus_we)
                 bus_rdata <= (bus_addr[1:0] == 2'b00) ?
                     {8'h00, 5'h1f, btn_sample, 8'h00, leds} :
-`ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
                     (bus_addr[1:0] == 2'b01) ?
                     {30'd0, dfu_selected, mode_valid} :
-`endif
                     32'h00000000;
         end
     end
     assign bus_ack = ack;
-    // V005 LEDs are active-high despite the legacy led_n port name.
+    // LEDs are active-high despite the legacy led_n port name.
     // Physical LED numbering and pin swaps are handled in the CCF.
     assign led_n = {counter[23], locked, leds[5:0]};
 endmodule

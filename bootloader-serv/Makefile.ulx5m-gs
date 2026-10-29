@@ -1,417 +1,80 @@
-# ULX5M-GS GateMate bring-up. Separate from original ECP5 Makefile.
-# Safe first target: FPGA RAM-only LED + PLL image; no flash programming.
 
-# Default placement seed for ULX5M-GS SERV bootloader.
-SERV_SEED ?= 122
+# Canonical ULX5M-GS SERV + BTN2 USB DFU + autonomous 25 MHz handoff.
+# Offline PACK ONLY; no flash/JTAG operations. CI and local use the same build target.
+.DEFAULT_GOAL := help
 
 YOSYS ?= yosys
 NEXTPNR ?= nextpnr-himbaechel
 GMPACK ?= gmpack
-DEVICE ?= CCGM1A1
-BUILD_DIR ?= build-ulx5m-gs
-
-TOP := top_ulx5m_gs_bringup
-SRC := rtl/top-ulx5m-gs-bringup.v rtl/sysmgr_gatemate.v
-CCF := data/top-ulx5m-gs-bringup.ccf
-SDC := data/top-ulx5m-gs-bringup.sdc
-JSON := $(BUILD_DIR)/$(TOP).json
-IMPL := $(BUILD_DIR)/$(TOP).txt
-BIT := $(BUILD_DIR)/$(TOP).bit
-
-.DEFAULT_GOAL := help
-.PHONY: help bringup usb-monitor usb-probe check flash dfu clean
-
-help:
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs bringup'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs btn2-boot-probe (SRAM only; no USB/flash)'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-btn2-boot-mode (offline)'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs btn2-dfu-quad-serv (SRAM only; BTN2-gated FWT3, flash-write experiment)'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-btn2-dfu-gate (offline)'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-btn2-dfu-regreset (offline)'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs btn2-dfu-quad-regreset-serv (isolated SRAM-only experiment)'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-btn2-dfu-asyncreset (offline)'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs btn2-dfu-quad-asyncreset-serv (isolated SRAM-only experiment)'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs usb-monitor'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs usb-probe'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs flash-read-probe'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs flash-read-serv (experimental)'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs dfu-stage-serv (RAM-only, no flash writes)'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs dfu-stream-serv (discard-only, no flash writes)'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs dfu-hw-test-serv (DANGEROUS 4KiB flash test, SRAM ONLY)'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs dfu-hw-multi-serv (DANGEROUS 8KiB flash test, SRAM ONLY)'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs dfu-hw-quad-serv (DANGEROUS 16KiB flash test, SRAM ONLY)'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-flash-serv-firmware'
-	@echo 'ULX5M-GS: make -f Makefile.ulx5m-gs test-dfu-at25ql321-chain (mock SPI only)'
-	@echo 'Produces a volatile JTAG-loadable LED/PLL bitstream (NOT DFU).'
-	@echo 'USB monitor is RX-only with no attach, and will NOT enumerate.'
-	@echo 'USB probe enumerates a non-programmable DFU interface from JTAG RAM.'
-	@echo 'flash-read-probe allows only read-only JEDEC ID/flash data via vendor USB.'
-	@echo 'SERV test also uses the read-only flash diagnostic and cannot write flash.'
-	@echo 'Flash-writing experiments are opt-in volatile SRAM builds; never install in factory flash.'
-
-bringup: $(BIT)
-
-# Standalone volatile BTN2 startup-mode probe; no USB/SPI flash resources.
-BTN2_TOP := top_ulx5m_gs_btn2_boot_probe
-BTN2_SRC := rtl/top-ulx5m-gs-btn2-boot-probe.v rtl/ulx5m_btn2_boot_select.v rtl/sysmgr_gatemate.v
-BTN2_CCF := data/top-ulx5m-gs-btn2-boot-probe.ccf
-BTN2_SDC := data/top-ulx5m-gs-bringup.sdc
-BTN2_JSON := $(BUILD_DIR)/$(BTN2_TOP).json
-BTN2_IMPL := $(BUILD_DIR)/$(BTN2_TOP).txt
-BTN2_BIT := $(BUILD_DIR)/$(BTN2_TOP).bit
-
-.PHONY: btn2-boot-probe test-btn2-boot-mode
-btn2-boot-probe: $(BTN2_BIT)
-
-test-btn2-boot-mode: | $(BUILD_DIR)
-	iverilog -g2012 -s tb_ulx5m_btn2_boot_select \
-	  -o $(BUILD_DIR)/btn2-boot-select-test.vvp \
-	  rtl/ulx5m_btn2_boot_select.v tests/tb_ulx5m_btn2_boot_select.v
-	vvp $(BUILD_DIR)/btn2-boot-select-test.vvp
-
-$(BTN2_JSON): $(BTN2_SRC) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog -defer $(BTN2_SRC); synth_gatemate -top $(BTN2_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/btn2-boot-probe-synth.log
-
-$(BTN2_IMPL): $(BTN2_JSON) $(BTN2_CCF) $(BTN2_SDC)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(BTN2_JSON)) -o ccf=$(abspath $(BTN2_CCF)) -o out=$(abspath $@) --sdc $(abspath $(BTN2_SDC)) --router router2 --placer-heap-beta=0.6 -l $(abspath $(BUILD_DIR)/btn2-boot-probe-pnr.log)
-
-$(BTN2_BIT): $(BTN2_IMPL)
-	$(GMPACK) $(abspath $(BTN2_IMPL)) $(abspath $@)
-
-# Independent, RX-only USB pad test. No DFU firmware and no flash access.
-USB_TOP := top_ulx5m_gs_usb_monitor
-USB_SRC := rtl/top-ulx5m-gs-usb-monitor.v rtl/sysmgr_gatemate.v cores/usb/rtl/usb_phy.v
-USB_CCF := data/top-ulx5m-gs-usb-monitor.ccf
-USB_SDC := data/top-ulx5m-gs-usb-monitor.sdc
-USB_JSON := $(BUILD_DIR)/$(USB_TOP).json
-USB_IMPL := $(BUILD_DIR)/$(USB_TOP).txt
-USB_BIT := $(BUILD_DIR)/$(USB_TOP).bit
-
-usb-monitor: $(USB_BIT)
-
-$(USB_JSON): $(USB_SRC) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog -defer $(USB_SRC); synth_gatemate -top $(USB_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/usb-monitor-synth.log
-
-$(USB_IMPL): $(USB_JSON) $(USB_CCF) $(USB_SDC)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(USB_JSON)) -o ccf=$(abspath $(USB_CCF)) -o out=$(abspath $@) --sdc $(abspath $(USB_SDC)) --router router2 --placer-heap-beta=0.6 -l $(abspath $(BUILD_DIR)/usb-monitor-pnr.log)
-
-$(USB_BIT): $(USB_IMPL)
-	$(GMPACK) $(abspath $(USB_IMPL)) $(abspath $@)
-
-
-# PicoRV32 + USB controller enumeration probe, RAM-only; no flash access.
-# NOTE: compile firmware first so synth_gatemate can initialize BRAM directly.
-PROBE_TOP := top_ulx5m_gs_usb_probe
-PROBE_FW := $(BUILD_DIR)/fw_ulx5m_probe.hex
-PROBE_MC := $(BUILD_DIR)/usb_trans_mc.hex
-PROBE_SRC := rtl/top-ulx5m-gs-usb-probe.v rtl/soc_ulx5m_misc.v \
-  rtl/sysmgr_gatemate.v rtl/picorv32.v rtl/soc_bridge.v rtl/soc_bram.v \
-  rtl/soc_mem_response_reg.v \
-  cores/misc/rtl/uart_wb.v cores/misc/rtl/uart_tx.v \
-  cores/misc/rtl/uart_rx.v cores/misc/rtl/uart_irda_tx.v \
-  cores/misc/rtl/uart_irda_rx.v cores/misc/rtl/fifo_sync_ram.v \
-  cores/misc/rtl/glitch_filter.v cores/misc/rtl/ram_sdp.v \
-  cores/misc/rtl/fifo_sync_shift.v \
-  $(wildcard cores/usb/rtl/*.v)
-PROBE_CCF := data/top-ulx5m-gs-usb-probe.ccf
-PROBE_SDC := data/top-ulx5m-gs-usb-probe.sdc
-PROBE_JSON := $(BUILD_DIR)/$(PROBE_TOP).json
-PROBE_IMPL := $(BUILD_DIR)/$(PROBE_TOP).txt
-PROBE_BIT := $(BUILD_DIR)/$(PROBE_TOP).bit
-
-.PHONY: usb-probe test-usb-probe-bus
-usb-probe: $(PROBE_BIT)
-
-# Exercise the complete PicoRV32-to-BRAM/Wishbone handshake in simulation.
-# No USB PHY or configuration flash is instantiated by this test.
-test-usb-probe-bus: | $(BUILD_DIR)
-	iverilog -g2012 -s tb_ulx5m_probe_bus -o $(BUILD_DIR)/probe-bus-test.vvp \
-	  rtl/picorv32.v rtl/soc_bridge.v rtl/soc_bram.v \
-	  rtl/soc_mem_response_reg.v tests/tb_ulx5m_probe_bus.v
-	vvp $(BUILD_DIR)/probe-bus-test.vvp
-
-$(PROBE_FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S fw/lnk-app.lds fw/Makefile.ulx5m-gs
-	$(MAKE) -C fw -f Makefile.ulx5m-gs
-
-$(PROBE_MC): cores/usb/utils/microcode.py | $(BUILD_DIR)
-	python3 $< > $@
-
-$(PROBE_JSON): $(PROBE_SRC) $(PROBE_FW) $(PROBE_MC) $(PROBE_CCF) $(PROBE_SDC) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog -defer -Icores/usb/rtl $(PROBE_SRC); synth_gatemate -top $(PROBE_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/usb-probe-synth.log
-
-$(PROBE_IMPL): $(PROBE_JSON) $(PROBE_CCF) $(PROBE_SDC)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(PROBE_JSON)) -o ccf=$(abspath $(PROBE_CCF)) -o out=$(abspath $@) --sdc $(abspath $(PROBE_SDC)) --router router2 --placer-heap-beta=0.6 -l $(abspath $(BUILD_DIR)/usb-probe-pnr.log)
-
-$(PROBE_BIT): $(PROBE_IMPL)
-	$(GMPACK) $(abspath $(PROBE_IMPL)) $(abspath $@)
-
-
-# Independent, volatile, read-only flash ID/data diagnostic.
-# The optional BRAM request pipeline is enabled only by this top.
-# Never modify usb-probe or its firmware/constraint sources.
-FLASH_TOP := top_ulx5m_gs_flash_read
-FLASH_FW := $(BUILD_DIR)/fw_ulx5m_flash_read.hex
-FLASH_SRC := $(filter-out rtl/top-ulx5m-gs-usb-probe.v,$(PROBE_SRC)) \
-  rtl/top-ulx5m-gs-flash-read.v rtl/qspi_master_wb.v \
-  rtl/qspi_phy_gatemate.v
-FLASH_CCF := data/top-ulx5m-gs-flash-read.ccf
-FLASH_SDC := data/top-ulx5m-gs-flash-read.sdc
-FLASH_JSON := $(BUILD_DIR)/$(FLASH_TOP).json
-FLASH_IMPL := $(BUILD_DIR)/$(FLASH_TOP).txt
-FLASH_BIT := $(BUILD_DIR)/$(FLASH_TOP).bit
-
-.PHONY: flash-read-probe
-flash-read-probe: $(FLASH_BIT)
-
-.PHONY: test-flash-bram-pipe
-test-flash-bram-pipe: | $(BUILD_DIR)
-	iverilog -g2012 -s tb_ulx5m_flash_bram_pipe -o $(BUILD_DIR)/flash-bram-pipe-test.vvp \
-	  rtl/picorv32.v rtl/soc_bridge.v rtl/soc_bram.v \
-	  rtl/soc_mem_response_reg.v tests/tb_ulx5m_flash_bram_pipe.v
-	vvp $(BUILD_DIR)/flash-bram-pipe-test.vvp
-
-$(FLASH_FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S fw/lnk-app.lds fw/Makefile.ulx5m-flash-read
-	$(MAKE) -C fw -f Makefile.ulx5m-flash-read
-
-$(FLASH_JSON): $(FLASH_SRC) $(FLASH_FW) $(PROBE_MC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog -defer -Icores/usb/rtl $(FLASH_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/flash-read-synth.log
-
-$(FLASH_IMPL): $(FLASH_JSON) $(FLASH_CCF) $(FLASH_SDC)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(FLASH_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 -l $(abspath $(BUILD_DIR)/flash-read-pnr.log)
-
-$(FLASH_BIT): $(FLASH_IMPL)
-	$(GMPACK) $(abspath $(FLASH_IMPL)) $(abspath $@)
-
-# Experimental SERV replacement for the read-only flash diagnostic.
-# Keep PicoRV32 targets and bitstreams intact. This does not write flash.
+IVERILOG ?= iverilog
+VVP ?= vvp
+PYTHON ?= python3
+CC_HOST ?= gcc
+SEED ?= 60
+# Keep this release equal to the workflow_dispatch OSS CAD Suite defaults.
+OSS_CAD_SUITE_VERSION ?= 2026-07-20
+EXPECTED_RISCV_GCC_VERSION ?= 12.2.0
+HEAP_BETA ?= 0.6
+NEXTPNR_EXTRA_ARGS ?=
 SERV_DIR ?= third_party/serv
 SERV_TAG := 1.4.0
 SERV_COMMIT := 7d9cde4
-# Keep the verification stamp out of the pinned upstream Git checkout.
-SERV_STAMP := $(BUILD_DIR)/serv-1.4.0.stamp
+OUT := build-ulx5m-gs
+RUN := $(OUT)/bootloader
+TOP := top_ulx5m_gs_bootloader
+CCF := data/ulx5m-gs.ccf
+SDC := data/ulx5m-gs.sdc
+MC := $(OUT)/usb_trans_mc.hex
+FW := $(RUN)/ulx5m_bootloader.hex
+CMD := $(RUN)/cmd.hex
+JSON := $(RUN)/$(TOP).json
+IMPL := $(RUN)/$(TOP).txt
+BIT := $(RUN)/$(TOP)-PACK-ONLY.bit
+LOG := $(RUN)/pnr.log
+SOURCE := $(RUN)/source.sha256
+STAMP := $(RUN)/build.ok
+SERV_STAMP := $(OUT)/serv-pinned.stamp
+CLI := tests/ulx5m_bootloader.py
+
+MISC_RTL := cores/misc/rtl/uart_wb.v cores/misc/rtl/uart_tx.v \
+  cores/misc/rtl/uart_rx.v cores/misc/rtl/uart_irda_tx.v \
+  cores/misc/rtl/uart_irda_rx.v cores/misc/rtl/fifo_sync_ram.v \
+  cores/misc/rtl/glitch_filter.v cores/misc/rtl/ram_sdp.v \
+  cores/misc/rtl/fifo_sync_shift.v
 SERV_RTL := $(addprefix $(SERV_DIR)/rtl/, \
   serv_bufreg.v serv_bufreg2.v serv_alu.v serv_csr.v serv_ctrl.v \
   serv_decode.v serv_immdec.v serv_mem_if.v serv_rf_if.v \
   serv_rf_ram_if.v serv_rf_ram.v serv_state.v serv_debug.v \
   serv_top.v serv_rf_top.v serv_aligner.v serv_compdec.v)
-SERV_FW := $(BUILD_DIR)/serv/fw_ulx5m_flash_read.hex
-SERV_SRC := $(filter-out rtl/picorv32.v,$(FLASH_SRC)) rtl/soc_serv_cpu.v $(SERV_RTL)
-SERV_JSON := $(BUILD_DIR)/$(FLASH_TOP)-serv.json
-SERV_IMPL := $(BUILD_DIR)/$(FLASH_TOP)-serv.txt
-SERV_BIT := $(BUILD_DIR)/$(FLASH_TOP)-serv.bit
-# Distinct streaming USB DFU experiment. Does not modify the proven staging
-# image, read-only SERV image, JTAG or external configuration flash.
-DFU_STREAM_FW := $(BUILD_DIR)/dfu-stream/fw_ulx5m_flash_read.hex
-DFU_STREAM_JSON := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-stream.json
-DFU_STREAM_IMPL := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-stream.txt
-DFU_STREAM_BIT := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-stream.bit
+SRC := rtl/top_ulx5m_gs_bootloader.v rtl/soc_ulx5m_misc.v \
+  rtl/sysmgr_gatemate.v rtl/soc_bridge.v rtl/soc_bram.v \
+  rtl/soc_mem_response_reg.v rtl/soc_serv_cpu.v \
+  rtl/qspi_master_wb.v rtl/qspi_phy_gatemate.v \
+  rtl/ulx5m_btn2_boot_select.v rtl/ulx5m_normal_boot_reset.v \
+  rtl/ulx5m_cfg_autoboot_25.v $(MISC_RTL) \
+  $(wildcard cores/usb/rtl/*.v) $(SERV_RTL)
+FINGERPRINT := $(SRC) $(wildcard cores/usb/rtl/*.vh) \
+  $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S fw/lnk-app.lds \
+  fw/bin2hex.py fw/Makefile.ulx5m-gs $(FW) $(CMD) $(MC) \
+  $(CCF) $(SDC) $(CLI) tests/cfgcmd_codec.py \
+  Makefile.ulx5m-gs
 
-.PHONY: dfu-stream-serv dfu-stream-serv-firmware
-dfu-stream-serv: $(DFU_STREAM_BIT)
-dfu-stream-serv-firmware: $(DFU_STREAM_FW)
+.PHONY: help prepare test test-host test-rtl verify-serv synth-check show-settings build qualify clean force-generated
+help:
+	@echo 'ULX5M-GS: prepare | test | build SEED=60 | qualify SEED=60 | show-settings | clean'
+	@echo 'CI routes the SAME full build/qualification as local, not a frozen candidate netlist.'
+	@echo 'Local PACK-ONLY; seed sweep and build never access hardware.'
 
-$(DFU_STREAM_FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S fw/lnk-app.lds fw/Makefile.ulx5m-flash-read
-	$(MAKE) -C fw -f Makefile.ulx5m-flash-read \
-	  BUILD_DIR=../$(BUILD_DIR)/dfu-stream SERV=1 DFU_STREAM_ONLY=1
+$(OUT) $(RUN):
+	@mkdir -p $@
 
-$(DFU_STREAM_JSON): $(DFU_STREAM_FW) $(PROBE_MC) $(SERV_STAMP) $(SERV_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_DFU_STREAM -Icores/usb/rtl $(SERV_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/dfu-stream-serv-synth.log
+$(MC): cores/usb/utils/microcode.py force-generated | $(OUT)
+	$(PYTHON) $< > $@
 
-$(DFU_STREAM_IMPL): $(DFU_STREAM_JSON) $(FLASH_CCF) $(FLASH_SDC)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(DFU_STREAM_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(SERV_SEED) -l $(abspath $(BUILD_DIR)/dfu-stream-serv-pnr.log)
-
-$(DFU_STREAM_BIT): $(DFU_STREAM_IMPL)
-	$(GMPACK) $(abspath $(DFU_STREAM_IMPL)) $(abspath $@)
-
-# Separate opt-in SRAM-only build. This CAN ERASE/PROGRAM precisely one
-# 4 KiB candidate sector, but only after an explicit USB arm request.
-# It must never replace dfu-stream-serv or be installed in factory flash.
-DFU_HW_TEST_FW := $(BUILD_DIR)/dfu-hw-test/fw_ulx5m_flash_read.hex
-DFU_HW_TEST_JSON := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-test.json
-DFU_HW_TEST_IMPL := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-test.txt
-DFU_HW_TEST_BIT := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-test.bit
-.PHONY: dfu-hw-test-serv dfu-hw-test-serv-firmware
-dfu-hw-test-serv: $(DFU_HW_TEST_BIT)
-dfu-hw-test-serv-firmware: $(DFU_HW_TEST_FW)
-$(DFU_HW_TEST_FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S fw/lnk-app.lds fw/Makefile.ulx5m-flash-read
-	$(MAKE) -C fw -f Makefile.ulx5m-flash-read \
-	  BUILD_DIR=../$(BUILD_DIR)/dfu-hw-test SERV=1 DFU_STREAM_ONLY=1 DFU_HW_TEST_ONLY=1
-$(DFU_HW_TEST_JSON): $(DFU_HW_TEST_FW) $(PROBE_MC) $(SERV_STAMP) $(SERV_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_DFU_HW_TEST -Icores/usb/rtl $(SERV_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/dfu-hw-test-serv-synth.log
-$(DFU_HW_TEST_IMPL): $(DFU_HW_TEST_JSON) $(FLASH_CCF) $(FLASH_SDC)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(DFU_HW_TEST_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(SERV_SEED) -l $(abspath $(BUILD_DIR)/dfu-hw-test-serv-pnr.log)
-$(DFU_HW_TEST_BIT): $(DFU_HW_TEST_IMPL)
-	$(GMPACK) $(abspath $(DFU_HW_TEST_IMPL)) $(abspath $@)
-
-# Opt-in 8 KiB / two-sector SRAM-only experiment, completely separate
-# from dfu-hw-test-serv. NEVER use -f to install it in configuration flash.
-DFU_HW_MULTI_FW := $(BUILD_DIR)/dfu-hw-multi/fw_ulx5m_flash_read.hex
-DFU_HW_MULTI_JSON := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-multi.json
-DFU_HW_MULTI_IMPL := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-multi.txt
-DFU_HW_MULTI_BIT := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-multi.bit
-.PHONY: dfu-hw-multi-serv dfu-hw-multi-serv-firmware
-dfu-hw-multi-serv: $(DFU_HW_MULTI_BIT)
-dfu-hw-multi-serv-firmware: $(DFU_HW_MULTI_FW)
-$(DFU_HW_MULTI_FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S fw/lnk-app.lds fw/Makefile.ulx5m-flash-read
-	$(MAKE) -C fw -f Makefile.ulx5m-flash-read \
-	  BUILD_DIR=../$(BUILD_DIR)/dfu-hw-multi SERV=1 DFU_STREAM_ONLY=1 DFU_HW_TEST_ONLY=1 DFU_HW_MULTI_TEST_ONLY=1
-$(DFU_HW_MULTI_JSON): $(DFU_HW_MULTI_FW) $(PROBE_MC) $(SERV_STAMP) $(SERV_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_DFU_HW_MULTI_TEST -Icores/usb/rtl $(SERV_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/dfu-hw-multi-serv-synth.log
-$(DFU_HW_MULTI_IMPL): $(DFU_HW_MULTI_JSON) $(FLASH_CCF) $(FLASH_SDC)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(DFU_HW_MULTI_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(SERV_SEED) -l $(abspath $(BUILD_DIR)/dfu-hw-multi-serv-pnr.log)
-$(DFU_HW_MULTI_BIT): $(DFU_HW_MULTI_IMPL)
-	$(GMPACK) $(abspath $(DFU_HW_MULTI_IMPL)) $(abspath $@)
-
-# Native-only emulator for two adjacent physical flash sectors.
-.PHONY: test-dfu-hw-multi-arm
-test-dfu-hw-multi-arm: | $(BUILD_DIR)
-	gcc -std=c11 -Wall -Wextra -Werror -O1 \
-	  -DULX5M_AT25QL321_EMULATOR_TEST=1 \
-	  -DULX5M_FLASH_PROGRAM_EMULATOR_TEST=1 \
-	  -DULX5M_FLASH_HW_TEST=1 -DULX5M_FLASH_HW_MULTI_TEST=1 \
-	  -DULX5M_FLASH_HW_HOST_TEST=1 -DULX5M_DFU_HW_TEST_ONLY=1 \
-	  -DULX5M_DFU_HW_MULTI_TEST_ONLY=1 -Ifw -Itests \
-	  -o $(BUILD_DIR)/test-dfu-hw-multi-arm \
-	  fw/ulx5m_at25ql321.c fw/ulx5m_flash_program.c \
-	  fw/ulx5m_dfu_stream.c fw/ulx5m_flash_hw_test.c \
-	  tests/ulx5m-at25ql321-mock.c tests/test-ulx5m-serv-dfu-hw-multi.c
-	$(BUILD_DIR)/test-dfu-hw-multi-arm
-
-# Opt-in 16 KiB / four-sector SRAM-only experiment. Not a bootloader.
-DFU_HW_QUAD_FW := $(BUILD_DIR)/dfu-hw-quad/fw_ulx5m_flash_read.hex
-DFU_HW_QUAD_JSON := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad.json
-DFU_HW_QUAD_IMPL := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad.txt
-DFU_HW_QUAD_BIT := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad.bit
-.PHONY: dfu-hw-quad-serv dfu-hw-quad-serv-firmware
-dfu-hw-quad-serv: $(DFU_HW_QUAD_BIT)
-dfu-hw-quad-serv-firmware: $(DFU_HW_QUAD_FW)
-$(DFU_HW_QUAD_FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S fw/lnk-app.lds fw/Makefile.ulx5m-flash-read
-	$(MAKE) -C fw -f Makefile.ulx5m-flash-read \
-	  BUILD_DIR=../$(BUILD_DIR)/dfu-hw-quad SERV=1 DFU_STREAM_ONLY=1 DFU_HW_TEST_ONLY=1 DFU_HW_QUAD_TEST_ONLY=1
-$(DFU_HW_QUAD_JSON): $(DFU_HW_QUAD_FW) $(PROBE_MC) $(SERV_STAMP) $(SERV_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_DFU_HW_QUAD_TEST -Icores/usb/rtl $(SERV_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/dfu-hw-quad-serv-synth.log
-$(DFU_HW_QUAD_IMPL): $(DFU_HW_QUAD_JSON) $(FLASH_CCF) $(FLASH_SDC)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(DFU_HW_QUAD_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(SERV_SEED) -l $(abspath $(BUILD_DIR)/dfu-hw-quad-serv-pnr.log)
-$(DFU_HW_QUAD_BIT): $(DFU_HW_QUAD_IMPL)
-	$(GMPACK) $(abspath $(DFU_HW_QUAD_IMPL)) $(abspath $@)
-
-# Native-only emulator for four physical flash sectors.
-.PHONY: test-dfu-hw-quad-arm
-test-dfu-hw-quad-arm: | $(BUILD_DIR)
-	gcc -std=c11 -Wall -Wextra -Werror -O1 \
-	  -DULX5M_AT25QL321_EMULATOR_TEST=1 \
-	  -DULX5M_FLASH_PROGRAM_EMULATOR_TEST=1 \
-	  -DULX5M_FLASH_HW_TEST=1 -DULX5M_FLASH_HW_QUAD_TEST=1 \
-	  -DULX5M_FLASH_HW_HOST_TEST=1 -DULX5M_DFU_HW_TEST_ONLY=1 \
-	  -DULX5M_DFU_HW_QUAD_TEST_ONLY=1 -Ifw -Itests \
-	  -o $(BUILD_DIR)/test-dfu-hw-quad-arm \
-	  fw/ulx5m_at25ql321.c fw/ulx5m_flash_program.c \
-	  fw/ulx5m_dfu_stream.c fw/ulx5m_flash_hw_test.c \
-	  tests/ulx5m-at25ql321-mock.c tests/test-ulx5m-serv-dfu-hw-quad.c
-	$(BUILD_DIR)/test-dfu-hw-quad-arm
-
-# Isolated BTN2-gated FWT3 16 KiB experiment. Reuse the exact validated
-# four-sector firmware HEX; only the top-level reset/attach policy differs.
-# BTN2 held -> enable SERV/USB/SPI after selection; released -> hold in reset.
-# NO application boot, NO persistent flash configuration, NO automatic writes.
-BTN2_DFU_QUAD_JSON := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2.json
-BTN2_DFU_QUAD_IMPL := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2.txt
-BTN2_DFU_QUAD_BIT := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2.bit
-BTN2_DFU_QUAD_SRC := $(SERV_SRC) rtl/ulx5m_btn2_boot_select.v rtl/ulx5m_btn2_dfu_gate.v
-
-.PHONY: btn2-dfu-quad-serv test-btn2-dfu-gate
-btn2-dfu-quad-serv: $(BTN2_DFU_QUAD_BIT)
-
-test-btn2-dfu-gate: | $(BUILD_DIR)
-	iverilog -g2012 -s tb_ulx5m_btn2_dfu_gate \
-	  -o $(BUILD_DIR)/btn2-dfu-gate-test.vvp \
-	  rtl/ulx5m_btn2_boot_select.v rtl/ulx5m_btn2_dfu_gate.v \
-	  tests/tb_ulx5m_btn2_dfu_gate.v
-	vvp $(BUILD_DIR)/btn2-dfu-gate-test.vvp
-
-$(BTN2_DFU_QUAD_JSON): $(DFU_HW_QUAD_FW) $(PROBE_MC) $(SERV_STAMP) $(BTN2_DFU_QUAD_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_DFU_HW_QUAD_TEST -DULX5M_SERV_BTN2_DFU_GATE -Icores/usb/rtl $(BTN2_DFU_QUAD_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/btn2-dfu-quad-serv-synth.log
-
-$(BTN2_DFU_QUAD_IMPL): $(BTN2_DFU_QUAD_JSON) $(FLASH_CCF) $(FLASH_SDC)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(BTN2_DFU_QUAD_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(SERV_SEED) -l $(abspath $(BUILD_DIR)/btn2-dfu-quad-serv-pnr.log)
-
-$(BTN2_DFU_QUAD_BIT): $(BTN2_DFU_QUAD_IMPL)
-	$(GMPACK) $(abspath $(BTN2_DFU_QUAD_IMPL)) $(abspath $@)
-
-# Separate BTN2 timing experiment: register only the release of firmware
-# reset. Keep the seed-38 baseline JSON/bitstream and Makefile target intact.
-# Uses the identical FWT3 firmware; SRAM-only, never install in flash.
-BTN2_DFU_REGRESET_JSON := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2-regreset.json
-BTN2_DFU_REGRESET_IMPL := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2-regreset.txt
-BTN2_DFU_REGRESET_BIT := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2-regreset.bit
-
-.PHONY: btn2-dfu-quad-regreset-serv test-btn2-dfu-regreset
-btn2-dfu-quad-regreset-serv: $(BTN2_DFU_REGRESET_BIT)
-
-test-btn2-dfu-regreset: | $(BUILD_DIR)
-	iverilog -g2012 -s tb_ulx5m_btn2_dfu_regreset \
-	  -o $(BUILD_DIR)/btn2-dfu-regreset-test.vvp \
-	  rtl/ulx5m_btn2_boot_select.v rtl/ulx5m_btn2_dfu_gate.v \
-	  tests/tb_ulx5m_btn2_dfu_regreset.v
-	vvp $(BUILD_DIR)/btn2-dfu-regreset-test.vvp
-	python3 tests/test-ulx5m-serv-btn2-regreset-guards.py
-
-$(BTN2_DFU_REGRESET_JSON): $(DFU_HW_QUAD_FW) $(PROBE_MC) $(SERV_STAMP) $(BTN2_DFU_QUAD_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_DFU_HW_QUAD_TEST -DULX5M_SERV_BTN2_DFU_GATE -DULX5M_SERV_BTN2_REGRESET -Icores/usb/rtl $(BTN2_DFU_QUAD_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/btn2-dfu-regreset-serv-synth.log
-
-$(BTN2_DFU_REGRESET_IMPL): $(BTN2_DFU_REGRESET_JSON) $(FLASH_CCF) $(FLASH_SDC)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(BTN2_DFU_REGRESET_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(SERV_SEED) -l $(abspath $(BUILD_DIR)/btn2-dfu-regreset-serv-pnr.log)
-
-$(BTN2_DFU_REGRESET_BIT): $(BTN2_DFU_REGRESET_IMPL)
-	$(GMPACK) $(abspath $(BTN2_DFU_REGRESET_IMPL)) $(abspath $@)
-
-# Separately built asynchronous-assertion/registered-release experiment.
-# Unlike the regreset variant, no combinational system-reset bypass remains
-# on the firmware reset output. The proven seed-38 image is not overwritten.
-BTN2_DFU_ASYNCRESET_JSON := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2-asyncreset.json
-BTN2_DFU_ASYNCRESET_IMPL := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2-asyncreset.txt
-BTN2_DFU_ASYNCRESET_BIT := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-hw-quad-btn2-asyncreset.bit
-
-.PHONY: btn2-dfu-quad-asyncreset-serv test-btn2-dfu-asyncreset
-btn2-dfu-quad-asyncreset-serv: $(BTN2_DFU_ASYNCRESET_BIT)
-
-test-btn2-dfu-asyncreset: | $(BUILD_DIR)
-	iverilog -g2012 -s tb_ulx5m_btn2_dfu_asyncreset \
-	  -o $(BUILD_DIR)/btn2-dfu-asyncreset-test.vvp \
-	  rtl/ulx5m_btn2_boot_select.v rtl/ulx5m_btn2_dfu_gate.v \
-	  tests/tb_ulx5m_btn2_dfu_asyncreset.v
-	vvp $(BUILD_DIR)/btn2-dfu-asyncreset-test.vvp
-	python3 tests/test-ulx5m-serv-btn2-asyncreset-guards.py
-
-$(BTN2_DFU_ASYNCRESET_JSON): $(DFU_HW_QUAD_FW) $(PROBE_MC) $(SERV_STAMP) $(BTN2_DFU_QUAD_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_DFU_HW_QUAD_TEST -DULX5M_SERV_BTN2_DFU_GATE -DULX5M_SERV_BTN2_ASYNC_REGRESET -Icores/usb/rtl $(BTN2_DFU_QUAD_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/btn2-dfu-asyncreset-serv-synth.log
-
-$(BTN2_DFU_ASYNCRESET_IMPL): $(BTN2_DFU_ASYNCRESET_JSON) $(FLASH_CCF) $(FLASH_SDC)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(BTN2_DFU_ASYNCRESET_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(SERV_SEED) -l $(abspath $(BUILD_DIR)/btn2-dfu-asyncreset-serv-pnr.log)
-
-$(BTN2_DFU_ASYNCRESET_BIT): $(BTN2_DFU_ASYNCRESET_IMPL)
-	$(GMPACK) $(abspath $(BTN2_DFU_ASYNCRESET_IMPL)) $(abspath $@)
-
-# Icarus cannot resolve a forward declaration in pinned SERV 1.4.0.
-# Generate a build-only state copy; leave the pinned upstream checkout intact.
-SERV_SIM_STATE := $(BUILD_DIR)/serv_state_iverilog.v
-SERV_SIM_RTL := $(filter-out $(SERV_DIR)/rtl/serv_state.v,$(SERV_RTL)) $(SERV_SIM_STATE)
-
-.PHONY: flash-read-serv test-flash-serv-bus check-serv
-flash-read-serv: $(SERV_BIT)
-
-check-serv:
-	python3 tests/check-ulx5m-gs-port.py
-	python3 tests/check-ulx5m-gs-probe.py
-	python3 tests/check-ulx5m-gs-flash-read.py
-	python3 tests/check-ulx5m-gs-serv.py
-
-# Pin upstream SERV to a specific official release and verify the commit.
-# An existing checkout must be at the same revision (never overwrite it).
-$(SERV_STAMP): | $(BUILD_DIR)
-	@if [ ! -d '$(SERV_DIR)/.git' ]; then \
+$(SERV_STAMP): | $(OUT)
+	@if ! git -C '$(SERV_DIR)' rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
 	  if [ -e '$(SERV_DIR)' ]; then \
-	    echo 'ERROR: SERV_DIR exists but is not a git checkout' >&2; exit 1; \
+	    echo '[FAIL] Existing SERV_DIR is not a Git checkout' >&2; exit 1; \
 	  fi; \
 	  mkdir -p '$(dir $(SERV_DIR))'; \
 	  git clone --quiet --depth 1 --branch '$(SERV_TAG)' \
@@ -419,387 +82,131 @@ $(SERV_STAMP): | $(BUILD_DIR)
 	fi
 	@rev=$$(git -C '$(SERV_DIR)' rev-parse --short=7 HEAD) || exit 1; \
 	  if [ "$$rev" != '$(SERV_COMMIT)' ]; then \
-	    echo "ERROR: expected SERV $(SERV_COMMIT), found $$rev" >&2; exit 1; \
+	    echo "[FAIL] Expected SERV $(SERV_COMMIT), got $$rev" >&2; exit 1; \
 	  fi
-	@test -f '$(SERV_DIR)/rtl/serv_rf_top.v' || exit 1
+	@test -f '$(SERV_DIR)/rtl/serv_rf_top.v'
 	@touch '$@'
 
-# Source files appear when the pinned SERV checkout has been fetched.
 $(SERV_RTL): $(SERV_STAMP)
-	@test -f '$@' || { echo 'ERROR: missing SERV source $@' >&2; exit 1; }
+	@test -f '$@' || { echo '[FAIL] Missing SERV source $@' >&2; exit 1; }
 
-$(SERV_FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S fw/lnk-app.lds fw/Makefile.ulx5m-flash-read
-	$(MAKE) -C fw -f Makefile.ulx5m-flash-read \
-	  BUILD_DIR=../$(BUILD_DIR)/serv SERV=1
+verify-serv: $(SERV_STAMP)
+	@rev=$$(git -C '$(SERV_DIR)' rev-parse --short=7 HEAD) || exit 1; \
+	  if [ "$$rev" != '$(SERV_COMMIT)' ]; then \
+	    echo "[FAIL] SERV revision changed: $$rev (expected $(SERV_COMMIT))" >&2; exit 1; \
+	  fi
 
-$(SERV_JSON): $(SERV_FW) $(PROBE_MC) $(SERV_STAMP) $(SERV_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -Icores/usb/rtl $(SERV_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/flash-read-serv-synth.log
+$(FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S \
+  fw/lnk-app.lds fw/bin2hex.py fw/Makefile.ulx5m-gs force-generated | $(RUN)
+	$(MAKE) -B -C fw -f Makefile.ulx5m-gs all BUILD_DIR=../$(RUN) EXPECTED_GCC_VERSION=$(EXPECTED_RISCV_GCC_VERSION)
 
-$(SERV_IMPL): $(SERV_JSON) $(FLASH_CCF) $(FLASH_SDC)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(SERV_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(SERV_SEED) -l $(abspath $(BUILD_DIR)/flash-read-serv-pnr.log)
+force-generated:
 
-$(SERV_BIT): $(SERV_IMPL)
-	$(GMPACK) $(abspath $(SERV_IMPL)) $(abspath $@)
+$(CMD): $(CLI) | $(RUN)
+	$(PYTHON) $(CLI) bootstrap --output $@
 
-# Separate DFU-RAM staging image. Never overwrite the read-only SERV image.
-# The RTL define selects the independent BRAM init file at synthesis time.
-# This target performs ONLY firmware compile, FPGA synthesis/PnR and packing.
-# It does NOT communicate with JTAG or program configuration flash.
-DFU_STAGE_FW := $(BUILD_DIR)/dfu-stage/fw_ulx5m_flash_read.hex
-DFU_STAGE_JSON := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-stage.json
-DFU_STAGE_IMPL := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-stage.txt
-DFU_STAGE_BIT := $(BUILD_DIR)/$(FLASH_TOP)-serv-dfu-stage.bit
+prepare: $(CMD) $(MC)
 
-.PHONY: dfu-stage-serv dfu-stage-serv-firmware
-dfu-stage-serv: $(DFU_STAGE_BIT)
-dfu-stage-serv-firmware: $(DFU_STAGE_FW)
+# Host tests exercise flash boundaries and native DFU chains without any
+# physical flash accesses or target programming.
+test-host: | $(OUT)
+	$(CC_HOST) -std=c11 -Wall -Wextra -Werror -Ifw \
+	  -o $(OUT)/test-at25-protected fw/ulx5m_at25ql321.c \
+	  tests/test-ulx5m-serv-at25ql321-protected.c
+	$(OUT)/test-at25-protected
+	$(CC_HOST) -std=c11 -Wall -Wextra -Werror -Ifw \
+	  -o $(OUT)/test-program-protected fw/ulx5m_flash_program.c fw/ulx5m_flash_layout.c \
+	  tests/test-ulx5m-serv-flash-program-protected.c
+	$(OUT)/test-program-protected
+	$(CC_HOST) -std=c11 -Wall -Wextra -Werror -O1 \
+	  -DULX5M_AT25QL321_EMULATOR_TEST=1 -Ifw -Itests \
+	  -o $(OUT)/test-at25-emulator fw/ulx5m_at25ql321.c \
+	  tests/ulx5m-at25ql321-mock.c tests/test-ulx5m-serv-at25ql321.c
+	$(OUT)/test-at25-emulator
+	$(CC_HOST) -std=c11 -Wall -Wextra -Werror -O1 \
+	  -DULX5M_AT25QL321_EMULATOR_TEST=1 \
+	  -DULX5M_FLASH_PROGRAM_EMULATOR_TEST=1 \
+	  -DULX5M_DFU_STREAM_EMULATOR_TEST=1 -Ifw -Itests \
+	  -o $(OUT)/test-dfu-flash-chain fw/ulx5m_at25ql321.c \
+	  fw/ulx5m_flash_program.c fw/ulx5m_dfu_stream.c \
+	  tests/ulx5m-at25ql321-mock.c tests/test-ulx5m-serv-at25ql321-chain.c
+	$(OUT)/test-dfu-flash-chain
 
-$(DFU_STAGE_FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S fw/lnk-app.lds fw/Makefile.ulx5m-flash-read
-	$(MAKE) -C fw -f Makefile.ulx5m-flash-read \
-	  BUILD_DIR=../$(BUILD_DIR)/dfu-stage SERV=1 DFU_STAGE_ONLY=1
+test-rtl: prepare
+	@command -v '$(IVERILOG)' >/dev/null || { echo '[FAIL] iverilog required' >&2; exit 1; }
+	@command -v '$(VVP)' >/dev/null || { echo '[FAIL] vvp required' >&2; exit 1; }
+	$(IVERILOG) -g2012 -s tb_ulx5m_cfg_autoboot_25 -o $(OUT)/cfg25.vvp \
+	  rtl/ulx5m_cfg_autoboot_25.v tests/tb_ulx5m_cfg_autoboot_25.v
+	$(VVP) $(OUT)/cfg25.vvp
+	$(IVERILOG) -g2012 -s tb_ulx5m_btn2_boot_select -o $(OUT)/btn2.vvp \
+	  rtl/ulx5m_btn2_boot_select.v tests/tb_ulx5m_btn2_boot_select.v
+	$(VVP) $(OUT)/btn2.vvp
+	$(IVERILOG) -g2012 -s tb_ulx5m_normal_boot_reset -o $(OUT)/reset.vvp \
+	  rtl/ulx5m_normal_boot_reset.v tests/tb_ulx5m_normal_boot_reset.v
+	$(VVP) $(OUT)/reset.vvp
 
-$(DFU_STAGE_JSON): $(DFU_STAGE_FW) $(PROBE_MC) $(SERV_STAMP) $(SERV_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_DFU_STAGE -Icores/usb/rtl $(SERV_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/dfu-stage-serv-synth.log
+test: prepare test-host test-rtl
+	$(PYTHON) tests/test_ulx5m_bootloader.py
 
-$(DFU_STAGE_IMPL): $(DFU_STAGE_JSON) $(FLASH_CCF) $(FLASH_SDC)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(DFU_STAGE_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(SERV_SEED) -l $(abspath $(BUILD_DIR)/dfu-stage-serv-pnr.log)
+# Offline synthesis smoke check. The resulting netlist is NOT a boot image.
+# GitHub seed sweep never routes this preliminary artifact.
+synth-check: verify-serv $(SERV_RTL) $(MC) $(FW) $(CMD) | $(RUN)
+	@command -v '$(YOSYS)' >/dev/null || { echo '[FAIL] yosys required' >&2; exit 1; }
+	$(PYTHON) $(CLI) bootstrap --output $(CMD)
+	$(YOSYS) -p 'read_verilog -defer -Icores/usb/rtl $(SRC); synth_gatemate -top $(TOP) -luttree -nomx8 -json $(abspath $(JSON))' > $(RUN)/synth.log
+	@test -s '$(JSON)' || { echo '[FAIL] frozen netlist missing' >&2; exit 1; }
+	@echo '[PASS] offline synthesis smoke check; NOT a qualified boot image'
 
-$(DFU_STAGE_BIT): $(DFU_STAGE_IMPL)
-	$(GMPACK) $(abspath $(DFU_STAGE_IMPL)) $(abspath $@)
+# Print the shared defaults that CI uses when no advanced overrides are selected.
+show-settings:
+	@echo 'OSS_CAD_SUITE_VERSION=$(OSS_CAD_SUITE_VERSION)'
+	@echo 'EXPECTED_RISCV_GCC_VERSION=$(EXPECTED_RISCV_GCC_VERSION)'
+	@echo 'SEED=$(SEED)'
+	@echo 'HEAP_BETA=$(HEAP_BETA)'
+	@echo 'NEXTPNR_EXTRA_ARGS=$(NEXTPNR_EXTRA_ARGS)'
+	@echo 'YOSYS=$(YOSYS)'
+	@echo 'NEXTPNR=$(NEXTPNR)'
+	@echo 'GMPACK=$(GMPACK)'
 
-# SERV 1.4.0 uses trap_pending before its declaration. Icarus needs it
-# declared first. Synthesis continues to use the exact pinned upstream RTL.
-$(SERV_SIM_STATE): $(SERV_DIR)/rtl/serv_state.v tests/prepare-ulx5m-serv-iverilog.py | $(BUILD_DIR)
-	python3 tests/prepare-ulx5m-serv-iverilog.py $< $@
+# The embedded handoff command is derived from the actual packed image.
+# Repack deterministically until it agrees or fail closed. A failed route
+# cannot leave behind a stale, apparently qualified bitstream.
+build: test verify-serv $(SERV_RTL) $(MC) $(FW)
+	@set -eu; \
+	  for tool in '$(YOSYS)' '$(NEXTPNR)' '$(GMPACK)'; do \
+	    command -v "$$tool" >/dev/null || { echo "[FAIL] Missing $$tool" >&2; exit 1; }; \
+	  done; \
+	  rm -f -- $(BIT) $(IMPL) $(LOG) $(SOURCE) $(STAMP); \
+	  echo '[INPUT] $(SEED): OSS_CAD_SUITE_VERSION=$(OSS_CAD_SUITE_VERSION) HEAP_BETA=$(HEAP_BETA) NEXTPNR_EXTRA_ARGS=$(NEXTPNR_EXTRA_ARGS)'; \
+	  $(YOSYS) --version; $(NEXTPNR) --version; \
+	  sha256sum $(FW) $(MC) $(CCF) $(SDC); \
+	  $(PYTHON) $(CLI) bootstrap --output $(CMD); \
+	  for pass in 1 2 3; do \
+	    echo "[INFO] Packing pass $$pass, seed $(SEED)"; \
+	    $(YOSYS) -p 'read_verilog -defer -Icores/usb/rtl $(SRC); synth_gatemate -top $(TOP) -luttree -nomx8 -json $(abspath $(JSON))' > $(RUN)/synth.log; \
+	    echo "[INPUT] pass $$pass, seed $(SEED):"; sha256sum $(CMD) $(JSON); \
+	    $(NEXTPNR) --device CCGM1A1 --json $(abspath $(JSON)) \
+	      -o ccf=$(abspath $(CCF)) -o out=$(abspath $(IMPL)) \
+	      --sdc $(abspath $(SDC)) --router router2 \
+	      --placer-heap-beta=$(HEAP_BETA) $(NEXTPNR_EXTRA_ARGS) --seed $(SEED) -l $(abspath $(LOG)); \
+	    $(GMPACK) --reconfig --bootaddr 2101248 \
+	      $(abspath $(IMPL)) $(abspath $(BIT)); \
+	    if $(PYTHON) $(CLI) derive --bit $(BIT) --hex $(CMD) --check; then \
+	      $(PYTHON) $(CLI) fingerprint --output $(SOURCE) --inputs $(FINGERPRINT); \
+	      $(PYTHON) $(CLI) stamp --bit $(BIT) --output $(STAMP) --seed $(SEED); \
+	      echo '[PASS] Image-derived ROM matches packed primary'; exit 0; \
+	    fi; \
+	    $(PYTHON) $(CLI) derive --bit $(BIT) --hex $(CMD) --write; \
+	  done; \
+	  rm -f -- $(BIT) $(SOURCE) $(STAMP); \
+	  echo '[FAIL] Image-derived command did not converge in 3 passes' >&2; exit 1
 
-# Same RV32I RAM/MMIO transaction test as the PicoRV32 baseline.
-test-flash-serv-bus: $(SERV_STAMP) $(SERV_SIM_STATE) | $(BUILD_DIR)
-	iverilog -g2012 -s tb_ulx5m_serv_flash_bram_pipe -o $(BUILD_DIR)/flash-serv-bus-test.vvp \
-	  $(SERV_SIM_RTL) rtl/soc_serv_cpu.v rtl/soc_bridge.v rtl/soc_bram.v \
-	  rtl/soc_mem_response_reg.v tests/tb_ulx5m_serv_flash_bram_pipe.v
-	vvp $(BUILD_DIR)/flash-serv-bus-test.vvp
-
-# Check the SERV-only trace CSR read pipeline without USB cable or JTAG.
-.PHONY: test-flash-serv-ep0-trace
-test-flash-serv-ep0-trace: $(PROBE_MC) | $(BUILD_DIR)
-	iverilog -g2012 -Icores/usb/rtl -s tb_ulx5m_serv_ep0_trace_csr \
-	  -o $(BUILD_DIR)/flash-serv-ep0-trace-test.vvp \
-	  $(wildcard cores/usb/rtl/*.v) tests/tb_ulx5m_serv_ep0_trace_csr.v
-	vvp $(BUILD_DIR)/flash-serv-ep0-trace-test.vvp
-
-# Compare BTN2 free-running raw RAM readback against the original CSR tests.
-# No hardware programming, flash writes, or firmware changes.
-.PHONY: test-btn2-raw-read
-test-btn2-raw-read: $(PROBE_MC) | $(BUILD_DIR)
-	iverilog -g2012 -DULX5M_RAW_FREE_READ_TEST -Icores/usb/rtl -s tb_ulx5m_serv_ep0_trace_csr \
-	  -o $(BUILD_DIR)/btn2-free-read-ep0-trace-test.vvp \
-	  $(wildcard cores/usb/rtl/*.v) tests/tb_ulx5m_serv_ep0_trace_csr.v
-	vvp $(BUILD_DIR)/btn2-free-read-ep0-trace-test.vvp
-
-# Exercise real USB PHY/RX LL and packet ACK decoding at 4 clocks/bit.
-.PHONY: test-flash-serv-ep0-ack
-
-test-flash-serv-ep0-ack: $(PROBE_MC) | $(BUILD_DIR)
-	iverilog -g2012 -Icores/usb/rtl -s tb_ulx5m_serv_ep0_ack_path \
-	  -o $(BUILD_DIR)/flash-serv-ep0-ack-test.vvp \
-	  $(wildcard cores/usb/rtl/*.v) tests/tb_ulx5m_serv_ep0_ack_path.v
-	vvp $(BUILD_DIR)/flash-serv-ep0-ack-test.vvp
-
-# Simulated capture RAM/CSR readout (no USB host or GateMate primitives).
-.PHONY: test-flash-serv-raw-capture
-test-flash-serv-raw-capture: | $(BUILD_DIR)
-	iverilog -g2012 -s tb_ulx5m_serv_raw_capture -o $(BUILD_DIR)/flash-serv-raw-capture-test.vvp \
-	  cores/usb/rtl/usb_ep0_raw_capture.v tests/tb_ulx5m_serv_raw_capture.v
-	vvp $(BUILD_DIR)/flash-serv-raw-capture-test.vvp
-	python3 tests/capture-ulx5m-serv-ep0-raw.py --selftest
-
-# Independently decode device DATA TX waveform (PID, payload, CRC16, EOP).
-# Does not force host ACK or modify the USB RTL/firmware.
-.PHONY: test-flash-serv-tx-packet
-test-flash-serv-tx-packet: | $(BUILD_DIR)
-	iverilog -g2012 -Icores/usb/rtl -s tb_ulx5m_serv_tx_packet \
-	  -o $(BUILD_DIR)/flash-serv-tx-packet-test.vvp \
-	  cores/usb/rtl/usb_crc.v cores/usb/rtl/usb_tx_pkt.v \
-	  cores/usb/rtl/usb_tx_ll.v tests/tb_ulx5m_serv_tx_packet.v
-	vvp $(BUILD_DIR)/flash-serv-tx-packet-test.vvp
-	python3 tests/check-ulx5m-serv-tx-waveform.py \
-	  $(BUILD_DIR)/flash-serv-tx-waveform.csv
-
-# Exercise the real 32-bit CPU-write / 8-bit USB-read endpoint RAM and
-# usb_trans-equivalent prefetch strobes through the complete TX packet engine.
-# This does not model analog USB pads or microcode endpoint arbitration.
-.PHONY: test-flash-serv-epbuf-tx
-test-flash-serv-epbuf-tx: | $(BUILD_DIR)
-	iverilog -g2012 -Icores/usb/rtl -s tb_ulx5m_serv_epbuf_tx \
-	  -o $(BUILD_DIR)/flash-serv-epbuf-tx-test.vvp \
-	  cores/usb/rtl/usb_crc.v cores/usb/rtl/usb_ep_buf.v \
-	  cores/usb/rtl/usb_tx_pkt.v cores/usb/rtl/usb_tx_ll.v \
-	  tests/tb_ulx5m_serv_epbuf_tx.v
-	vvp $(BUILD_DIR)/flash-serv-epbuf-tx-test.vvp
-	python3 tests/check-ulx5m-serv-epbuf-tx.py \
-	  $(BUILD_DIR)/flash-serv-epbuf-tx-waveform.csv
-
-# Execute the full SERV flash-read firmware with register-level USB/UART/SPI mocks.
-# This verifies firmware startup and USB attach, NOT USB enumeration or flash IO.
-.PHONY: test-flash-serv-firmware
-test-flash-serv-firmware: $(SERV_STAMP) $(SERV_SIM_STATE) $(SERV_FW) | $(BUILD_DIR)
-	iverilog -g2012 -s tb_ulx5m_serv_firmware_boot -o $(BUILD_DIR)/flash-serv-firmware-test.vvp \
-	  $(SERV_SIM_RTL) rtl/soc_serv_cpu.v rtl/soc_bridge.v rtl/soc_bram.v \
-	  rtl/soc_mem_response_reg.v tests/tb_ulx5m_serv_firmware_boot.v
-	vvp $(BUILD_DIR)/flash-serv-firmware-test.vvp +firmware=$(SERV_FW)
-
-check:
-	python3 tests/check-ulx5m-gs-port.py
-
-$(BUILD_DIR):
-	mkdir -p $@
-
-$(JSON): $(SRC) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog $(SRC); synth_gatemate -top $(TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/synth.log
-
-$(IMPL): $(JSON) $(CCF) $(SDC)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(JSON)) -o ccf=$(abspath $(CCF)) -o out=$(abspath $@) --sdc $(abspath $(SDC)) --router router2 --placer-heap-beta=0.6 -l $(abspath $(BUILD_DIR)/pnr.log)
-
-$(BIT): $(IMPL)
-	$(GMPACK) $(abspath $(IMPL)) $(abspath $@)
-
-flash dfu:
-	@echo 'ERROR: ULX5M flash and DFU targets are disabled until verified.' >&2
-	@exit 1
+# Explicit, separate and repeatable verification of the completed build.
+qualify:
+	$(PYTHON) $(CLI) qualify --bit $(BIT) --hex $(CMD) \
+	  --json $(JSON) --pnr-log $(LOG) --source-sha $(SOURCE) \
+	  --stamp $(STAMP) --seed $(SEED) --inputs $(FINGERPRINT)
 
 clean:
-	rm -rf $(BUILD_DIR)
-
-# Host-only RAM-DFU staging tests: no synthesis, FPGA programming, or flash.
-.PHONY: test-dfu-stage
-
-test-dfu-stage: | $(BUILD_DIR)
-	gcc -std=c11 -Wall -Wextra -Werror -Ifw \
-	  -o $(BUILD_DIR)/test-dfu-stage \
-	  fw/ulx5m_dfu_stage.c tests/test-ulx5m-dfu-stage.c
-	$(BUILD_DIR)/test-dfu-stage
-
-# Host firmware-path integration: actual usb_ctrl_ep0.c BD/data/status state
-# machine calls the RAM-only DFU receiver. Does not use PHY or flash.
-.PHONY: test-dfu-ep0
-
-test-dfu-ep0: | $(BUILD_DIR)
-	gcc -std=gnu11 -O1 -g -ffreestanding -fno-builtin \
-	  -Wall -Wextra -Werror -DULX5M_EP0_HOST_TEST=1 -DULX5M_SERV_TEST=1 \
-	  -Ifw -o $(BUILD_DIR)/test-dfu-ep0 \
-	  fw/usb_ctrl_ep0.c fw/ulx5m_dfu_stage.c tests/test-ulx5m-serv-dfu-ep0.c
-	$(BUILD_DIR)/test-dfu-ep0
-
-# Host-only discard-only DFU receiver (up to 2 MiB via 64-byte blocks).
-.PHONY: test-dfu-stream test-dfu-stream-ep0
-test-dfu-stream: | $(BUILD_DIR)
-	gcc -std=c11 -Wall -Wextra -Werror -Ifw \
-	  -o $(BUILD_DIR)/test-dfu-stream \
-	  fw/ulx5m_dfu_stream.c tests/test-ulx5m-dfu-stream.c
-	$(BUILD_DIR)/test-dfu-stream
-
-test-dfu-stream-ep0: | $(BUILD_DIR)
-	gcc -std=gnu11 -O1 -g -ffreestanding -fno-builtin \
-	  -Wall -Wextra -Werror -DULX5M_EP0_HOST_TEST=1 -DULX5M_SERV_TEST=1 \
-	  -Ifw -o $(BUILD_DIR)/test-dfu-stream-ep0 \
-	  fw/usb_ctrl_ep0.c fw/ulx5m_dfu_stream.c tests/test-ulx5m-serv-dfu-stream-ep0.c
-	$(BUILD_DIR)/test-dfu-stream-ep0
-
-# Validate the actual firmware STR1/FLM1 vendor dispatch (host only).
-.PHONY: test-dfu-stream-dispatch
-test-dfu-stream-dispatch: | $(BUILD_DIR)
-	gcc -std=gnu11 -O1 -Wall -Wextra -Werror -ffunction-sections -fdata-sections \
-	  -DULX5M_DFU_STREAM_ONLY=1 -Ifw \
-	  -Wl,--gc-sections -o $(BUILD_DIR)/test-dfu-stream-dispatch \
-	  tests/test-ulx5m-serv-dfu-stream-dispatch.c \
-	  fw/ulx5m_flash_layout.c fw/ulx5m_dfu_stream.c \
-	  fw/ulx5m_at25ql321.c fw/ulx5m_at25ql321_hw.c
-	$(BUILD_DIR)/test-dfu-stream-dispatch
-
-# Host-only flash programming model. Neither target can write physical flash.
-# The emulator test define is prohibited by the RISC-V production source.
-.PHONY: test-flash-program-protected test-flash-program-emulator
-.PHONY: test-dfu-stream-program-emulator
-
-test-flash-program-protected: | $(BUILD_DIR)
-	gcc -std=c11 -Wall -Wextra -Werror -Ifw \
-	  -o $(BUILD_DIR)/test-flash-program-protected \
-	  fw/ulx5m_flash_program.c fw/ulx5m_flash_layout.c \
-	  tests/test-ulx5m-serv-flash-program-protected.c
-	$(BUILD_DIR)/test-flash-program-protected
-
-test-flash-program-emulator: | $(BUILD_DIR)
-	gcc -std=c11 -Wall -Wextra -Werror \
-	  -DULX5M_FLASH_PROGRAM_EMULATOR_TEST=1 -Ifw \
-	  -o $(BUILD_DIR)/test-flash-program-emulator \
-	  fw/ulx5m_flash_program.c tests/test-ulx5m-serv-flash-program.c
-	$(BUILD_DIR)/test-flash-program-emulator
-
-test-dfu-stream-program-emulator: | $(BUILD_DIR)
-	gcc -std=c11 -Wall -Wextra -Werror \
-	  -DULX5M_FLASH_PROGRAM_EMULATOR_TEST=1 \
-	  -DULX5M_DFU_STREAM_EMULATOR_TEST=1 -Ifw \
-	  -o $(BUILD_DIR)/test-dfu-stream-program-emulator \
-	  fw/ulx5m_flash_program.c fw/ulx5m_dfu_stream.c \
-	  tests/test-ulx5m-serv-dfu-to-flash-emulator.c
-	$(BUILD_DIR)/test-dfu-stream-program-emulator
-
-# Host-only provisional flash layout and write-protection policy test.
-.PHONY: test-flash-layout
-
-test-flash-layout: | $(BUILD_DIR)
-	gcc -std=c11 -Wall -Wextra -Werror -Ifw \
-	  -o $(BUILD_DIR)/test-flash-layout \
-	  fw/ulx5m_flash_layout.c tests/test-ulx5m-serv-flash-layout.c
-	$(BUILD_DIR)/test-flash-layout
-
-# Host-only experimental 0x58 dispatch validation, with dead hardware code removed.
-.PHONY: test-flash-layout-ep0
-
-test-flash-layout-ep0: | $(BUILD_DIR)
-	gcc -std=gnu11 -O1 -Wall -Wextra -Werror -ffunction-sections -fdata-sections \
-	  -DULX5M_DFU_STAGE_ONLY=1 -Ifw \
-	  -Wl,--gc-sections -o $(BUILD_DIR)/test-flash-layout-ep0 \
-	  tests/test-ulx5m-serv-flash-layout-ep0.c \
-	  fw/ulx5m_flash_layout.c fw/ulx5m_dfu_stage.c
-	$(BUILD_DIR)/test-flash-layout-ep0
-
-# AT25QL321 command-layer tests. The SPI model and write permission are
-# native-host-only. Normal firmware compiles the mutating API as DENIED.
-.PHONY: test-at25ql321-protected test-at25ql321-emulator test-dfu-at25ql321-chain
-
-test-at25ql321-protected: | $(BUILD_DIR)
-	gcc -std=c11 -Wall -Wextra -Werror -Ifw \
-	  -o $(BUILD_DIR)/test-at25ql321-protected \
-	  fw/ulx5m_at25ql321.c tests/test-ulx5m-serv-at25ql321-protected.c
-	$(BUILD_DIR)/test-at25ql321-protected
-
-test-at25ql321-emulator: | $(BUILD_DIR)
-	gcc -std=c11 -Wall -Wextra -Werror -O1 \
-	  -DULX5M_AT25QL321_EMULATOR_TEST=1 -Ifw -Itests \
-	  -o $(BUILD_DIR)/test-at25ql321-emulator \
-	  fw/ulx5m_at25ql321.c tests/ulx5m-at25ql321-mock.c \
-	  tests/test-ulx5m-serv-at25ql321.c
-	$(BUILD_DIR)/test-at25ql321-emulator
-
-test-dfu-at25ql321-chain: | $(BUILD_DIR)
-	gcc -std=c11 -Wall -Wextra -Werror -O1 \
-	  -DULX5M_AT25QL321_EMULATOR_TEST=1 \
-	  -DULX5M_FLASH_PROGRAM_EMULATOR_TEST=1 \
-	  -DULX5M_DFU_STREAM_EMULATOR_TEST=1 -Ifw -Itests \
-	  -o $(BUILD_DIR)/test-dfu-at25ql321-chain \
-	  fw/ulx5m_at25ql321.c fw/ulx5m_flash_program.c \
-	  fw/ulx5m_dfu_stream.c tests/ulx5m-at25ql321-mock.c \
-	  tests/test-ulx5m-serv-at25ql321-chain.c
-	$(BUILD_DIR)/test-dfu-at25ql321-chain
-
-# Hardware MMIO adapter tested against a register-level fake (no FPGA needed).
-.PHONY: test-at25ql321-hw
-
-test-at25ql321-hw: | $(BUILD_DIR)
-	gcc -std=c11 -O1 -Wall -Wextra -Werror -Ifw \
-	  -o $(BUILD_DIR)/test-at25ql321-hw \
-	  fw/ulx5m_at25ql321_hw.c fw/ulx5m_at25ql321.c \
-	  tests/test-ulx5m-serv-at25-hw.c
-	$(BUILD_DIR)/test-at25ql321-hw
-
-# Exercise real 0x5A/0x5B firmware request validation with mock flash calls.
-# Native-host-only DFU -> GateMate MMIO -> SPI flash model. NEVER hardware.
-.PHONY: test-dfu-at25ql321-mmio-emulator
-
-test-dfu-at25ql321-mmio-emulator: | $(BUILD_DIR)
-	gcc -std=c11 -Wall -Wextra -Werror -O1 \
-	  -DULX5M_AT25QL321_EMULATOR_TEST=1 \
-	  -DULX5M_AT25QL321_MMIO_HOST_TEST=1 \
-	  -DULX5M_FLASH_PROGRAM_EMULATOR_TEST=1 \
-	  -DULX5M_DFU_STREAM_EMULATOR_TEST=1 -Ifw -Itests \
-	  -o $(BUILD_DIR)/test-dfu-at25ql321-mmio-emulator \
-	  fw/ulx5m_at25ql321.c fw/ulx5m_at25ql321_hw.c \
-	  fw/ulx5m_flash_program.c fw/ulx5m_dfu_stream.c \
-	  tests/ulx5m-at25ql321-mock.c \
-	  tests/test-ulx5m-serv-at25-mmio-chain.c
-	$(BUILD_DIR)/test-dfu-at25ql321-mmio-emulator
-
-.PHONY: test-at25ql321-hw-dispatch
-
-test-at25ql321-hw-dispatch: | $(BUILD_DIR)
-	gcc -std=gnu11 -O1 -Wall -Wextra -Werror \
-	  -ffunction-sections -fdata-sections -DULX5M_DFU_STREAM_ONLY=1 -Ifw \
-	  -Wl,--gc-sections -o $(BUILD_DIR)/test-at25ql321-hw-dispatch \
-	  tests/test-ulx5m-serv-at25-hw-dispatch.c \
-	  fw/ulx5m_dfu_stream.c fw/ulx5m_flash_layout.c
-	$(BUILD_DIR)/test-at25ql321-hw-dispatch
-
-# Explicit host-only one-sector DFU -> SPI experiment. NO physical IO.
-.PHONY: test-dfu-hw-flash-arm
-test-dfu-hw-flash-arm: | $(BUILD_DIR)
-	gcc -std=c11 -Wall -Wextra -Werror -O1 \
-	  -DULX5M_AT25QL321_EMULATOR_TEST=1 \
-	  -DULX5M_FLASH_PROGRAM_EMULATOR_TEST=1 \
-	  -DULX5M_FLASH_HW_TEST=1 -DULX5M_FLASH_HW_HOST_TEST=1 \
-	  -DULX5M_DFU_HW_TEST_ONLY=1 -Ifw -Itests \
-	  -o $(BUILD_DIR)/test-dfu-hw-flash-arm \
-	  fw/ulx5m_at25ql321.c fw/ulx5m_flash_program.c \
-	  fw/ulx5m_dfu_stream.c fw/ulx5m_flash_hw_test.c \
-	  tests/ulx5m-at25ql321-mock.c tests/test-ulx5m-serv-dfu-hw-test.c
-	$(BUILD_DIR)/test-dfu-hw-flash-arm
-
-# Separate SRAM-only normal-boot integration. Frozen seed-147 inputs and
-# established BTN2 DFU targets remain unchanged. Reconfiguration is NOT
-# instantiated by default; JTAG read access has passed on hardware, but
-# automatic recovery from failed reconfiguration has not been established.
-NORMAL_BOOT_FW := $(BUILD_DIR)/normal-boot/fw_ulx5m_flash_read.hex
-NORMAL_BOOT_JSON := $(BUILD_DIR)/$(FLASH_TOP)-normal-boot.json
-NORMAL_BOOT_IMPL := $(BUILD_DIR)/$(FLASH_TOP)-normal-boot.txt
-NORMAL_BOOT_BIT := $(BUILD_DIR)/$(FLASH_TOP)-normal-boot.bit
-NORMAL_BOOT_SRC := $(SERV_SRC) rtl/ulx5m_btn2_boot_select.v \
-  rtl/ulx5m_normal_boot_reset.v rtl/ulx5m_cfg_stream_wb.v
-NORMAL_BOOT_SEED ?= 147
-
-.PHONY: normal-boot-sram normal-boot-firmware
-normal-boot-sram: $(NORMAL_BOOT_BIT)
-normal-boot-firmware: $(NORMAL_BOOT_FW)
-
-$(NORMAL_BOOT_FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S fw/lnk-app.lds fw/Makefile.ulx5m-flash-read
-	$(MAKE) -C fw -f Makefile.ulx5m-flash-read \
-	  BUILD_DIR=../$(BUILD_DIR)/normal-boot SERV=1 \
-	  NORMAL_BOOT_EXPERIMENT=1 DFU_STREAM_ONLY=1
-
-$(NORMAL_BOOT_JSON): $(NORMAL_BOOT_FW) $(PROBE_MC) $(SERV_STAMP) $(NORMAL_BOOT_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_DFU_STREAM -DULX5M_SERV_BTN2_DFU_GATE -DULX5M_SERV_NORMAL_BOOT_EXPERIMENT -Icores/usb/rtl $(NORMAL_BOOT_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/normal-boot-serv-synth.log
-
-$(NORMAL_BOOT_IMPL): $(NORMAL_BOOT_JSON) $(FLASH_CCF) $(FLASH_SDC)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(NORMAL_BOOT_JSON)) -o ccf=$(abspath $(FLASH_CCF)) -o out=$(abspath $@) --sdc $(abspath $(FLASH_SDC)) --router router2 --placer-heap-beta=0.6 --seed $(NORMAL_BOOT_SEED) -l $(abspath $(BUILD_DIR)/normal-boot-serv-pnr.log)
-
-$(NORMAL_BOOT_BIT): $(NORMAL_BOOT_IMPL)
-	$(GMPACK) $(abspath $(NORMAL_BOOT_IMPL)) $(abspath $@)
-
-# Offline-only CC_CFG_CTRL integration, with separate opt-in firmware.
-# This produces a netlist but deliberately has NO route, gmpack or JTAG
-# target. Do not use for physical reconfiguration without verified recovery.
-NORMAL_BOOT_CFG_FW := $(BUILD_DIR)/normal-boot-cfg-offline/fw_ulx5m_flash_read.hex
-NORMAL_BOOT_CFG_JSON := $(BUILD_DIR)/$(FLASH_TOP)-normal-boot-cfg-offline.json
-.PHONY: normal-boot-cfg-offline
-normal-boot-cfg-offline: $(NORMAL_BOOT_CFG_JSON)
-$(NORMAL_BOOT_CFG_FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S fw/lnk-app.lds fw/Makefile.ulx5m-flash-read
-	$(MAKE) -C fw -f Makefile.ulx5m-flash-read \
-	  BUILD_DIR=../$(BUILD_DIR)/normal-boot-cfg-offline SERV=1 \
-	  NORMAL_BOOT_EXPERIMENT=1 DFU_STREAM_ONLY=1 CFG_STREAM_ENABLE=1
-
-$(NORMAL_BOOT_CFG_JSON): $(NORMAL_BOOT_CFG_FW) $(PROBE_MC) $(SERV_STAMP) $(NORMAL_BOOT_SRC) $(FLASH_CCF) $(FLASH_SDC) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog -defer -DULX5M_USE_SERV -DULX5M_SERV_DFU_STREAM -DULX5M_SERV_BTN2_DFU_GATE -DULX5M_SERV_NORMAL_BOOT_EXPERIMENT -DULX5M_SERV_CFG_HANDOFF_OFFLINE -DULX5M_ENABLE_CFG_STREAM -Icores/usb/rtl $(NORMAL_BOOT_SRC); synth_gatemate -top $(FLASH_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/normal-boot-cfg-offline-synth.log
-
-# Harmless normal-application test bitstream, not a bootloader or flash image.
-NORMAL_LED_TOP := top_ulx5m_gs_normal_led
-NORMAL_LED_CCF := data/top-ulx5m-gs-normal-led.ccf
-NORMAL_LED_JSON := $(BUILD_DIR)/$(NORMAL_LED_TOP).json
-NORMAL_LED_IMPL := $(BUILD_DIR)/$(NORMAL_LED_TOP).txt
-NORMAL_LED_BIT := $(BUILD_DIR)/$(NORMAL_LED_TOP).bit
-.PHONY: normal-led-sram
-normal-led-sram: $(NORMAL_LED_BIT)
-$(NORMAL_LED_JSON): rtl/top-ulx5m-gs-normal-led.v $(NORMAL_LED_CCF) | $(BUILD_DIR)
-	$(YOSYS) -p 'read_verilog rtl/top-ulx5m-gs-normal-led.v; synth_gatemate -top $(NORMAL_LED_TOP) -luttree -nomx8 -json $(abspath $@)' > $(BUILD_DIR)/normal-led-synth.log
-$(NORMAL_LED_IMPL): $(NORMAL_LED_JSON) $(NORMAL_LED_CCF)
-	$(NEXTPNR) --device $(DEVICE) --json $(abspath $(NORMAL_LED_JSON)) -o ccf=$(abspath $(NORMAL_LED_CCF)) -o out=$(abspath $@) --router router2 --placer-heap-beta=0.6 --seed 147 -l $(abspath $(BUILD_DIR)/normal-led-pnr.log)
-$(NORMAL_LED_BIT): $(NORMAL_LED_IMPL)
-	$(GMPACK) $(abspath $(NORMAL_LED_IMPL)) $(abspath $@)
+	@case '$(OUT)' in build-ulx5m-gs) rm -rf -- '$(OUT)' ;; \
+	  *) echo '[FAIL] refusing to remove unexpected build dir' >&2; exit 1 ;; esac

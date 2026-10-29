@@ -17,14 +17,14 @@ on:
           - ulx4m-ld-85f
           - ulx5m-gs
       seed_first:
-        description: First seed to route (1-260)
+        description: First seed to route
         required: true
         default: "1"
         type: string
       seed_last:
-        description: Last seed to route (1-260)
+        description: Last seed to route (max 512 from first)
         required: true
-        default: "260"
+        default: "50"
         type: string
       max_parallel:
         description: Maximum concurrent GitHub route jobs
@@ -243,9 +243,8 @@ jobs:
           if [[ ! "${SWEEP_SEED_FIRST}" =~ ^[0-9]+$ ||
                 ! "${SWEEP_SEED_LAST}" =~ ^[0-9]+$ ||
                 "${SWEEP_SEED_FIRST}" -lt 1 ||
-                "${SWEEP_SEED_LAST}" -gt 260 ||
                 "${SWEEP_SEED_FIRST}" -gt "${SWEEP_SEED_LAST}" ]]; then
-              echo "Seed range must be within 1-260 with first <= last." >&2
+              echo "Seed range must be >1 with first <= last, and a maximum of 512 total seeds." >&2
               exit 1
           fi
 

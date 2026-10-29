@@ -32,7 +32,6 @@ module qspi_phy_gatemate #(
             .IO(spi_io[i]), .A(io_out[i]), .T(io_tristate[i] | release_to_config), .Y(io_in[i])
         );
     end endgenerate
-`ifdef ULX5M_SERV_SPI_ACTIVE_SECONDARY
     // Dedicated configuration flash pins must stop being fabric outputs
     // BEFORE CC_CFG_CTRL.RECFG requests an SPI-active reread.
     genvar j;
@@ -44,10 +43,6 @@ module qspi_phy_gatemate #(
     CC_TOBUF #(.V_IO("1.8")) sck_pad_i (
         .A(sck_out), .T(release_to_config), .O(spi_sck)
     );
-`else
-    assign spi_cs = cs_out;
-    assign spi_sck = sck_out;
-`endif
 
     always @(posedge clk) begin
         if (rst) begin

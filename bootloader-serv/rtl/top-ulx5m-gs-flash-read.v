@@ -218,7 +218,9 @@ module top_ulx5m_gs_flash_read (
     // Firmware is compiled into this word-addressed RAM image before
     // GateMate synthesis. No ECP5 ecpbram patching is needed.
 `ifdef ULX5M_USE_SERV
-`ifdef ULX5M_V73_REGISTERED_REBOOT
+`ifdef ULX5M_V79_CFG25_AUTOBOOT
+    localparam FW_IMAGE = "build-ulx5m-gs/normal-boot-dfu-hw-native/fw_ulx5m_flash_read.hex";
+`elsif ULX5M_V73_REGISTERED_REBOOT
     localparam FW_IMAGE = "build-ulx5m-gs/v73-normal-boot-dfu-hw-native/fw_ulx5m_flash_read.hex";
 `elsif ULX5M_SERV_SPI_ACTIVE_SECONDARY
     localparam FW_IMAGE = "build-ulx5m-gs/normal-boot-dfu-hw-native/fw_ulx5m_flash_read.hex";
@@ -375,6 +377,23 @@ module top_ulx5m_gs_flash_read (
 
 `ifdef ULX5M_SERV_NORMAL_BOOT_EXPERIMENT
     // Peripheral 5: v73 registered handoff or legacy RECFG/stream controller.
+`ifdef ULX5M_V79_CFG25_AUTOBOOT
+    // Normal-mode reconfiguration runs from the independent board clock.
+    // Keep Wishbone responses in the 48 MHz SERV domain; no CDC bus crossing.
+    reg wb_ack_cfg25 = 1'b0;
+    always @(posedge clk48) begin
+        if (fw_reset)
+            wb_ack_cfg25 <= 1'b0;
+        else
+            wb_ack_cfg25 <= wb_cyc[5] && !wb_ack_cfg25;
+    end
+    assign wb_ack[5] = wb_ack_cfg25;
+    assign wb_rdata[5] = 32'd0;
+    ulx5m_cfg_autoboot_25 cfg25_i (
+        .clk25(clk25), .normal_mode(mode_valid && !dfu_selected),
+        .release_spi(release_spi_for_config)
+    );
+`else
 `ifdef ULX5M_SERV_SPI_ACTIVE_SECONDARY
     ulx5m_spi_active_reboot_wb cfg_stream_i (
         .release_spi(release_spi_for_config),
@@ -394,6 +413,7 @@ module top_ulx5m_gs_flash_read (
         .bus_rdata(wb_rdata[5]), .bus_cyc(wb_cyc[5]),
         .bus_ack(wb_ack[5]), .bus_we(wb_we)
     );
+`endif
 `endif
 
 endmodule
