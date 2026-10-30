@@ -12,6 +12,7 @@ import hashlib
 from pathlib import Path
 import struct
 import sys
+import time
 import zlib
 
 from cfgcmd_codec import parse_commands, CMD_CHG_STATUS, CMD_JUMP
@@ -56,9 +57,19 @@ def checked_status(device, phase, size=None, crc=None):
 
 
 def dfu_getstatus(device):
-    result = bytes(device.ctrl_transfer(0xa1, 3, 0, 0, 6, timeout=30000))
-    if len(result) != 6 or result[0] != 0 or result[4] != 5:
-        raise ValueError('DFU block rejected (status/state %r)' % (result,))
+    deadline = time.monotonic() + 30.0
+    while True:
+        result = bytes(device.ctrl_transfer(0xa1, 3, 0, 0, 6, timeout=30000))
+        if len(result) != 6 or result[0] != 0:
+            raise ValueError('DFU block rejected (status/state %r)' % (result,))
+        if result[4] == 5:  # dfuDNLOAD_IDLE: page write is complete
+            return
+        if result[4] != 4:  # dfuDNBUSY: foreground flash write outstanding
+            raise ValueError('unexpected DFU block state %r' % (result,))
+        if time.monotonic() >= deadline:
+            raise ValueError('DFU block programming timed out; secondary is not qualified')
+        delay_ms = result[1] | (result[2] << 8) | (result[3] << 16)
+        time.sleep(min(max(delay_ms / 1000.0, 0.001), 0.1))
 
 
 def verify_flash(device, image, progress=None):
@@ -112,10 +123,22 @@ def update(device, image, progress=None):
     values = checked_status(device, 1, length, crc)
     if values[3] != length:
         raise ValueError('device received %d/%d bytes' % (values[3], length))
-    device.ctrl_transfer(0x40, 0x5e, 0x5afe, 0x2026, b'', timeout=120000)
-    values = checked_status(device, 2, length, crc)
-    if values[3] != length:
-        raise ValueError('device FINISH length mismatch')
+    device.ctrl_transfer(0x40, 0x5e, 0x5afe, 0x2026, b'', timeout=30000)
+    deadline = time.monotonic() + 180.0
+    while True:
+        values = status(device)
+        if values[1:4] != (length, crc, length):
+            raise ValueError('device FINISH length/checksum/progress mismatch')
+        if values[0] == 2 and values[4] == 0:
+            break
+        if values[0] == 3 or values[4]:
+            raise ValueError('device verification failed (phase/error %d/%d)' %
+                             (values[0], values[4]))
+        if values[0] != 4:
+            raise ValueError('unexpected FINISH phase %d' % values[0])
+        if time.monotonic() >= deadline:
+            raise ValueError('device verification timed out; secondary is not qualified')
+        time.sleep(0.02)
     # Independent host-controlled byte-for-byte readback via separate SPI READ.
     return verify_flash(device, image, progress)
 

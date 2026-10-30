@@ -3,13 +3,13 @@ Bootloader SERV de l'ULX5M-GS : installation, fonctionnement et récupération
 
 .. important:: État des fonctions vérifiées
 
-   Le primaire persistant seed 160 a été validé sur une carte ULX5M-GS V005
-   pour le mode USB DFU (BTN2 maintenu au démarrage) et le démarrage autonome
-   de l'image secondaire (BTN2 relâché). Le micrologiciel optionnel ``FWTF``
-   a été vérifié sur matériel pour l'énumération USB et la **lecture** de la
-   flash après chargement temporaire par JTAG. Son chemin d'effacement,
-   programmation et finalisation USB d'une image complète n'a **pas** été
-   validé sur matériel. Il n'existe pas de retour arrière atomique.
+   Le primaire persistant ``FWTN`` seed 160 a été validé sur ULX5M-GS V005
+   en mode USB DFU (BTN2 maintenu) et en démarrage secondaire autonome.
+   Le profil ``FWTF`` v2d, chargé uniquement en SRAM par JTAG, a réussi une
+   réécriture USB physique de 3 026 octets avec vérification FINISH et
+   relecture par l'hôte. La comparaison JTAG des 4 Mio après écriture et
+   les redémarrages à froid restent à vérifier. Cette mise à jour en place
+   n'assure pas de retour arrière atomique.
 
 Ce guide concerne le répertoire ``bootloader-serv/`` du projet Hazard3-Doom
 et la carte Intergalaktik ULX5M-GS **V005**. Le petit processeur SERV RV32I
@@ -38,8 +38,8 @@ Fonctions disponibles
      - Matériel : PASS pour les deux profils
    * - Réception DFU complète et vérification de la flash
      - Tests hors ligne : PASS
-   * - Écriture USB d'une image secondaire complète
-     - Non validée sur matériel
+   * - Première réécriture USB de 3 026 octets et contrôle par l'hôte
+     - Matériel : PASS ; comparaison JTAG complète en attente
    * - Mise à jour atomique et restauration automatique
      - Non implémentées
 
@@ -154,24 +154,40 @@ point de terminaison bulk. Le produit USB est annoncé comme
 ``ULX5M-GS FPGA (DFU Probe)`` ; un ancien nom ULX4M conservé par Windows
 n'est pas un identifiant fiable.
 
+``FWTN`` et ``FWTF`` sont des **identifiants de profil du micrologiciel**
+de quatre caractères ASCII, et non des acronymes, des noms de fichiers,
+des commandes GateMate ou des identifiants USB. Ils occupent les octets
+0..3 de la réponse
+STATUS fournisseur de 24 octets (requête ``0x5D``). Ils désignent le
+micrologiciel qui répond sur USB, pas l'image secondaire stockée en flash.
+Les deux profils utilisent le VID:PID ``1D50:614B``.
+
 ``FWTN``
-   Profil restreint par défaut, actuellement installé en primaire
-   persistant. Le démarrage USB et la lecture de la flash ont été vérifiés.
-   Son banc d'essai d'écriture ne couvre que 4 Kio.
+   Profil restreint par défaut (sans ``DFU_FULL_IMAGE=1``), installé comme
+   primaire persistant de référence. L'énumération USB et la lecture du
+   secondaire sont validées sur matériel. Son banc d'essai limité à 4 Kio
+   n'est **pas** un outil de mise à jour complète ; ``--execute`` est refusé.
 
 ``FWTF``
-   Profil optionnel activé par ``DFU_FULL_IMAGE=1``. Le récepteur DFU,
-   les bornes d'adresses, l'effacement, la programmation et la relecture
-   ont passé les tests d'émulation. Chargé temporairement via JTAG,
-   ``FWTF`` a énuméré l'USB et relu le secondaire sur matériel, mais
-   **aucune écriture USB d'image complète** n'a été validée.
+   Profil d'écriture complète activé par ``DFU_FULL_IMAGE=1``, chargé
+   temporairement en SRAM par JTAG ``-m`` et non installé en flash primaire.
+   La version v2d a réussi la réécriture physique de 3 026 octets, FINISH
+   et la relecture USB indépendante. La comparaison JTAG complète, la
+   récupération après interruption et les grandes images restent à valider.
 
-Le protocole expérimental utilise des blocs DNLOAD ordonnés de 64 octets,
-un CRC32 du flux, des contrôles explicites ARM/STATUS/FINISH et une
-relecture indépendante de l'image. La comparaison SHA-256 effectuée par
-l'hôte établit l'identité des octets, pas l'authenticité cryptographique.
-Un simple ``dfu-util -D`` n'est pas une procédure de mise à jour qualifiée.
-L'outil hôte refuse une écriture destructive vers le profil ``FWTN``.
+Après les quatre caractères, STATUS renvoie cinq entiers de 32 bits en
+ordre little-endian : phase, longueur attendue, CRC32 attendu, nombre
+d'octets reçus et code d'erreur. Les phases sont ``0`` (désarmé), ``1``
+(armé), ``4`` (vérification en cours), ``2`` (vérifié) et ``3`` (échec).
+L'accusé de réception de FINISH ne prouve pas la réussite : l'hôte attend
+la phase ``2`` sans erreur. SHA-256 vérifie l'égalité des octets mais ne
+constitue pas une signature d'authenticité.
+
+Le protocole utilise des blocs DNLOAD ordonnés de 64 octets, CRC32 et les
+requêtes fournisseur ARM (``0x5C``), STATUS (``0x5D``) et FINISH (``0x5E``).
+``--probe`` accepte les deux profils en **lecture seule** ; ``--execute``
+exige ``FWTF`` et une confirmation explicite. ``dfu-util -D`` seul ne
+remplace pas cette procédure de mise à jour protégée.
 
 Prérequis
 ---------
@@ -229,6 +245,17 @@ Tigard. **Garder BTN2 maintenu pendant tout le transfert JTAG et jusqu'à
 ce que D4 soit allumée.** Relâcher ensuite BTN2 : D4 doit rester allumée
 et D3 éteinte. Un appui tardif sur BTN2 ne change pas le mode enregistré.
 
+L'ordre d'alimentation reste à caractériser. Le 30 octobre, un chargement
+JTAG a atteint 100 % avec l'ULX5M alimentée en premier, mais les LED
+sont restées éteintes et Windows n'a pas trouvé le DFU USB. Après une
+coupure complète, Tigard alimenté **en premier**, puis l'ULX5M avec BTN2
+maintenu, a permis l'énumération et la mise à jour USB. Des essais plus
+anciens avaient réussi dans l'autre ordre. Si toutes les LED restent
+éteintes ou si l'USB est absent, couper **les deux** alimentations et
+essayer l'ordre inverse. La cause n'est pas établie. Garder VTGT non
+connecté et la masse commune. Ne pas couper l'alimentation pendant un
+effacement ou une programmation de flash.
+
 .. code-block:: bash
 
    cd /mnt/c/workspace/Hazard3-Doom/bootloader-serv
@@ -273,6 +300,55 @@ Le résultat attendu indique ``Device profile FWTN`` ou ``FWTF``, puis
 n'envoie **aucune commande ARM, effacement, programmation, FINISH ou RECFG**.
 Ne pas utiliser ``--execute`` pour une installation ordinaire.
 
+Réécriture secondaire contrôlée (expérimentale)
+------------------------------------------------
+
+La première écriture concerne uniquement le secondaire natif connu de
+3 026 octets, dans le secteur ``0x201000..0x201FFF``. Elle ne modifie pas
+le primaire persistant. La mise à jour s'effectue **sur place**, sans
+atomicité ni restauration automatique. Toute écriture destructive exige
+une autorisation explicite de l'opérateur.
+
+Avant l'essai, conserver deux lectures indépendantes de 4 Mio dont le
+SHA-256 vaut
+``3aa6280fd96de3c00ef844a2f0298a919f7cea9311d5a267ee0be85bc4375c78``
+(dossier ``../ulx5m-prewrite-readonly-20261030-FN1nVy/``). Vérifier les
+empreintes des deux bitstreams, le contenu ``0xFF`` de tous les octets
+``0x201BD2..0x3FFFFF`` et l'intégrité des zones protégées.
+
+Charger le primaire ``FWTF`` v2d en SRAM avec SW1 ON/ON, BTN2 maintenu et
+JTAG ``-m`` uniquement. Avant la commande destructive, la sonde USB
+``--probe`` doit identifier ``FWTF``, le JEDEC ``1F 42 16`` et les
+3 026 octets corrects. Ne jamais installer ``FWTF`` dans la flash primaire.
+
+Après autorisation distincte, la commande **destructive** utilise l'outil
+hôte Windows existant :
+
+.. code-block:: bash
+
+   cd /mnt/c/workspace/Hazard3-Doom/bootloader-serv
+   SCRIPT_WIN="$(wslpath -w "$PWD/tests/ulx5m_dfu_update.py")"
+   IMAGE_WIN="$(wslpath -w "$PWD/build-ulx5m-gs/native-v41-secondary-3026.bit")"
+   BIN_WIN="$(wslpath -w "$PWD/../bin")"
+   powershell.exe -NoProfile -Command \
+     "\$env:PATH='$BIN_WIN;' + \$env:PATH; py -3 '$SCRIPT_WIN' --image '$IMAGE_WIN' --execute --confirm REPLACE-SECONDARY-0x201000"
+
+Le premier essai autorisé du 30 octobre 2026 (v2d, 3 026 octets)
+a réussi le transfert, la vérification FINISH et la relecture USB avec
+le SHA-256 attendu. Aucune commande RECFG n'a été envoyée. Il s'agit
+d'une **réussite de l'écriture USB vérifiée par l'hôte**, sans validation
+complète du flash : la comparaison JTAG de 4 Mio et les redémarrages
+à froid restent à effectuer. Pour chaque essai ultérieur, exiger de nouveau
+un transfert, FINISH et une relecture USB corrects.
+Effectuer ensuite une lecture JTAG **indépendante** des 4 Mio à l'aide de
+``tests/ulx5m_flash_install.py`` (API ``detect()``/``dump()`` en lecture
+seule). L'image étant identique, le SHA-256 global doit rester celui de
+la sauvegarde. Tester séparément le DFU ``FWTN`` avec BTN2 maintenu et
+le démarrage des LED défilantes avec BTN2 relâché, SW1 OFF/OFF.
+
+En cas d'erreur, conserver les journaux, ne pas relancer l'écriture
+ni effectuer de démarrage normal ; revenir au DFU doré avec BTN2 maintenu.
+
 Redémarrage persistant et récupération
 --------------------------------------
 
@@ -292,18 +368,23 @@ deux sauvegardes indépendantes des 4 Mio et les empreintes d'images.
 Une mise à jour ``FWTF`` modifie le secondaire **en place** : une coupure
 peut le rendre inutilisable. Si le primaire persistant reste sain,
 maintenir BTN2 lors de la mise sous tension permet de retrouver le DFU ;
-sinon la récupération externe JTAG/flash est requise. La longue analyse
-synchrone de FINISH (relecture et examen des secteurs restants) nécessite
-une validation temporelle sur matériel avant toute première écriture.
-Aucune commande destructive n'est autorisée par ce guide.
+sinon la récupération externe JTAG/flash est requise. Avec v2d, les blocs
+DNLOAD sont programmés hors des callbacks USB et FINISH vérifie l'image de
+manière incrémentale sans effacer les secteurs suivants. Les attentes WIP
+pour l'effacement et la programmation restent synchrones et peuvent
+retarder le service USB. Un premier transfert de 3 026 octets a été
+vérifié par l'hôte ; les durées extrêmes, les images plus grandes et la
+reprise après interruption restent non qualifiées. Cette documentation
+n'autorise aucune nouvelle opération destructive.
 
 Dépannage
 ---------
 
-* **JTAG non détecté :** SW1 ON/ON, ULX5M alimentée avant Tigard,
-  masse commune, I/O 1,8 V et IDCODE ``0x20000001``.
-* **JTAG chargé mais USB absent :** maintenir BTN2 pendant tout le
-  chargement ; D4 allumée et D3 éteinte indiquent le mode DFU.
+* **JTAG non détecté :** SW1 ON/ON, couper les deux alimentations puis
+  essayer l'un ou l'autre ordre ; masse commune, I/O 1,8 V, IDCODE ``0x20000001``.
+* **JTAG chargé mais USB absent :** vérifier le maintien de BTN2 et les
+  LED ; si elles sont toutes éteintes, redémarrer les deux appareils dans
+  l'ordre inverse. D4 allumée et D3 éteinte indiquent le mode DFU.
 * **Nom ULX4M affiché par Windows :** contrôler le VID:PID et le
   descripteur ``ULX5M-GS FPGA (DFU Probe)``.
 * **Aucun périphérique sous WSL :** utiliser Python Windows via PowerShell.
@@ -322,12 +403,15 @@ Les empreintes ci-dessous concernent la configuration vérifiée le
 
 * Primaire persistant ``FWTN`` : 420 175 octets ; SHA-256
   ``c41830bd09e0e924facd2425f10a8072878e59505d12b82aff533be7df8cfe27``.
-* Primaire temporaire ``FWTF`` : SHA-256
-  ``6c1bb2b8219f9b0c69c56725467b9a6c40f80a3a5caf6262dfe5769842528c97``.
+* Primaire temporaire ``FWTF`` v2d : 420 175 octets ; SHA-256
+  ``c73b8d6fe1ac1150ad3e3bba72c6d64664ee495185fade339f188f628dcfe167``.
 * Secondaire natif connu : 3 026 octets ; SHA-256
   ``68e15779871aa50d23ccb9cd52d458d072c0ca963310b2c74a96bde2861489dd``.
 * Sauvegardes initiales identiques de 4 Mio : SHA-256
   ``09542df4b40bb6bcce00a327bb890f6a2d46099eae2e41f7a89e8e602614007d``.
+* Deux sauvegardes physiques actuelles avant écriture (4 Mio) : SHA-256
+  ``3aa6280fd96de3c00ef844a2f0298a919f7cea9311d5a267ee0be85bc4375c78`` ;
+  ``../ulx5m-prewrite-readonly-20261030-FN1nVy/``.
 * Session de récupération du primaire :
   ``build-ulx5m-gs/flash-install-20261030T155241133153Z``.
 * Routage candidat seed 160 : fréquences maximales 67,96 MHz (25 MHz)

@@ -63,7 +63,7 @@ static struct ulx5m_flash_program program;
 static uint8_t arm_buffer[ULX5M_HW_ARM_BYTES] __attribute__((aligned(4)));
 static uint32_t image_bytes;
 static uint32_t expected_crc;
-static uint8_t phase;  /* 0=disarmed, 1=armed, 2=verified, 3=failed */
+static uint8_t phase;  /* 0=disarmed, 1=armed, 2=verified, 3=failed, 4=verifying */
 static uint8_t error_code;
 
 static uint32_t get32(const uint8_t *p)
@@ -113,6 +113,17 @@ static int sink(uint32_t offset, const uint8_t *bytes, unsigned len)
 int ulx5m_flash_hw_test_is_armed(void)
 {
     return phase == 1u;
+}
+void ulx5m_flash_hw_test_tick(void)
+{
+    if (phase == 4u) {
+        enum ulx5m_flash_program_result result =
+            ulx5m_flash_program_finish_step(&program);
+        if (result != ULX5M_PROGRAM_PENDING) {
+            phase = result == ULX5M_PROGRAM_OK ? 2u : 3u;
+            error_code = (uint8_t)result;
+        }
+    }
 }
 #endif
 
@@ -209,9 +220,15 @@ static bool finish_done(struct usb_xfer *xfer)
         ulx5m_dfu_stream_set_flash_sink(0);
         return true;
     }
+#ifdef ULX5M_DFU_FULL_IMAGE_TEST
+    result = ulx5m_flash_program_finish_start(&program);
+    phase = result == ULX5M_PROGRAM_PENDING ? 4u : 3u;
+    error_code = result == ULX5M_PROGRAM_PENDING ? 0u : (uint8_t)result;
+#else
     result = ulx5m_flash_program_finish(&program);
-    phase = result == ULX5M_PROGRAM_OK ? 2 : 3;
+    phase = result == ULX5M_PROGRAM_OK ? 2u : 3u;
     error_code = (uint8_t)result;
+#endif
     ulx5m_dfu_stream_set_flash_sink(0);
     return true;
 }

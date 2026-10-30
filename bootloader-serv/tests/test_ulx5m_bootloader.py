@@ -330,12 +330,21 @@ class FullImageHostOffline(unittest.TestCase):
                 self.expected_crc = 0
                 self.image_length = 0
                 self.corrupted = False
+                self.verify_polls = 0
+                self.verify_error = False
+                self.block_busy = False
+                self.busy_polls = 0
 
             def ctrl_transfer(self, direction, command, value, index, data, timeout=0):
                 if (direction, command) == (0xc0, 0x5d):
+                    if self.phase == 4:
+                        self.verify_polls += 1
+                        if self.verify_polls >= 3:
+                            self.phase = 3 if self.verify_error else 2
                     return b'FWTF' + struct.pack('<5I', self.phase,
                                                   self.image_length, self.expected_crc,
-                                                  len(self.received), 0)
+                                                  len(self.received),
+                                                  5 if self.phase == 3 else 0)
                 if (direction, command) == (0xc0, 0x5a):
                     return b'A251\x1f\x42\x16\x00'
                 if (direction, command) == (0x40, 0x5c):
@@ -348,14 +357,19 @@ class FullImageHostOffline(unittest.TestCase):
                 if (direction, command) == (0x21, 1):
                     assert self.phase == 1 and value == len(self.received) // 64
                     self.received.extend(data)
+                    self.block_busy = True
                     return len(data)
                 if (direction, command) == (0xa1, 3):
+                    if self.block_busy:
+                        self.block_busy = False
+                        self.busy_polls += 1
+                        return bytes((0, 1, 0, 0, 4, 0))
                     return bytes((0, 0, 0, 0, 5, 0))
                 if (direction, command) == (0x40, 0x5e):
                     assert (value, index) == (0x5afe, 0x2026)
                     assert len(self.received) == self.image_length
                     assert updater.zlib.crc32(self.received) == self.expected_crc
-                    self.phase = 2
+                    self.phase = 4
                     return 0
                 if (direction, command) == (0xc0, 0x5b):
                     assert self.phase == 2
@@ -366,8 +380,15 @@ class FullImageHostOffline(unittest.TestCase):
                     return result
                 raise AssertionError('unexpected request %s' % ((direction, command),))
 
-        self.assertEqual(updater.update(MockDevice(), image),
+        ok = MockDevice()
+        self.assertEqual(updater.update(ok, image),
                          updater.hashlib.sha256(image).hexdigest())
+        self.assertGreaterEqual(ok.verify_polls, 3)
+        self.assertGreater(ok.busy_polls, 0)
+        failed = MockDevice()
+        failed.verify_error = True
+        with self.assertRaisesRegex(ValueError, 'verification failed'):
+            updater.update(failed, image)
         bad = MockDevice()
         bad.corrupted = True
         with self.assertRaisesRegex(ValueError, 'readback mismatch'):

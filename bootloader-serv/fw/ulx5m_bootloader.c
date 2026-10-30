@@ -354,6 +354,11 @@ void main(void)
     usb_init(&ulx5m_probe_desc);
     usb_register_function_driver(&flash_drv);
     usb_connect();
-    while (1)
+    while (1) {
         usb_poll();
+#if defined(ULX5M_DFU_FULL_IMAGE_TEST) && defined(ULX5M_FLASH_HW_TEST)
+        ulx5m_dfu_stream_tick();
+        ulx5m_flash_hw_test_tick();
+#endif
+    }
 }

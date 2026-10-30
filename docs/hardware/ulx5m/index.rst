@@ -235,6 +235,11 @@ V005 board measured both ``CFG_MD2`` and ``CFG_MD3`` near 1.8 V with SW1 ON/ON.
      - Unsupported
      - Do not select
 
+.. figure:: ../../images/ULX5M-GS-SW1-ON-ON.png
+   :alt: ULX5M-GS SW1 two-position settings shown in the on-on state
+
+   **ULX5M-GS SW1 Set to ON/ON**
+
 Set both switches with FPGA power removed. Power-cycle the FPGA to sample
 ``CFG_MD[3:0]``; do not change SW1 while powered. ``BTN2`` is a separate,
 latched **firmware** choice after the primary FPGA configuration loads:

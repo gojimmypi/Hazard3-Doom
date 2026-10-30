@@ -91,6 +91,12 @@ October 26, 2026: persistent primary installation
   The V005 schematic shows OFF/OFF pulls both LOW (SPI-active ``0x0``).
   See :doc:`index` for the full switch table. No RTL register sets this
   power-on configuration mode.
+
+.. figure:: ../../images/ULX5M-GS-SW1-ON-ON.png
+   :alt: ULX5M-GS SW1 two-position settings shown in the on-on state
+
+   **ULX5M-GS SW1 Set to ON/ON**
+
 * The SERV v50 seed-7 image was locally routed at 48.57 MHz. With SW1 ON/ON,
   JTAG SRAM configuration supported BTN2 DFU, USB enumeration ``1D50:614B``,
   and read-only verification of the secondary sector. The normal-mode firmware

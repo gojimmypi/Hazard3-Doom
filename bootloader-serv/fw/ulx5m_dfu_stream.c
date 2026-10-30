@@ -39,6 +39,9 @@ static struct {
     uint32_t crc;
     uint16_t next_block;
     uint16_t pending_len;
+#if defined(ULX5M_DFU_FULL_IMAGE_TEST) && defined(ULX5M_FLASH_HW_TEST)
+    uint8_t flash_pending;
+#endif
     uint8_t state;
     uint8_t status;
 } stream;
@@ -58,6 +61,9 @@ void ulx5m_dfu_stream_reset(void)
     stream.crc = 0xffffffffu;
     stream.next_block = 0;
     stream.pending_len = 0;
+#if defined(ULX5M_DFU_FULL_IMAGE_TEST) && defined(ULX5M_FLASH_HW_TEST)
+    stream.flash_pending = 0;
+#endif
     stream.state = dfuIDLE;
     stream.status = OK;
     for (unsigned i = 0; i < ULX5M_STREAM_BLOCK_BYTES; ++i)
@@ -78,6 +84,38 @@ static enum usb_fnd_resp fail(uint8_t error)
     return USB_FND_ERROR;
 }
 
+static void complete_block(void)
+{
+    for (unsigned i = 0; i < stream.pending_len; ++i) {
+        uint32_t crc = stream.crc ^ stream.pending[i];
+        for (unsigned bit = 0; bit < 8; ++bit)
+            crc = (crc >> 1) ^ ((crc & 1u) ? 0xedb88320u : 0u);
+        stream.crc = crc;
+    }
+    stream.used += stream.pending_len;
+    stream.next_block++;
+    stream.pending_len = 0;
+    stream.state = dfuDNLOAD_SYNC;
+}
+
+#if defined(ULX5M_DFU_FULL_IMAGE_TEST) && defined(ULX5M_FLASH_HW_TEST)
+/* Process the pending USB block only from the foreground USB poll loop. */
+void ulx5m_dfu_stream_tick(void)
+{
+    if (stream.state != dfuDNBUSY || !stream.flash_pending)
+        return;
+    stream.flash_pending = 0;
+    if (!stream_flash_sink ||
+        stream_flash_sink(stream.used, stream.pending, stream.pending_len)) {
+        stream.state = dfuERROR;
+        stream.status = errWRITE;
+        stream.pending_len = 0;
+        return;
+    }
+    complete_block();
+}
+#endif
+
 static bool block_done(struct usb_xfer *xfer)
 {
     if (xfer->data != stream.pending ||
@@ -89,6 +127,14 @@ static bool block_done(struct usb_xfer *xfer)
         stream.status = errUSBR;
         return true;
     }
+#if defined(ULX5M_DFU_FULL_IMAGE_TEST) && defined(ULX5M_FLASH_HW_TEST)
+    if (stream_flash_sink) {
+        /* Acknowledge OUT before any potentially slow erase/page program. */
+        stream.flash_pending = 1;
+        stream.state = dfuDNBUSY;
+        return true;
+    }
+#endif
 #ifdef ULX5M_DFU_STREAM_EMULATOR_TEST
     if (stream_test_sink &&
         stream_test_sink(stream.used, stream.pending, stream.pending_len)) {
@@ -98,7 +144,7 @@ static bool block_done(struct usb_xfer *xfer)
         return true;
     }
 #endif
-#ifdef ULX5M_FLASH_HW_TEST
+#if defined(ULX5M_FLASH_HW_TEST) && !defined(ULX5M_DFU_FULL_IMAGE_TEST)
     if (stream_flash_sink &&
         stream_flash_sink(stream.used, stream.pending, stream.pending_len)) {
         stream.state = dfuERROR;
@@ -107,16 +153,7 @@ static bool block_done(struct usb_xfer *xfer)
         return true;
     }
 #endif
-    for (unsigned i = 0; i < stream.pending_len; ++i) {
-        uint32_t crc = stream.crc ^ stream.pending[i];
-        for (unsigned bit = 0; bit < 8; ++bit)
-            crc = (crc >> 1) ^ ((crc & 1u) ? 0xedb88320u : 0u);
-        stream.crc = crc;
-    }
-    stream.used += stream.pending_len;
-    stream.next_block++;
-    stream.pending_len = 0;
-    stream.state = dfuDNLOAD_SYNC;
+    complete_block();
     return true;
 }
 
@@ -190,7 +227,8 @@ enum usb_fnd_resp ulx5m_dfu_stream_req(struct usb_ctrl_req *req,
             stream.status = errNOTDONE;
         }
         xfer->data[0] = stream.status;
-        xfer->data[1] = 0;
+        /* Host must wait for the foreground flash write to complete. */
+        xfer->data[1] = stream.state == dfuDNBUSY ? 20u : 0u;
         xfer->data[2] = 0;
         xfer->data[3] = 0;
         xfer->data[4] = stream.state;

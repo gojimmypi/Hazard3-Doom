@@ -25,7 +25,8 @@ enum ulx5m_flash_program_result {
     ULX5M_PROGRAM_VERIFY = 5,
     ULX5M_PROGRAM_CRC = 6,
     ULX5M_PROGRAM_STATE = 7,
-    ULX5M_PROGRAM_FORMAT = 8
+    ULX5M_PROGRAM_FORMAT = 8,
+    ULX5M_PROGRAM_PENDING = 9
 };
 
 struct ulx5m_flash_program_ops {
@@ -44,6 +45,8 @@ struct ulx5m_flash_program {
     uint32_t expected_crc32;
     uint32_t received;
     uint32_t running_crc;
+    uint32_t verify_crc;
+    uint32_t verify_offset;
     uint32_t next_page_address;
     uint32_t next_sector_address;
     unsigned pending_length;
@@ -52,6 +55,7 @@ struct ulx5m_flash_program {
     enum ulx5m_flash_program_result result;
     uint8_t active;
     uint8_t finalized;
+    uint8_t verifying;
 };
 
 /* The only way to enable the mock backend is ULX5M_FLASH_PROGRAM_EMULATOR_TEST.
@@ -65,6 +69,14 @@ ulx5m_flash_program_begin(struct ulx5m_flash_program *session,
 enum ulx5m_flash_program_result
 ulx5m_flash_program_feed(struct ulx5m_flash_program *session,
                          uint32_t offset, const uint8_t *data, unsigned length);
+
+/* FINISH begins without SPI IO; each step performs at most one page write
+ * or 256-byte read. PENDING is not successful verification. */
+enum ulx5m_flash_program_result
+ulx5m_flash_program_finish_start(struct ulx5m_flash_program *session);
+
+enum ulx5m_flash_program_result
+ulx5m_flash_program_finish_step(struct ulx5m_flash_program *session);
 
 enum ulx5m_flash_program_result
 ulx5m_flash_program_finish(struct ulx5m_flash_program *session);

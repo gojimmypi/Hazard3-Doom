@@ -83,7 +83,16 @@ static void vendor_block(const uint8_t *image, unsigned offset, unsigned length)
     assert(x.cb_done && x.len == (int)length);
     memcpy(x.data, image + offset, length);
     x.ofs = length;
+    const unsigned previous_erases = vendor_mock.erases;
+    const unsigned previous_pages = vendor_mock.pages;
     assert(x.cb_done(&x));
+    /* USB callback must not run a destructive SPI command. */
+    assert(vendor_mock.erases == previous_erases);
+    assert(vendor_mock.pages == previous_pages);
+    assert(vendor_req(0xa1, USB_REQ_DFU_GETSTATUS, 0, 0, 6, &x) ==
+           USB_FND_SUCCESS);
+    assert(x.data[0] == OK && x.data[4] == dfuDNBUSY && x.data[1] == 20u);
+    ulx5m_dfu_stream_tick();
     assert(vendor_req(0xa1, USB_REQ_DFU_GETSTATUS, 0, 0, 6, &x) ==
            USB_FND_SUCCESS);
     assert(x.data[0] == OK && x.data[4] == dfuDNLOAD_IDLE);
@@ -132,6 +141,18 @@ int main(void)
     ulx5m_dfu_stream_reset();
     vendor_mock.jedec[2] = ULX5M_AT25QL321_JEDEC2;
     vendor_arm(sizeof(image), crc);
+    /* A premature next block must not execute the queued flash write. */
+    assert(vendor_req(0x21, USB_REQ_DFU_DNLOAD, 0, 0, 64, &x) == USB_FND_SUCCESS);
+    memcpy(x.data, image, 64);
+    x.ofs = 64;
+    assert(x.cb_done(&x));
+    const unsigned no_erase = vendor_mock.erases;
+    const unsigned no_page = vendor_mock.pages;
+    assert(vendor_req(0x21, USB_REQ_DFU_DNLOAD, 1, 0, 64, &x) == USB_FND_ERROR);
+    ulx5m_dfu_stream_tick();
+    assert(vendor_mock.erases == no_erase && vendor_mock.pages == no_page);
+    ulx5m_dfu_stream_reset();
+    vendor_arm(sizeof(image), crc);
     /* Premature FINISH is rejected without mutating data. */
     assert(vendor_req(0x40, ULX5M_HW_FINISH_REQ, 0x5afe, 0x2026, 0, &x) ==
            USB_FND_ERROR);
@@ -151,6 +172,15 @@ int main(void)
            USB_FND_SUCCESS);
     assert(x.cb_done && x.cb_done(&x));
     assert(vendor_req(0xc0, ULX5M_HW_STATUS_REQ, 0, 0, 24, &x) == USB_FND_SUCCESS);
+    assert(vendor_get32(x.data + 4) == 4u);
+    assert(vendor_get32(x.data + 20) == ULX5M_PROGRAM_OK);
+    assert(vendor_req(0x40, ULX5M_HW_FINISH_REQ, 0x5afe, 0x2026, 0, &x) == USB_FND_ERROR);
+    for (unsigned polls = 0; polls < 5000u; ++polls) {
+        ulx5m_flash_hw_test_tick();
+        assert(vendor_req(0xc0, ULX5M_HW_STATUS_REQ, 0, 0, 24, &x) == USB_FND_SUCCESS);
+        if (vendor_get32(x.data + 4) != 4u)
+            break;
+    }
     assert(vendor_get32(x.data + 4) == 2u);
     assert(vendor_get32(x.data + 16) == sizeof(image));
     assert(vendor_get32(x.data + 20) == ULX5M_PROGRAM_OK);
@@ -172,6 +202,64 @@ int main(void)
     assert(!vendor_mock.writes_to_factory && !vendor_mock.bad_command);
     assert(vendor_req(0x21, USB_REQ_DFU_DNLOAD,
                       (sizeof(image) + 63u) / 64u, 0, 1, &x) == USB_FND_ERROR);
+    /* Shorter image must touch only its own erase sector, not occupied tail. */
+    ulx5m_dfu_stream_reset();
+    const unsigned short_length = 3026u;
+    const uint32_t short_crc = vendor_crc(image, short_length);
+    const unsigned short_erases = vendor_mock.erases;
+    vendor_mock.memory[0x300000u] = 0x37u;
+    vendor_arm(short_length, short_crc);
+    for (unsigned off = 0; off < short_length; off += 64u) {
+        unsigned len = short_length - off;
+        if (len > 64u) len = 64u;
+        vendor_block(image, off, len);
+    }
+    assert(vendor_req(0x40, ULX5M_HW_FINISH_REQ, 0x5afe, 0x2026, 0, &x) == USB_FND_SUCCESS);
+    assert(x.cb_done && x.cb_done(&x));
+    assert(vendor_req(0xc0, ULX5M_HW_STATUS_REQ, 0, 0, 24, &x) == USB_FND_SUCCESS);
+    assert(vendor_get32(x.data + 4) == 4u);
+    for (unsigned polls = 0; polls < 30u; ++polls)
+        ulx5m_flash_hw_test_tick();
+    assert(vendor_req(0xc0, ULX5M_HW_STATUS_REQ, 0, 0, 24, &x) == USB_FND_SUCCESS);
+    assert(vendor_get32(x.data + 4) == 2u);
+    assert(vendor_mock.erases == short_erases + 1u);
+    assert(vendor_mock.memory[0x300000u] == 0x37u);
+    assert(memcmp(vendor_mock.memory + 0x201000u, image, short_length) == 0);
+    /* Corruption introduced after per-page verification must fail FINISH. */
+    ulx5m_dfu_stream_reset();
+    vendor_arm(short_length, short_crc);
+    for (unsigned off = 0; off < short_length; off += 64u) {
+        unsigned len = short_length - off;
+        if (len > 64u) len = 64u;
+        vendor_block(image, off, len);
+    }
+    vendor_mock.memory[0x201000u + 6u] ^= 1u;
+    assert(vendor_req(0x40, ULX5M_HW_FINISH_REQ, 0x5afe, 0x2026, 0, &x) == USB_FND_SUCCESS);
+    assert(x.cb_done && x.cb_done(&x));
+    for (unsigned polls = 0; polls < 30u; ++polls)
+        ulx5m_flash_hw_test_tick();
+    assert(vendor_req(0xc0, ULX5M_HW_STATUS_REQ, 0, 0, 24, &x) == USB_FND_SUCCESS);
+    assert(vendor_get32(x.data + 4) == 3u);
+    assert(vendor_get32(x.data + 20) == ULX5M_PROGRAM_VERIFY);
+    assert(vendor_mock.memory[0x300000u] == 0x37u);
+    /* A physical SPI error in the foreground must report failure, not ACK. */
+    ulx5m_dfu_stream_reset();
+    vendor_arm(256u, vendor_crc(image, 256u));
+    for (unsigned off = 0; off < 192u; off += 64u)
+        vendor_block(image, off, 64u);
+    assert(vendor_req(0x21, USB_REQ_DFU_DNLOAD, 3, 0, 64, &x) == USB_FND_SUCCESS);
+    memcpy(x.data, image + 192u, 64u);
+    x.ofs = 64;
+    assert(x.cb_done(&x));
+    vendor_mock.fail_transfer_at = vendor_mock.transfers + 1u;
+    ulx5m_dfu_stream_tick();
+    assert(vendor_req(0xa1, USB_REQ_DFU_GETSTATUS, 0, 0, 6, &x) == USB_FND_SUCCESS);
+    assert(x.data[0] == errWRITE && x.data[4] == dfuERROR);
+    assert(vendor_req(0xc0, ULX5M_HW_STATUS_REQ, 0, 0, 24, &x) == USB_FND_SUCCESS);
+    assert(vendor_get32(x.data + 4) == 3u);
+    assert(vendor_get32(x.data + 20) == ULX5M_PROGRAM_IO);
+    assert(!vendor_mock.writes_to_factory);
+    puts("[PASS] cooperative FINISH with 3026-byte rewrite, occupied tail and readback fault");
     puts("[PASS] full-image ARM/DNLOAD/GETSTATUS/FINISH across hardware-writer mock");
     puts("[PASS] wrong JEDEC, premature finish, interrupted restart and protected 0x000000..0x200fff");
     puts("[LIMIT] CPU/USB timing, routing and physical SPI not qualified by host test");
@@ -296,16 +384,16 @@ int main(void)
     assert(ulx5m_flash_program_finish(&programmer)==ULX5M_PROGRAM_OK);
     assert(memcmp(mock.memory+ULX5M_FLASH_CANDIDATE_START,image,total)==0);
 #ifdef ULX5M_DFU_FULL_IMAGE_TEST
-    assert(mock.erases==104 && mock.pages==1639);
+    assert(mock.erases==103 && mock.pages==1639);
     for (unsigned i = 0; i < ULX5M_FLASH_ERASE_BYTES; ++i)
         assert(mock.memory[ULX5M_FLASH_CANDIDATE_START +
-                           total + 0x4000u + i] == 0xffu);
+                           ((total + 0xfffu) & ~0xfffu) + 0x4000u + i] == 0x28u);
 #else
     assert(mock.erases==103 && mock.pages==1639);
 #endif
     assert(!mock.writes_to_factory && !mock.bad_command);
 #ifdef ULX5M_DFU_FULL_IMAGE_TEST
-    assert(mock.write_enables == 104 + 1639);
+    assert(mock.write_enables == 103 + 1639);
 #else
     assert(mock.write_enables == 103 + 1639);
 #endif
@@ -343,7 +431,7 @@ int main(void)
     assert(x.data[0]==errNOTDONE && x.data[4]==dfuERROR);
     puts("[PASS] 419538 bytes across actual DFU request/state callbacks to mock flash");
 #ifdef ULX5M_DFU_FULL_IMAGE_TEST
-    puts("[PASS] 104 SPI erases including stale-tail scrub, 1639 pages, WREN/WEL/WIP/readback");
+    puts("[PASS] 103 SPI erases, trailing occupied sectors preserved, 1639 pages");
 #else
     puts("[PASS] 103 SPI erases, 1639 pages, WREN/WEL/WIP/readback");
 #endif

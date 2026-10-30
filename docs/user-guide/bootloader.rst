@@ -245,6 +245,25 @@ source at reset. On this V005 board, **ON/ON** ties ``CFG_MD2`` and
 LOW (SPI-active boot, ``0x0``). ``CFG_MD1`` and ``CFG_MD0`` stay LOW. Mixed
 switch positions are not valid for the intended primary flash boot.
 
+.. figure:: ../images/sw-settings.png
+   :alt: ULX5M-GS SW1 two-position settings
+
+   **ULX5M-GS SW1 Settings**
+
+See the portion of the schematic:
+
+.. figure:: ../images/ULX5M-GS-SW1-schematic-detail.png
+   :alt: ULX5M-GS SW1 schematic details
+
+   **ULX5M-GS SW1 Schematic Details**
+
+Note the two ``JTAG_CFG`` lines tied to ground. The full
+
+.. figure:: ../images/ULX5M-GS-config-set1.png
+   :alt: ULX5M-GS SW1 schematic details
+
+   **ULX5M-GS Full ``JTAG_CFG`` setting list**
+
 SW1 must be changed with the FPGA **powered off**, followed by a cold
 power-on. GateMate samples ``CFG_MD`` at reset; the SERV RTL does not select
 this hardware boot source. Once the primary configuration is loaded, BTN2
@@ -394,6 +413,18 @@ Cold-start sequence (no buttons are pressed):
 #. Run the JTAG detection or programming command. After an SRAM load, if a
    subsequent JTAG command reports ``Error: no device found``, fully remove
    power from both devices and repeat this sequence before retrying.
+
+This Tigard-first order was verified for the historical JTAG probe. For the
+later SERV ``FWTF`` v2d firmware, earlier tests also worked with the ULX5M
+powered first. On October 30, an ULX5M-first SRAM load reported 100 % but
+all LEDs stayed dark and Windows could not find DFU; a full power-off and
+Tigard-first retry produced the expected DFU LEDs and a successful USB
+secondary rewrite. The cause has not been established. If an SRAM load
+succeeds but firmware does not run, fully remove power from both devices
+and retry the opposite power-up order with BTN2 continuously held for DFU
+selection. Keep Tigard VTGT disconnected. Never power-cycle during flash
+programming. See :doc:`../hardware/ulx5m/serv-bootloader` for the current
+SERV-specific procedure.
 
 From the Hazard3-Doom repository root in WSL, use the native Windows
 ``openFPGALoader.exe`` (verified with ``--freq 100k``):
@@ -618,18 +649,26 @@ Remaining work
 
 The USB probe enumerates, and separate 25 MHz GateMate diagnostics identify
 and read the configuration flash. The integrated 48 MHz PicoRV32/USB flash-read
-target has **not** met timing; USB flash-content reads are not yet available.
-Before enabling flash writes, integrate and verify USB read requests against
-the preserved backup, determine the flash layout and bootloader protection,
-and validate user-image handoff and recovery. Persistent boot and DFU-entry
-buttons remain unvalidated. See ``bootloader/README_ULX5M_USB_PROBE.md`` for
-USB-probe limitations.
+target had **not** met timing, and USB flash-content reads were not yet
+available at that historical checkpoint. The later seed-160 SERV bootloader
+has since passed persistent BTN2-selected DFU, secondary walking-LED boot,
+and USB physical readback. The persistent ``FWTN`` (restricted) and
+SRAM-loaded ``FWTF`` (opt-in full-image writer) are four-byte firmware profile
+IDs returned by vendor STATUS request ``0x5D``; they do not identify the
+secondary image. On October 30, 2026, ``FWTF`` v2d completed the first
+authorized 3,026-byte USB secondary rewrite with firmware FINISH and
+independent USB host readback PASS. The full 4 MiB post-write JTAG comparison
+and cold boots remain pending. ``--probe`` supports both profiles, but
+``--execute`` requires ``FWTF`` and an explicit confirmation. See
+:doc:`../hardware/ulx5m/serv-bootloader` for the current flash layout,
+recovery and guarded update protocol.
 
 Rare bootloader replacement and recovery
 ----------------------------------------
 
-The procedures below apply to the validated ULX4M-LD bootloader, not to
-the unfinished ULX5M-GS port.
+The procedures below apply to the validated ULX4M-LD bootloader, **not**
+to ULX5M-GS. For its separately qualified boot paths and still-experimental
+full-image USB writer, see :doc:`../hardware/ulx5m/serv-bootloader`.
 
 .. danger::
 

@@ -33,6 +33,7 @@ void ulx5m_flash_hw_test_set_test_bus(const struct ulx5m_at25ql321_bus *bus);
 void ulx5m_flash_hw_test_reset(void);
 #ifdef ULX5M_DFU_FULL_IMAGE_TEST
 int ulx5m_flash_hw_test_is_armed(void);
+void ulx5m_flash_hw_test_tick(void);
 #endif
 enum usb_fnd_resp ulx5m_flash_hw_test_req(struct usb_ctrl_req *req,
                                            struct usb_xfer *xfer);
