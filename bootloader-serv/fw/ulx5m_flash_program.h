@@ -1,5 +1,5 @@
-/* ULX5M-GS candidate-slot flash programming logic.
- * No SPI opcodes in this module. Production builds are fail-closed.
+/* ULX5M-GS bounded candidate-slot flash programming logic.
+ * No SPI opcodes in this module. Default builds are fail-closed.
  * The emulator-only build switch MUST NOT be used in FPGA firmware.
  */
 #ifndef ULX5M_FLASH_PROGRAM_H
@@ -8,12 +8,12 @@
 #include <stdint.h>
 #include "ulx5m_flash_layout.h"
 
-#if defined(ULX5M_FLASH_HW_NATIVE_SLOT_TEST)
+#if defined(ULX5M_FLASH_HW_NATIVE_SLOT_TEST) || defined(ULX5M_DFU_FULL_IMAGE_TEST)
 #define ULX5M_FLASH_CANDIDATE_START 0x00201000u
 #else
 #define ULX5M_FLASH_CANDIDATE_START 0x00200000u
 #endif
-#define ULX5M_FLASH_CANDIDATE_BYTES 0x00200000u
+#define ULX5M_FLASH_CANDIDATE_BYTES (ULX5M_FLASH_BYTES - ULX5M_FLASH_CANDIDATE_START)
 #define ULX5M_FLASH_STREAM_BLOCK_BYTES 64u
 
 enum ulx5m_flash_program_result {
@@ -24,7 +24,8 @@ enum ulx5m_flash_program_result {
     ULX5M_PROGRAM_IO = 4,
     ULX5M_PROGRAM_VERIFY = 5,
     ULX5M_PROGRAM_CRC = 6,
-    ULX5M_PROGRAM_STATE = 7
+    ULX5M_PROGRAM_STATE = 7,
+    ULX5M_PROGRAM_FORMAT = 8
 };
 
 struct ulx5m_flash_program_ops {

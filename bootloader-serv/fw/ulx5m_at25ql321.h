@@ -1,5 +1,5 @@
-/* AT25QL321 SPI command driver; hardware writes are NOT authorized.
- * Mutating commands compile only for native-host emulator tests.
+/* AT25QL321 SPI command driver; writes require a separate opt-in
+ * firmware profile or a native-host emulator. Default is read-only.
  */
 #ifndef ULX5M_AT25QL321_H
 #define ULX5M_AT25QL321_H
@@ -10,7 +10,7 @@
 #define ULX5M_AT25QL321_JEDEC0 0x1fu
 #define ULX5M_AT25QL321_JEDEC1 0x42u
 #define ULX5M_AT25QL321_JEDEC2 0x16u
-#if defined(ULX5M_FLASH_HW_NATIVE_SLOT_TEST)
+#if defined(ULX5M_FLASH_HW_NATIVE_SLOT_TEST) || defined(ULX5M_DFU_FULL_IMAGE_TEST)
 #define ULX5M_AT25QL321_CANDIDATE_START 0x00201000u
 #else
 #define ULX5M_AT25QL321_CANDIDATE_START 0x00200000u

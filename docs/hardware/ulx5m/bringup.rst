@@ -126,8 +126,8 @@ October 28, 2026: v72 runtime secondary takeover on silicon
   Preserve that directory and the v72 bitstream. v72 is an experiment, not
   a replacement for the real SERV/BTN2 bootloader.
 
-Configuration handoff and remaining work
-----------------------------------------
+Configuration handoff and remaining work (October 28 checkpoint)
+----------------------------------------------------------------
 
 The v65/v67 results demonstrated that the packed configuration-bank ownership
 bit matters. The v70 command bytes matched TinyDFU's algorithm but v70
@@ -150,3 +150,33 @@ GateMate toolchain quickstart
 <https://colognechip.com/programmable-logic/gatemate/gatemate-toolchain-quickstart/>`_.
 For GPIO overstress research and its limitations see `gm_gpio_ringosc
 <https://github.com/pu-cc/gm_gpio_ringosc>`_.
+
+Integrated SERV primary: verified seed-160 configuration
+--------------------------------------------------------
+
+The integrated SERV bootloader supersedes the isolated v72 experiment.
+The current hardware results were recorded on October 30, 2026; see
+:doc:`serv-bootloader` for the supported procedures and limitations.
+
+* An exact 420,175-byte seed-160 primary was installed in flash; SHA-256:
+  ``c41830bd09e0e924facd2425f10a8072878e59505d12b82aff533be7df8cfe27``.
+  Two independent original 4 MiB backups matched SHA-256
+  ``09542df4b40bb6bcce00a327bb890f6a2d46099eae2e41f7a89e8e602614007d``.
+  The primary installer verified the changed 512 KiB primary and preserved
+  everything after ``0x080000``.
+* With SW1 OFF/OFF and BTN2 held during power-up, persistent ``FWTN`` DFU
+  enumerated ``1D50:614B`` even after releasing BTN2. Windows-native PyUSB
+  read back the entire 3,026-byte native secondary at ``0x201000`` with SHA-256
+  ``68e15779871aa50d23ccb9cd52d458d072c0ca963310b2c74a96bde2861489dd``.
+* With BTN2 released, the same persistent primary autonomously loaded that
+  secondary after a cold boot and the distinctive walking LEDs ran. Tigard
+  was powered off during these SPI-active boot tests.
+* The opt-in full-image ``FWTF`` candidate was built at seed 160 and loaded
+  through JTAG SRAM without writing flash; its image SHA-256 was
+  ``6c1bb2b8219f9b0c69c56725467b9a6c40f80a3a5caf6262dfe5769842528c97``.
+  It enumerated USB and read back the same secondary, then a power cycle
+  restored persistent ``FWTN`` and the normal walking-LED boot.
+* Full-image DFU receiver, bounds and flash mock tests passed. **A complete
+  physical USB secondary erase/program/FINISH cycle has not passed.** In-place
+  updates are not atomic; automatic rollback is not implemented. Keep the
+  proven primary and external recovery backups before testing any write.

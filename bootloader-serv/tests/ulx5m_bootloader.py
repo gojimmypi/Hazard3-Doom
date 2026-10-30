@@ -156,7 +156,7 @@ def qualify(args):
     print('[PASS] 25/48 MHz routed timing: %s' %
           ', '.join('%.2f/%.2f MHz' % (a, req) for a, _, req in clocks))
     print('[PASS] flash pinout and complete source manifest')
-    print('[LIMIT] 4 KiB native DFU test profile; not a complete updater')
+    print('[LIMIT] Firmware profile is not physically validated by PACK-ONLY qualification')
     print('[BLOCK] PACK-ONLY; no physical automatic-boot confirmation')
 
 

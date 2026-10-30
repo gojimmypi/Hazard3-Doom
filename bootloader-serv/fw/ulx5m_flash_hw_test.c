@@ -1,7 +1,6 @@
-/* Isolated experimental physical flash slot at 0x200000 (4K, 8K or 16K).
- * This file must NEVER be linked by the normal DFU-stream firmware.
- * The FPGA is loaded into VOLATILE SRAM for this experiment.
- * External flash boot selection is NOT performed by this module.
+/* Opt-in USB DFU physical flash writer. The golden build retains its
+ * isolated 4 KiB native test profile. Full-image mode writes only the
+ * native secondary at 0x201000; it never activates or selects boot targets.
  */
 #include <stdint.h>
 #include "config.h"
@@ -23,6 +22,12 @@
 #if defined(ULX5M_FLASH_HW_MULTI_TEST) && defined(ULX5M_FLASH_HW_QUAD_TEST)
 #error "Four-sector and two-sector profiles are mutually exclusive"
 #endif
+#if defined(ULX5M_DFU_FULL_IMAGE_TEST) && \
+    (defined(ULX5M_FLASH_HW_NATIVE_SLOT_TEST) || \
+     defined(ULX5M_FLASH_HW_QUAD_TEST) || \
+     defined(ULX5M_FLASH_HW_MULTI_TEST))
+#error "Full-image and limited experimental profiles are mutually exclusive"
+#endif
 #ifdef ULX5M_FLASH_HW_NATIVE_SLOT_TEST
 #if !defined(ULX5M_DFU_HW_NATIVE_TEST_ONLY) || \
     !defined(ULX5M_FLASH_HW_QUAD_TEST) || defined(ULX5M_DFU_HW_QUAD_TEST_ONLY)
@@ -43,7 +48,16 @@ _Static_assert(ULX5M_AT25QL321_CANDIDATE_START == 0x00201000u,
 #error "Emulator authorization must not be used in hardware firmware"
 #endif
 
+#ifndef ULX5M_FLASH_HW_HOST_TEST
 static struct ulx5m_at25ql321_hw hw;
+#endif
+#ifdef ULX5M_FLASH_HW_HOST_TEST
+static const struct ulx5m_at25ql321_bus *test_bus;
+void ulx5m_flash_hw_test_set_test_bus(const struct ulx5m_at25ql321_bus *bus)
+{
+    test_bus = bus;
+}
+#endif
 static struct ulx5m_at25ql321 chip;
 static struct ulx5m_flash_program program;
 static uint8_t arm_buffer[ULX5M_HW_ARM_BYTES] __attribute__((aligned(4)));
@@ -95,6 +109,13 @@ static int sink(uint32_t offset, const uint8_t *bytes, unsigned len)
     return 0;
 }
 
+#ifdef ULX5M_DFU_FULL_IMAGE_TEST
+int ulx5m_flash_hw_test_is_armed(void)
+{
+    return phase == 1u;
+}
+#endif
+
 void ulx5m_flash_hw_test_reset(void)
 {
     ulx5m_dfu_stream_set_flash_sink(0);
@@ -109,19 +130,29 @@ static int arm(uint32_t length, uint32_t crc)
 {
     uint8_t id[3];
     uint8_t status;
+#ifndef ULX5M_DFU_FULL_IMAGE_TEST
     uint8_t scratch[256];
+#endif
     struct ulx5m_flash_program_ops ops = {
         .ctx = 0, .erase_sector = spi_erase,
         .program_page = spi_program, .read_bytes = spi_read
     };
-    if (phase != 0 || !length || length > ULX5M_HW_MAX_BYTES)
+    if (phase != 0 || !ulx5m_dfu_stream_can_arm() ||
+        !length || length > ULX5M_HW_MAX_BYTES)
         return -1;
+#ifdef ULX5M_FLASH_HW_HOST_TEST
+    if (!test_bus)
+        return -1;
+    ulx5m_at25ql321_init(&chip, test_bus);
+#else
     ulx5m_at25ql321_hw_init(&hw, SPI_BASE);
     ulx5m_at25ql321_hw_bind(&chip, &hw);
+#endif
     if (ulx5m_at25ql321_identify(&chip, id) != ULX5M_AT25_OK ||
         ulx5m_at25ql321_status(&chip, &status) != ULX5M_AT25_OK ||
         (status & 0x03u))
         return -1;
+#ifndef ULX5M_DFU_FULL_IMAGE_TEST
     /* Fail closed unless the candidate sector is entirely erased.
      * Incomplete transfers cannot be silently restarted or resumed. */
     for (unsigned off = 0; off < ULX5M_HW_MAX_BYTES; off += 256u) {
@@ -132,6 +163,7 @@ static int arm(uint32_t length, uint32_t crc)
             if (scratch[i] != 0xffu)
                 return -1;
     }
+#endif
     if (ulx5m_flash_program_begin(&program, &ops, length, crc) !=
         ULX5M_PROGRAM_OK)
         return -1;
@@ -148,7 +180,9 @@ static bool arm_done(struct usb_xfer *xfer)
         xfer->len != ULX5M_HW_ARM_BYTES ||
         arm_buffer[0] != 'U' || arm_buffer[1] != '5' ||
         arm_buffer[2] != 'W' ||
-#ifdef ULX5M_FLASH_HW_NATIVE_SLOT_TEST
+#ifdef ULX5M_DFU_FULL_IMAGE_TEST
+        arm_buffer[3] != 'F' ||
+#elif defined(ULX5M_FLASH_HW_NATIVE_SLOT_TEST)
         arm_buffer[3] != 'N' ||
 #elif defined(ULX5M_FLASH_HW_QUAD_TEST)
         arm_buffer[3] != '3' ||
@@ -191,7 +225,9 @@ enum usb_fnd_resp ulx5m_flash_hw_test_req(struct usb_ctrl_req *req,
             return USB_FND_ERROR;
         xfer->data[0] = 'F'; xfer->data[1] = 'W';
         xfer->data[2] = 'T';
-#ifdef ULX5M_FLASH_HW_NATIVE_SLOT_TEST
+#ifdef ULX5M_DFU_FULL_IMAGE_TEST
+        xfer->data[3] = 'F';
+#elif defined(ULX5M_FLASH_HW_NATIVE_SLOT_TEST)
         xfer->data[3] = 'N';
 #elif defined(ULX5M_FLASH_HW_QUAD_TEST)
         xfer->data[3] = '3';

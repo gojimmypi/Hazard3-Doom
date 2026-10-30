@@ -22,10 +22,17 @@ CFLAGS := -DBOARD_ULX5M_GS=1 -Wall -Wextra -Os -march=rv32i -mabi=ilp32 \
   -ffreestanding -fno-builtin -fno-pic -fomit-frame-pointer \
   -ffunction-sections -fdata-sections -nostartfiles \
   -DULX5M_SERV_TEST=1 -DULX5M_NORMAL_MODE=1 \
-  -DULX5M_DFU_STREAM_ONLY=1 \
-  -DULX5M_FLASH_HW_TEST=1 -DULX5M_DFU_HW_TEST_ONLY=1 \
+  -DULX5M_DFU_STREAM_ONLY=1
+# Explicit opt-in only. The installed golden primary uses DFU_FULL_IMAGE=0.
+DFU_FULL_IMAGE ?= 0
+ifeq ($(DFU_FULL_IMAGE),1)
+CFLAGS += -DULX5M_FLASH_HW_TEST=1 -DULX5M_DFU_HW_TEST_ONLY=1 \
+  -DULX5M_DFU_FULL_IMAGE_TEST=1
+else
+CFLAGS += -DULX5M_FLASH_HW_TEST=1 -DULX5M_DFU_HW_TEST_ONLY=1 \
   -DULX5M_FLASH_HW_QUAD_TEST=1 -DULX5M_FLASH_HW_NATIVE_SLOT_TEST=1 \
   -DULX5M_DFU_HW_NATIVE_TEST_ONLY=1
+endif
 LDFLAGS := -Wl,-Bstatic,-T,lnk-app.lds,--gc-sections
 SRCS := start.S ulx5m_bootloader.c usb_desc_ulx5m.c usb.c \
   usb_ctrl_ep0.c usb_ctrl_std.c console.c mini-printf.c \

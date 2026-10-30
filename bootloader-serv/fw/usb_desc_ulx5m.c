@@ -2,7 +2,7 @@
  * USB DFU enumeration probe descriptor for standalone ULX5M-GS development.
  * VID:PID below is inherited from ULX3S firmware for local bench testing;
  * it is NOT a registered ULX5M product identity. Do not distribute unchanged.
- * No alternate flash targets; bmAttributes indicates neither upload nor download.
+ * No alternate flash targets; only the opt-in FWTF image advertises download.
  */
 #include "usb.h"
 
@@ -39,6 +39,8 @@ static const struct {
         .bDescriptorType = USB_DT_DFU,
 #ifdef ULX5M_DFU_STAGE_ONLY
         .bmAttributes = 0x01, /* canDnload only; RAM staging, not persistent */
+#elif defined(ULX5M_DFU_FULL_IMAGE_TEST)
+        .bmAttributes = 0x09, /* canDnload; explicit verified FINISH required */
 #else
         .bmAttributes = 0x08, /* manifestation tolerant; no upload/download */
 #endif

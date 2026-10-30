@@ -142,11 +142,11 @@ Flash de configuration et état du développement
 
 La flash SPI de la carte testée a renvoyé l'identifiant JEDEC ``1f 42 16``
 (AT25QL321, 4 Mio). Le diagnostic actuel du projet peut lire la flash sans
-y écrire ; l'image d'origine a été sauvegardée par blocs de 64 Kio. Le
-portage ULX5M reste expérimental : programmer la SRAM du FPGA par JTAG
-n'installe pas de bootloader DFU persistant et l'image exécutée est perdue
-à la coupure d'alimentation. N'appliquez pas les dispositions de flash ou
-les commandes de récupération ULX4M à l'ULX5M.
+y écrire ; l'image d'origine a été sauvegardée par blocs de 64 Kio.
+Le primaire SERV persistant a été vérifié dans les deux modes de démarrage. Un chargement JTAG en SRAM reste temporaire ; il ne remplace
+pas le primaire persistant. La programmation USB complète du secondaire
+n'a pas encore été validée sur matériel. N'appliquez pas les dispositions
+de flash ou les commandes de récupération ULX4M à l'ULX5M.
 
 Sources et vérification des révisions
 -------------------------------------
@@ -167,8 +167,25 @@ ici ont été revérifiées dans la DS1001 du fabricant de **septembre 2026**.
 Pour les limites en vigueur, consultez le lien du fabricant plutôt que de
 supposer que la copie incluse est la dernière version.
 
-Development record (English translation pending)
-------------------------------------------------
+État actuel du bootloader SERV
+------------------------------
+
+Le primaire SERV persistant seed 160 fonctionne sur la carte V005 :
+BTN2 maintenu au démarrage active USB DFU ``1D50:614B`` et BTN2 relâché
+démarre automatiquement le secondaire natif à ``0x201000``.
+Les 3 026 octets du secondaire ont été relus et vérifiés par SHA-256,
+avec ``FWTN`` (primaire persistant) et ``FWTF`` (chargé en SRAM par JTAG).
+La programmation complète par USB et le retour arrière atomique ne sont
+pas qualifiés. Consulter :doc:`serv-bootloader` pour les procédures
+d'installation, de vérification et de récupération.
+
+.. toctree::
+   :maxdepth: 1
+
+   serv-bootloader
+
+Dossiers d'essais historiques (en partie en anglais)
+----------------------------------------------------
 
 .. toctree::
    :maxdepth: 1

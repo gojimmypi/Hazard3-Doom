@@ -91,8 +91,15 @@ ulx5m_flash_program_begin(struct ulx5m_flash_program *s,
         return fail(s, ULX5M_PROGRAM_STATE);
     if (!size || size > ULX5M_FLASH_CANDIDATE_BYTES)
         return fail(s, ULX5M_PROGRAM_RANGE);
+#ifdef ULX5M_DFU_FULL_IMAGE_TEST
+    /* Packed GateMate images have this four-byte synchronization prefix. */
+    if (size < ULX5M_FLASH_PAGE_BYTES)
+        return fail(s, ULX5M_PROGRAM_FORMAT);
+#endif
 #ifdef ULX5M_FLASH_HW_TEST
-#ifdef ULX5M_FLASH_HW_NATIVE_SLOT_TEST
+#if defined(ULX5M_DFU_FULL_IMAGE_TEST)
+    /* Exclusive 0x201000..0x3fffff update window, no 4 KiB test limit. */
+#elif defined(ULX5M_FLASH_HW_NATIVE_SLOT_TEST)
     if (size > ULX5M_FLASH_ERASE_BYTES)
         return fail(s, ULX5M_PROGRAM_RANGE);
 #elif defined(ULX5M_FLASH_HW_QUAD_TEST)
@@ -131,6 +138,16 @@ ulx5m_flash_program_feed(struct ulx5m_flash_program *s,
         return fail(s, ULX5M_PROGRAM_ORDER);
     if (len > s->image_size - s->received)
         return fail(s, ULX5M_PROGRAM_RANGE);
+#ifdef ULX5M_DFU_FULL_IMAGE_TEST
+    if (offset == 0u) {
+        static const uint8_t sync[4] = {0xd9u, 0x01u, 0xedu, 0x96u};
+        if (len < sizeof(sync))
+            return fail(s, ULX5M_PROGRAM_FORMAT);
+        for (unsigned i = 0; i < sizeof(sync); ++i)
+            if (data[i] != sync[i])
+                return fail(s, ULX5M_PROGRAM_FORMAT);
+    }
+#endif
 
     for (unsigned i = 0; i < len; ++i) {
         s->pending[s->pending_length++] = data[i];
@@ -176,8 +193,43 @@ ulx5m_flash_program_finish(struct ulx5m_flash_program *s)
     if ((readback_crc ^ 0xffffffffu) != s->expected_crc32)
         return fail(s, ULX5M_PROGRAM_VERIFY);
 
-    /* The image has never been marked bootable. The eventual commit and
-     * boot selection must be a separate, validated recovery-aware step. */
+#ifdef ULX5M_DFU_FULL_IMAGE_TEST
+    /* Remove stale commands from a previously longer secondary. Only
+     * sectors strictly after the newly written image are considered.
+     * The final image sector was already erased by flush_page(). */
+    uint32_t tail = (ULX5M_FLASH_CANDIDATE_START + s->image_size +
+                     ULX5M_FLASH_ERASE_BYTES - 1u) &
+                    ~(ULX5M_FLASH_ERASE_BYTES - 1u);
+    for (; tail < ULX5M_FLASH_BYTES; tail += ULX5M_FLASH_ERASE_BYTES) {
+        unsigned dirty = 0;
+        for (unsigned offset = 0; offset < ULX5M_FLASH_ERASE_BYTES;
+             offset += ULX5M_FLASH_PAGE_BYTES) {
+            if (s->ops.read_bytes(s->ops.ctx, tail + offset, s->verified,
+                                  ULX5M_FLASH_PAGE_BYTES) != 0)
+                return fail(s, ULX5M_PROGRAM_IO);
+            for (unsigned i = 0; i < ULX5M_FLASH_PAGE_BYTES; ++i)
+                if (s->verified[i] != 0xffu)
+                    dirty = 1;
+        }
+        if (!dirty)
+            continue;
+        if (s->ops.erase_sector(s->ops.ctx, tail) != 0)
+            return fail(s, ULX5M_PROGRAM_IO);
+        for (unsigned offset = 0; offset < ULX5M_FLASH_ERASE_BYTES;
+             offset += ULX5M_FLASH_PAGE_BYTES) {
+            if (s->ops.read_bytes(s->ops.ctx, tail + offset, s->verified,
+                                  ULX5M_FLASH_PAGE_BYTES) != 0)
+                return fail(s, ULX5M_PROGRAM_IO);
+            for (unsigned i = 0; i < ULX5M_FLASH_PAGE_BYTES; ++i)
+                if (s->verified[i] != 0xffu)
+                    return fail(s, ULX5M_PROGRAM_VERIFY);
+        }
+    }
+#endif
+
+    /* No automatic activation: only a subsequent normal-mode cold boot
+     * invokes the existing independent configuration controller. An
+     * interrupted in-place update must be recovered using BTN2 DFU. */
     s->active = 0;
     s->finalized = 1;
     return ULX5M_PROGRAM_OK;

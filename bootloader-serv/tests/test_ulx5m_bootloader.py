@@ -250,5 +250,129 @@ class BootloaderOffline(unittest.TestCase):
         self.assertNotIn('CFG_REBOOT_EXEC', firmware)
 
 
+
+class FullImageHostOffline(unittest.TestCase):
+    @staticmethod
+    def valid_secondary():
+        from cfgcmd_codec import CMD_CHG_STATUS
+        import ulx5m_dfu_update as updater
+        prefix = bytes.fromhex('d901ed96104dd6')
+        image = prefix + bytes(256 - len(prefix) - 18) + packet(CMD_CHG_STATUS, bytes(12))
+        updater.check_image(image)
+        return image
+
+    def test_secondary_preflight_and_primary_rejection(self):
+        import ulx5m_dfu_update as updater
+        image = self.valid_secondary()
+        self.assertEqual(updater.check_image(image), updater.zlib.crc32(image))
+        with self.assertRaisesRegex(ValueError, 'synchronization'):
+            updater.check_image(b'X' + image[1:])
+        with self.assertRaisesRegex(ValueError, '256'):
+            updater.check_image(image[:255])
+        with self.assertRaisesRegex(ValueError, 'secondary'):
+            updater.check_image(image[:-18] + bytes(8) +
+                                packet(CMD_JUMP, updater.START.to_bytes(4, 'little')))
+        with self.assertRaisesRegex(ValueError, 'Truncated'):
+            updater.check_image(image + b'\x01')
+        with tempfile.TemporaryDirectory() as td:
+            file = Path(td) / 'secondary.bit'
+            file.write_bytes(image)
+            self.assertEqual(updater.main(['--image', str(file)]), 0)
+            self.assertEqual(updater.main(['--image', str(file), '--execute']), 1)
+
+    def test_read_only_probe_and_mismatch(self):
+        import struct
+        import ulx5m_dfu_update as updater
+        image = self.valid_secondary()
+
+        class ReadOnlyDevice:
+            def __init__(self, profile=b'FWTN', corrupt=False):
+                self.profile = profile
+                self.corrupt = corrupt
+                self.requests = []
+
+            def ctrl_transfer(self, direction, command, value, index, data, timeout=0):
+                # Any OUT request (including ARM/FINISH) fails the test.
+                self.requests.append((direction, command))
+                if direction != 0xc0:
+                    raise AssertionError('probe attempted an OUT request')
+                if command == 0x5d:
+                    return self.profile + struct.pack('<5I', 0, 0, 0, 0, 0)
+                if command == 0x5a:
+                    return b'A251\x1f\x42\x16\x00'
+                if command == 0x5b:
+                    offset = ((index << 16) | value) - updater.START
+                    result = bytearray(image[offset:offset + data])
+                    if self.corrupt and offset == 0:
+                        result[0] ^= 1
+                    return result
+                raise AssertionError('unexpected probe request')
+
+        for profile in (b'FWTN', b'FWTF'):
+            device = ReadOnlyDevice(profile)
+            self.assertEqual(updater.probe(device, image),
+                             updater.hashlib.sha256(image).hexdigest())
+            self.assertTrue(all(direction == 0xc0 for direction, _ in device.requests))
+        with self.assertRaisesRegex(ValueError, 'unexpected DFU writer profile'):
+            updater.probe(ReadOnlyDevice(b'FWT1'), image)
+        with self.assertRaisesRegex(ValueError, 'readback mismatch'):
+            updater.probe(ReadOnlyDevice(corrupt=True), image)
+
+    def test_vendor_transport_and_independent_readback(self):
+        import struct
+        import ulx5m_dfu_update as updater
+        image = self.valid_secondary()
+
+        class MockDevice:
+            def __init__(self):
+                self.phase = 0
+                self.received = bytearray()
+                self.expected_crc = 0
+                self.image_length = 0
+                self.corrupted = False
+
+            def ctrl_transfer(self, direction, command, value, index, data, timeout=0):
+                if (direction, command) == (0xc0, 0x5d):
+                    return b'FWTF' + struct.pack('<5I', self.phase,
+                                                  self.image_length, self.expected_crc,
+                                                  len(self.received), 0)
+                if (direction, command) == (0xc0, 0x5a):
+                    return b'A251\x1f\x42\x16\x00'
+                if (direction, command) == (0x40, 0x5c):
+                    assert (value, index) == (1, 0x2000)
+                    assert bytes(data[:4]) == b'U5WF'
+                    self.image_length, self.expected_crc, token = struct.unpack('<3I', data[4:])
+                    assert token == updater.TOKEN
+                    self.phase = 1
+                    return len(data)
+                if (direction, command) == (0x21, 1):
+                    assert self.phase == 1 and value == len(self.received) // 64
+                    self.received.extend(data)
+                    return len(data)
+                if (direction, command) == (0xa1, 3):
+                    return bytes((0, 0, 0, 0, 5, 0))
+                if (direction, command) == (0x40, 0x5e):
+                    assert (value, index) == (0x5afe, 0x2026)
+                    assert len(self.received) == self.image_length
+                    assert updater.zlib.crc32(self.received) == self.expected_crc
+                    self.phase = 2
+                    return 0
+                if (direction, command) == (0xc0, 0x5b):
+                    assert self.phase == 2
+                    offset = ((index << 16) | value) - updater.START
+                    result = bytearray(self.received[offset:offset + data])
+                    if self.corrupted and offset == 0:
+                        result[0] ^= 1
+                    return result
+                raise AssertionError('unexpected request %s' % ((direction, command),))
+
+        self.assertEqual(updater.update(MockDevice(), image),
+                         updater.hashlib.sha256(image).hexdigest())
+        bad = MockDevice()
+        bad.corrupted = True
+        with self.assertRaisesRegex(ValueError, 'readback mismatch'):
+            updater.update(bad, image)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

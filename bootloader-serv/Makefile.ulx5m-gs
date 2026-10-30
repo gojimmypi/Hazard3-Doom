@@ -131,6 +131,25 @@ test-host: | $(OUT)
 	  fw/ulx5m_flash_program.c fw/ulx5m_dfu_stream.c \
 	  tests/ulx5m-at25ql321-mock.c tests/test-ulx5m-serv-at25ql321-chain.c
 	$(OUT)/test-dfu-flash-chain
+	$(CC_HOST) -std=c11 -Wall -Wextra -Werror -O1 \
+	  -DULX5M_AT25QL321_EMULATOR_TEST=1 \
+	  -DULX5M_FLASH_PROGRAM_EMULATOR_TEST=1 \
+	  -DULX5M_DFU_STREAM_EMULATOR_TEST=1 \
+	  -DULX5M_DFU_FULL_IMAGE_TEST=1 -Ifw -Itests \
+	  -o $(OUT)/test-dfu-full-image fw/ulx5m_at25ql321.c \
+	  fw/ulx5m_flash_program.c fw/ulx5m_dfu_stream.c \
+	  tests/ulx5m-at25ql321-mock.c tests/test-ulx5m-serv-at25ql321-chain.c
+	$(OUT)/test-dfu-full-image
+
+	$(CC_HOST) -std=c11 -Wall -Wextra -Werror -O1 \
+	  -DULX5M_AT25QL321_EMULATOR_TEST=1 \
+	  -DULX5M_FLASH_HW_TEST=1 -DULX5M_FLASH_HW_HOST_TEST=1 \
+	  -DULX5M_DFU_HW_TEST_ONLY=1 -DULX5M_DFU_FULL_IMAGE_TEST=1 -Ifw -Itests \
+	  -o $(OUT)/test-dfu-full-vendor fw/ulx5m_at25ql321.c \
+	  fw/ulx5m_flash_program.c fw/ulx5m_flash_layout.c \
+	  fw/ulx5m_dfu_stream.c fw/ulx5m_flash_hw_test.c \
+	  tests/ulx5m-at25ql321-mock.c tests/test-ulx5m-serv-at25ql321-chain.c
+	$(OUT)/test-dfu-full-vendor
 
 test-rtl: prepare
 	@command -v '$(IVERILOG)' >/dev/null || { echo '[FAIL] iverilog required' >&2; exit 1; }

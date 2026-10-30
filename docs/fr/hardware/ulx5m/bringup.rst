@@ -98,3 +98,21 @@ GateMate toolchain quickstart
 <https://colognechip.com/programmable-logic/gatemate/gatemate-toolchain-quickstart/>`_.
 For GPIO overstress research and its limitations see `gm_gpio_ringosc
 <https://github.com/pu-cc/gm_gpio_ringosc>`_.
+
+Configuration intégrée de référence
+-----------------------------------
+
+Le primaire SERV seed 160 est désormais vérifié sur matériel, distinctement
+sur les deux chemins SPI actifs. Avec SW1 OFF/OFF et BTN2 maintenu avant la
+mise sous tension, le DFU persistant ``FWTN`` énumère ``1D50:614B`` et
+reste actif après relâchement de BTN2. Avec BTN2 relâché, la configuration
+lance de façon autonome l'image native à ``0x201000`` et ses LED défilantes,
+sans Tigard. Le firmware expérimental ``FWTF``, chargé uniquement en SRAM
+via JTAG, énumère également l'USB et relit le secondaire. La comparaison
+SHA-256 des 3 026 octets a réussi pour les deux profils.
+
+Ce résultat, établi le 30 octobre 2026, remplace les limitations des
+prototypes FWT3 et v72 décrits plus haut. Le chemin USB d'effacement et
+de programmation d'une image complète n'a pas encore été validé sur la
+flash physique. Voir :doc:`serv-bootloader` pour les procédures utilisables
+et les limites de récupération.

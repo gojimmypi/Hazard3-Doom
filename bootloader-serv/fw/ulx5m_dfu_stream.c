@@ -64,6 +64,12 @@ void ulx5m_dfu_stream_reset(void)
         stream.pending[i] = 0;
 }
 
+int ulx5m_dfu_stream_can_arm(void)
+{
+    return stream.used == 0u && stream.next_block == 0u &&
+           stream.pending_len == 0u && stream.state == dfuIDLE;
+}
+
 static enum usb_fnd_resp fail(uint8_t error)
 {
     stream.state = dfuERROR;
@@ -150,6 +156,10 @@ enum usb_fnd_resp ulx5m_dfu_stream_req(struct usb_ctrl_req *req,
 
     switch (req->wRequestAndType) {
     case USB_RT_DFU_DNLOAD:
+#if defined(ULX5M_DFU_FULL_IMAGE_TEST) && defined(ULX5M_FLASH_HW_TEST)
+        if (!ulx5m_flash_hw_test_is_armed())
+            return fail(errWRITE);
+#endif
         if (stream.state != dfuIDLE && stream.state != dfuDNLOAD_IDLE)
             return fail(errSTALLEDPKT);
         if (req->wValue != stream.next_block)

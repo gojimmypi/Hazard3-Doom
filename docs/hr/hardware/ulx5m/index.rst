@@ -136,10 +136,11 @@ Konfiguracijski flash i stanje razvoja
 
 SPI flash ispitivane pločice vratio je JEDEC ID ``1f 42 16`` (AT25QL321,
 4 MiB). Postojeći dijagnostički alat projekta može čitati flash bez upisa;
-izvorna slika spremljena je u dijelovima od 64 KiB. ULX5M port i dalje
-je eksperimentalan: programiranje FPGA SRAM-a putem JTAG-a ne stvara trajni
-DFU bootloader, a isključivanje napajanja uklanja pokrenutu sliku.
-Nemojte primjenjivati ULX4M raspored flasha ili naredbe za oporavak na ULX5M.
+izvorna slika spremljena je u dijelovima od 64 KiB.
+Integrirani SERV primarni bitstream provjeren je u oba trajna načina
+pokretanja. JTAG učitavanje u SRAM ostaje privremeno; puni USB
+zapis sekundarne slike još nije provjeren na hardveru. Nemojte
+primjenjivati ULX4M raspored flasha ili naredbe za oporavak na ULX5M.
 
 Izvori i provjera revizija
 --------------------------
@@ -160,8 +161,24 @@ ponovno su provjerene prema proizvođačevu DS1001 iz **rujna 2026.**
 Za aktualne granice slijedite poveznicu na proizvođačev dokument umjesto
 da pretpostavite kako je lokalna kopija najnovija.
 
-Development record (English translation pending)
-------------------------------------------------
+Trenutni status SERV bootloadera
+--------------------------------
+
+Trajni SERV primarni bitstream, sjeme 160, provjeren je na pločici V005:
+BTN2 pritisnut pri pokretanju odabire USB DFU ``1D50:614B``; s otpuštenim
+BTN2 autonomno se pokreće sekundarna slika s ``0x201000``.
+Svih 3026 bajtova sekundarne slike pročitano je i provjereno SHA-256
+pomoću ``FWTN`` (trajni) i ``FWTF`` (privremeni JTAG SRAM) profila.
+Stvarni puni USB zapis i atomski oporavak nisu kvalificirani.
+Za instalaciju, rad i oporavak pogledajte :doc:`serv-bootloader`.
+
+.. toctree::
+   :maxdepth: 1
+
+   serv-bootloader
+
+Povijesni zapisi ispitivanja (dijelom na engleskom)
+---------------------------------------------------
 
 .. toctree::
    :maxdepth: 1
