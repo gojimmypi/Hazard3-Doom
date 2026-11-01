@@ -15,6 +15,12 @@ SEED ?= 60
 OSS_CAD_SUITE_VERSION ?= 2026-07-20
 EXPECTED_RISCV_GCC_VERSION ?= 12.2.0
 HEAP_BETA ?= 0.6
+# FWTN lacks full-image DFU. Opt in to FWTF explicitly.
+DFU_FULL_IMAGE ?= 0
+ifneq ($(filter-out 0 1,$(DFU_FULL_IMAGE)),)
+$(error DFU_FULL_IMAGE must be 0 (FWTN) or 1 (FWTF))
+endif
+FW_PROFILE := $(if $(filter 1,$(DFU_FULL_IMAGE)),FWTF,FWTN)
 NEXTPNR_EXTRA_ARGS ?=
 SERV_DIR ?= third_party/serv
 SERV_TAG := 1.4.0
@@ -35,6 +41,21 @@ SOURCE := $(RUN)/source.sha256
 STAMP := $(RUN)/build.ok
 SERV_STAMP := $(OUT)/serv-pinned.stamp
 CLI := tests/ulx5m_bootloader.py
+
+# Independent, source-backed native LED secondary; never flash this target.
+NATIVE_TOP := top_ulx5m_gs_secondary
+NATIVE_RUN := $(OUT)/native-secondary
+NATIVE_RTL := rtl/top_ulx5m_gs_secondary.v
+NATIVE_CCF := data/ulx5m-gs-native-secondary.ccf
+NATIVE_JSON := $(NATIVE_RUN)/$(NATIVE_TOP).json
+NATIVE_IMPL := $(NATIVE_RUN)/$(NATIVE_TOP).txt
+NATIVE_BIT := $(NATIVE_RUN)/$(NATIVE_TOP)-SOURCE-CANDIDATE.bit
+NATIVE_LOG := $(NATIVE_RUN)/pnr.log
+NATIVE_SOURCE := $(NATIVE_RUN)/source.sha256
+NATIVE_STAMP := $(NATIVE_RUN)/build.ok
+NATIVE_INPUTS := $(NATIVE_RTL) $(NATIVE_CCF) $(SDC) \
+  tests/tb_ulx5m_gs_secondary.v tests/ulx5m_dfu_update.py \
+  tests/cfgcmd_codec.py $(CLI) Makefile.ulx5m-gs
 
 MISC_RTL := cores/misc/rtl/uart_wb.v cores/misc/rtl/uart_tx.v \
   cores/misc/rtl/uart_rx.v cores/misc/rtl/uart_irda_tx.v \
@@ -59,13 +80,15 @@ FINGERPRINT := $(SRC) $(wildcard cores/usb/rtl/*.vh) \
   $(CCF) $(SDC) $(CLI) tests/cfgcmd_codec.py \
   Makefile.ulx5m-gs
 
-.PHONY: help prepare test test-host test-rtl verify-serv synth-check show-settings build qualify clean force-generated
+.PHONY: help prepare test test-host test-rtl verify-serv synth-check show-settings build qualify clean force-generated native-secondary-test native-secondary-build native-secondary-qualify
 help:
 	@echo 'ULX5M-GS: prepare | test | build SEED=60 | qualify SEED=60 | show-settings | clean'
 	@echo 'CI routes the SAME full build/qualification as local, not a frozen candidate netlist.'
 	@echo 'Local PACK-ONLY; seed sweep and build never access hardware.'
+	@echo 'Full-image primary: build SEED=160 DFU_FULL_IMAGE=1 | qualify SEED=160 DFU_FULL_IMAGE=1'
+	@echo 'Native source candidate: native-secondary-build SEED=160 | native-secondary-qualify SEED=160'
 
-$(OUT) $(RUN):
+$(OUT) $(RUN) $(NATIVE_RUN):
 	@mkdir -p $@
 
 $(MC): cores/usb/utils/microcode.py force-generated | $(OUT)
@@ -98,7 +121,7 @@ verify-serv: $(SERV_STAMP)
 
 $(FW): $(wildcard fw/*.c) $(wildcard fw/*.h) fw/start.S \
   fw/lnk-app.lds fw/bin2hex.py fw/Makefile.ulx5m-gs force-generated | $(RUN)
-	$(MAKE) -B -C fw -f Makefile.ulx5m-gs all BUILD_DIR=../$(RUN) EXPECTED_GCC_VERSION=$(EXPECTED_RISCV_GCC_VERSION)
+	$(MAKE) -B -C fw -f Makefile.ulx5m-gs all BUILD_DIR=../$(RUN) EXPECTED_GCC_VERSION=$(EXPECTED_RISCV_GCC_VERSION) DFU_FULL_IMAGE=$(DFU_FULL_IMAGE)
 
 force-generated:
 
@@ -181,6 +204,7 @@ show-settings:
 	@echo 'OSS_CAD_SUITE_VERSION=$(OSS_CAD_SUITE_VERSION)'
 	@echo 'EXPECTED_RISCV_GCC_VERSION=$(EXPECTED_RISCV_GCC_VERSION)'
 	@echo 'SEED=$(SEED)'
+	@echo 'DFU_FULL_IMAGE=$(DFU_FULL_IMAGE) ($(FW_PROFILE))'
 	@echo 'HEAP_BETA=$(HEAP_BETA)'
 	@echo 'NEXTPNR_EXTRA_ARGS=$(NEXTPNR_EXTRA_ARGS)'
 	@echo 'YOSYS=$(YOSYS)'
@@ -212,7 +236,7 @@ build: test verify-serv $(SERV_RTL) $(MC) $(FW)
 	      $(abspath $(IMPL)) $(abspath $(BIT)); \
 	    if $(PYTHON) $(CLI) derive --bit $(BIT) --hex $(CMD) --check; then \
 	      $(PYTHON) $(CLI) fingerprint --output $(SOURCE) --inputs $(FINGERPRINT); \
-	      $(PYTHON) $(CLI) stamp --bit $(BIT) --output $(STAMP) --seed $(SEED); \
+	      $(PYTHON) $(CLI) stamp --bit $(BIT) --output $(STAMP) --seed $(SEED) --profile $(FW_PROFILE); \
 	      echo '[PASS] Image-derived ROM matches packed primary'; exit 0; \
 	    fi; \
 	    $(PYTHON) $(CLI) derive --bit $(BIT) --hex $(CMD) --write; \
@@ -224,7 +248,37 @@ build: test verify-serv $(SERV_RTL) $(MC) $(FW)
 qualify:
 	$(PYTHON) $(CLI) qualify --bit $(BIT) --hex $(CMD) \
 	  --json $(JSON) --pnr-log $(LOG) --source-sha $(SOURCE) \
-	  --stamp $(STAMP) --seed $(SEED) --inputs $(FINGERPRINT)
+	  --stamp $(STAMP) --seed $(SEED) --profile $(FW_PROFILE) --inputs $(FINGERPRINT)
+
+# Native image uses the standard gmpack format: NO --reconfig or --bootaddr.
+# This never writes JTAG, flash, or the installed golden primary.
+native-secondary-test: | $(NATIVE_RUN)
+	@command -v '$(IVERILOG)' >/dev/null || { echo '[FAIL] iverilog required' >&2; exit 1; }
+	@command -v '$(VVP)' >/dev/null || { echo '[FAIL] vvp required' >&2; exit 1; }
+	$(IVERILOG) -g2012 -s tb_ulx5m_gs_secondary -o $(NATIVE_RUN)/led-test.vvp \
+	  $(NATIVE_RTL) tests/tb_ulx5m_gs_secondary.v
+	$(VVP) $(NATIVE_RUN)/led-test.vvp
+
+native-secondary-build: native-secondary-test
+	@set -eu; \
+	  for tool in '$(YOSYS)' '$(NEXTPNR)' '$(GMPACK)'; do \
+	    command -v "$$tool" >/dev/null || { echo "[FAIL] Missing $$tool" >&2; exit 1; }; \
+	  done; \
+	  $(YOSYS) -p 'read_verilog -defer $(NATIVE_RTL); synth_gatemate -top $(NATIVE_TOP) -luttree -nomx8 -json $(abspath $(NATIVE_JSON))' > $(NATIVE_RUN)/synth.log; \
+	  $(NEXTPNR) --device CCGM1A1 --json $(abspath $(NATIVE_JSON)) \
+	    -o ccf=$(abspath $(NATIVE_CCF)) -o out=$(abspath $(NATIVE_IMPL)) \
+	    --sdc $(abspath $(SDC)) --router router2 \
+	    --placer-heap-beta=$(HEAP_BETA) $(NEXTPNR_EXTRA_ARGS) --seed $(SEED) -l $(abspath $(NATIVE_LOG)); \
+	  $(GMPACK) $(abspath $(NATIVE_IMPL)) $(abspath $(NATIVE_BIT)); \
+	  $(PYTHON) $(CLI) fingerprint --output $(NATIVE_SOURCE) --inputs $(NATIVE_INPUTS); \
+	  $(PYTHON) $(CLI) stamp --bit $(NATIVE_BIT) --output $(NATIVE_STAMP) --seed $(SEED); \
+	  $(MAKE) -f Makefile.ulx5m-gs native-secondary-qualify SEED=$(SEED)
+
+native-secondary-qualify:
+	$(PYTHON) $(CLI) qualify-native --bit $(NATIVE_BIT) \
+	  --json $(NATIVE_JSON) --pnr-log $(NATIVE_LOG) \
+	  --source-sha $(NATIVE_SOURCE) --stamp $(NATIVE_STAMP) \
+	  --seed $(SEED) --inputs $(NATIVE_INPUTS)
 
 clean:
 	@case '$(OUT)' in build-ulx5m-gs) rm -rf -- '$(OUT)' ;; \

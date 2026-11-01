@@ -644,24 +644,24 @@ repository and do not commit the flash images or temporary chunk files to
 Git. See ``bootloader/README_ULX5M_FLASH_BACKUP.md`` for resume, verification,
 and SRAM-loading utility instructions.
 
-Remaining work
-~~~~~~~~~~~~~~
+ULX5M-GS SERV bootloader
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-The USB probe enumerates, and separate 25 MHz GateMate diagnostics identify
-and read the configuration flash. The integrated 48 MHz PicoRV32/USB flash-read
-target had **not** met timing, and USB flash-content reads were not yet
-available at that historical checkpoint. The later seed-160 SERV bootloader
-has since passed persistent BTN2-selected DFU, secondary walking-LED boot,
-and USB physical readback. The persistent ``FWTN`` (restricted) and
-SRAM-loaded ``FWTF`` (opt-in full-image writer) are four-byte firmware profile
-IDs returned by vendor STATUS request ``0x5D``; they do not identify the
-secondary image. On October 30, 2026, ``FWTF`` v2d completed the first
-authorized 3,026-byte USB secondary rewrite with firmware FINISH and
-independent USB host readback PASS. The full 4 MiB post-write JTAG comparison
-and cold boots remain pending. ``--probe`` supports both profiles, but
-``--execute`` requires ``FWTF`` and an explicit confirmation. See
-:doc:`../hardware/ulx5m/serv-bootloader` for the current flash layout,
-recovery and guarded update protocol.
+The earlier PicoRV32 USB/flash integration is distinct from the validated
+seed-160 SERV bootloader. The persistent ``FWTN`` profile provides DFU
+recovery and read-only secondary verification. The opt-in ``FWTF`` profile,
+loaded into SRAM through JTAG, supports guarded full-image secondary updates.
+Both identifiers are returned by vendor STATUS request ``0x5D``; they identify
+the running firmware profile, not the secondary image. ``--probe`` accepts
+both profiles, whereas ``--execute`` requires ``FWTF``, explicit approval
+and a matching image SHA-256 supplied before USB access.
+
+The ``FWTF`` v2d reference qualified a same-image 3,026-byte USB update with
+firmware FINISH verification, independent USB readback, two matching 4 MiB
+post-write JTAG dumps, ``FWTN`` recovery and autonomous secondary boot. This
+does not qualify power-loss recovery or larger updates. See
+:doc:`../hardware/ulx5m/serv-bootloader` for address protection, exact image
+fingerprints and operating procedures.
 
 Rare bootloader replacement and recovery
 ----------------------------------------

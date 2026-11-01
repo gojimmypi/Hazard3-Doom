@@ -3,12 +3,12 @@ ULX5M-GS SERV bootloader: instalacija, rad i oporavak
 
 .. important:: Stanje provjerenih funkcija
 
-   Trajni primarni ``FWTN`` sa sjemenom 160 provjeren je na ULX5M-GS V005
-   za USB DFU uz pritisnut BTN2 i autonomno pokretanje sekundarne slike.
-   ``FWTF`` v2d, učitan samo u SRAM putem JTAG-a, uspješno je prepisao
-   3 026 bajtova preko USB-a uz FINISH provjeru i povratno čitanje na
-   računalu. Neovisna JTAG usporedba svih 4 MiB i hladna pokretanja nakon
-   upisa još čekaju provjeru. Ažuriranje nije atomsko.
+   Trajni primarni ``FWTN`` (sjeme 160) potvrđen je za DFU oporavak i
+   autonomno pokretanje sekundarne slike. ``FWTF`` v2d, učitan samo u
+   SRAM, potvrđen je za USB ponovno pisanje iste sekundarne slike od
+   3 026 bajtova, uključujući FINISH, USB povratno čitanje i neovisnu
+   JTAG usporedbu cijelog flasha. Ažuriranje nije atomsko; veće slike i
+   oporavak nakon prekida nisu kvalificirani.
 
 Ovaj vodič opisuje direktorij ``bootloader-serv/`` projekta Hazard3-Doom
 za pločicu Intergalaktik ULX5M-GS **V005**. Mali RV32I procesor SERV
@@ -37,8 +37,8 @@ Dostupne funkcije
      - Hardver: PASS u oba profila
    * - Puni DFU tok i provjera flash memorije
      - Izvanmrežni testovi: PASS
-   * - Prvi USB upis 3 026 bajtova i provjera na računalu
-     - Hardver: PASS; puna JTAG usporedba još nije dovršena
+   * - Ponovni upis iste slike od 3 026 bajtova i JTAG provjera 4 MiB
+     - Hardver: PASS (``FWTF`` v2d)
    * - Atomsko ažuriranje i automatski povratak
      - Nisu implementirani
 
@@ -152,8 +152,7 @@ bulk krajnje točke. Naziv proizvoda u deskriptoru je
 pa uređaj prepoznajte po VID:PID i stvarnom deskriptoru.
 
 ``FWTN`` i ``FWTF`` su četveroznakovni ASCII **identifikatori profila
-firmvera**, a ne akronimi, nazivi datoteka, GateMate naredbe ili USB
-identifikatori.
+firmvera**, a ne nazivi datoteka, GateMate naredbe ili USB identifikatori.
 Nalaze se u bajtovima 0..3 odgovora proizvođačeve naredbe STATUS od
 24 bajta (zahtjev ``0x5D``). Označavaju firmver koji odgovara preko USB-a,
 a ne sadržaj sekundarne flash slike. Oba profila koriste VID:PID
@@ -169,8 +168,9 @@ a ne sadržaj sekundarne flash slike. Oba profila koriste VID:PID
    Opcijski zapisivač cijele slike (``DFU_FULL_IMAGE=1``), privremeno
    učitan u SRAM putem JTAG ``-m``; nije instaliran u primarni flash.
    Verzija v2d prošla je fizički USB upis 3 026 bajtova, FINISH i
-   neovisnu USB provjeru. Potpuna JTAG usporedba, oporavak nakon prekida
-   i veće slike još nisu provjereni.
+   neovisnu USB provjeru. Dva potpuna JTAG ispisa, povratak na ``FWTN``
+   i autonomno pokretanje također su prošli. Oporavak nakon prekida i
+   veće slike još nisu provjereni.
 
 Nakon ASCII oznake, STATUS vraća pet 32-bitnih little-endian vrijednosti:
 fazu, očekivanu duljinu, očekivani CRC32, broj primljenih bajtova i kod
@@ -182,7 +182,8 @@ SHA-256 uspoređuje bajtove, ali nije provjera autentičnosti potpisa.
 Protokol koristi DNLOAD blokove od 64 bajta u zadanom redoslijedu, CRC32
 i zahtjeve ARM (``0x5C``), STATUS (``0x5D``) i FINISH (``0x5E``).
 ``--probe`` prihvaća oba profila i služi samo za **čitanje**;
-``--execute`` traži ``FWTF`` i izričitu potvrdu. Sam ``dfu-util -D``
+``--execute`` traži ``FWTF``, izričitu potvrdu i očekivani SHA-256
+slike (provjera prije USB pristupa). Sam ``dfu-util -D``
 nije zamjena za ovaj zaštićeni postupak ažuriranja.
 
 Preduvjeti
@@ -240,15 +241,14 @@ pritisnut tijekom cijelog JTAG učitavanja i dok se ne upali D4.** Nakon
 otpuštanja D4 mora ostati upaljena, a D3 ugašena. Naknadni pritisak BTN2
 ne mijenja već zaključani način.
 
-Redoslijed uključivanja napajanja još nije razjašnjen. Dana 30. listopada
-JTAG prijenos dosegnuo je 100 % kad je ULX5M uključen prvi, ali LED-ovi
-su ostali ugašeni i Windows nije pronašao USB DFU. Nakon potpunog
-isključivanja obaju uređaja, uključivanje Tigarda **prvog**, a zatim
-ULX5M-a uz pritisnut BTN2 omogućilo je USB ažuriranje. Raniji pokusi
-uspjeli su obrnutim redoslijedom. Ako svi LED-ovi ostanu ugašeni ili se
-USB ne pojavi, isključite **oba** uređaja i pokušajte obrnutim redoslijedom.
-Uzrok nije utvrđen. Tigard VTGT mora ostati nepovezan, uz zajedničku
-masu. Ne prekidajte napajanje tijekom brisanja ili pisanja flasha.
+Oba redoslijeda uključivanja (Tigard prvi ili ULX5M prvi) bila su uspješna;
+nijedan nije utvrđen kao obvezan. Dovršen JTAG prijenos ne dokazuje da
+firmver radi. Ako LED-ovi ostanu ugašeni ili USB nije dostupan, isključite
+**oba** uređaja, pokušajte obrnuti redoslijed i držite BTN2 tijekom
+konfiguracije. Prije pristupa flashu potvrdite D4 upaljenu, D3 ugašenu i
+USB vezu. Uzrok osjetljivosti na redoslijed napajanja nije utvrđen.
+Tigard VTGT mora ostati nepovezan, uz zajedničku masu. Ne prekidajte
+napajanje tijekom brisanja ili pisanja flasha.
 
 .. code-block:: bash
 
@@ -260,6 +260,17 @@ masu. Ne prekidajte napajanje tijekom brisanja ili pisanja flasha.
 Provjerite IDCODE ``0x20000001`` i ``Load SRAM via JTAG: 100%``.
 Opcija ``-m`` je privremena; **nemojte koristiti ``-f``**.
 Pričekajte Windows USB uređaj ``1D50:614B``.
+
+JTAG učitavanje u SRAM sa SW1 ON/ON nije ispitivanje pokretanja iz
+SPI flash memorije nakon hladnog uključenja. GateMate pri resetiranju
+pamti konfiguracijski način; JTAG način ne pokreće automatski sliku
+iz SPI flash memorije. Kad je BTN2 otpušten, D3 uključen, D4 isključen
+i D7 treperi, primarni firmver je odabrao normalni način, ali to ne
+potvrđuje predaju sekundarnoj slici. Izostanak hodajućih LED-ova
+sam po sebi nije dokaz regresije. Autonomno pokretanje provjerite
+odvojenim hladnim uključenjem sa SW1 OFF/OFF i otpuštenim BTN2; time
+se provjerava instalirani ``FWTN``, a ne ``FWTF`` učitan u SRAM.
+Ne mijenjajte SW1 dok je pločica pod napajanjem.
 
 USB provjera samo čitanjem
 --------------------------
@@ -294,22 +305,22 @@ Uspjeh prikazuje ``Device profile FWTN`` ili ``FWTF``, potom
 **ne šalje ARM, erase, program, FINISH ni RECFG**. Ne koristite
 ``--execute`` u početnom postupku.
 
-Kontrolirani sekundarni zapis (eksperimentalno)
------------------------------------------------
+Kontrolirano sekundarno ažuriranje (eksperimentalno)
+----------------------------------------------------
 
-Prvi zapis ponovno programira samo poznatu ispravnu sekundarnu sliku od
-3 026 bajtova u sektoru ``0x201000..0x201FFF``. Trajni primarni
-bootloader ostaje nedirnut. Ažuriranje je **na istome mjestu**, bez
-atomskog dovršetka ili automatskog povratka. Za svaku destruktivnu radnju
-potrebno je izričito odobrenje korisnika.
+Referentni postupak ponovno programira poznatu sekundarnu sliku od
+3 026 bajtova u sektoru ``0x201000..0x201FFF``, bez instaliranja trajnog
+primarnog bootloadera. Ažuriranje je **na istome mjestu**, bez atomskog
+dovršetka ili automatskog povratka. Svaki destruktivni zapis zahtijeva
+izričito odobrenje korisnika.
 
-Prije upisa sačuvajte dvije neovisne kopije cijelog flasha od 4 MiB,
-SHA-256
+Prije upisa sačuvajte dvije neovisne i identične kopije cijelog flasha
+od 4 MiB. SHA-256 referentnog stanja je
 ``3aa6280fd96de3c00ef844a2f0298a919f7cea9311d5a267ee0be85bc4375c78``
-(u ``../ulx5m-prewrite-readonly-20261030-FN1nVy/``). Provjerite SHA-256
-primarnog i sekundarnog bitstreama, da su adrese
-``0x201BD2..0x3FFFFF`` popunjene s ``0xFF`` te da su zaštićene regije
-očuvane.
+(``../ulx5m-prewrite-readonly-20261030-FN1nVy/``); buduće stanje može
+biti različito. Provjerite SHA-256 primarnog i sekundarnog bitstreama,
+izbrisani raspon ``0x201BD2..0x3FFFFF`` za referentnu sliku i očuvanje
+zaštićenih regija.
 
 S uključenim SW1 ON/ON i neprekidno pritisnutim BTN2 učitajte ``FWTF``
 v2d u SRAM isključivo JTAG opcijom ``-m``. Provjera samo čitanjem
@@ -325,20 +336,24 @@ postojeći Windows Python alat:
    SCRIPT_WIN="$(wslpath -w "$PWD/tests/ulx5m_dfu_update.py")"
    IMAGE_WIN="$(wslpath -w "$PWD/build-ulx5m-gs/native-v41-secondary-3026.bit")"
    BIN_WIN="$(wslpath -w "$PWD/../bin")"
+   EXPECTED_SHA256="68e15779871aa50d23ccb9cd52d458d072c0ca963310b2c74a96bde2861489dd"
    powershell.exe -NoProfile -Command \
-     "\$env:PATH='$BIN_WIN;' + \$env:PATH; py -3 '$SCRIPT_WIN' --image '$IMAGE_WIN' --execute --confirm REPLACE-SECONDARY-0x201000"
+     "\$env:PATH='$BIN_WIN;' + \$env:PATH; py -3 '$SCRIPT_WIN' --image '$IMAGE_WIN' --execute --confirm REPLACE-SECONDARY-0x201000 --expected-sha256 '$EXPECTED_SHA256'"
 
-Prvi odobreni zapis od 30. listopada 2026. (v2d, 3 026 bajtova)
-uspješno je dovršio prijenos, FINISH i neovisnu USB provjeru s očekivanom
-SHA-256 vrijednošću. Nije poslana naredba RECFG. To je **uspješan fizički
-USB zapis prema provjeri na računalu**, ali potpuna provjera još nije
-dovršena: preostaju usporedba cijelih 4 MiB preko JTAG-a i hladna pokretanja.
-Svaki sljedeći zapis zahtijeva novu provjeru i posebno odobrenje. Zatim
-obavite drugi, neovisni JTAG ispis cijelih 4 MiB pomoću čitajućeg API-ja
-``detect()``/``dump()`` u ``tests/ulx5m_flash_install.py``; SHA-256 cijelog
-flasha mora ostati isti jer se zapisuje ista slika. Provjerite DFU
-``FWTN`` uz BTN2 pritisnut pri uključivanju i zasebno pomične LED-ove
-uz BTN2 otpušten, u oba slučaja sa SW1 OFF/OFF.
+Nakon odobrenog zapisa zahtijevajte uspješan FINISH i neovisno USB čitanje
+koje odgovara SHA-256 vrijednosti poslane slike. SHA-256 referentne
+sekundarne slike je
+``68e15779871aa50d23ccb9cd52d458d072c0ca963310b2c74a96bde2861489dd``.
+Host ne šalje naredbu FPGA RECFG.
+
+Zatim neovisno pročitajte svih 4 MiB preko JTAG-a čitajućim API-jem
+``detect()``/``dump()`` iz ``tests/ulx5m_flash_install.py``. Pri ponovnom
+upisu iste referentne slike cijeli flash mora odgovarati početnom stanju
+(SHA-256 ``3aa6280fd96de3c00ef844a2f0298a919f7cea9311d5a267ee0be85bc4375c78``).
+Za različitu sliku provjerite novi zapis i očuvanje svih ostalih bajtova.
+Provjerite DFU ``FWTN`` uz BTN2 pritisnut pri uključivanju, a zatim
+sekundarno pokretanje uz BTN2 otpušten, oba sa SW1 OFF/OFF. Samo upis
+iste referentne slike prošao je te fizičke provjere.
 
 Ako bilo što ne uspije, sačuvajte zapisnike; nemojte automatski ponoviti
 zapis ili pokušati normalno pokretanje. Koristite zlatni DFU uz BTN2.
@@ -365,9 +380,9 @@ ostane ispravna, BTN2 pri uključivanju omogućuje DFU oporavak; inače je
 potreban vanjski JTAG/flash. U verziji v2d DNLOAD obrada odvija se izvan
 USB povratnih poziva, a FINISH provjerava sliku postupno bez brisanja
 preostalih sektora. Čekanje WIP stanja pri brisanju i programiranju još
-je sinkrono te može odgoditi USB obradu. Prvi zapis od 3 026 bajtova
-prošao je USB provjeru; najdulja trajanja, veće slike i oporavak nakon
-prekida nisu potvrđeni. Ovaj vodič nije odobrenje za novi destruktivni zapis.
+je sinkrono te može odgoditi USB obradu. Najdulja trajanja USB usluge,
+veće slike i oporavak nakon prekida nisu kvalificirani. Ovaj vodič ne
+odobrava destruktivni zapis.
 
 Rješavanje problema
 -------------------
@@ -400,13 +415,11 @@ Sljedeće vrijednosti označavaju testiranu konfiguraciju 30. listopada
   ``c73b8d6fe1ac1150ad3e3bba72c6d64664ee495185fade339f188f628dcfe167``.
 * Poznata sekundarna slika: 3026 bajtova; SHA-256
   ``68e15779871aa50d23ccb9cd52d458d072c0ca963310b2c74a96bde2861489dd``.
-* Dvije identične početne kopije flasha (4 MiB): SHA-256
-  ``09542df4b40bb6bcce00a327bb890f6a2d46099eae2e41f7a89e8e602614007d``.
-* Dvije trenutne neovisne kopije prije zapisa (4 MiB): SHA-256
+* Dvije neovisne kopije prije zapisa (4 MiB): SHA-256
   ``3aa6280fd96de3c00ef844a2f0298a919f7cea9311d5a267ee0be85bc4375c78``;
   ``../ulx5m-prewrite-readonly-20261030-FN1nVy/``.
-* Oporavak trajnog primarnog bitstreama:
-  ``build-ulx5m-gs/flash-install-20261030T155241133153Z``.
+* Dvije kopije nakon JTAG provjere (4 MiB): isti SHA-256;
+  ``../ulx5m-postwrite-readonly-20261030-fiHyVE/``.
 * Ruta sjemena 160: Fmax 67,96 MHz (domena 25 MHz) i
   49,06 MHz (domena 48 MHz).
 

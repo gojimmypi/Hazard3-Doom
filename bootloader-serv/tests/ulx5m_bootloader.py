@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Single offline ULX5M-GS command/manifest/timing qualification tool.
 
-Subcommands: bootstrap, derive, fingerprint, stamp, qualify.
+Subcommands: bootstrap, derive, fingerprint, stamp, qualify, qualify-native.
 No tool in this file accesses JTAG, USB, SPI, flash or FPGA hardware.
 """
 import argparse
@@ -137,7 +137,8 @@ def check_timing(pnrtxt):
 def qualify(args):
     expected = json.loads(args.stamp.read_text(encoding='ascii'))
     packed = args.bit.read_bytes()
-    if expected != {'sha256': sha(packed), 'seed': args.seed}:
+    if expected != {'sha256': sha(packed), 'seed': args.seed,
+                    'profile': args.profile}:
         raise ValueError('build stamp missing/stale, or seed/bitstream changed')
     validate_manifest(args.source_sha.read_text(encoding='ascii'), args.inputs)
     if not 10000 <= len(packed) <= 0x80000:
@@ -150,7 +151,8 @@ def qualify(args):
     if len(cells_by_type(data, 'CC_BRAM_20K')) + len(cells_by_type(data, 'CC_BRAM_40K')) < 4:
         raise ValueError('SERV/USB BRAM structure missing')
     clocks = check_timing(args.pnr_log.read_text(encoding='utf-8'))
-    print('[PASS] %d-byte primary; SHA256 %s' % (len(packed), sha(packed)))
+    print('[PASS] %s primary: %d bytes; SHA256 %s' %
+          (args.profile, len(packed), sha(packed)))
     print('[PASS] image-derived 27-byte ROM SHA256 %s' % sha(frame))
     print('[PASS] one CC_IBUF drives both the 25 MHz CFG global clock and PLL')
     print('[PASS] 25/48 MHz routed timing: %s' %
@@ -158,6 +160,49 @@ def qualify(args):
     print('[PASS] flash pinout and complete source manifest')
     print('[LIMIT] Firmware profile is not physically validated by PACK-ONLY qualification')
     print('[BLOCK] PACK-ONLY; no physical automatic-boot confirmation')
+
+
+def qualify_native(args):
+    # A new, source-built LED test image, not a regeneration of native v41.
+    from ulx5m_dfu_update import check_image
+    packed = args.bit.read_bytes()
+    expected = json.loads(args.stamp.read_text(encoding='ascii'))
+    if expected != {'sha256': sha(packed), 'seed': args.seed}:
+        raise ValueError('native build stamp missing/stale, or seed/image changed')
+    validate_manifest(args.source_sha.read_text(encoding='ascii'), args.inputs)
+    crc = check_image(packed)  # Reject JUMP and malformed configuration streams.
+    data = json.loads(args.json.read_text(encoding='utf-8'))
+    top = data['modules']['top_ulx5m_gs_secondary']['ports']
+    if top['clk25']['direction'] != 'input' or len(top['led_n']['bits']) != 8:
+        raise ValueError('native LED clock or output bus is missing')
+    if cells_by_type(data, 'CC_CFG_CTRL') or cells_by_type(data, 'CC_PLL'):
+        raise ValueError('native LED design must not contain CFG controller or PLL')
+    pnrtxt = args.pnr_log.read_text(encoding='utf-8')
+    if not re.search(r"constraining clock net 'clk25' to 25\.00 MHz", pnrtxt, re.I):
+        raise ValueError('native 25 MHz oscillator constraint missing')
+    clocks = re.findall(
+        r'Max frequency for clock\s+[^:\n]+:\s*([0-9.]+) MHz\s*\((PASS|FAIL) at ([0-9.]+) MHz\)',
+        pnrtxt, re.I)
+    if not clocks or any(result.upper() != 'PASS' or float(actual) < float(required)
+                         for actual, result, required in clocks):
+        raise ValueError('native routed timing failed')
+    if not any(abs(float(required) - 25.0) < 0.01 for _, _, required in clocks):
+        raise ValueError('native 25 MHz routed clock timing missing')
+    pads = ('IO_SB_A0', 'IO_SB_B0', 'IO_SB_A1', 'IO_SB_B1',
+            'IO_SB_B2', 'IO_SB_A2', 'IO_SB_B3', 'IO_SB_A3')
+    for i, pad in enumerate(pads):
+        # nextpnr's routed pad names use led_n for bit 0 and led_n_7
+        # through led_n_1 for the other bits, not Verilog led_n[7].
+        suffix = r'led_n(?:_0|\[0\])?' if i == 0 else \
+                 r'led_n(?:_%d|\[%d\])' % (i, i)
+        if not re.search(r"Constraining '[^']*\." + suffix +
+                         r"' to pad '" + pad + r"'", pnrtxt):
+            raise ValueError('native LED pin changed or unconstrained: D%d' % i)
+    print('[PASS] native LED secondary %d bytes; SHA256 %s; CRC32 %08x' %
+          (len(packed), sha(packed), crc))
+    print('[PASS] native source manifest, seed receipt, 25 MHz timing and V005 LED pins')
+    print('[LIMIT] untested source-built candidate; not the recovered 3,026-byte v41')
+    print('[BLOCK] no flash or hardware programming is authorized by qualification')
 
 
 def parser_main(argv=None):
@@ -178,11 +223,18 @@ def parser_main(argv=None):
     st.add_argument('--bit', required=True, type=Path)
     st.add_argument('--output', required=True, type=Path)
     st.add_argument('--seed', type=int, required=True)
+    st.add_argument('--profile', choices=('FWTN', 'FWTF'))
     q = sub.add_parser('qualify')
     for flag in ('bit', 'hex', 'json', 'pnr-log', 'source-sha', 'stamp'):
         q.add_argument('--' + flag, required=True, type=Path)
     q.add_argument('--seed', type=int, required=True)
+    q.add_argument('--profile', choices=('FWTN', 'FWTF'), required=True)
     q.add_argument('--inputs', nargs='+', required=True)
+    n = sub.add_parser('qualify-native')
+    for flag in ('bit', 'json', 'pnr-log', 'source-sha', 'stamp'):
+        n.add_argument('--' + flag, required=True, type=Path)
+    n.add_argument('--seed', type=int, required=True)
+    n.add_argument('--inputs', nargs='+', required=True)
     a = p.parse_args(argv)
     try:
         if a.action == 'bootstrap':
@@ -205,10 +257,14 @@ def parser_main(argv=None):
             a.output.write_text(fingerprint(a.inputs), encoding='ascii')
             print('[PASS] captured %d source inputs' % len(a.inputs))
         elif a.action == 'stamp':
-            a.output.write_text(json.dumps({'sha256': sha(a.bit.read_bytes()),
-                                            'seed': a.seed}, sort_keys=True) + '\n',
+            receipt = {'sha256': sha(a.bit.read_bytes()), 'seed': a.seed}
+            if a.profile:
+                receipt['profile'] = a.profile
+            a.output.write_text(json.dumps(receipt, sort_keys=True) + '\n',
                                 encoding='ascii')
             print('[PASS] build stamp created (not hardware qualification)')
+        elif a.action == 'qualify-native':
+            qualify_native(a)
         else:
             qualify(a)
     except (OSError, ValueError, KeyError, IndexError, TypeError) as exc:

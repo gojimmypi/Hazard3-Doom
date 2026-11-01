@@ -69,6 +69,8 @@ class BootloaderOffline(unittest.TestCase):
         self.assertIn('$(FW): $(wildcard fw/*.c)', mk)
         self.assertIn('fw/Makefile.ulx5m-gs force-generated | $(RUN)', mk)
         self.assertIn('$(MAKE) -B -C fw', mk)
+        self.assertIn('DFU_FULL_IMAGE=$(DFU_FULL_IMAGE)', mk)
+        self.assertIn('--profile $(FW_PROFILE)', mk)
         self.assertIn('$(MC): cores/usb/utils/microcode.py force-generated', mk)
         self.assertIn('EXPECTED_RISCV_GCC_VERSION ?= 12.2.0', mk)
         self.assertIn('EXPECTED_GCC_VERSION ?= 12.2.0', fw)
@@ -158,23 +160,103 @@ class BootloaderOffline(unittest.TestCase):
             bit = Path(td) / 'primary.bit'
             stamp = Path(td) / 'build.ok'
             bit.write_bytes(b'Q' * 10000)
-            stamp.write_text(json.dumps({'seed': 876, 'sha256': sha(bit.read_bytes())}),
-                             encoding='ascii')
+            stamp.write_text(json.dumps({'seed': 876, 'sha256': sha(bit.read_bytes()),
+                                         'profile': 'FWTF'}), encoding='ascii')
             with mock.patch.object(installer, 'BIT', bit), \
                  mock.patch.object(installer, 'STAMP', stamp), \
                  mock.patch.object(installer.subprocess, 'run') as run:
                 image, seed = installer.candidate()
                 self.assertEqual((image, seed), (bit.read_bytes(), 876))
                 self.assertIn('SEED=876', run.call_args.args[0])
+                self.assertIn('DFU_FULL_IMAGE=1', run.call_args.args[0])
                 bit.write_bytes(b'Z' * 10000)
                 with self.assertRaisesRegex(ValueError, 'does not match'):
                     installer.candidate()
                 self.assertEqual(run.call_count, 1)
 
+    def test_installer_rejects_non_full_image_profile(self):
+        with tempfile.TemporaryDirectory() as td:
+            bit = Path(td) / 'primary.bit'
+            stamp = Path(td) / 'build.ok'
+            bit.write_bytes(b'Q' * 10000)
+            for profile in (None, 'FWTN'):
+                receipt = {'seed': 160, 'sha256': sha(bit.read_bytes())}
+                if profile:
+                    receipt['profile'] = profile
+                stamp.write_text(json.dumps(receipt), encoding='ascii')
+                with mock.patch.object(installer, 'BIT', bit), \
+                     mock.patch.object(installer, 'STAMP', stamp), \
+                     mock.patch.object(installer.subprocess, 'run') as run:
+                    with self.assertRaisesRegex(ValueError, 'FWTF full-image'):
+                        installer.candidate()
+                    run.assert_not_called()
+
+    def test_primary_stamp_has_explicit_build_profile(self):
+        from ulx5m_bootloader import parser_main, qualify
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as td:
+            bit, stamp = (Path(td) / name for name in ('primary.bit', 'build.ok'))
+            bit.write_bytes(b'Q' * 10000)
+            self.assertEqual(parser_main(['stamp', '--bit', str(bit), '--output',
+                                          str(stamp), '--seed', '160',
+                                          '--profile', 'FWTF']), 0)
+            receipt = json.loads(stamp.read_text(encoding='ascii'))
+            self.assertEqual(receipt['profile'], 'FWTF')
+            args = SimpleNamespace(bit=bit, stamp=stamp, seed=160, profile='FWTN')
+            with self.assertRaisesRegex(ValueError, 'stamp'):
+                qualify(args)
+
+    def test_jtag_flash_id_requires_correct_alignment(self):
+        good = 'Read Flash JEDEC ID: 0x1f4216\nDetected: Renesas AT25QL321\n'
+        old_good = ('Read Flash Detail:\nJedec ID          : 1f\n'
+                    'memory type       : 42\nmemory capacity   : 16\n')
+        for output in (good, old_good):
+            installer.require_flash_id(output, 0)
+        for output in ('Read Flash Detail:\nJedec ID          : 0f\n'
+                       'memory type       : a1\nmemory capacity   : 0b\n',
+                       'Read Flash Detail:\nJedec ID          : 8f\n'
+                       'memory type       : a1\nmemory capacity   : 0b\n',
+                       'Read Flash JEDEC ID: 0x0fa10b\n', ''):
+            with self.assertRaises(ValueError) as caught:
+                installer.require_flash_id(output, 0x20000)
+            self.assertIn('possible one-bit receive shift', str(caught.exception))
+
+    def test_jtag_dump_refuses_shifted_chunk(self):
+        for bad_chunk in (0, 1):
+            with self.subTest(bad_chunk=bad_chunk), tempfile.TemporaryDirectory() as td:
+                path = Path(td) / 'backup.bin'
+                reads = []
+                def fake_jtag(*options, capture=False):
+                    self.assertTrue(capture)
+                    reads.append(options)
+                    path.with_name(path.name + '.chunk').write_bytes(b'12345678')
+                    if len(reads) - 1 == bad_chunk:
+                        return ('Read Flash Detail:\nJedec ID          : 0f\n'
+                                'memory type       : a1\nmemory capacity   : 0b\n')
+                    return 'Read Flash JEDEC ID: 0x1f4216\n'
+                with mock.patch.object(installer, 'FLASH_SIZE', 16), \
+                     mock.patch.object(installer, 'FLASH_READ_CHUNK', 8), \
+                     mock.patch.object(installer, 'jtag', side_effect=fake_jtag), \
+                     mock.patch.object(installer, 'winpath', return_value='fake'):
+                    with self.assertRaises(ValueError) as caught:
+                        installer.dump(path)
+                self.assertIn('possible one-bit receive shift', str(caught.exception))
+                self.assertEqual(len(reads), bad_chunk + 1)
+                self.assertFalse(path.exists())
+                self.assertFalse(path.with_name(path.name + '.partial').exists())
+
+    def test_guarded_installer_rejects_identical_shifted_backups(self):
+        with tempfile.TemporaryDirectory() as td:
+            shifted = bytes.fromhex('6c80f6cb') + b'R' * (installer.FLASH_SIZE - 4)
+            with mock.patch.object(installer, 'dump', return_value=shifted):
+                with self.assertRaises(ValueError) as caught:
+                    installer.backup(Path(td))
+            self.assertIn('invalid GateMate sync', str(caught.exception))
+
     def test_guarded_installer_rollback_after_primary_mismatch(self):
         with tempfile.TemporaryDirectory() as td:
             base = Path(td)
-            original = b'R' * installer.FLASH_SIZE
+            original = bytes.fromhex('d901ed96') + b'R' * (installer.FLASH_SIZE - 4)
             image = b'N' * 10000
             flash = bytearray(original)
             with mock.patch.object(installer, 'BUILD', base), \
@@ -207,7 +289,7 @@ class BootloaderOffline(unittest.TestCase):
             with self.subTest(damage_protected=damage_protected):
                 with tempfile.TemporaryDirectory() as td:
                     base = Path(td)
-                    original = b'R' * installer.FLASH_SIZE
+                    original = bytes.fromhex('d901ed96') + b'R' * (installer.FLASH_SIZE - 4)
                     image = b'N' * 10000
                     flash = bytearray(original)
                     with mock.patch.object(installer, 'BUILD', base), \
@@ -279,6 +361,23 @@ class FullImageHostOffline(unittest.TestCase):
             file.write_bytes(image)
             self.assertEqual(updater.main(['--image', str(file)]), 0)
             self.assertEqual(updater.main(['--image', str(file), '--execute']), 1)
+            from contextlib import redirect_stderr
+            from io import StringIO
+            with mock.patch.dict('sys.modules', {'usb': None, 'usb.core': None}):
+                # Reject unapproved/mismatched images before touching USB.
+                for argv, reason in (
+                    (['--image', str(file), '--execute', '--confirm', updater.CONFIRM],
+                     'matching --expected-sha256'),
+                    (['--image', str(file), '--execute', '--confirm', updater.CONFIRM,
+                      '--expected-sha256', '0' * 64], 'matching --expected-sha256'),
+                    (['--image', str(file), '--execute', '--confirm', updater.CONFIRM,
+                      '--expected-sha256', updater.hashlib.sha256(image).hexdigest()],
+                     'pyusb and a working libusb backend are required'),
+                ):
+                    errors = StringIO()
+                    with redirect_stderr(errors):
+                        self.assertEqual(updater.main(argv), 1)
+                    self.assertIn(reason, errors.getvalue())
 
     def test_read_only_probe_and_mismatch(self):
         import struct
@@ -393,6 +492,61 @@ class FullImageHostOffline(unittest.TestCase):
         bad.corrupted = True
         with self.assertRaisesRegex(ValueError, 'readback mismatch'):
             updater.update(bad, image)
+
+
+class NativeSecondaryOffline(unittest.TestCase):
+    def test_native_led_source_and_independent_build_target(self):
+        mk = (ROOT / 'Makefile.ulx5m-gs').read_text(encoding='ascii')
+        rtl = (ROOT / 'rtl/top_ulx5m_gs_secondary.v').read_text(encoding='ascii')
+        ccf = (ROOT / 'data/ulx5m-gs-native-secondary.ccf').read_text(encoding='ascii')
+        self.assertIn('native-secondary-build:', mk)
+        self.assertIn('native-secondary-qualify:', mk)
+        self.assertIn('$(GMPACK) $(abspath $(NATIVE_IMPL)) $(abspath $(NATIVE_BIT))', mk)
+        self.assertNotIn('openFPGALoader', mk)
+        self.assertIn('position <= (position == 6) ? 0', rtl)
+        self.assertIn('assign led_n = {7\'b0000001 << position, heartbeat}', rtl)
+        self.assertEqual(ccf.count('Pin_out "led_n['), 8)
+        self.assertIn('Pin_in  "clk25"', ccf)
+
+    def test_native_qualifier_rejects_stale_and_wrong_pins(self):
+        from types import SimpleNamespace
+        from ulx5m_bootloader import qualify_native
+        image = FullImageHostOffline.valid_secondary()
+        pins = ('IO_SB_A0', 'IO_SB_B0', 'IO_SB_A1', 'IO_SB_B1',
+                'IO_SB_B2', 'IO_SB_A2', 'IO_SB_B3', 'IO_SB_A3')
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td)
+            bit, manifest, stamp, netlist, log = (p / n for n in (
+                'native.bit', 'source.sha256', 'stamp.json', 'route.json', 'pnr.log'))
+            bit.write_bytes(image)
+            manifest.write_text(fingerprint(['rtl/top_ulx5m_gs_secondary.v']), encoding='ascii')
+            stamp.write_text(json.dumps({'sha256': sha(image), 'seed': 160}), encoding='ascii')
+            netlist.write_text(json.dumps({'modules': {'top_ulx5m_gs_secondary': {
+                'ports': {'clk25': {'direction': 'input', 'bits': [1]},
+                          'led_n': {'direction': 'output', 'bits': list(range(2, 10))}},
+                'cells': {}}}}), encoding='ascii')
+            valid_log = "Info: constraining clock net 'clk25' to 25.00 MHz\n"
+            valid_log += "Max frequency for clock 'clk25': 40.00 MHz (PASS at 25.00 MHz)\n"
+            for i, pad in enumerate(pins):
+                # Real nextpnr GateMate logs use led_n_7..led_n, not [7]..[0].
+                signal = 'led_n' if i == 0 else 'led_n_%d' % i
+                valid_log += "Constraining '$iopadmap$top_ulx5m_gs_secondary.%s' to pad '%s'\n" % (signal, pad)
+            log.write_text(valid_log, encoding='ascii')
+            args = SimpleNamespace(bit=bit, source_sha=manifest, stamp=stamp,
+                                   json=netlist, pnr_log=log, seed=160,
+                                   inputs=['rtl/top_ulx5m_gs_secondary.v'])
+            qualify_native(args)
+            args.seed = 161
+            with self.assertRaisesRegex(ValueError, 'stamp'):
+                qualify_native(args)
+            args.seed = 160
+            log.write_text(valid_log.replace('IO_SB_A0', 'IO_SB_B0'), encoding='ascii')
+            with self.assertRaisesRegex(ValueError, 'pin changed'):
+                qualify_native(args)
+            log.write_text(valid_log, encoding='ascii')
+            manifest.write_text('0' * 64 + '  rtl/top_ulx5m_gs_secondary.v\n', encoding='ascii')
+            with self.assertRaisesRegex(ValueError, 'source/firmware/constraint'):
+                qualify_native(args)
 
 
 if __name__ == '__main__':

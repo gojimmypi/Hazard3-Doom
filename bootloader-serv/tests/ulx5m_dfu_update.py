@@ -2,8 +2,8 @@
 """Guarded secondary-only ULX5M-GS USB DFU updater (no JTAG operations).
 
 Preflight is offline by default. --probe reads flash without modifying it.
---execute requires an exact confirmation and an explicitly opt-in FWTF
-firmware profile; golden FWTN is never writable here.
+--execute requires an exact confirmation, the expected payload SHA256,
+and an explicitly opt-in FWTF firmware profile; golden FWTN is never writable here.
 The update is in-place, NOT atomic. Hold BTN2 on reboot to recover an aborted
 or corrupt secondary; do not assume normal boot is safe after interruption.
 """
@@ -148,6 +148,8 @@ def main(argv=None):
     parser.add_argument('--image', type=Path, required=True)
     parser.add_argument('--execute', action='store_true',
                         help='actually replace the secondary image over USB')
+    parser.add_argument('--expected-sha256', default='',
+                        help='required with --execute: exact SHA256 of the image to program')
     parser.add_argument('--probe', action='store_true',
                         help='read-only USB verification of the current secondary flash image')
     parser.add_argument('--confirm', default='',
@@ -168,6 +170,8 @@ def main(argv=None):
             return 0
         if args.execute and args.confirm != CONFIRM:
             raise ValueError('destructive update requires --confirm ' + CONFIRM)
+        if args.execute and args.expected_sha256.lower() != hashlib.sha256(image).hexdigest():
+            raise ValueError('destructive update requires matching --expected-sha256')
         try:
             import usb.core
         except ImportError as exc:

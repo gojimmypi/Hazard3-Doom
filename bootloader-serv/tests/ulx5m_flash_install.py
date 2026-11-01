@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -25,7 +26,16 @@ FLASH_READ_CHUNK = 0x20000
 SECONDARY = 0x201000
 CONFIRM_INSTALL = 'I_AUTHORIZE_ULX5M_PRIMARY_512K_WITH_VERIFIED_ROLLBACK'
 CONFIRM_RESTORE = 'I_AUTHORIZE_ULX5M_PRIMARY_512K_ROLLBACK'
-PROGRAMMER = (ROOT / '../bin/openFPGALoader.exe').resolve()
+
+
+def is_wsl():
+    release = Path('/proc/sys/kernel/osrelease')
+    return sys.platform == 'linux' and release.is_file() and (
+        'microsoft' in release.read_text(encoding='ascii').lower())
+
+
+PROGRAMMER = ((ROOT / '../bin/openFPGALoader.exe').resolve() if is_wsl()
+              else Path(shutil.which('openFPGALoader') or 'openFPGALoader'))
 
 
 def digest(data):
@@ -44,11 +54,13 @@ def candidate():
     image = BIT.read_bytes()
     require(10000 <= len(image) <= PRIMARY_SIZE,
             'packed bitstream does not fit the 512 KiB primary partition')
+    require(stamp.get('profile') == 'FWTF',
+            'primary installation requires an explicit FWTF full-image build receipt')
     require(stamp['sha256'] == digest(image), 'candidate does not match build.ok')
     # Invoke the existing canonical qualifier (includes command ROM, timing,
     # source fingerprints and flash pinout). Never substitute sweep results.
     subprocess.run(['make', '-f', 'Makefile.ulx5m-gs', 'qualify',
-                    'SEED=%d' % seed], cwd=ROOT, check=True)
+                    'SEED=%d' % seed, 'DFU_FULL_IMAGE=1'], cwd=ROOT, check=True)
     return image, seed
 
 
@@ -72,24 +84,61 @@ def load_backups(session):
     a = (session / 'flash-before-a.bin').read_bytes()
     b = (session / 'flash-before-b.bin').read_bytes()
     require(len(a) == FLASH_SIZE and a == b, 'full-chip recovery backups differ')
+    require(a[:4] == bytes.fromhex('d901ed96'),
+            'recovery backup has invalid GateMate sync; possible shifted JTAG read')
     require(digest(a) == meta['original_sha256'], 'recovery backup checksum mismatch')
     return a, meta
 
 
-def winpath(path):
+def toolpath(path):
+    if not is_wsl():
+        return str(path.resolve())
     return subprocess.check_output(['wslpath', '-w', str(path.resolve())],
                                    text=True).strip()
 
 
-def jtag(*options):
-    require(PROGRAMMER.is_file(), 'Windows openFPGALoader.exe missing: %s' % PROGRAMMER)
+def jtag(*options, capture=False):
+    require(PROGRAMMER.is_file(), 'openFPGALoader missing: %s' % PROGRAMMER)
     cmd = [str(PROGRAMMER), '-c', 'tigard', '--freq', '1000k', *options]
     print('[JTAG]', ' '.join(cmd), flush=True)
+    if capture:
+        result = subprocess.run(cmd, cwd=ROOT, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True)
+        print(result.stdout, end='', flush=True)
+        result.check_returncode()
+        return result.stdout
     subprocess.run(cmd, cwd=ROOT, check=True)
 
 
+def require_flash_id(output, offset):
+    # An unknown JEDEC ID does not make openFPGALoader v1.2.0 fail a dump.
+    # Reject shifted IDs before accepting any chunk as a recovery backup.
+    values = {}
+    for line in output.splitlines():
+        key, sep, value = line.partition(':')
+        if sep and value.strip():
+            key = key.strip().lower()
+            if key in ('read flash jedec id', 'jedec id', 'memory type',
+                       'memory capacity'):
+                try:
+                    values[key] = int(value.strip().split()[0], 16)
+                except ValueError:
+                    pass
+    recognized = (values.get('read flash jedec id') == 0x1f4216 or
+                  values.get('jedec id') == 0x1f4216 or
+                  (values.get('jedec id'), values.get('memory type'),
+                   values.get('memory capacity')) == (0x1f, 0x42, 0x16))
+    require(recognized, 'invalid JTAG flash JEDEC ID at offset 0x%06x; '
+            'possible one-bit receive shift; refusing dump' % offset)
+
+
 def detect():
-    require(PROGRAMMER.is_file(), 'openFPGALoader.exe is missing')
+    require(PROGRAMMER.is_file(), 'openFPGALoader is missing: %s' % PROGRAMMER)
+    if not is_wsl():
+        version = subprocess.run([str(PROGRAMMER), '--version'], cwd=ROOT,
+                                 capture_output=True, text=True, check=True)
+        require((version.stdout + version.stderr).strip() == 'openFPGALoader v1.2.0',
+                'native openFPGALoader must be the validated v1.2.0 release')
     cmd = [str(PROGRAMMER), '-c', 'tigard', '--freq', '1000k', '--detect']
     result = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True,
                             check=True)
@@ -115,8 +164,9 @@ def dump(path):
             for offset in range(0, FLASH_SIZE, FLASH_READ_CHUNK):
                 length = min(FLASH_READ_CHUNK, FLASH_SIZE - offset)
                 try:
-                    jtag('--dump-flash', '--file-size', str(length), '-o', str(offset),
-                         winpath(chunk))
+                    output = jtag('--dump-flash', '--file-size', str(length), '-o',
+                                  str(offset), toolpath(chunk), capture=True)
+                    require_flash_id(output, offset)
                 except subprocess.CalledProcessError as exc:
                     raise ValueError('flash dump failed at offset 0x%06x (exit %d)' %
                                      (offset, exc.returncode)) from exc
@@ -147,7 +197,7 @@ def dump(path):
 def program(path):
     require(path.stat().st_size == PRIMARY_SIZE,
             'refusing to write anything other than exactly 512 KiB')
-    jtag('-f', '-o', '0', winpath(path))
+    jtag('-f', '-o', '0', toolpath(path))
 
 
 def unique_session():
@@ -161,6 +211,8 @@ def backup(session):
     a = dump(session / 'flash-before-a.bin')
     b = dump(session / 'flash-before-b.bin')
     require(a == b, 'the two complete flash reads differ; no write performed')
+    require(a[:4] == bytes.fromhex('d901ed96'),
+            'primary has invalid GateMate sync; possible shifted JTAG read')
     require(any(v != 0xff for v in a[:256]), 'primary appears erased; do not install')
     print('[PASS] matching 4 MiB pre-install dumps:', digest(a))
     return a

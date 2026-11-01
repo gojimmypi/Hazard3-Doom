@@ -3,12 +3,12 @@ ULX5M-GS SERV Bootloader: Setup, Operation, and Recovery
 
 .. important:: Verified configuration and limitations
 
-   The persistent GateMate seed-160 ``FWTN`` primary is hardware verified
-   for BTN2-held USB DFU and automatic secondary boot. The SRAM-loaded
-   ``FWTF`` v2d writer completed one 3,026-byte physical USB secondary rewrite
-   with firmware FINISH and host USB readback verification. Independent
-   post-write full-chip JTAG comparison and cold-boot recovery tests remain
-   pending. The in-place updater is not power-loss-safe or production-ready.
+   The seed-160 ``FWTN`` primary is validated for persistent DFU recovery
+   and autonomous secondary boot. The SRAM-only ``FWTF`` v2d profile is
+   validated for a same-image, 3,026-byte USB secondary rewrite, including
+   firmware verification, independent USB readback and full-flash JTAG
+   comparison. Updates are in-place; power-loss recovery and larger images
+   are not hardware-qualified.
 
 This guide applies to the Intergalaktik ULX5M-GS **V005** and the
 ``bootloader-serv/`` directory in Hazard3-Doom. It documents the experimental
@@ -37,8 +37,8 @@ Verified capabilities
      - Hardware PASS (both profiles)
    * - Full-image stream and flash protection/verification
      - Offline emulator tests PASS
-   * - First 3,026-byte USB erase/program/FINISH and host readback
-     - Hardware PASS; independent full-chip check pending
+   * - Same-image 3,026-byte USB rewrite and independent 4 MiB verification
+     - Hardware PASS (``FWTF`` v2d)
    * - Power-loss-safe update and automatic rollback
      - Not implemented
 
@@ -66,11 +66,6 @@ Change SW1 only while the FPGA is powered off.
      - Held throughout JTAG SRAM load and startup
      - Run an experimental primary temporarily; DFU when D4 is on
 
-.. figure:: ../../images/ULX5M-GS-SW1-ON-ON.png
-   :alt: ULX5M-GS SW1 two-position settings shown in the on-on state
-
-   **ULX5M-GS SW1 Set to ON/ON**
-
 ``OFF/OFF`` is SPI-active mode (configuration mode ``0x0``). ``ON/ON`` is
 JTAG mode (``0xC``). Mixed settings are not used for this workflow. The
 BTN2 latch is sampled during startup: releasing the button after entering
@@ -82,8 +77,8 @@ The board has a 25 MHz reference clock. The independent
 command and ``RECFG`` from its own 25 MHz domain. The SERV/USB SoC uses a
 nominal 48 MHz PLL domain. The normal-mode controller releases the flash
 pins for reconfiguration; the secondary boot does not depend on USB or a
-running SERV firmware loop. On the tested board, walking LEDs appeared after
-approximately 2.68 seconds.
+running SERV firmware loop. The measured startup interval for the reference
+secondary was approximately 2.68 seconds.
 
 .. list-table:: Primary LED diagnostics
    :header-rows: 1
@@ -172,8 +167,7 @@ show a cached ULX4M-friendly name; identify the device by VID:PID and its
 actual descriptors rather than the tree label.
 
 ``FWTN`` and ``FWTF`` are four-byte ASCII **firmware profile identifiers**,
-not acronyms, image filenames, GateMate configuration commands or USB
-product IDs.
+not image filenames, GateMate configuration commands or USB product IDs.
 They occupy bytes 0..3 of the 24-byte vendor STATUS response (request
 ``0x5D``), identifying the firmware currently answering over USB, not the
 contents of secondary flash. Both profiles use USB VID:PID ``1D50:614B``.
@@ -188,8 +182,9 @@ contents of secondary flash. Both profiles use USB VID:PID ``1D50:614B``.
    Opt-in full-image writer (``DFU_FULL_IMAGE=1``), tested by temporary JTAG
    ``-m`` SRAM loading, **not** installed to primary flash. The v2d candidate
    passed a physical 3,026-byte secondary rewrite, firmware FINISH and
-   independent USB host readback. Full-chip post-write JTAG comparison,
-   interrupted-write recovery and larger images remain unqualified.
+   independent USB host readback. Two independent post-write 4 MiB JTAG
+   dumps, golden ``FWTN`` recovery and autonomous secondary boot also passed.
+   Interrupted-write recovery and larger images remain unqualified.
 
 After the four ASCII bytes, STATUS returns five little-endian 32-bit values:
 phase, expected image length, expected CRC32, received byte count and error
@@ -202,8 +197,9 @@ image-authenticity signature.
 The full-image protocol uses ordered 64-byte class DNLOAD blocks, stream
 CRC32, and vendor ARM (``0x5C``), STATUS (``0x5D``) and FINISH (``0x5E``)
 requests. ``--probe`` permits either profile and performs **read-only**
-verification; ``--execute`` requires ``FWTF`` and an exact confirmation
-argument. Ordinary ``dfu-util -D`` is not a qualified replacement for
+verification; ``--execute`` requires ``FWTF``, an exact confirmation
+argument and the expected image SHA-256 (checked before USB access).
+Ordinary ``dfu-util -D`` is not a qualified replacement for
 this explicitly armed update protocol.
 
 Newcomer prerequisites
@@ -269,17 +265,14 @@ load and until D4 is ON**. Then release it; D4 should stay ON and D3 stay
 OFF. If D3 is ON, reset/reload with BTN2 held; pressing BTN2 late cannot
 change the latched boot mode.
 
-The cold power-up order is not yet characterized. On October 30, one
-ULX5M-first attempt completed the JTAG SRAM transfer but left all LEDs
-dark and Windows could not find the USB DFU device. After a complete
-power-off, starting Tigard **first** and the ULX5M **second**, with BTN2
-held through configuration, produced D0/D1/D4/D5/D6 ON, D2/D3 OFF, D7
-blinking, and a working USB update. Earlier tests succeeded with the
-opposite order. If LEDs remain dark or USB does not enumerate, power off
-**both** devices and retry the other order. The cause is not established;
-a completed JTAG transfer alone does not prove firmware execution. Keep
-Tigard VTGT disconnected and maintain a common ground. Never power-cycle
-during a flash erase/program operation.
+Both Tigard-first and ULX5M-first power-up orders have worked; neither
+is a required sequence. A completed JTAG SRAM transfer does not establish
+that the firmware is running. If the LEDs remain dark or USB does not
+enumerate, disconnect power from **both** devices and retry with the
+opposite power-up order, holding BTN2 through configuration. Confirm D4
+ON, D3 OFF and USB enumeration before accessing flash. The cause of the
+power-order sensitivity is not established. Keep Tigard VTGT disconnected,
+maintain a common ground, and never interrupt flash erase/program power.
 
 .. code-block:: bash
 
@@ -292,6 +285,16 @@ Check JTAG IDCODE ``0x20000001`` and the ``Load SRAM via JTAG: 100%``
 result. The ``-m`` operation is volatile; do **not** use ``-f``. Wait for
 Windows to enumerate ``1D50:614B``. A loaded image can still choose normal
 mode if BTN2 was released too early.
+
+A JTAG SRAM load with SW1 ON/ON is not an SPI-active cold-boot test.
+GateMate latches its configuration mode at reset; JTAG mode does not
+automatically boot an image from SPI flash. With BTN2 released, D3 ON,
+D4 OFF and D7 blinking indicate normal mode in the primary firmware,
+not a verified secondary handoff. Absence of walking LEDs in this test
+alone is not evidence of an autoboot regression. Check autonomous boot
+separately with SW1 OFF/OFF and BTN2 released at cold power-on; that
+tests the installed ``FWTN`` primary, not the SRAM-only ``FWTF`` image.
+Do not change SW1 while the board is powered to force a mode change.
 
 Read-only physical USB verification
 -----------------------------------
@@ -325,26 +328,26 @@ With the ULX5M in DFU mode, use native **Windows Python** for USB:
 An expected successful result identifies ``Device profile FWTN`` or
 ``Device profile FWTF``, verifies ``3026/3026`` bytes and reports the
 matching SHA-256. ``--probe`` uses vendor IN reads only: it sends **no ARM,
-erase, program, FINISH or RECFG requests**. Do not use the destructive
-``--execute`` option during newcomer setup.
+erase, program, FINISH or RECFG requests**. The separate ``--execute``
+command requires explicit authorization.
 
-Guarded secondary rewrite (experimental)
-----------------------------------------
+Guarded secondary update (experimental)
+---------------------------------------
 
-The first write uses the same known-working 3,026-byte native secondary and
-may affect only its 4 KiB sector ``0x201000..0x201FFF``. It does **not**
-install a primary bootloader. This is an **in-place, non-atomic** operation:
-USB disconnect, power loss or flash errors can leave the secondary unbootable.
-Obtain explicit operator authorization before every destructive write.
+The reference procedure rewrites the existing 3,026-byte native secondary
+in sector ``0x201000..0x201FFF``. It does **not** install a primary
+bootloader. Updates are **in-place and non-atomic**: USB disconnect, power
+loss or flash errors can leave the secondary unbootable. Obtain explicit
+operator authorization for each destructive update.
 
 The following prerequisites are required before an authorized experiment:
 
-* Verify the primary and secondary image hashes in the reproducibility table.
-* Preserve two **independent** 4 MiB pre-write dumps outside generated build
-  directories. Their content must match SHA-256
-  ``3aa6280fd96de3c00ef844a2f0298a919f7cea9311d5a267ee0be85bc4375c78``.
-  The verified reference copies are in
-  ``../ulx5m-prewrite-readonly-20261030-FN1nVy/``. Keep both unchanged.
+* Verify the primary and secondary image hashes in the qualification table.
+* Preserve two **independent**, matching 4 MiB pre-write dumps outside
+  generated build directories. For the verified reference flash image,
+  SHA-256 is ``3aa6280fd96de3c00ef844a2f0298a919f7cea9311d5a267ee0be85bc4375c78``
+  (``../ulx5m-prewrite-readonly-20261030-FN1nVy/``). Future flash contents
+  may differ; verify and retain the actual pre-write backups.
 * Confirm the ``0x201BD2..0x3FFFFF`` tail is all ``0xFF`` and keep
   ``0x000000..0x200FFF`` protected. v2d does not erase trailing sectors.
 * Use SW1 ON/ON and BTN2 held continuously during the **SRAM-only** JTAG
@@ -361,23 +364,25 @@ Windows host tool (not WSL PyUSB). The command below is **destructive**:
    SCRIPT_WIN="$(wslpath -w "$PWD/tests/ulx5m_dfu_update.py")"
    IMAGE_WIN="$(wslpath -w "$PWD/build-ulx5m-gs/native-v41-secondary-3026.bit")"
    BIN_WIN="$(wslpath -w "$PWD/../bin")"
+   EXPECTED_SHA256="68e15779871aa50d23ccb9cd52d458d072c0ca963310b2c74a96bde2861489dd"
    powershell.exe -NoProfile -Command \
-     "\$env:PATH='$BIN_WIN;' + \$env:PATH; py -3 '$SCRIPT_WIN' --image '$IMAGE_WIN' --execute --confirm REPLACE-SECONDARY-0x201000"
+     "\$env:PATH='$BIN_WIN;' + \$env:PATH; py -3 '$SCRIPT_WIN' --image '$IMAGE_WIN' --execute --confirm REPLACE-SECONDARY-0x201000 --expected-sha256 '$EXPECTED_SHA256'"
 
-The first authorized v2d write on October 30, 2026 transferred 3,026 bytes
-and passed firmware FINISH verification and independent host USB readback:
-SHA-256 ``68e15779871aa50d23ccb9cd52d458d072c0ca963310b2c74a96bde2861489dd``.
-No FPGA RECFG was issued. This is a **physical USB write PASS at the host
-verification stage**, not complete hardware qualification. The post-write
-JTAG full-chip comparison and subsequent cold-boot tests remain pending.
-For subsequent writes, the host must again report transfer completion,
-FINISH verification and a matching independent USB readback. Independently re-dump all 4 MiB via
-the guarded JTAG ``tests/ulx5m_flash_install.py`` ``detect()``/``dump()``
-read-only API; compare every byte against a preserved pre-write backup. Since
-the first experiment rewrites the **same** image, the expected full-chip SHA-256
-remains ``3aa6280fd96de3c00ef844a2f0298a919f7cea9311d5a267ee0be85bc4375c78``.
-Then cold-boot SW1 OFF/OFF with BTN2 held for golden ``FWTN`` DFU, and
-separately with BTN2 released for the walking-LED secondary.
+After an authorized update, require successful FINISH verification and an
+independent USB readback matching the supplied image SHA-256. The reference
+secondary SHA-256 is
+``68e15779871aa50d23ccb9cd52d458d072c0ca963310b2c74a96bde2861489dd``.
+The host does not issue FPGA RECFG.
+
+Use the JTAG ``tests/ulx5m_flash_install.py`` read-only ``detect()`` and
+``dump()`` APIs for independent full-chip verification. For the same-image
+reference rewrite, the 4 MiB dump must match the pre-write image byte-for-byte
+(SHA-256 ``3aa6280fd96de3c00ef844a2f0298a919f7cea9311d5a267ee0be85bc4375c78``).
+For a different secondary image, compare the changed region with the new
+payload and verify that all other flash bytes remain unchanged. Finally,
+verify SW1 OFF/OFF with BTN2 held for ``FWTN`` recovery and BTN2 released
+for autonomous secondary boot. Only the same-image reference operation has
+completed these physical checks.
 
 If any transfer, verification or comparison fails, stop. Preserve logs and
 backups; do not attempt an automatic retry or normal secondary boot. Enter
@@ -391,8 +396,7 @@ After a volatile test, power off both boards, set SW1 OFF/OFF, leave Tigard
 **off**, and hold BTN2 before powering the ULX5M. Release BTN2 after the
 primary DFU LED pattern appears. The USB read-only probe should show
 ``FWTN`` again. Power-cycle a second time with BTN2 **released** to
-confirm automatic secondary boot and walking LEDs. The October 30 bench
-confirmed both modes, including the final walking LEDs, without Tigard.
+confirm automatic secondary boot and walking LEDs.
 
 Installing a new primary in persistent flash is a **separate, advanced and
 destructive** maintenance operation. Building the bitstream or using ``-m``
@@ -411,10 +415,9 @@ DFU; otherwise, external JTAG/flash recovery is required. The lengthy
 FINISH verification now advances incrementally and does not erase trailing
 sectors. DNLOAD erase/page operations run in the foreground but still
 synchronously poll flash WIP, which may delay USB servicing (4 KiB erase
-can take up to 400 ms). One 3,026-byte write passed the physical USB host verification; worst-case
-erase/program USB responsiveness, larger images and interruption recovery
-remain unqualified. Documentation is not authorization for any further
-destructive operation.
+can take up to 400 ms). Worst-case USB responsiveness, larger-image writes
+and interrupted-update recovery remain unqualified. Documentation does not
+authorize a destructive operation.
 
 Troubleshooting
 ---------------
@@ -442,10 +445,10 @@ Troubleshooting
    * - Power loss during a future secondary update
      - Do not rely on automatic rollback; use BTN2-held DFU or external recovery
 
-Reproducibility reference
--------------------------
+Qualification reference
+-----------------------
 
-.. list-table:: Hardware-proven image fingerprints
+.. list-table:: Reference configuration and image checksums
    :header-rows: 1
    :widths: 43 57
 
@@ -457,18 +460,17 @@ Reproducibility reference
      - 420,175 bytes; SHA-256 ``c73b8d6fe1ac1150ad3e3bba72c6d64664ee495185fade339f188f628dcfe167``
    * - Known-good native walking-LED secondary
      - 3,026 bytes; SHA-256 ``68e15779871aa50d23ccb9cd52d458d072c0ca963310b2c74a96bde2861489dd``
-   * - Matching original full-flash backups
-     - SHA-256 ``09542df4b40bb6bcce00a327bb890f6a2d46099eae2e41f7a89e8e602614007d``
    * - Two matching current pre-write 4 MiB backups
      - SHA-256 ``3aa6280fd96de3c00ef844a2f0298a919f7cea9311d5a267ee0be85bc4375c78``; ``../ulx5m-prewrite-readonly-20261030-FN1nVy/``
-   * - Golden primary recovery session
-     - ``build-ulx5m-gs/flash-install-20261030T155241133153Z``
+   * - Two matching post-write 4 MiB JTAG dumps
+     - Same SHA-256; ``../ulx5m-postwrite-readonly-20261030-fiHyVE/``
    * - Routed full-image candidate
      - Seed 160; 25 MHz domain Fmax 67.96 MHz; 48 MHz domain Fmax 49.06 MHz
 
-These values identify the hardware tested on October 30, 2026 and must
-not be assumed for future revisions. The two primary images have the same output filename but
-different contents. Check the file SHA-256 before a JTAG or flash operation.
+These checksums identify the validated seed-160/v2d reference configuration,
+not arbitrary future builds. Both primary profiles use the same output
+filename but have different contents. Verify SHA-256 before JTAG loading or
+flash programming.
 
 Related documentation
 ---------------------

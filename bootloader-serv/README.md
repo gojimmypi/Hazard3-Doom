@@ -39,10 +39,30 @@ ROM, global clock connections, routed 25/48 MHz timing, and flash pad mapping.
 A failed route or stale build cannot produce a qualified result. There is
 no automatic FPGA SRAM/flash program, JTAG, or DFU install target.
 
-**Not yet proven on ULX5M-GS hardware:** autonomous secondary SPI-active
-boot and reliable normal-mode LED behavior. The USB DFU writer is still a
-restricted, explicitly armed 4 KiB native image test, not a general-purpose
-image updater. Do not install the PACK-ONLY image as persistent stage0.
+## ULX5M-GS hardware-qualified operation
+
+The installed golden `FWTN` primary supports BTN2-held USB DFU recovery and
+BTN2-released autonomous SPI-active boot from secondary flash address
+`0x201000`. The `FWTF` profile is an opt-in, SRAM-loaded full-image USB DFU
+writer; it is not the persistent primary.
+
+A source-built 7,096-byte native LED secondary was verified in FPGA SRAM,
+installed over `FWTF` USB DFU, independently read back through `FWTF` and
+`FWTN`, and executed by autonomous cold boot. The complete 4 MiB flash
+readback matched the expected image; only the two secondary erase sectors
+`0x201000..0x202fff` changed. This qualifies the tested image and sequence,
+not arbitrary images or interruption-safe updates. The secondary writer is
+in-place and non-atomic. Preserve the golden primary and recovery backups;
+do not install the current PACK-ONLY build as persistent stage0.
+
+SW1 OFF/OFF selects SPI-active boot; SW1 ON/ON selects JTAG. Set both switch
+sections fully with power removed. An intermittent one-bit right shift was
+observed in JTAG flash reads; the problem was absent after reseating SW1,
+but its electrical cause is unconfirmed. Require JEDEC `1f4216` and valid
+flash contents for each JTAG backup; do not use shifted dumps for recovery.
+Keep the unmodified `openFPGALoader` v1.2.0 executable. BTN2 selects DFU
+mode only for a configured bootloader at startup; it is not the silicon's
+configuration-mode switch.
 
 ## Existing ULX3S / ULX4M builds
 
