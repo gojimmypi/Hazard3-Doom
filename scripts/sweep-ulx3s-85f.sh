@@ -187,7 +187,8 @@ mkdir -p "${SWEEP_DIR}"
 
 {
     printf 'target=ulx3s-85f\n'
-    printf 'device=um5g-85k\n'
+    printf 'device=85k\n'
+    printf 'speed=6\n'
     printf 'package=CABGA381\n'
     printf 'full_route=1\n'
     printf 'result_columns=seed,clk_sys_mhz,clk_video_mhz,clk_tmds_mhz,route_seconds,timing_status\n'
@@ -240,7 +241,7 @@ run_seed()
     if sweep_ecp5_run_nextpnr \
         --seed "${seed}" \
         "${SWEEP_NEXTPNR_ARGS[@]}" \
-        --um5g-85k \
+        --85k --speed 6 \
         --package CABGA381 \
         --lpf "${LPF}" \
         --json "${NETLIST}" \

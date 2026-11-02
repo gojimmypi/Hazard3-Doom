@@ -515,7 +515,7 @@ ulx3s-85f)
     LPF="${HAZARD3_SYNTH}/fpga_ulx3s.lpf"
     IDCODE="0x41113043"
     NEXTPNR_SEED="${NEXTPNR_SEED:-${ECP5_DEFAULT_NEXTPNR_SEED}}"
-    PNR_DEVICE_ARGS=(--um5g-85k --package CABGA381)
+    PNR_DEVICE_ARGS=(--85k --speed 6 --package CABGA381)
     HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
     SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.video-profile"
     SYNTH_DURATION_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.synth-seconds"

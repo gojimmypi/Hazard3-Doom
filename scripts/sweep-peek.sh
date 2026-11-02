@@ -225,7 +225,7 @@ run_seed()
 
     if ! nextpnr-ecp5 \
         --placer heap \
-        --um5g-85k \
+        --85k --speed 6 \
         --package CABGA381 \
         --lpf "${SYNTH_DIR}/fpga_ulx3s.lpf" \
         --json "${NETLIST}" \
