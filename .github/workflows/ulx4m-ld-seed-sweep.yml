@@ -14,12 +14,12 @@ on:
           - ulx3s-12f
           - ulx4m-ld-85f
       seed_first:
-        description: First seed to route (1-260)
+        description: First seed to route (positive 32-bit integer)
         required: true
         default: "1"
         type: string
       seed_last:
-        description: Last seed to route (1-260)
+        description: Last seed to route (maximum 512 consecutive seeds)
         required: true
         default: "260"
         type: string
@@ -52,7 +52,7 @@ on:
       ulx3s_85f_extended_modes:
         description: ULX3S 85F extended HDMI modes (ignored for other targets)
         required: true
-        default: "1"
+        default: "0"
         type: choice
         options:
           - "1"
@@ -211,14 +211,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ ! "${SWEEP_SEED_FIRST}" =~ ^[0-9]+$ ||
-                ! "${SWEEP_SEED_LAST}" =~ ^[0-9]+$ ||
-                "${SWEEP_SEED_FIRST}" -lt 1 ||
-                "${SWEEP_SEED_LAST}" -gt 260 ||
-                "${SWEEP_SEED_FIRST}" -gt "${SWEEP_SEED_LAST}" ]]; then
-              echo "Seed range must be within 1-260 with first <= last." >&2
-              exit 1
-          fi
+          # Validate the seed range with the same generator used for the matrix.
+          # Accept any positive signed 32-bit starting seed, up to 512 seeds;
+          # GitHub Actions limits the generated matrix to 256 route jobs.
+          ./scripts/generate-ecp5-seed-matrix.py \
+              --first "${SWEEP_SEED_FIRST}" \
+              --last "${SWEEP_SEED_LAST}" \
+              --per-job "${SWEEP_SEEDS_PER_JOB}" >/dev/null
 
           if [[ ! "${SWEEP_MAX_PARALLEL}" =~ ^[1-9][0-9]*$ ]]; then
               echo "max_parallel must be a positive integer." >&2
@@ -342,7 +341,7 @@ jobs:
 
           case "${SWEEP_TARGET}" in
           ulx3s-85f)
-              monitor_clock_hz=50000000
+              monitor_clock_hz=25000000
               ;;
           ulx4m-ld-85f)
               monitor_clock_hz="$((HAZARD3_ULX4M_SYS_CLK_MHZ * 1000000))"
@@ -556,7 +555,7 @@ jobs:
           printf '  SWEEP_SEEDS_PER_JOB: %s\n' "${SWEEP_SEEDS_PER_JOB}"
           case "${SWEEP_TARGET}" in
           ulx3s-85f)
-              printf '  System clock:                  50 MHz (fixed)\n'
+              printf '  System clock:                  25 MHz (fixed; 640x480 HDMI)\n'
               printf '  HAZARD3_HDMI_EXTENDED_MODES: %s\n' "${HAZARD3_HDMI_EXTENDED_MODES}"
               ;;
           ulx3s-12f)

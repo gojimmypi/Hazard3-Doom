@@ -29,7 +29,7 @@ COMMON_SCRIPT="${SCRIPT_DIR}/sweep-ecp5-common.sh"
 SWEEP_JOBS="${SWEEP_JOBS:-4}"
 SWEEP_SKIP_SYNTH="${SWEEP_SKIP_SYNTH:-0}"
 SWEEP_PREPARE_ONLY="${SWEEP_PREPARE_ONLY:-0}"
-HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
+HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-0}"
 SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.video-profile"
 SYNTH_DURATION_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.synth-seconds"
 SYNTH_LOG="${BUILD_DIR}/fpga_ulx3s_85f.synth.log"
@@ -55,7 +55,7 @@ Usage: $0 SEED [SEED ...]
        $0 --all
 
 Route one or more nextpnr seeds for the ULX3S 85F Hazard3-Doom build.
-Seeds must be decimal values from 1 through 260.
+Seeds are positive 32-bit decimals; at most 512 seeds per run (--all uses 1-260).
 SWEEP_JOBS=N runs up to N routes concurrently (default: 4).
 HAZARD3_HDMI_EXTENDED_MODES=0|1 selects standard/extended video.
 SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.
@@ -95,12 +95,12 @@ if [[ ! "${SWEEP_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
 fi
 
 case "${HAZARD3_HDMI_EXTENDED_MODES}" in
-0) VIDEO_PROFILE="standard" ;;
-1) VIDEO_PROFILE="extended" ;;
+0) VIDEO_PROFILE="vga640-standard" ;;
+1) VIDEO_PROFILE="vga640-extended" ;;
 *) echo "HAZARD3_HDMI_EXTENDED_MODES must be 0 or 1." >&2; exit 1 ;;
 esac
 
-printf 'ULX3S 85F sweep configuration: system clock=50 MHz, HDMI profile=%s, extended modes=%s\n' \
+printf 'ULX3S 85F sweep configuration: system clock=25 MHz, HDMI profile=%s, extended modes=%s\n' \
     "${VIDEO_PROFILE}" "${HAZARD3_HDMI_EXTENDED_MODES}"
 
 if [[ "${SWEEP_PREPARE_ONLY}" != "1" ]]; then
@@ -184,15 +184,16 @@ mkdir -p "${SWEEP_DIR}"
 
 {
     printf 'target=ulx3s-85f\n'
-    printf 'device=um5g-85k\n'
+    printf 'device=85k\n'
+    printf 'speed=6\n'
     printf 'package=CABGA381\n'
     printf 'full_route=1\n'
     printf 'result_columns=seed,clk_sys_mhz,clk_video_mhz,clk_tmds_mhz,route_seconds,timing_status\n'
     printf 'video_profile=%s\n' "${VIDEO_PROFILE}"
     sweep_ecp5_write_tuning_metadata
-    printf 'clk_sys_required_mhz=50.00\n'
-    printf 'clk_video_required_mhz=50.00\n'
-    printf 'clk_tmds_required_mhz=250.00\n'
+    printf 'clk_sys_required_mhz=25.00\n'
+    printf 'clk_video_required_mhz=25.00\n'
+    printf 'clk_tmds_required_mhz=125.00\n'
     printf 'synthesis_seconds=%s\n' "${synthesis_seconds}"
     printf 'netlist_sha256=%s\n' "${netlist_sha256}"
     printf 'netlist=fpga_ulx3s_85f.json\n'
@@ -221,7 +222,7 @@ run_seed()
     local svf="${SWEEP_DIR}/fpga_ulx3s_85f-${seed}.svf"
     local bit="${SWEEP_DIR}/fpga_ulx3s_85f-${seed}.bit"
     local result="${SWEEP_DIR}/result-seed-${seed}.csv"
-    local clk_sys clk_video clk_tmds
+    local clk_sys clk_video clk_tmds sys_clock
     local route_start_seconds route_start_time
     local route_end_seconds route_end_time
     local route_seconds route_status
@@ -237,7 +238,7 @@ run_seed()
     if sweep_ecp5_run_nextpnr \
         --seed "${seed}" \
         "${SWEEP_NEXTPNR_ARGS[@]}" \
-        --um5g-85k \
+        --85k --speed 6 \
         --package CABGA381 \
         --lpf "${LPF}" \
         --json "${NETLIST}" \
@@ -279,10 +280,18 @@ run_seed()
         ;;
     esac
 
-    clk_sys="$(sweep_ecp5_extract_clock "${pnr_log}" "clk_sys")"
+    # The 85F's 25 MHz direct clock is clk_osc; older PLL builds used clk_sys.
+    # Detect the reported clock to avoid false FAIL classifications after RTL changes.
+    if ! sys_clock="$(sweep_ecp5_ulx3s_85f_system_clock "${pnr_log}")"; then
+        printf '%d,ERROR,ERROR,ERROR,%s,ERROR\n' "${seed}" "${route_seconds}" > "${result}"
+        [[ -f "${pnr_log}" ]] && mv "${pnr_log}" "${failed_log}"
+        rm -f "${config}" "${svf}" "${bit}"
+        return 1
+    fi
+    clk_sys="$(sweep_ecp5_extract_clock "${pnr_log}" "${sys_clock}")"
     clk_video="$(sweep_ecp5_extract_clock "${pnr_log}" "clk_video_pix")"
     clk_tmds="$(sweep_ecp5_extract_clock "${pnr_log}" "clk_tmds_x5")"
-    clk_sys_status="$(sweep_ecp5_extract_clock_status "${pnr_log}" "clk_sys")"
+    clk_sys_status="$(sweep_ecp5_extract_clock_status "${pnr_log}" "${sys_clock}")"
     clk_video_status="$(sweep_ecp5_extract_clock_status "${pnr_log}" "clk_video_pix")"
     clk_tmds_status="$(sweep_ecp5_extract_clock_status "${pnr_log}" "clk_tmds_x5")"
 
@@ -312,8 +321,8 @@ run_seed()
         "${route_seconds}" "${timing_status}" > "${result}"
 
     rm -f "${failed_log}" "${config}" "${svf}"
-    printf 'Seed %s: clk_sys=%s MHz, clk_video=%s MHz, clk_tmds=%s MHz, route=%ss, %s\n' \
-        "${seed}" "${clk_sys}" "${clk_video}" "${clk_tmds}" \
+    printf 'Seed %s: clk_sys=%s MHz (nextpnr: %s), clk_video=%s MHz, clk_tmds=%s MHz, route=%ss, %s\n' \
+        "${seed}" "${clk_sys}" "${sys_clock}" "${clk_video}" "${clk_tmds}" \
         "${route_seconds}" "${timing_status}"
 }
 

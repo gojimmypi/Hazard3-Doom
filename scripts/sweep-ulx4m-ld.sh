@@ -65,7 +65,7 @@ Usage: $0 SEED [SEED ...]
        $0 --all
 
 Route one or more nextpnr seeds for the ULX4M-LD 85F Hazard3-Doom build.
-Seeds must be decimal values from 1 through 260.
+Seeds are positive 32-bit decimals; at most 512 seeds per run (--all uses 1-260).
 SWEEP_JOBS=N runs up to N routes concurrently (default: 2).
 HAZARD3_ULX4M_SYS_CLK_MHZ=25|40|50 selects the Hazard3 system clock.
 ULX4M_LITEDRAM_CPU=serv|vexrisc selects the LiteDRAM initialization CPU.

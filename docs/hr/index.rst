@@ -26,6 +26,16 @@ RISC-V procesora te ULX3S i ULX4M ECP5 FPGA obitelji.
    * `Raspberry Pi Pico 2 <https://www.raspberrypi.com/products/raspberry-pi-pico-2/>`_
    * `Upstream Hazard3 RTL <https://github.com/Wren6991/Hazard3>`_
 
+.. warning::
+
+   U izdanju ``v0.2.0`` za ULX3S 85F zadano je odabran pogrešan FPGA tip:
+   nextpnr koristi ``--um5g-85k`` umjesto ``--85k --speed 6`` za
+   ``LFE5U-85F-6``. Rezultati timinga i bitstreamovi izrađeni s tom
+   postavkom ne mogu se smatrati kvalificiranima za predviđeni FPGA.
+   Zadana postavka bit će ispravljena u ``v0.2.1`` i kasnijim izdanjima.
+   Vidi `Hazard3-Doom #21 <https://github.com/ulx3s/Hazard3-Doom/issues/21>`_ i
+   `Hazard3 #10 <https://github.com/ulx3s/Hazard3/issues/10>`_.
+
 Projekt spaja C i Verilog primjere, FPGA dizajne, HDMI video i framebuffer
 podršku, kontrolere vanjske memorije, pristup SD kartici, UART i JTAG debug,
 resident boot monitor, host-side alate za prijenos i učitljivu DoomGeneric

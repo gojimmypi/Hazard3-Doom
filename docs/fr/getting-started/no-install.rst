@@ -39,6 +39,15 @@ Voir :doc:`../hardware/ulx3s/video-and-storage` pour les détails.
 Voir :doc:`../user-guide/pinouts` pour les connexions UART et
 :doc:`../user-guide/web-tool` pour la référence complète du Device Tool.
 
+.. warning::
+
+   Le réglage de build par défaut de la version ``v0.2.0`` pour l'ULX3S 85F
+   sélectionne ``--um5g-85k`` au lieu de ``--85k --speed 6`` pour le
+   ``LFE5U-85F-6``. Les images FPGA construites avec ce réglage peuvent
+   présenter un comportement imprévisible ; utilisez une image destinée au
+   bon composant. Ce réglage sera corrigé à partir de ``v0.2.1``.
+   Voir `issue #21 <https://github.com/ulx3s/Hazard3-Doom/issues/21>`_.
+
 1. Télécharger les fichiers précompilés
 ----------------------------------------
 

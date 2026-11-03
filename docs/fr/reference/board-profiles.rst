@@ -52,6 +52,16 @@ la documentation n'en conserve pas une seconde copie :
 un routage explicite. Ces valeurs sont des références de release, pas des
 optima permanents.
 
+.. warning::
+
+   Dans ``v0.2.0``, la cible nextpnr par défaut de l'ULX3S 85F est
+   ``--um5g-85k`` ; le ``LFE5U-85F-6`` prévu exige ``--85k --speed 6``
+   (boîtier ``CABGA381``). Les résultats de timing obtenus avec le réglage
+   incorrect ne prouvent pas la fermeture temporelle pour le FPGA prévu.
+   Ce réglage sera corrigé à partir de ``v0.2.1``. Voir
+   `Hazard3-Doom #21 <https://github.com/ulx3s/Hazard3-Doom/issues/21>`_ et
+   `Hazard3 #10 <https://github.com/ulx3s/Hazard3/issues/10>`_.
+
 Validation FPGA actuelle
 ------------------------
 
