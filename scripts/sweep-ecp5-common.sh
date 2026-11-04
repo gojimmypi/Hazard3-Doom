@@ -204,6 +204,15 @@ sweep_ecp5_tuning_suffix()
     printf '%s\n' "${suffix}"
 }
 
+# nextpnr accepts signed 32-bit positive seeds; reject overflow before Bash
+# arithmetic, and normalize decimal input (including leading zeros).
+sweep_ecp5_valid_seed()
+{
+    [[ "$1" =~ ^0*([1-9][0-9]*)$ ]] || return 1
+    REPLY="${BASH_REMATCH[1]}"
+    (( ${#REPLY} <= 10 )) && (( 10#${REPLY} <= 2147483647 ))
+}
+
 sweep_ecp5_parse_seeds()
 {
     local usage_function="$1"
@@ -222,7 +231,7 @@ sweep_ecp5_parse_seeds()
         exit 1
     fi
 
-    local arg seed_arg seed_first seed_last seed_value
+    local arg seed_arg seed_first seed_last seed_value raw_first raw_last
     local arg_seeds=()
 
     for arg in "$@"; do
@@ -235,33 +244,45 @@ sweep_ecp5_parse_seeds()
         IFS=',' read -r -a arg_seeds <<< "${arg}"
         for seed_arg in "${arg_seeds[@]}"; do
             if [[ "${seed_arg}" =~ ^([0-9]+)-([0-9]+)$ ]]; then
-                seed_first=$((10#${BASH_REMATCH[1]}))
-                seed_last=$((10#${BASH_REMATCH[2]}))
-                if (( seed_first < 1 || seed_last > 260 || seed_first > seed_last )); then
-                    echo "Invalid seed range: ${seed_arg}; expected start-end within 1-260." >&2
-                    "${usage_function}"
+                raw_first="${BASH_REMATCH[1]}"
+                raw_last="${BASH_REMATCH[2]}"
+                if ! sweep_ecp5_valid_seed "${raw_first}"; then
+                    echo "Invalid starting seed: ${raw_first}; expected 1-2147483647." >&2
+                    exit 1
+                fi
+                seed_first="${REPLY}"
+                if ! sweep_ecp5_valid_seed "${raw_last}"; then
+                    echo "Invalid ending seed: ${raw_last}; expected 1-2147483647." >&2
+                    exit 1
+                fi
+                seed_last="${REPLY}"
+                if (( seed_first > seed_last || seed_last - seed_first >= 512 )); then
+                    echo "Invalid seed range: ${seed_arg}; first <= last, maximum 512 seeds." >&2
                     exit 1
                 fi
                 while (( seed_first <= seed_last )); do
                     if [[ -z "${SWEEP_SEEN_SEEDS[${seed_first}]+x}" ]]; then
+                        if (( ${#SWEEP_SEEDS[@]} >= 512 )); then
+                            echo "Maximum 512 unique seeds per sweep." >&2
+                            exit 1
+                        fi
                         SWEEP_SEEDS+=("${seed_first}")
                         SWEEP_SEEN_SEEDS["${seed_first}"]=1
                     fi
                     seed_first=$((seed_first + 1))
                 done
-            elif [[ "${seed_arg}" =~ ^[0-9]+$ ]]; then
-                seed_value=$((10#${seed_arg}))
-                if (( seed_value < 1 || seed_value > 260 )); then
-                    echo "Invalid seed: ${seed_arg}; expected 1-260." >&2
-                    "${usage_function}"
-                    exit 1
-                fi
+            elif sweep_ecp5_valid_seed "${seed_arg}"; then
+                seed_value="${REPLY}"
                 if [[ -z "${SWEEP_SEEN_SEEDS[${seed_value}]+x}" ]]; then
+                    if (( ${#SWEEP_SEEDS[@]} >= 512 )); then
+                        echo "Maximum 512 unique seeds per sweep." >&2
+                        exit 1
+                    fi
                     SWEEP_SEEDS+=("${seed_value}")
                     SWEEP_SEEN_SEEDS["${seed_value}"]=1
                 fi
             else
-                echo "Invalid seed: ${seed_arg}; expected 1-260 or a range such as 1-32." >&2
+                echo "Invalid seed: ${seed_arg}; expected 1-2147483647 or a range such as 750-1261." >&2
                 "${usage_function}"
                 exit 1
             fi
@@ -273,13 +294,43 @@ sweep_ecp5_results_filename()
 {
     local sweep_dir="$1"
 
-    if (( ${#SWEEP_SEEDS[@]} == 260 )); then
+    if (( ${#SWEEP_SEEDS[@]} == 260 )) &&
+       [[ "${SWEEP_SEEDS[0]}" == "1" && "${SWEEP_SEEDS[259]}" == "260" ]]; then
         printf '%s/results.csv\n' "${sweep_dir}"
     elif (( ${#SWEEP_SEEDS[@]} == 1 )); then
         printf '%s/results-seed-%s.csv\n' "${sweep_dir}" "${SWEEP_SEEDS[0]}"
     else
         printf '%s/results-selected.csv\n' "${sweep_dir}"
     fi
+}
+
+# The ULX3S 85F once used a PLL-derived clk_sys (50 MHz). In the 25 MHz
+# direct-oscillator configuration, nextpnr instead reports clk_osc$TRELLIS_IO_IN.
+# Identify the name from the final timing report, never from the requested seed,
+# and reject unknown/ambiguous reports rather than silently marking a pass.
+sweep_ecp5_ulx3s_85f_system_clock()
+{
+    local log="$1"
+    local reports have_sys=0 have_osc=0
+
+    reports="$(grep 'Max frequency for clock' "${log}" 2>/dev/null || true)"
+    if [[ "${reports}" == *"'\$glbnet\$clk_sys'"* ]]; then
+        have_sys=1
+    fi
+    if [[ "${reports}" == *"'\$glbnet\$clk_osc'"* ||
+          "${reports}" == *"'\$glbnet\$clk_osc\$TRELLIS_IO_IN'"* ]]; then
+        have_osc=1
+    fi
+
+    case "${have_sys}${have_osc}" in
+    10) printf 'clk_sys\n' ;;
+    01) printf 'clk_osc\n' ;;
+    *)
+        printf 'ERROR: ULX3S 85F system clock is missing or ambiguous in %s (clk_sys=%s, clk_osc=%s).\n' \
+            "${log}" "${have_sys}" "${have_osc}" >&2
+        return 1
+        ;;
+    esac
 }
 
 sweep_ecp5_extract_clock()

@@ -118,7 +118,7 @@ case "${memory_profile}" in
     ;;
 esac
 
-system_clock_hz="${HAZARD3_SYS_CLK_HZ:-50000000}"
+system_clock_hz="${HAZARD3_SYS_CLK_HZ:-40000000}"
 case "${system_clock_hz}" in
 25000000|40000000|50000000)
     ;;

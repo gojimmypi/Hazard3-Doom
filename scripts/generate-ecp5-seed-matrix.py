@@ -21,6 +21,12 @@ import argparse
 import json
 
 
+# nextpnr uses a signed 32-bit seed; GitHub supports at most 256 matrix jobs.
+MAX_SEED = 2**31 - 1
+MAX_SWEEP_SEEDS = 512
+MAX_MATRIX_JOBS = 256
+
+
 def positive_integer(value: str) -> int:
     parsed = int(value)
     if parsed < 1:
@@ -28,17 +34,33 @@ def positive_integer(value: str) -> int:
     return parsed
 
 
+def seed_integer(value: str) -> int:
+    parsed = positive_integer(value)
+    if parsed > MAX_SEED:
+        raise argparse.ArgumentTypeError(f"seed must be <= {MAX_SEED}")
+    return parsed
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Generate grouped ECP5 seed jobs as a GitHub Actions matrix."
     )
-    parser.add_argument("--first", type=positive_integer, required=True)
-    parser.add_argument("--last", type=positive_integer, required=True)
+    parser.add_argument("--first", type=seed_integer, required=True)
+    parser.add_argument("--last", type=seed_integer, required=True)
     parser.add_argument("--per-job", type=positive_integer, required=True)
     args = parser.parse_args()
 
     if args.first > args.last:
         parser.error("--first must be less than or equal to --last")
+
+    seed_count = args.last - args.first + 1
+    if seed_count > MAX_SWEEP_SEEDS:
+        parser.error(f"maximum {MAX_SWEEP_SEEDS} consecutive seeds per sweep")
+    if (seed_count + args.per_job - 1) // args.per_job > MAX_MATRIX_JOBS:
+        parser.error(
+            f"GitHub Actions allows at most {MAX_MATRIX_JOBS} matrix jobs; "
+            "increase --per-job for this seed count"
+        )
 
     seeds = range(args.first, args.last + 1)
     groups = []

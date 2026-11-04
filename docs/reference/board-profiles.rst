@@ -50,6 +50,16 @@ directly from that file so the documentation does not maintain another copy:
 ``NEXTPNR_SEED`` can still override the selected board default for an explicit
 route. Treat the defaults as release baselines, not permanent optima.
 
+.. warning::
+
+   The ULX3S 85F nextpnr device default in ``v0.2.0`` is ``--um5g-85k``;
+   the intended ``LFE5U-85F-6`` requires ``--85k --speed 6`` (with package
+   ``CABGA381``). Timing results obtained with the incorrect default do not
+   establish timing closure for the intended FPGA. This will be corrected
+   in ``v0.2.1`` and later releases. See
+   `Hazard3-Doom issue #21 <https://github.com/ulx3s/Hazard3-Doom/issues/21>`_ and
+   `Hazard3 issue #10 <https://github.com/ulx3s/Hazard3/issues/10>`_.
+
 Current FPGA validation
 -----------------------
 
