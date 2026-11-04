@@ -84,10 +84,10 @@ prepare_ulx3s_video_profile()
 
     case "${HAZARD3_HDMI_EXTENDED_MODES}" in
     0)
-        VIDEO_PROFILE="standard"
+        VIDEO_PROFILE="vga640-standard"
         ;;
     1)
-        VIDEO_PROFILE="extended"
+        VIDEO_PROFILE="vga640-extended"
         ;;
     *)
         echo "HAZARD3_HDMI_EXTENDED_MODES must be 0 or 1" >&2
@@ -514,9 +514,9 @@ ulx3s-85f)
     MAKEFILE="ULX3S.mk"
     LPF="${HAZARD3_SYNTH}/fpga_ulx3s.lpf"
     IDCODE="0x41113043"
-    NEXTPNR_SEED="${NEXTPNR_SEED:-${ECP5_DEFAULT_NEXTPNR_SEED}}"
+    NEXTPNR_SEED="${NEXTPNR_SEED:-${ULX3S_85F_DEFAULT_NEXTPNR_SEED}}"
     PNR_DEVICE_ARGS=(--85k --speed 6 --package CABGA381)
-    HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
+    HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-0}"
     SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.video-profile"
     SYNTH_DURATION_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.synth-seconds"
     ;;

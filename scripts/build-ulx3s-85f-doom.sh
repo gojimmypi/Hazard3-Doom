@@ -100,7 +100,7 @@ BOOT_HEX_WORK="${HAZARD3_ROOT}/example_soc/soc/hazard3-boot-monitor.hex"
 BOOT_HEX_OUTPUT="${BOARD_BUILD_DIR}/hazard3-boot-monitor.hex"
 SDCARD_DIR="${BOARD_BUILD_DIR}/sdcard"
 DOOM_OUTPUT="${DOOM_BUILD_DIR}/hazard3-doom.h3img"
-HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-1}"
+HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-0}"
 
 
 require_file()
@@ -185,10 +185,10 @@ print_final_timing_summary()
 
 case "${HAZARD3_HDMI_EXTENDED_MODES}" in
 0)
-    VIDEO_PROFILE="standard"
+    VIDEO_PROFILE="vga640-standard"
     ;;
 1)
-    VIDEO_PROFILE="extended"
+    VIDEO_PROFILE="vga640-extended"
     ;;
 *)
     echo "HAZARD3_HDMI_EXTENDED_MODES must be 0 or 1" >&2
@@ -196,7 +196,7 @@ case "${HAZARD3_HDMI_EXTENDED_MODES}" in
     ;;
 esac
 
-printf 'ULX3S 85F build configuration: system clock=50 MHz, HDMI profile=%s, extended modes=%s\n' \
+printf 'ULX3S 85F build configuration: system clock=25 MHz, HDMI profile=%s, extended modes=%s\n' \
     "${VIDEO_PROFILE}" "${HAZARD3_HDMI_EXTENDED_MODES}"
 
 require_tool make
@@ -214,10 +214,10 @@ require_executable "${ROOT_DIR}/scripts/build.sh"
 require_executable "${ROOT_DIR}/scripts/make-boot-hex.py"
 require_executable "${ROOT_DIR}/doom/build-doom-image.sh"
 
-printf 'Building the shared 50 MHz monitor with the 64 MiB map...\n'
+printf 'Building the shared 25 MHz monitor with the 64 MiB map...\n'
 HAZARD3_BUILD_DIR="${MONITOR_BUILD_DIR}" \
 HAZARD3_MEMORY_PROFILE=64m \
-HAZARD3_SYS_CLK_HZ=50000000 \
+HAZARD3_SYS_CLK_HZ=25000000 \
     "${ROOT_DIR}/scripts/build.sh"
 
 require_file "${MONITOR_OUTPUT}"
@@ -262,7 +262,7 @@ printf '  Log:     %s\n' "${BUILD_LOG}"
 print_final_timing_summary "${PNR_LOG}"
 printf '  SD H3IMG:  %s\n' "${SDCARD_DIR}/DOOM.IMG"
 printf '  Boot HEX: %s\n' "${BOOT_HEX_OUTPUT}"
-printf '  Profile: 64m SDRAM, 50 MHz, HDMI %s\n\n' "${VIDEO_PROFILE}"
+printf '  Profile: 64m SDRAM, 25 MHz, HDMI %s\n\n' "${VIDEO_PROFILE}"
 printf 'To load the FPGA bitstream into SRAM (temporary; lost on power-cycle):\n\n'
 if (( IS_WSL == 1 )); then
     printf '  ./bin/fujprog-v48-win64.exe  ./build/fpga_ulx3s_85f.bit\n\n'

@@ -64,7 +64,7 @@ Usage: $0 SEED [SEED ...]
        $0 --all
 
 Route one or more nextpnr seeds for the ULX3S 12F Hazard3-Doom build.
-Seeds must be decimal values from 1 through 260.
+Seeds are positive 32-bit decimals; at most 512 seeds per run (--all uses 1-260).
 SWEEP_JOBS=N runs up to N routes concurrently (default: 4).
 HAZARD3_MEMORY_PROFILE=32m|64m selects the SDRAM profile (default: 32m).
 SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.

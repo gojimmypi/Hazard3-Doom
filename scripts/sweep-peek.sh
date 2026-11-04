@@ -41,11 +41,16 @@ NETLIST="${BUILD_DIR}/fpga_ulx3s_85f.json"
 SYNTH_LOG="${BUILD_DIR}/fpga_ulx3s_85f.synth.log"
 SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.video-profile"
 
+# Shared system-clock detection also used by the fully routed ULX3S 85F sweep.
+# shellcheck source=scripts/sweep-ecp5-common.sh
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/sweep-ecp5-common.sh"
+
 usage()
 {
     echo "Usage: $0 [seed]" >&2
     echo "  no seed  Sweep seeds 1 through 260" >&2
-    echo "  seed     Run placement-only check for one seed (1-260)" >&2
+    echo "  seed     Run placement-only check for one seed (1-2147483647)" >&2
     echo "  SWEEP_JOBS=N  Run up to N placement checks concurrently (default: 4)" >&2
     echo "  HAZARD3_HDMI_EXTENDED_MODES=0|1  Select standard or extended video profile (default: 1)" >&2
 }
@@ -90,12 +95,12 @@ SWEEP_DIR="${BUILD_DIR}/ulx3s-placement-sweep/${VIDEO_PROFILE}"
 if (( $# == 1 )); then
     seed_arg="$1"
 
-    if [[ ! "${seed_arg}" =~ ^[0-9]+$ ]] ||
-       (( seed_arg < 1 || seed_arg > 260 )); then
-        echo "Invalid seed: ${seed_arg}; expected 1-260." >&2
+    if ! sweep_ecp5_valid_seed "${seed_arg}"; then
+        echo "Invalid seed: ${seed_arg}; expected 1-2147483647." >&2
         usage
         exit 1
     fi
+    seed_arg="${REPLY}"
 
     seeds=("${seed_arg}")
     results_file="${SWEEP_DIR}/results-seed-${seed_arg}.csv"
@@ -219,7 +224,7 @@ run_seed()
     local seed="$1"
     local log="${SWEEP_DIR}/seed-${seed}.log"
     local result="${SWEEP_DIR}/result-seed-${seed}.csv"
-    local clk_sys clk_video clk_tmds
+    local clk_sys clk_video clk_tmds sys_clock
 
     echo "=== placement seed ${seed} ==="
 
@@ -238,12 +243,18 @@ run_seed()
         return 1
     fi
 
-    clk_sys="$(extract_clock "${log}" "clk_sys")"
+    # Detect whether nextpnr reports the former PLL clk_sys or direct clk_osc.
+    if ! sys_clock="$(sweep_ecp5_ulx3s_85f_system_clock "${log}")"; then
+        printf '%d,ERROR,ERROR,ERROR\n' "${seed}" > "${result}"
+        return 1
+    fi
+    clk_sys="$(extract_clock "${log}" "${sys_clock}")"
     clk_video="$(extract_clock "${log}" "clk_video_pix")"
     clk_tmds="$(extract_clock "${log}" "clk_tmds_x5")"
 
     printf "%d,%s,%s,%s\n" \
         "${seed}" "${clk_sys}" "${clk_video}" "${clk_tmds}" > "${result}"
+    printf 'Seed %s system clock reported as %s\n' "${seed}" "${sys_clock}"
     cat "${result}"
 }
 

@@ -405,6 +405,27 @@ check_seed_matrix()
     else
         pass 'generate-ecp5-seed-matrix.py: rejects reversed range'
     fi
+
+    if "${SCRIPT_DIR}/generate-ecp5-seed-matrix.py" \
+        --first 750 --last 1261 --per-job 2 > "${COMMAND_LOG}" 2>&1; then
+        pass 'generate-ecp5-seed-matrix.py: arbitrary start, 512 seeds'
+    else
+        fail 'generate-ecp5-seed-matrix.py: arbitrary start, 512 seeds'
+    fi
+
+    if "${SCRIPT_DIR}/generate-ecp5-seed-matrix.py" \
+        --first 750 --last 1262 --per-job 2 > "${COMMAND_LOG}" 2>&1; then
+        fail 'generate-ecp5-seed-matrix.py: rejects 513 seeds'
+    else
+        pass 'generate-ecp5-seed-matrix.py: rejects 513 seeds'
+    fi
+
+    if "${SCRIPT_DIR}/generate-ecp5-seed-matrix.py" \
+        --first 750 --last 1261 --per-job 1 > "${COMMAND_LOG}" 2>&1; then
+        fail 'generate-ecp5-seed-matrix.py: rejects >256 jobs'
+    else
+        pass 'generate-ecp5-seed-matrix.py: rejects >256 jobs'
+    fi
 }
 
 check_riscv_runtime_detection()
@@ -676,8 +697,9 @@ validate_integration_settings()
             return 1
         fi
         for seed in "${seeds[@]}"; do
-            if [[ ! "${seed}" =~ ^[1-9][0-9]*$ ]] || (( seed > 260 )); then
-                printf 'Invalid seed in %s: %s (expected 1 through 260).\n' \
+            if [[ ! "${seed}" =~ ^[1-9][0-9]*$ ]] ||
+               (( ${#seed} > 10 )) || (( seed > 2147483647 )); then
+                printf 'Invalid seed in %s: %s (expected 1 through 2147483647).\n' \
                     "${label}" "${seed}" >&2
                 return 1
             fi

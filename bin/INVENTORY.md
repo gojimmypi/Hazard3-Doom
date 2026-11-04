@@ -12,9 +12,9 @@ Project version: v0.2.1
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 36
+Files inventoried: 29
 
-Total bytes: 63775632
+Total bytes: 42197662
 
 ## Verification
 
@@ -27,18 +27,15 @@ should be identified before a public release.
 
 | Path | Bytes | SHA-256 | Component | Kind |
 |---|---:|---|---|---|
-| `README.md` | 9985 | `e7c6ff4d369ad2626b3e742cbb6a0cfb9b05952df4f03b1b59d3ec459e1e1cd8` | REVIEW | Markdown documentation |
+| `README.md` | 6675 | `8f206bb35b0c56fed6682a8f39ccd6af4de06a9d72279677173aec688f795bf2` | REVIEW | Markdown documentation |
 | `dfu-prefix.exe` | 178765 | `96f1d24e00d1772e2c2721e100d86da4f7489af82fef1481819705bd0636d42e` | REVIEW | Windows executable |
 | `dfu-suffix.exe` | 179276 | `22946fa4cea2fd1396d5716af43b40e89e0096245135ae8080a09309880e4f0c` | REVIEW | Windows executable |
 | `dfu-util-static.exe` | 799602 | `1f4687d0f11f0eede72d582fb5174537d5820de515862a8041ac9506b4a6fa1e` | REVIEW | Windows executable |
 | `dfu-util.exe` | 290852 | `e27acab246d0c806033110bfd4330709bc3f0dbebc6440baada667f94fa54839` | REVIEW | Windows executable |
 | `fpga_ulx3s_12f.bit` | 309906 | `da68d4c3049fb1ee2ded4a3da8ac81c9e5d7efc646b162075f0464b1dc094084` | Hazard3-Doom project output | FPGA bitstream |
+| `fpga_ulx3s_85f-25MHz-640x480.bit` | 881177 | `1b191ec18b5c12e9098ac6b3e3952e00f81971707c564cba2ae1eab49cf212f2` | Hazard3-Doom project output | FPGA bitstream |
 | `fpga_ulx3s_85f.bit` | 981156 | `9a7265336898e8aa52c627bb3ce84b46f65a56b420299d3f091237cb091bf125` | Hazard3-Doom project output | FPGA bitstream |
 | `fpga_ulx4m_ld.bit` | 993246 | `1e7be30f31f6aefc4c4c3aff67b6614b27221e627012404cd9863a7b531badb7` | Hazard3-Doom project output | FPGA bitstream |
-| `fpga_ulx5m_gs_bringup.bit` | 9868 | `dc28bb1ea52a979e285bd498cac8ec9cef7c413123c5be0c6ae98e02195e9be1` | Hazard3-Doom project output | FPGA bitstream |
-| `fpga_ulx5m_gs_flash_data.bit` | 58769 | `9523c0e752424faeb59551dda812ef8b3250f066f9a49a33de52f2731bbd7f69` | Hazard3-Doom project output | FPGA bitstream |
-| `fpga_ulx5m_gs_flash_jedec.bit` | 27396 | `27fe241b5bbe0879e59168297d3d97a6e1850355f8dd1cf116c737181c928556` | Hazard3-Doom project output | FPGA bitstream |
-| `fpga_ulx5m_gs_usb_probe.bit` | 398797 | `da1733563fbeb9db755b8cfb1b63591491cec85a98a6e4f80403ad78bd7c697e` | Hazard3-Doom project output | FPGA bitstream |
 | `fujprog-v48-win64.exe` | 212992 | `376be3f349c5cac35496f6cb8eaf75867e7f1ab3d8ecf7e5ddb43040eec272d5` | fujprog | Windows executable |
 | `gdb/README.md` | 217 | `2b83faba2c959cf9cc8180176279792e1185723f120bbfaeb54d9689eeb58f47` | xPack GNU RISC-V Embedded GCC/GDB runtime | Markdown documentation |
 | `gdb/libgcc_s_seh-1.dll` | 184227 | `61252331a388c1092649b561555f815e3a93175f8c33f819f6e09a1f0e3039c7` | xPack GNU RISC-V Embedded GCC/GDB runtime | Windows DLL |
@@ -55,11 +52,7 @@ should be identified before a public release.
 | `hazard3-doom-ulx4m-ld.h3img` | 591008 | `b750a50829717871f71363eabe368cfc0b515640f17de8d73a61ad8f971c1707` | Hazard3-Doom project output | Hazard3-Doom image |
 | `libftdi1.dll` | 272504 | `a78e1a41e18ae01b1a8e78dd16bfb6ed21a2b35809f18dec65a888ccede093ac` | libftdi | Windows DLL |
 | `libusb-1.0.dll` | 234930 | `e811df196a8e4e2ee18bcd224d7f6421736fafc78fe20419d76165692668926b` | libusb | Windows DLL |
-| `openFPGALoader-v1.1.1.exe` | 6967851 | `88f6755a08fea726204002c0c47e275c3f322092e633142e7fe5360c3de52519` | REVIEW | Windows executable |
-| `openFPGALoader-v1.2.0-ulx5m-rxfix.1.exe` | 7039645 | `04ce92d82d72ae1072e4495aff064a4b933b939d6cb2c0daa97d4ee0a0ffab85` | REVIEW | Windows executable |
-| `openFPGALoader-v1.2.0.exe` | 7039645 | `9be9dcdb6e00e6d473f1031a459658561c95630584b1a5739aa2b8788237adea` | REVIEW | Windows executable |
-| `openFPGALoader.exe` | 7039645 | `9be9dcdb6e00e6d473f1031a459658561c95630584b1a5739aa2b8788237adea` | openFPGALoader | Windows executable |
+| `openFPGALoader.exe` | 6967851 | `88f6755a08fea726204002c0c47e275c3f322092e633142e7fe5360c3de52519` | openFPGALoader | Windows executable |
 | `openocd.exe` | 4490254 | `10567f01d37c66a0975537960d66e61f7b4e2a17eb2c9637e2c2cbc569f70c79` | OpenOCD | Windows executable |
 | `putty.exe` | 1647912 | `fc6f9dbdf4b9f8dd1f5f3a74cb6e55119d3fe2c9db52436e10ba07842e6c3d7c` | PuTTY | Windows executable |
-| `usbview.exe` | 842072 | `0e3fc15abc73d204b9b72e4bc286b14992f7d8726075aa19126d48801423d818` | REVIEW | Windows executable |
 | `zadig-2.5.exe` | 5157432 | `78a1a26854fbc848284588a62c7fbec9c652f6a3218ba543783d369265df00d6` | Zadig/libwdi | Windows executable |

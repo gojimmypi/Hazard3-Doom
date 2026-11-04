@@ -451,7 +451,7 @@ printf 'Watching %s seeds %s-%s.\n' \
     "${SWEEP_TARGET}" "${SWEEP_SEED_FIRST}" "${SWEEP_SEED_LAST}"
 case "${SWEEP_TARGET}" in
 ulx3s-85f)
-    printf 'Timing targets: sys=50.00 MHz | video=50.00 MHz | tmds=250.00 MHz\n'
+    printf 'Timing targets: sys=25.00 MHz | video=25.00 MHz | tmds=125.00 MHz\n'
     ;;
 ulx3s-12f)
     printf 'Timing targets: sys=40.00 MHz | video=50.00 MHz | tmds=250.00 MHz\n'

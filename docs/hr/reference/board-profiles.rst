@@ -50,6 +50,16 @@ datoteke:
 ``NEXTPNR_SEED`` i dalje može nadjačati zadani seed odabrane pločice za izričiti
 route. Ove su vrijednosti release baseline, a ne trajni optimum.
 
+.. warning::
+
+   Zadani nextpnr FPGA tip za ULX3S 85F u izdanju ``v0.2.0`` jest
+   ``--um5g-85k``; za predviđeni ``LFE5U-85F-6`` potreban je
+   ``--85k --speed 6`` (kućište ``CABGA381``). Rezultati timinga dobiveni
+   pogrešnom postavkom ne potvrđuju zadovoljavanje vremenskih zahtjeva
+   za predviđeni FPGA. Postavka će biti ispravljena u ``v0.2.1`` i
+   kasnijim izdanjima. Vidi `Hazard3-Doom #21 <https://github.com/ulx3s/Hazard3-Doom/issues/21>`_ i
+   `Hazard3 #10 <https://github.com/ulx3s/Hazard3/issues/10>`_.
+
 Trenutačna FPGA provjera
 ------------------------
 
