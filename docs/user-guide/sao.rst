@@ -6,10 +6,11 @@ Hazard3-Doom exposes a Hackaday-style SAO connector through an APB-controlled I2
 Connector signals
 -----------------
 
-The Supercon SAO cannot be plugged directly into the ULX3S because the 3.3V and ground pins are perpendicular
-to the other pins on the ULX3S header.
+The Supercon SAO 2x3 pinout does not match the ULX3S J1 header layout. An adapter is required to connect the SAO signals correctly. Do not connect an SAO directly to J1.
 
-The documented ULX3S SAO signals are:
+The J1 I/O supply is configurable for 2.5V or 3.3V. Verify that the supply is configured for 3.3V before connecting an SAO that requires 3.3V power.
+
+The ULX3S SAO signals are on ``J1`` (the 40 pin connector next to the ``F1`` button):
 
 .. list-table::
    :header-rows: 1
@@ -20,41 +21,48 @@ The documented ULX3S SAO signals are:
      - J1 Row
      - Header Pin
    * - Power
-     - 3.3V
-     - 3.3V
-     - 1
+     - 2.5/3.3V
+     - 2.5/3.3V
+     - Power
      - 1
    * - Ground
      - GND
      - GND
-     - 2
+     - Ground
      - 3
+   * - SCL
+     - B10
+     - GN2
+     - 2
+     - 9
    * - SDA
      - A9
      - GP2
      - 2
      - 10
-   * - SCL
-     - B10
-     - GN2
-     - 2
+   * - GPIO2
+     - C10
+     - GN3
+     - 3
      - 11
    * - GPIO1
      - B9
      - GP3
      - 3
      - 12
-   * - GPIO2
-     - C10
-     - GN3
-     - 3
-     - 11
 
 .. figure:: ../images/ulx3s-pinout.png
    :alt: ULX3S pinout
 
    **ULX3S Pinout** - The SAO signals use J1 GPIO locations shown above. See
    :doc:`pinouts` for the general board-wiring reference.
+
+Reminder: For the standard right-angled female J1/J2 headers, odd-numbered GPIO pins correspond to ``GN`` (-) signals, and even-numbered GPIO pins correspond to ``GP`` (+) signals, as indicated by the PCB silkscreen. These markings identify signal polarity within the GP/GN naming convention; they do not imply that all GPIO pins support differential signaling. J1 GP/GN 0-7 are single-ended signals.
+
+Refer to the KiCad schematic for the ULX3S J1 pinout and the SAO connector pinout. The ULX3S J1 pin 1 indicator is shown below:
+
+.. figure:: ../images/ulx3s-j1-pin1.png
+   :alt: ULX3S J1 Pin 1 indicator.
 
 Hazard3 APB base
 ----------------
