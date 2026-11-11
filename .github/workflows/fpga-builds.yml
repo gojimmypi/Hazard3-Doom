@@ -3,6 +3,7 @@ name: Board integration builds
 on:
   schedule:
     - cron: "23 8 * * 1"
+  pull_request:
   workflow_dispatch:
 
 permissions:
