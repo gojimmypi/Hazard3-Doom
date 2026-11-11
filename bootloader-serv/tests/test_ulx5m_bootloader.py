@@ -237,7 +237,7 @@ class BootloaderOffline(unittest.TestCase):
                 with mock.patch.object(installer, 'FLASH_SIZE', 16), \
                      mock.patch.object(installer, 'FLASH_READ_CHUNK', 8), \
                      mock.patch.object(installer, 'jtag', side_effect=fake_jtag), \
-                     mock.patch.object(installer, 'winpath', return_value='fake'):
+                     mock.patch.object(installer, 'toolpath', return_value='fake'):
                     with self.assertRaises(ValueError) as caught:
                         installer.dump(path)
                 self.assertIn('possible one-bit receive shift', str(caught.exception))

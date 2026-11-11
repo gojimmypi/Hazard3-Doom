@@ -14,7 +14,7 @@ Git source: current index (`git ls-files --cached`)
 
 Files inventoried: 20
 
-Total bytes: 143928
+Total bytes: 143929
 
 ## Verification
 
@@ -40,7 +40,7 @@ should be identified before a public release.
 | `test-ulx5m-serv-at25ql321-protected.c` | 1062 | `929ce293f3db9e0e9a2cf9d68f2d11ef4dea15f955c3745570b5e12f432ba918` | REVIEW | File |
 | `test-ulx5m-serv-at25ql321.c` | 3562 | `b4019f4ac6d43b63c19980da2ed15c6259614602f161094b4bfec5627914408b` | REVIEW | File |
 | `test-ulx5m-serv-flash-program-protected.c` | 1606 | `69d6dc7de59ab1690798a977aebaea51e1d97237e0015e698301f346bd2d5163` | REVIEW | File |
-| `test_ulx5m_bootloader.py` | 29417 | `a67ac3d64c3f1eddeddf8560e19fd3dd6aa4d1dbe2b7cf7ad3bdcd166f1b0e70` | REVIEW | File |
+| `test_ulx5m_bootloader.py` | 29418 | `8c5c5a4a279d7e825ff1e2fdfdd19ed63fba5787b1745ac81df5e5cfa4f0bcd3` | REVIEW | File |
 | `ulx5m-at25ql321-mock.c` | 4185 | `30ada14a13d6f1306558a729c14bab54e39f7b7628abf6a118f92925937284ae` | REVIEW | File |
 | `ulx5m-at25ql321-mock.h` | 799 | `696efd553b06cd9f6188b7d0d37b86850d788e78657a9ffdde6cfa0205f50aeb` | REVIEW | File |
 | `ulx5m_acceptance.py` | 23981 | `adbee81221988cf41c9fba6ecebcee9602d78864a2802718965dd9194125449e` | REVIEW | File |
