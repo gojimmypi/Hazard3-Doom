@@ -82,7 +82,7 @@ Integration mode uses the full development requirements check.
 Integration defaults:
   SCRIPT_TEST_ULX3S_85F_SEEDS="11 178"
   SCRIPT_TEST_ULX3S_12F_SEEDS="82 37"
-  SCRIPT_TEST_ULX4M_LD_SEEDS="83 45"
+  SCRIPT_TEST_ULX4M_LD_SEEDS="42 173"
   SCRIPT_TEST_SWEEP_JOBS=1
   SCRIPT_TEST_REQUIRE_TIMING_PASS=0
 
@@ -714,7 +714,7 @@ run_integration_tests()
     read -r -a ulx3s_12f_seeds <<< \
         "${SCRIPT_TEST_ULX3S_12F_SEEDS:-${shared_seeds:-82 37}}"
     read -r -a ulx4m_ld_seeds <<< \
-        "${SCRIPT_TEST_ULX4M_LD_SEEDS:-${shared_seeds:-83 45}}"
+        "${SCRIPT_TEST_ULX4M_LD_SEEDS:-${shared_seeds:-42 173}}"
 
     printf '\nIntegration sample: parallel routes=%s\n' "${jobs}"
     printf '  ULX3S 85F seeds:  %s\n' "${ulx3s_85f_seeds[*]}"
@@ -872,7 +872,7 @@ main()
             SCRIPT_TEST_ULX3S_12F_SEEDS \
                 "${SCRIPT_TEST_ULX3S_12F_SEEDS:-${shared_seeds:-82 37}}" \
             SCRIPT_TEST_ULX4M_LD_SEEDS \
-                "${SCRIPT_TEST_ULX4M_LD_SEEDS:-${shared_seeds:-83 45}}"; then
+                "${SCRIPT_TEST_ULX4M_LD_SEEDS:-${shared_seeds:-42 173}}"; then
             run_integration_tests
         else
             fail 'integration settings'
