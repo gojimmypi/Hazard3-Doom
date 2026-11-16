@@ -13,7 +13,7 @@ Board Profiles
    * - ULX3S 85F
      - ``64m``
      - 16-bit SDR SDRAM; native ``ahb_sdram`` controller path
-     - 50 MHz
+     - 25 MHz default; 40/50 MHz experimental
      - 320x200 default; extended modes available
    * - ULX3S 12F
      - ``32m`` default; ``64m`` optional
@@ -57,10 +57,18 @@ configuration baselines, not timing guarantees.
    The ULX3S 85F nextpnr device default in ``v0.2.0`` is ``--um5g-85k``;
    the intended ``LFE5U-85F-6`` requires ``--85k --speed 6`` (with package
    ``CABGA381``). Timing results obtained with the incorrect default do not
-   establish timing closure for the intended FPGA. This will be corrected
-   in ``v0.2.1`` and later releases. See
+   establish timing closure for the intended FPGA. The current ECP5 helper
+   uses the correct ``--85k --speed 6`` default. See
    `Hazard3-Doom issue #21 <https://github.com/ulx3s/Hazard3-Doom/issues/21>`_ and
    `Hazard3 issue #10 <https://github.com/ulx3s/Hazard3/issues/10>`_.
+
+Current ECP5 profiles use ``--85k --speed 6 --package CABGA381`` for
+ULX3S 85F, ``--12k --speed 6 --package CABGA381`` for ULX3S 12F, and
+``--um-85k --speed 8 --package CABGA381`` for ULX4M-LD. Local builds
+and sweeps share ``ECP5_PNR_SPEED_GRADE`` / ``ECP5_PNR_PACKAGE`` overrides.
+HDMI output is fixed per board (640x480 for 85F; 1024x600 for 12F and
+ULX4M-LD); framebuffer modes are a separate setting. See
+:doc:`timing-sweeps` for choices and validation rules.
 
 Current FPGA validation
 -----------------------
@@ -80,8 +88,8 @@ portable timing guarantees.
      - Status
    * - ULX3S 85F
      - 11
-     - ``clk_sys`` 52.24 MHz
-     - PASS at 50 MHz
+     - Correct ``--85k --speed 6`` 25 MHz baseline
+     - Historical 50 MHz pass used an incorrect device model; not qualified
    * - ULX3S 12F
      - 82
      - ``clk_sys`` 42.70 MHz

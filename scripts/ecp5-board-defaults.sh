@@ -138,3 +138,33 @@ ecp5_board_defaults()
         ;;
     esac
 }
+
+# ECP5 nextpnr device options shared by local builds and seed sweeps.
+# The device family stays board-specific; override speed/package only for
+# experiments. Changing these options does not modify the installed FPGA.
+ecp5_pnr_device_profile()
+{
+    local board_id="$1"
+    local device_option default_speed
+    case "${board_id}" in
+    ulx3s-85f) device_option="--85k"; default_speed=6 ;;
+    ulx3s-12f) device_option="--12k"; default_speed=6 ;;
+    ulx4m-ld-85f) device_option="--um-85k"; default_speed=8 ;;
+    *) echo "Unsupported ECP5 device profile: ${board_id}" >&2; return 1 ;;
+    esac
+
+    ECP5_PNR_SPEED_GRADE="${ECP5_PNR_SPEED_GRADE:-${default_speed}}"
+    ECP5_PNR_PACKAGE="${ECP5_PNR_PACKAGE:-CABGA381}"
+    if [[ ! "${ECP5_PNR_SPEED_GRADE}" =~ ^[1-9][0-9]*$ ]]; then
+        echo "ECP5_PNR_SPEED_GRADE must be a positive integer." >&2
+        return 1
+    fi
+    if [[ ! "${ECP5_PNR_PACKAGE}" =~ ^[A-Za-z0-9]+$ ]]; then
+        echo "ECP5_PNR_PACKAGE must be an alphanumeric nextpnr package name." >&2
+        return 1
+    fi
+    # This array is populated for the build/sweep script that sources this file.
+    # ShellCheck cannot see the use across independently checked source files.
+    # shellcheck disable=SC2034
+    PNR_DEVICE_ARGS=("${device_option}" --speed "${ECP5_PNR_SPEED_GRADE}" --package "${ECP5_PNR_PACKAGE}")
+}

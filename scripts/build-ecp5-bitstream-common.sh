@@ -22,7 +22,11 @@
 #
 # Shared ECP5 synthesis/place-and-route flow for Hazard3-Doom board wrappers.
 # Board-specific behavior is selected by the first argument.
-
+#
+# ****************************** REMINDER *******************************************
+# When changing default here, also review .github/workflows/ulx4m-ld-seed-sweep.yml
+# ***********************************************************************************
+#
 set -euo pipefail
 
 # Verify this script against the recorded inventory without blocking normal execution.
@@ -622,6 +626,18 @@ validate_ulx3s_12f_system_timing()
 # Keep the normal build on the simpler qualified route unless a new sweep shows
 # a better setting for a changed netlist/toolchain.
 #
+# Manually maintained last-observed nextpnr routing durations (minutes).
+# These are estimates, not timeouts. Actual durations vary with seed, netlist,
+# speed grade, nextpnr version, and machine. Update after each measured run.
+# Set 0 until a completed route duration is known (no ETA will be printed).
+# ULX3S 85F: prior seed 11 took about 12 minutes.
+# ULX3S 12F: no verified completed-route duration yet.
+# ULX4M-LD 85F: prior seed 2 took about 8 minutes.
+# Each value can also be overridden in the environment without editing this file.
+ULX3S_85F_LAST_SEEN_ROUTE_MINUTES="${ULX3S_85F_LAST_SEEN_ROUTE_MINUTES:-12}"
+ULX3S_12F_LAST_SEEN_ROUTE_MINUTES="${ULX3S_12F_LAST_SEEN_ROUTE_MINUTES:-5}"
+ULX4M_LD_85F_LAST_SEEN_ROUTE_MINUTES="${ULX4M_LD_85F_LAST_SEEN_ROUTE_MINUTES:-8}"
+
 PNR_TUNING_ARGS=()
 ecp5_board_defaults "${BOARD_ID}"
 
@@ -633,7 +649,8 @@ ulx3s-85f)
     LPF="${HAZARD3_SYNTH}/fpga_ulx3s.lpf"
     IDCODE="0x41113043"
     NEXTPNR_SEED="${NEXTPNR_SEED:-${ULX3S_85F_DEFAULT_NEXTPNR_SEED}}"
-    PNR_DEVICE_ARGS=(--85k --speed 6 --package CABGA381)
+    LAST_SEEN_ROUTE_MINUTES="${ULX3S_85F_LAST_SEEN_ROUTE_MINUTES}"
+    ecp5_pnr_device_profile "ulx3s-85f"
     HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-0}"
     ecp5_ulx3s_85f_clock_profile
     SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.video-profile"
@@ -655,7 +672,8 @@ ulx3s-12f)
     LPF="${HAZARD3_SYNTH}/fpga_ulx3s.lpf"
     IDCODE="0x21111043"
     NEXTPNR_SEED="${NEXTPNR_SEED:-${ECP5_DEFAULT_NEXTPNR_SEED}}"
-    PNR_DEVICE_ARGS=(--12k --speed 6 --package CABGA381)
+    LAST_SEEN_ROUTE_MINUTES="${ULX3S_12F_LAST_SEEN_ROUTE_MINUTES}"
+    ecp5_pnr_device_profile "ulx3s-12f"
     HAZARD3_MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE:-32m}"
     SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_12f.memory-profile"
     SYNTH_DURATION_STAMP="${BUILD_DIR}/fpga_ulx3s_12f.synth-seconds"
@@ -668,6 +686,7 @@ ulx4m-ld-85f)
     LPF="${HAZARD3_SYNTH}/fpga_ulx4m_ld.lpf"
     IDCODE="0x01113043"
     NEXTPNR_SEED="${NEXTPNR_SEED:-${ECP5_DEFAULT_NEXTPNR_SEED}}"
+    LAST_SEEN_ROUTE_MINUTES="${ULX4M_LD_85F_LAST_SEEN_ROUTE_MINUTES}"
     NEXTPNR_HEAP_TIMINGWEIGHT="${NEXTPNR_HEAP_TIMINGWEIGHT:-${SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT:-${ECP5_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT}}}"
     if [[ ! "${NEXTPNR_HEAP_TIMINGWEIGHT}" =~ ^[1-9][0-9]*$ ]]; then
         echo "NEXTPNR_HEAP_TIMINGWEIGHT must be a positive integer." >&2
@@ -675,7 +694,7 @@ ulx4m-ld-85f)
     fi
     # See also --placer-heap-timingweight setting in scripts/sweep-ecp5-common.sh
     PNR_TUNING_ARGS=(--placer-heap-timingweight "${NEXTPNR_HEAP_TIMINGWEIGHT}")
-    PNR_DEVICE_ARGS=(--um-85k --speed 8 --package CABGA381)
+    ecp5_pnr_device_profile "ulx4m-ld-85f"
     LITEDRAM_DIR="${HAZARD3_ROOT}/example_soc/third_party/LiteDRAM"
     ULX4M_LITEDRAM_CPU="${ULX4M_LITEDRAM_CPU:-serv}"
     case "${ULX4M_LITEDRAM_CPU}" in
@@ -702,6 +721,13 @@ ulx4m-ld-85f)
     exit 2
     ;;
 esac
+
+# Validate before starting synthesis; only nonnegative whole minutes are valid.
+if [[ ! "${LAST_SEEN_ROUTE_MINUTES}" =~ ^(0|[1-9][0-9]*)$ ]]; then
+    printf 'ERROR: Last-seen route minutes for %s must be a nonnegative whole number.\n' \
+        "${BOARD_ID}" >&2
+    exit 1
+fi
 
 NETLIST="${BUILD_DIR}/${FPGA_NAME}.json"
 SYNTH_WORK_LOG="${HAZARD3_SYNTH}/synth.log"
@@ -846,6 +872,16 @@ cleanup_temporary_outputs
     route_start_seconds="$(date +%s)"
     route_start_time="$(date '+%Y-%m-%d %H:%M:%S %Z')"
     printf 'Seed %s route start: %s\n' "${NEXTPNR_SEED}" "${route_start_time}"
+    if [[ "${LAST_SEEN_ROUTE_MINUTES}" == 0 ]]; then
+        printf 'Seed %s route expected completion: unknown (no last-seen duration for %s)\n' \
+            "${NEXTPNR_SEED}" "${BOARD_ID}"
+    else
+        # GNU date converts epoch seconds back into the local date/time zone.
+        route_expected_seconds="$((route_start_seconds + LAST_SEEN_ROUTE_MINUTES * 60))"
+        route_expected_time="$(date -d "@${route_expected_seconds}" '+%Y-%m-%d %H:%M:%S %Z')"
+        printf 'Seed %s route expected completion: %s (last seen: %s min)\n' \
+            "${NEXTPNR_SEED}" "${route_expected_time}" "${LAST_SEEN_ROUTE_MINUTES}"
+    fi
 
     if nextpnr-ecp5 \
         --seed "${NEXTPNR_SEED}" \

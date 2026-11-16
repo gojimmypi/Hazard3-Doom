@@ -21,11 +21,10 @@ Potpuni omotači za pločice održavaju monitor, FPGA dizajn, Doom sliku i SDRAM
 memorijsku mapu međusobno usklađenima.
 
 ``scripts/build-ulx3s-85f-doom.sh``
-   Potpuni build za ULX3S 85F. Gradi monitor za 50 MHz/64 MiB, priprema
+   Potpuni build za ULX3S 85F. Zadano gradi monitor za 25 MHz/64 MiB, priprema
    rezidentnu FPGA boot sliku, gradi ili ponovno koristi 85F bitstream, gradi
-   Doom sliku i priprema datoteke za SD-card tijek rada. 85F omotač zadano
-   omogućuje proširene HDMI načine; postavite ``HAZARD3_HDMI_EXTENDED_MODES=0``
-   za lakši framebuffer profil samo s 320x200.
+   Doom sliku i priprema datoteke za SD-card tijek rada. 85F omotač zadano koristi ``HAZARD3_HDMI_EXTENDED_MODES=0``
+   (320x200 framebuffer). Postavite ``1`` samo za proširene interne načine.
 
 ``scripts/build-ulx3s-12f-doom.sh``
    Potpuni kompaktni build za ULX3S 12F. Zadano koristi memorijski profil od
@@ -122,6 +121,22 @@ Pomoćni alati za Doom i Supercon build
 ``scripts/cleanup-supercon-dev.py.bak``
    Zadržana sigurnosna kopija starijeg pomoćnog alata za čišćenje Supercon
    razvojnog okruženja. Nije dio normalnog podržanog tijeka rada.
+
+Podesive ECP5 postavke i video izvještaji
+-----------------------------------------
+
+``scripts/ecp5-board-defaults.sh`` sadrži nextpnr argumente za ULX3S 85F
+(``--85k --speed 6``), ULX3S 12F (``--12k --speed 6``) i ULX4M-LD
+(``--um-85k --speed 8``), sve u kućištu ``CABGA381``.
+``ECP5_PNR_SPEED_GRADE`` i ``ECP5_PNR_PACKAGE`` mijenjaju lokalne postavke.
+Polje ``PNR_DEVICE_ARGS`` koristi skripta koja uključuje ovaj helper;
+ne izvozi se kao procesna varijabla okruženja.
+
+``SWEEP_SYS_TARGET_MHZ``, ``SWEEP_VIDEO_TARGET_MHZ``,
+``SWEEP_TMDS_TARGET_MHZ``, ``SWEEP_LITEDRAM_TARGET_MHZ`` i
+``SWEEP_INIT_TARGET_MHZ`` mijenjaju samo **prikazane** MHz vrijednosti.
+``SWEEP_HDMI_OUTPUT_RESOLUTION`` provjerava postojeći 640x480 ili
+1024x600 izlaz pločice; ne stvara novi raster. Vidi :doc:`timing-sweeps`.
 
 Placement i routed sweepovi seedova
 -----------------------------------

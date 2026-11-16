@@ -4,7 +4,7 @@ ECP5 Timing and Seed Sweeps
 Hazard3-Doom uses repeated nextpnr-ecp5 place-and-route runs to characterize
 ECP5 timing, select useful seeds, compare place-and-route settings, and catch
 timing regressions after RTL or generated-core changes. The same sweep scripts
-are used locally and by the GitHub Actions ``ECP5 seed sweep`` workflow.
+are used locally and by the GitHub Actions ``FPGA seed sweep`` workflow.
 
 A sweep is more than a search for a lucky seed. It is also a reproducible
 experiment: synthesize one netlist, route that exact netlist many times, record
@@ -66,10 +66,10 @@ Current nominal timing requirements are:
      - TMDS x5
      - LiteDRAM init
    * - ULX3S 85F
-     - 50 MHz
+     - 25 MHz (40/50 experimental)
      - n/a
-     - 50 MHz
-     - 250 MHz
+     - 25 MHz
+     - 125 MHz
      - n/a
    * - ULX3S 12F
      - 40 MHz
@@ -79,7 +79,7 @@ Current nominal timing requirements are:
      - n/a
    * - ULX4M-LD 85F
      - Selected by workflow; 40 MHz default
-     - 60 MHz
+     - 60.01 MHz
      - 50 MHz
      - 250 MHz
      - 25 MHz
@@ -226,8 +226,8 @@ GitHub Actions sweep
 
 The repository workflow is currently
 ``.github/workflows/ulx4m-ld-seed-sweep.yml``. Its displayed name is
-``ECP5 seed sweep`` and its target selector supports ULX3S 85F, ULX3S 12F, and
-ULX4M-LD 85F.
+``FPGA seed sweep`` and its target selector supports ULX3S 85F, ULX3S 12F,
+ULX4M-LD 85F, and headless ULX5M-GS.
 
 The workflow is manually started with ``workflow_dispatch``. It deliberately
 separates synthesis from routing so every route job works from the same frozen
@@ -236,6 +236,101 @@ netlist.
 Workflow concurrency is grouped by target and Git ref with
 ``cancel-in-progress: false``. A second run for the same target/ref is therefore
 not used to cancel a sweep that is already collecting results.
+
+Configurable clock targets, ECP5 device and HDMI output
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The GitHub Actions choices and equivalent local environment variables are
+listed below. ``board-default`` is a visible dropdown choice, not a blank
+field. The workflow resolves it to a numeric value before invoking the script.
+
+.. list-table:: Board-specific defaults
+   :header-rows: 1
+   :widths: 21 12 15 16 16 20
+
+   * - Target
+     - nextpnr speed
+     - System MHz
+     - Video MHz
+     - TMDS MHz
+     - HDMI output raster
+   * - ``ulx3s-85f``
+     - 6
+     - 25 (40/50 experimental)
+     - 25.00
+     - 125.00
+     - ``640x480``
+   * - ``ulx3s-12f``
+     - 6
+     - 40
+     - 50.00
+     - 250.00
+     - ``1024x600``
+   * - ``ulx4m-ld-85f``
+     - 8
+     - 40
+     - 50.00
+     - 250.00
+     - ``1024x600``
+   * - ``ulx5m-gs``
+     - n/a (GateMate)
+     - 12 (20/25 selectable)
+     - n/a
+     - n/a
+     - headless
+
+All ECP5 entries use ``CABGA381``. The ULX4M-LD report also lists
+``SWEEP_LITEDRAM_TARGET_MHZ=60.01`` and ``SWEEP_INIT_TARGET_MHZ=25.00``.
+
+``ecp5_speed_grade`` offers ``board-default``, ``6``, ``7``, and ``8``;
+``ecp5_package`` currently offers only ``CABGA381``. The system target
+choices are ``board-default``, ``12.00``, ``20.00``, ``25.00``, ``40.00``,
+and ``50.00``. Video choices are ``board-default``, ``25.00``, ``50.00``;
+TMDS choices are ``board-default``, ``125.00``, ``250.00``. LiteDRAM
+and initialization target choices are ``60.01`` and ``25.00`` respectively.
+These choices are global to the workflow; not every combination is meaningful
+for every board.
+
+**Important:** ``SWEEP_SYS_TARGET_MHZ``, ``SWEEP_VIDEO_TARGET_MHZ``,
+``SWEEP_TMDS_TARGET_MHZ``, ``SWEEP_LITEDRAM_TARGET_MHZ``, and
+``SWEEP_INIT_TARGET_MHZ`` change **reported** targets and metadata only.
+They do not adjust PLLs, physical clocks, LPF/SDC timing constraints, or
+nextpnr PASS/FAIL. Set actual ULX3S 85F system-clock experiments using
+``HAZARD3_ULX3S_85F_SYS_CLK_MHZ=25|40|50`` and ULX4M-LD experiments
+using ``HAZARD3_ULX4M_SYS_CLK_MHZ=25|40|50``. Likewise, the nextpnr
+speed override models a different timing grade; it cannot change the
+physical FPGA speed grade or certify an unqualified build.
+
+The HDMI dropdown ``hdmi_output_resolution`` offers ``board-default``,
+``640x480``, and ``1024x600``. ``SWEEP_HDMI_OUTPUT_RESOLUTION`` provides
+the local equivalent. The current sweep implementations support 640x480
+only on ULX3S 85F, 1024x600 on ULX3S 12F and ULX4M-LD, and no HDMI on
+ULX5M-GS. An incompatible selection is rejected; the control does not
+synthesize a new raster or modify the framebuffer. The separate
+``ulx3s_85f_extended_modes`` (``HAZARD3_HDMI_EXTENDED_MODES``) controls
+optional **internal** framebuffer modes (default ``0``), not output timing.
+
+Example of a local 85F 50 MHz experiment on the real speed-6 model:
+
+.. code-block:: bash
+
+   HAZARD3_ULX3S_85F_SYS_CLK_MHZ=50 \
+   ECP5_PNR_SPEED_GRADE=6 \
+   ECP5_PNR_PACKAGE=CABGA381 \
+   SWEEP_HDMI_OUTPUT_RESOLUTION=640x480 \
+   SWEEP_JOBS=4 ./scripts/sweep-ulx3s-85f.sh 1-32
+
+Changing speed grade, package, PLL selection, video profile, nextpnr version,
+or other synthesis/routing inputs invalidates prior timing comparisons;
+record the selected board, constraints, netlist SHA256, and toolchain.
+
+.. warning:: GitHub Actions manual input limit
+
+   GitHub Actions currently permits at most 25 ``workflow_dispatch`` inputs.
+   The supplied combined workflow declares 32 inputs including HDMI and
+   therefore cannot expose these dropdowns through manual dispatch until at
+   least seven controls are consolidated. The local sweep scripts do not have
+   this GitHub Actions input-count limitation.
 
 Current workflow inputs
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -252,11 +347,11 @@ The workflow file remains authoritative if a default changes later.
      - Purpose and selection guidance
    * - ``target``
      - ``ulx3s-85f``
-     - Select ``ulx3s-85f``, ``ulx3s-12f``, or ``ulx4m-ld-85f``.
+     - Select ``ulx3s-85f``, ``ulx3s-12f``, ``ulx4m-ld-85f``, or ``ulx5m-gs``.
    * - ``seed_first`` / ``seed_last``
-     - 1 / 260
-     - Inclusive seed range. The current GitHub workflow validates the range as
-       1 through 260. Start with a smaller controlled range for experiments.
+     - 1 / 50
+     - Inclusive seed range: up to 512 consecutive positive seeds per run,
+       with a maximum of 256 route jobs in the GitHub matrix.
    * - ``max_parallel``
      - 20
      - Maximum number of GitHub route jobs running concurrently. Choices are
@@ -271,8 +366,8 @@ The workflow file remains authoritative if a default changes later.
      - Keep per-seed ``.bit`` files in artifacts. Leave disabled for broad
        exploratory sweeps unless the bitstreams are needed for hardware tests.
    * - ``ulx3s_85f_extended_modes``
-     - 1
-     - Enable the extended ULX3S 85F HDMI profile. Ignored by other targets.
+     - 0
+     - Enable optional internal framebuffer modes (not HDMI output resolution).
    * - ``ulx3s_12f_memory_profile``
      - ``32m``
      - Select the 12F SDRAM map. Ignored by other targets.
@@ -323,7 +418,7 @@ The workflow file remains authoritative if a default changes later.
 ``max_parallel`` and ``seeds_per_job`` solve different problems. For ``N`` seeds,
 the workflow creates approximately ``ceil(N / seeds_per_job)`` route jobs. At
 most ``max_parallel`` of those jobs run at once, while seeds within a job run
-serially. For the common 1-260 range with two seeds per job, that is 130 route
+serially. For the default 1-50 range with two seeds per job, that is 25 route
 jobs with at most 20 active concurrently.
 
 Why two seeds per GitHub job

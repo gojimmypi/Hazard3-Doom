@@ -13,7 +13,7 @@ Complete board builds
 The complete board wrappers are the safest way to build a matched FPGA,
 monitor, and Doom image for one target.
 
-ULX3S 85F, 64 MiB, 50 MHz:
+ULX3S 85F, 64 MiB, 25 MHz default (40/50 MHz experimental):
 
 .. code-block:: bash
 

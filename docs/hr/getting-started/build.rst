@@ -13,7 +13,7 @@ Potpune izgradnje za pločice
 Potpune omotne skripte za pločice najsigurniji su način za izgradnju međusobno
 usklađenih FPGA slike, monitora i Doom slike za jedan cilj.
 
-ULX3S 85F, 64 MiB, 50 MHz:
+ULX3S 85F, 64 MiB, 25 MHz zadano (40/50 MHz eksperimentalno):
 
 .. code-block:: bash
 

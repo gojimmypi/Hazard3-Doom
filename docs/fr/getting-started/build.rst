@@ -13,7 +13,7 @@ Builds complets des cartes
 Les wrappers de build complets des cartes sont la manière la plus sûre de
 construire un ensemble cohérent FPGA, moniteur et image Doom pour une cible.
 
-ULX3S 85F, 64 Mio, 50 MHz :
+ULX3S 85F, 64 Mio, 25 MHz par défaut (40/50 MHz expérimentaux) :
 
 .. code-block:: bash
 

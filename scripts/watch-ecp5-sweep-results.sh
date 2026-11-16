@@ -447,23 +447,31 @@ print_consolidated()
     printf '%s\n' '------------------------------------------------------------'
 }
 
+printf 'HDMI output resolution: %s\n' "${SWEEP_HDMI_OUTPUT_RESOLUTION:-unspecified}"
 printf 'Watching %s seeds %s-%s.\n' \
     "${SWEEP_TARGET}" "${SWEEP_SEED_FIRST}" "${SWEEP_SEED_LAST}"
 case "${SWEEP_TARGET}" in
 ulx3s-85f)
-    printf 'Timing targets: sys=25.00 MHz | video=25.00 MHz | tmds=125.00 MHz\n'
+    sys_target="${SWEEP_SYS_TARGET_MHZ:-${HAZARD3_ULX3S_85F_SYS_CLK_MHZ:-25}.00}"
+    video_target="${SWEEP_VIDEO_TARGET_MHZ:-25.00}"
+    tmds_target="${SWEEP_TMDS_TARGET_MHZ:-125.00}"
+    printf 'Timing targets (reported): sys=%s MHz | video=%s MHz | tmds=%s MHz\n' \
+        "${sys_target}" "${video_target}" "${tmds_target}"
     ;;
 ulx3s-12f)
-    printf 'Timing targets: sys=40.00 MHz | video=50.00 MHz | tmds=250.00 MHz\n'
+    printf 'Timing targets (reported): sys=%s MHz | video=%s MHz | tmds=%s MHz\n' \
+        "${SWEEP_SYS_TARGET_MHZ:-40.00}" "${SWEEP_VIDEO_TARGET_MHZ:-50.00}" "${SWEEP_TMDS_TARGET_MHZ:-250.00}"
     ;;
 ulx4m-ld-85f)
-    printf 'Timing targets: sys=%s.00 MHz | litedram_user=60.01 MHz | video=50.00 MHz | tmds=250.00 MHz | init=25.00 MHz\n' \
-        "${HAZARD3_ULX4M_SYS_CLK_MHZ:-40}"
+    printf 'Timing targets (reported): sys=%s MHz | litedram_user=%s MHz | video=%s MHz | tmds=%s MHz | init=%s MHz\n' \
+        "${SWEEP_SYS_TARGET_MHZ:-${HAZARD3_ULX4M_SYS_CLK_MHZ:-40}.00}" "${SWEEP_LITEDRAM_TARGET_MHZ:-60.01}" \
+        "${SWEEP_VIDEO_TARGET_MHZ:-50.00}" "${SWEEP_TMDS_TARGET_MHZ:-250.00}" "${SWEEP_INIT_TARGET_MHZ:-25.00}"
     ;;
 ulx5m-gs)
     printf 'Timing target: %s=%s MHz\n' "${clock_label}" "${clock_target_mhz:-25.00}"
     ;;
 esac
+
 printf 'Expected seed groups: %s (%s seed(s) per job).\n' \
     "${expected_groups}" "${SWEEP_SEEDS_PER_JOB}"
 printf 'Newly uploaded seed artifacts will be reported here while routing continues.\n'

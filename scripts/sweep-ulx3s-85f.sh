@@ -53,8 +53,17 @@ ecp5_ulx3s_85f_clock_profile
 source "${COMMON_SCRIPT}"
 echo "Include source: ${COMMON_SCRIPT}" >&2
 
+ecp5_pnr_device_profile "ulx3s-85f"
+sweep_ecp5_clock_targets
 sweep_ecp5_init_tuning
 TUNING_SUFFIX="$(sweep_ecp5_tuning_suffix)"
+# Isolate experimental device-grade sweeps from production profiles.
+DEVICE_SUFFIX=""
+if [[ "${ECP5_PNR_SPEED_GRADE}" != "6" || "${ECP5_PNR_PACKAGE}" != CABGA381 ]]; then
+    DEVICE_SUFFIX="-speed${ECP5_PNR_SPEED_GRADE}-${ECP5_PNR_PACKAGE}"
+fi
+TUNING_SUFFIX="${TUNING_SUFFIX}${DEVICE_SUFFIX}"
+
 # Keep different clock and video profiles from overwriting each other's runs.
 case "${HAZARD3_HDMI_EXTENDED_MODES}" in
 0) VIDEO_PROFILE="vga640-standard" ;;
@@ -73,7 +82,8 @@ Usage: $0 SEED [SEED ...]
        $0 --all
 
 Route one or more nextpnr seeds for the ULX3S 85F Hazard3-Doom build.
-Seeds are positive 32-bit decimals; at most 512 seeds per run (--all uses 1-260).
+Seeds are positive signed 32-bit decimals; ranges may exceed 512 seeds.
+--all uses 1-512 by default; SWEEP_ALL_SEED_LAST=N sets its last seed.
 SWEEP_JOBS=N runs up to N routes concurrently (default: 4).
 HAZARD3_HDMI_EXTENDED_MODES=0|1 selects standard/extended video.
 HAZARD3_ULX3S_85F_SYS_CLK_MHZ=25|40|50 selects the actual system PLL.
@@ -84,6 +94,12 @@ HAZARD3_ULX3S_85F_CACHE_TAG_PIPELINE=0|1 adds a registered tag-hit/way-select st
 HAZARD3_ULX3S_85F_TAG_RAM_MODE=0|1|2: original, registered tag, or registered tag+per-way RAM.
 HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE=0|1: capture cache AHB address before EBR lookup.
 The monitor preload must be built for the same clock before sweeping.
+ECP5_PNR_SPEED_GRADE=N overrides the nextpnr speed grade (board default 6 or 8).
+ECP5_PNR_PACKAGE=NAME overrides the nextpnr package (default CABGA381).
+SWEEP_SYS_TARGET_MHZ, SWEEP_VIDEO_TARGET_MHZ, SWEEP_TMDS_TARGET_MHZ
+  set reported MHz targets checked for timing PASS; they do not change the PLL.
+  The physical clock requirements remain minimums, even with lower overrides.
+SWEEP_LITEDRAM_TARGET_MHZ and SWEEP_INIT_TARGET_MHZ apply to ULX4M only.
 SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.
 SWEEP_ROUTE_TIMEOUT_SECONDS=N limits each nextpnr route (default: 600).
 EOF_USAGE
@@ -313,9 +329,11 @@ mkdir -p "${SWEEP_DIR}"
 {
     printf 'target=ulx3s-85f\n'
     printf 'device=85k\n'
-    printf 'speed=6\n'
-    printf 'package=CABGA381\n'
+    printf 'speed=%s\n' "${ECP5_PNR_SPEED_GRADE}"
+    printf 'package=%s\n' "${ECP5_PNR_PACKAGE}"
     printf 'full_route=1\n'
+    printf 'target_overrides_are_reporting_only=0\n'
+    printf 'target_overrides_change_physical_clocks=0\n'
     printf 'result_columns=seed,clk_sys_mhz,clk_video_mhz,clk_tmds_mhz,route_seconds,timing_status\n'
     printf 'video_profile=%s\n' "${VIDEO_PROFILE}"
     printf 'system_clock_mhz=%s\n' "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}"
@@ -326,9 +344,9 @@ mkdir -p "${SWEEP_DIR}"
     printf 'tag_ram_mode=%s\n' "${HAZARD3_ULX3S_85F_TAG_RAM_MODE}"
     printf 'cache_addr_pipeline=%s\n' "${HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE}"
     sweep_ecp5_write_tuning_metadata
-    printf 'clk_sys_required_mhz=%s.00\n' "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}"
-    printf 'clk_video_required_mhz=25.00\n'
-    printf 'clk_tmds_required_mhz=125.00\n'
+    printf 'clk_sys_required_mhz=%s\n' "${SWEEP_SYS_TARGET_MHZ}"
+    printf 'clk_video_required_mhz=%s\n' "${SWEEP_VIDEO_TARGET_MHZ}"
+    printf 'clk_tmds_required_mhz=%s\n' "${SWEEP_TMDS_TARGET_MHZ}"
     printf 'synthesis_seconds=%s\n' "${synthesis_seconds}"
     printf 'netlist_sha256=%s\n' "${netlist_sha256}"
     printf 'netlist=fpga_ulx3s_85f.json\n'
@@ -373,8 +391,7 @@ run_seed()
     if sweep_ecp5_run_nextpnr \
         --seed "${seed}" \
         "${SWEEP_NEXTPNR_ARGS[@]}" \
-        --85k --speed 6 \
-        --package CABGA381 \
+        "${PNR_DEVICE_ARGS[@]}" \
         --lpf "${LPF}" \
         --json "${NETLIST}" \
         --textcfg "${config}" \
@@ -416,7 +433,7 @@ run_seed()
     esac
 
     # At 25 MHz clk_sys is an oscillator alias; at 40/50 MHz it is PLL-derived.
-    # Detect the reported clock and check nextpnr's actual timing verdict.
+    # Detect the reported clock before checking its measured frequency.
     if ! sys_clock="$(sweep_ecp5_ulx3s_85f_system_clock "${pnr_log}")"; then
         printf '%d,ERROR,ERROR,ERROR,%s,ERROR\n' "${seed}" "${route_seconds}" > "${result}"
         [[ -f "${pnr_log}" ]] && mv "${pnr_log}" "${failed_log}"
@@ -430,10 +447,20 @@ run_seed()
     clk_video_status="$(sweep_ecp5_extract_clock_status "${pnr_log}" "clk_video_pix")"
     clk_tmds_status="$(sweep_ecp5_extract_clock_status "${pnr_log}" "clk_tmds_x5")"
 
+    # nextpnr can report PASS against a constraint lower than the requested
+    # clock (for example 32.05 MHz reported as PASS for a 50 MHz build).
+    # Enforce both the physical clock profile and the reporting targets.
+    # Neither a stale nextpnr constraint nor a lower target override may PASS.
     timing_status="FAIL"
     if [[ "${clk_sys_status}" == "PASS" &&
           "${clk_video_status}" == "PASS" &&
-          "${clk_tmds_status}" == "PASS" ]]; then
+          "${clk_tmds_status}" == "PASS" ]] &&
+       sweep_ecp5_clock_meets_target "${clk_sys}" "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" &&
+       sweep_ecp5_clock_meets_target "${clk_video}" "25.00" &&
+       sweep_ecp5_clock_meets_target "${clk_tmds}" "125.00" &&
+       sweep_ecp5_clock_meets_target "${clk_sys}" "${SWEEP_SYS_TARGET_MHZ}" &&
+       sweep_ecp5_clock_meets_target "${clk_video}" "${SWEEP_VIDEO_TARGET_MHZ}" &&
+       sweep_ecp5_clock_meets_target "${clk_tmds}" "${SWEEP_TMDS_TARGET_MHZ}"; then
         timing_status="PASS"
     fi
 
@@ -518,5 +545,10 @@ fi
 printf 'Timed-out seeds: %s\n' "${timeout_count}"
 printf 'TIMEOUT seed values: %s\n' "${timeout_seeds:-none}"
 printf 'Results: %s\n' "${results_file}"
+
+if (( pass_count == 0 )); then
+    printf 'ERROR: No timing-passing seeds; sweep failed. Results retained in %s\n' "${results_file}" >&2
+    status=1
+fi
 
 exit "${status}"

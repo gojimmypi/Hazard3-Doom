@@ -40,11 +40,11 @@ The complete board wrappers keep the monitor, FPGA design, Doom image, and SDRAM
 memory map aligned.
 
 ``scripts/build-ulx3s-85f-doom.sh``
-   Complete ULX3S 85F build. It builds the 50 MHz/64 MiB monitor, prepares the
+   Complete ULX3S 85F build. It builds the 25 MHz/64 MiB monitor by default, prepares the
    FPGA resident boot image, builds or reuses the 85F bitstream, builds the Doom
    image, and stages files used by the SD-card workflow. The 85F wrapper defaults
-   to extended HDMI modes enabled; set ``HAZARD3_HDMI_EXTENDED_MODES=0`` for the
-   lean 320x200-only framebuffer profile.
+   to ``HAZARD3_HDMI_EXTENDED_MODES=0`` (320x200 framebuffer); set it to
+   ``1`` only to evaluate optional extended framebuffer modes.
 
 ``scripts/build-ulx3s-12f-doom.sh``
    Complete ULX3S 12F compact build. The default is the 32 MiB memory profile at
@@ -149,6 +149,24 @@ Doom and Supercon build helpers
    Retained backup of an older Supercon development cleanup helper. It is not
    part of the normal supported workflow.
 
+Configurable ECP5 routing and video reports
+-------------------------------------------
+
+``scripts/ecp5-board-defaults.sh`` defines the nextpnr device arrays for
+ULX3S 85F (``--85k --speed 6``), ULX3S 12F (``--12k --speed 6``), and
+ULX4M-LD (``--um-85k --speed 8``), all in package ``CABGA381``.
+``ECP5_PNR_SPEED_GRADE`` and ``ECP5_PNR_PACKAGE`` override these settings
+for local builds and seed sweeps. The generated ``PNR_DEVICE_ARGS`` array is
+consumed by the sourcing build or sweep script; it is not an exported process
+environment variable.
+
+``SWEEP_SYS_TARGET_MHZ``, ``SWEEP_VIDEO_TARGET_MHZ``,
+``SWEEP_TMDS_TARGET_MHZ``, ``SWEEP_LITEDRAM_TARGET_MHZ``, and
+``SWEEP_INIT_TARGET_MHZ`` affect only **reported** MHz targets.
+``SWEEP_HDMI_OUTPUT_RESOLUTION`` validates the existing 640x480 or 1024x600
+board output; it cannot generate a different raster. See
+:doc:`timing-sweeps` for exact defaults, dropdown choices, and examples.
+
 Placement and routed seed sweeps
 --------------------------------
 
@@ -168,7 +186,8 @@ strategy, see :doc:`timing-sweeps`.
 ``scripts/sweep.sh``
    ULX3S 85F full place-and-route sweep. Accepts explicit seeds, comma-separated
    seeds, or ``--all``. ``SWEEP_JOBS`` controls concurrent routing jobs. Routed
-   logs and bitstreams are retained under ``build/ulx3s-seed-sweep/``.
+   logs and bitstreams are retained in clock/profile-specific directories under
+   ``build/``.
 
 ``scripts/sweep-peek-ulx3s-12f.sh``
    ULX3S 12F placement-only sweep. Accepts explicit seeds or ``--all``. Defaults

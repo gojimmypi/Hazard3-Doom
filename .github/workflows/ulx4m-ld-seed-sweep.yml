@@ -1,11 +1,38 @@
 name: FPGA seed sweep
-run-name: FPGA seed sweep - ${{ inputs.target }} - seeds ${{ inputs.seed_first }}-${{ inputs.seed_last }}
+# The run title shows the configured hardware system clock, not the optional
+# timing PASS threshold (sweep_sys_target_mhz). Changing that threshold must
+# not make a 50 MHz build appear to be a different clock configuration.
+# GitHub run-name can use inputs but cannot use the resolved workflow env.
+# The conditions below select the clock for each board:
+#   ULX3S-85F: selected clock, or 50 if the experimental checkbox is enabled.
+#   ULX3S-12F: fixed 40 MHz.
+#   ULX4M-LD: selected ULX4M system clock.
+#   ULX5M-GS: selected ULX5M system clock (last fallback).
+# The optional breadcrumb adds " - label" only when nonempty.
+run-name: >-
+  FPGA seed sweep${{ inputs.breadcrumb && format(' - {0}', inputs.breadcrumb) || '' }} - ${{ inputs.target }} -
+  ${{ inputs.target == 'ulx3s-85f' && (inputs.ulx3s_85f_50mhz_best_config && '50' || inputs.ulx3s_85f_sys_clk_mhz) ||
+      inputs.target == 'ulx3s-12f' && '40' ||
+      inputs.target == 'ulx4m-ld-85f' && inputs.ulx4m_sys_clk_mhz ||
+      inputs.ulx5m_sys_clk_mhz }} MHz -
+  seeds ${{ inputs.seed_first }}-${{ inputs.seed_last }}
 # TODO:        rename this file as it is no longer ECP5 specific
 #
-
+# ******************************************* REMINDER *******************************************
+#
+# When changing defaults here, also review the defaults in scripts/build-ecp5-bitstream-common.sh
+#
+# You may only define up to 25 `inputs` for a `workflow_dispatch` event
+#
+# ************************************************************************************************
 on:
   workflow_dispatch:
     inputs:
+      breadcrumb:
+        description: Optional run title label (recommended maximum 30 characters)
+        required: false
+        default: ""
+        type: string
       target:
         description: FPGA target to sweep
         required: true
@@ -35,11 +62,21 @@ on:
           - "4"
           - "8"
           - "12"
-          - "20"
+          - "20"  # GitHub plan Concurrent jobs
+                  # Free 20
+                  # Pro 40
+                  # Team 60
+                  # Enterprise 500
       seeds_per_job:
         description: Seeds routed serially by each GitHub route job
         required: true
-        default: "2" # keep in mind some seed values may be long running and hit timeout
+        default: "2" # Keep in mind some seed values may be long running and hit timeout.
+                     # 360 minutes (6 hours) maximum for a single job, so 2 seeds per job is a good default.
+                     # Typical ULX3S job is 10 minutes, but some seeds can take 30 minutes or more to route.
+                     #
+                     # There's a GitHub maximum of 6 hours per job.
+                     # Entire workflow can take up to 35 days; includes execution, waiting, and approval time.
+                     # It does not let a single hosted job run continuously for 35 days
         type: choice
         options:
           - "1"
@@ -47,16 +84,35 @@ on:
           - "3"
           - "4"
           - "5"
+          - "9"
       retain_bitstreams:
         description: Retain per-seed bitstreams in CI artifacts when produced
         required: true
         default: false
         type: boolean
+      ulx3s_85f_sys_clk_mhz:
+        description: ULX3S 85F system clock (25/40/50 MHz; select actual FPGA speed grade)
+        required: true
+        default: "25"
+        type: choice
+        options:
+          - "25"
+          - "40"
+          - "50"
       ulx3s_85f_50mhz_best_config:
-        description: ULX3S 85F 50 MHz, registered hits and dual-port SRAM (ignored for other targets)
+        description: Experimental cache/SRAM configuration (requires experimental Hazard3 branch)
         required: true
         default: false
         type: boolean
+      hdmi_output_resolution:
+        description: HDMI output raster (board-default; only implemented board modes are accepted)
+        required: true
+        default: board-default
+        type: choice
+        options:
+          - board-default
+          - 640x480
+          - 1024x600
       ulx3s_85f_extended_modes:
         description: ULX3S 85F extended HDMI modes (ignored for other targets)
         required: true
@@ -120,6 +176,60 @@ on:
           - "0.6"
           - "0.7"
           - "0.8"
+      ecp5_speed_grade:
+        description: ECP5 nextpnr speed grade (board default is 6 for ULX3S, 8 for ULX4M)
+        required: true
+        default: board-default
+        type: choice
+        options:
+          - board-default
+          - "6"
+          - "7"
+          - "8"
+      sweep_sys_target_mhz:
+        description: ECP5 system timing PASS threshold (MHz; board-default follows chosen clock)
+        required: true
+        default: board-default
+        type: choice
+        options:
+          - board-default
+          - "12.00"
+          - "20.00"
+          - "25.00"
+          - "40.00"
+          - "50.00"
+      sweep_video_target_mhz:
+        description: ECP5 video timing PASS threshold (MHz; default 25 for 85F, 50 for 12F/ULX4M)
+        required: true
+        default: board-default
+        type: choice
+        options:
+          - board-default
+          - "25.00"
+          - "50.00"
+      sweep_tmds_target_mhz:
+        description: ECP5 HDMI TMDS timing PASS threshold (MHz; default 125 for 85F, 250 for 12F/ULX4M)
+        required: true
+        default: board-default
+        type: choice
+        options:
+          - board-default
+          - "125.00"
+          - "250.00"
+      sweep_litedram_target_mhz:
+        description: ULX4M LiteDRAM user-clock minimum Fmax for timing PASS (MHz)
+        required: true
+        default: "60.01"
+        type: choice
+        options:
+          - "60.01"
+      sweep_init_target_mhz:
+        description: ULX4M initialization-clock minimum Fmax for timing PASS (MHz)
+        required: true
+        default: "25.00"
+        type: choice
+        options:
+          - "25.00"
       placer:
         description: ECP5 nextpnr placer (ULX5M uses heap)
         required: true
@@ -128,55 +238,8 @@ on:
         options:
           - heap
           - sa
-      router:
-        description: ECP5 nextpnr router (ULX5M uses router2)
-        required: true
-        default: router1
-        type: choice
-        options:
-          - router1
-          - router2
-      heap_timingweight:
-        description: ECP5 HeAP timing weight (ignored for ULX4M-LD and ULX5M)
-        required: true
-        default: "10"
-        type: choice
-        options:
-          - "10"
-          - "20"
-          - "30"
-          - "40"
-      heap_critexp:
-        description: ECP5 HeAP criticality exponent (ignored for ULX5M)
-        required: true
-        default: "2"
-        type: choice
-        options:
-          - "2"
-          - "3"
-          - "4"
-      tmg_ripup:
-        description: Enable ECP5 timing-driven router rip-up (ignored for ULX5M)
-        required: true
-        default: false
-        type: boolean
-      router2_alt_weights:
-        description: Enable ECP5 Router2 alternate weights (ignored for ULX5M)
-        required: true
-        default: false
-        type: boolean
-      nextpnr_extra_args:
-        description: Optional whitespace-separated extra nextpnr arguments
-        required: false
-        default: ""
-        type: string
-      synth_oss_cad_suite_version:
-        description: OSS CAD Suite snapshot used for synthesis
-        required: true
-        default: "2026-07-20"
-        type: string
-      route_oss_cad_suite_version:
-        description: OSS CAD Suite snapshot used for routing
+      oss_cad_suite_version:
+        description: OSS CAD Suite snapshot used for synthesis and routing
         required: true
         default: "2026-07-20"
         type: string
@@ -197,12 +260,17 @@ env:
   SWEEP_MAX_PARALLEL: ${{ inputs.max_parallel }}
   SWEEP_SEEDS_PER_JOB: ${{ inputs.seeds_per_job }}
   RETAIN_BITSTREAMS: ${{ inputs.retain_bitstreams }}
-  OSS_CAD_SUITE_VERSION: ${{ inputs.synth_oss_cad_suite_version }}
-  ROUTE_OSS_CAD_SUITE_VERSION: ${{ inputs.route_oss_cad_suite_version }}
+  #
+  # There was a time where different versions were used. Not recommended:
+  OSS_CAD_SUITE_VERSION: ${{ inputs.oss_cad_suite_version }}
+  ROUTE_OSS_CAD_SUITE_VERSION: ${{ inputs.oss_cad_suite_version }}
+  #
   HAZARD3_HDMI_EXTENDED_MODES: ${{ inputs.ulx3s_85f_extended_modes }}
-  # Keep the qualified 25 MHz profile as default. The opt-in 50 MHz profile
-  # reproduces the 39.32 MHz candidate, not a timing-qualified build.
-  HAZARD3_ULX3S_85F_SYS_CLK_MHZ: ${{ inputs.ulx3s_85f_50mhz_best_config && '50' || '25' }}
+  # This describes an existing board output mode; it cannot change HDMI PLL/RTL.
+  SWEEP_HDMI_OUTPUT_RESOLUTION: ${{ inputs.hdmi_output_resolution == 'board-default' && (inputs.target == 'ulx3s-85f' && '640x480' || inputs.target == 'ulx5m-gs' && 'headless' || '1024x600') || inputs.hdmi_output_resolution }}
+  # The 25 MHz path remains the default; 40/50 MHz use a system PLL.
+  # Routing grade must match the FPGA actually installed on the board.
+  HAZARD3_ULX3S_85F_SYS_CLK_MHZ: ${{ inputs.ulx3s_85f_50mhz_best_config && '50' || inputs.ulx3s_85f_sys_clk_mhz }}
   HAZARD3_ULX3S_85F_REGISTERED_READ_HITS: ${{ inputs.ulx3s_85f_50mhz_best_config && '1' || '0' }}
   HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER: "1"
   HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW: ${{ inputs.ulx3s_85f_50mhz_best_config && '1' || '0' }}
@@ -214,13 +282,23 @@ env:
   ULX4M_LITEDRAM_CPU: ${{ inputs.ulx4m_litedram_cpu }}
   ULX5M_SYS_CLK_MHZ: ${{ inputs.ulx5m_sys_clk_mhz }}
   SWEEP_ULX5M_HEAP_BETA: ${{ inputs.ulx5m_heap_beta }}
+  # These are minimum achieved Fmax values for timing qualification.
+  # They do not change the actual PLL frequencies or nextpnr constraints.
+  # Keep board-default unless intentionally testing a stricter timing goal.
+  ECP5_PNR_SPEED_GRADE: ${{ inputs.ecp5_speed_grade == 'board-default' && (inputs.target == 'ulx4m-ld-85f' && '8' || '6') || inputs.ecp5_speed_grade }}
+  ECP5_PNR_PACKAGE: "CABGA381"
+  SWEEP_SYS_TARGET_MHZ: ${{ inputs.sweep_sys_target_mhz == 'board-default' && (inputs.target == 'ulx3s-85f' && (inputs.ulx3s_85f_50mhz_best_config && '50.00' || format('{0}.00', inputs.ulx3s_85f_sys_clk_mhz)) || inputs.target == 'ulx3s-12f' && '40.00' || inputs.target == 'ulx4m-ld-85f' && format('{0}.00', inputs.ulx4m_sys_clk_mhz) || format('{0}.00', inputs.ulx5m_sys_clk_mhz)) || inputs.sweep_sys_target_mhz }}
+  SWEEP_VIDEO_TARGET_MHZ: ${{ inputs.sweep_video_target_mhz == 'board-default' && (inputs.target == 'ulx3s-85f' && '25.00' || '50.00') || inputs.sweep_video_target_mhz }}
+  SWEEP_TMDS_TARGET_MHZ: ${{ inputs.sweep_tmds_target_mhz == 'board-default' && (inputs.target == 'ulx3s-85f' && '125.00' || '250.00') || inputs.sweep_tmds_target_mhz }}
+  SWEEP_LITEDRAM_TARGET_MHZ: ${{ inputs.sweep_litedram_target_mhz }}
+  SWEEP_INIT_TARGET_MHZ: ${{ inputs.sweep_init_target_mhz }}
   SWEEP_NEXTPNR_PLACER: ${{ inputs.target == 'ulx5m-gs' && 'heap' || inputs.placer }}
-  SWEEP_NEXTPNR_ROUTER: ${{ inputs.target == 'ulx5m-gs' && 'router2' || inputs.router }}
-  SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT: ${{ inputs.target == 'ulx4m-ld-85f' && inputs.ulx4m_heap_timingweight || inputs.heap_timingweight }}
-  SWEEP_NEXTPNR_HEAP_CRITEXP: ${{ inputs.heap_critexp }}
-  SWEEP_NEXTPNR_TMG_RIPUP: ${{ inputs.tmg_ripup }}
-  SWEEP_NEXTPNR_ROUTER2_ALT_WEIGHTS: ${{ inputs.router2_alt_weights }}
-  SWEEP_NEXTPNR_EXTRA_ARGS: ${{ inputs.nextpnr_extra_args }}
+  SWEEP_NEXTPNR_ROUTER: ${{ inputs.target == 'ulx5m-gs' && 'router2' || 'router1' }}
+  SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT: ${{ inputs.target == 'ulx4m-ld-85f' && inputs.ulx4m_heap_timingweight || '10' }}
+  SWEEP_NEXTPNR_HEAP_CRITEXP: "2"
+  SWEEP_NEXTPNR_TMG_RIPUP: "false"
+  SWEEP_NEXTPNR_ROUTER2_ALT_WEIGHTS: "false"
+  SWEEP_NEXTPNR_EXTRA_ARGS: ""
   # GateMate router2 can occasionally stall on one remaining overused wire.
   # Give ULX5M nine minutes to route and ten minutes total per seed so a
   # pathological route cannot monopolize a runner. Preserve the established
@@ -243,6 +321,93 @@ jobs:
       TOOLCHAIN_PREFIX: ${{ github.workspace }}/bin/riscv-gcc/bin/riscv-none-elf-
 
     steps:
+      # Print inputs before checkout or toolchain installation so even an early
+      # failure leaves a visible configuration record in the logs and summary.
+      - name: Show parameters
+        shell: bash
+        env:
+          DISPATCH_INPUTS_JSON: ${{ toJSON(inputs) }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+
+          inputs = json.loads(os.environ["DISPATCH_INPUTS_JSON"])
+          target = os.environ["SWEEP_TARGET"]
+          actual_mhz = {
+              "ulx3s-85f": os.environ["HAZARD3_ULX3S_85F_SYS_CLK_MHZ"],
+              "ulx3s-12f": "40",
+              "ulx4m-ld-85f": os.environ["HAZARD3_ULX4M_SYS_CLK_MHZ"],
+              "ulx5m-gs": os.environ["ULX5M_SYS_CLK_MHZ"],
+          }[target]
+
+          resolved = [
+              ("FPGA target", target),
+              ("Seed range", f'{os.environ["SWEEP_SEED_FIRST"]}-{os.environ["SWEEP_SEED_LAST"]}'),
+              ("Configured system clock (MHz)", actual_mhz),
+              ("HDMI output", os.environ["SWEEP_HDMI_OUTPUT_RESOLUTION"]),
+              ("Maximum parallel jobs", os.environ["SWEEP_MAX_PARALLEL"]),
+              ("Seeds per job", os.environ["SWEEP_SEEDS_PER_JOB"]),
+              ("Retain bitstreams", os.environ["RETAIN_BITSTREAMS"]),
+              ("OSS CAD Suite (synthesis and routing)", os.environ["OSS_CAD_SUITE_VERSION"]),
+              ("nextpnr placer", os.environ["SWEEP_NEXTPNR_PLACER"]),
+              ("nextpnr router", os.environ["SWEEP_NEXTPNR_ROUTER"]),
+              ("HeAP timing weight", os.environ["SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT"]),
+              ("HeAP criticality exponent", os.environ["SWEEP_NEXTPNR_HEAP_CRITEXP"]),
+              ("Timing-driven rip-up", os.environ["SWEEP_NEXTPNR_TMG_RIPUP"]),
+              ("Router2 alternate weights", os.environ["SWEEP_NEXTPNR_ROUTER2_ALT_WEIGHTS"]),
+              ("Additional nextpnr arguments", os.environ["SWEEP_NEXTPNR_EXTRA_ARGS"]),
+              ("Route timeout (seconds)", os.environ["SWEEP_ROUTE_TIMEOUT_SECONDS"]),
+              ("Seed timeout (seconds)", os.environ["SWEEP_SEED_TIMEOUT_SECONDS"]),
+          ]
+          if target != "ulx5m-gs":
+              resolved += [
+                  ("Minimum system Fmax for PASS (MHz)", os.environ["SWEEP_SYS_TARGET_MHZ"]),
+                  ("Minimum video Fmax for PASS (MHz)", os.environ["SWEEP_VIDEO_TARGET_MHZ"]),
+                  ("Minimum HDMI TMDS Fmax for PASS (MHz)", os.environ["SWEEP_TMDS_TARGET_MHZ"]),
+                  ("ECP5 speed grade", os.environ["ECP5_PNR_SPEED_GRADE"]),
+                  ("ECP5 package", os.environ["ECP5_PNR_PACKAGE"]),
+              ]
+          if target == "ulx3s-85f":
+              resolved += [
+                  ("Registered cache read hits", os.environ["HAZARD3_ULX3S_85F_REGISTERED_READ_HITS"]),
+                  ("SRAM write buffer", os.environ["HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER"]),
+                  ("SRAM dual-port read/write", os.environ["HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW"]),
+              ]
+          elif target == "ulx3s-12f":
+              resolved.append(("SDRAM memory profile", os.environ["HAZARD3_MEMORY_PROFILE"]))
+          elif target == "ulx4m-ld-85f":
+              resolved += [
+                  ("LiteDRAM initialization CPU", os.environ["ULX4M_LITEDRAM_CPU"]),
+                  ("Minimum LiteDRAM Fmax for PASS (MHz)", os.environ["SWEEP_LITEDRAM_TARGET_MHZ"]),
+                  ("Minimum initialization Fmax for PASS (MHz)", os.environ["SWEEP_INIT_TARGET_MHZ"]),
+              ]
+          elif target == "ulx5m-gs":
+              resolved.append(("GateMate HeAP beta", os.environ["SWEEP_ULX5M_HEAP_BETA"]))
+
+          print("=== Resolved sweep configuration ===", flush=True)
+          for name, value in resolved:
+              print(f"  {name}: {value}")
+          print(f"\n=== Workflow dispatch inputs ({len(inputs)}) ===")
+          for name, value in inputs.items():
+              print(f"  {name}: {json.dumps(value, ensure_ascii=True)}")
+
+          # Also publish a searchable table in the GitHub Actions run summary.
+          def markdown_value(value):
+              return str(value).replace("\\", "\\\\").replace("|", "\\|").replace("`", "\\`").replace("\n", " ")
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("## FPGA seed sweep parameters\n\n")
+              summary.write("### Resolved configuration\n\n| Parameter | Value |\n| --- | --- |\n")
+              for name, value in resolved:
+                  summary.write(f"| {markdown_value(name)} | `{markdown_value(value)}` |\n")
+              summary.write(f"\n### Dispatch inputs ({len(inputs)})\n\n| Input | Selected value |\n| --- | --- |\n")
+              for name, value in inputs.items():
+                  summary.write(f"| `{markdown_value(name)}` | `{markdown_value(json.dumps(value, ensure_ascii=True))}` |\n")
+              summary.write("\nTiming thresholds affect PASS/FAIL qualification, not the physical PLL frequencies.\n")
+          PY
+
       - name: Check out repository
         uses: actions/checkout@v7
         with:
@@ -254,6 +419,14 @@ jobs:
         run: |
           set -euo pipefail
 
+          # The normal 40/50 MHz clock modes do not require the experimental
+          # registered-cache/dual-port SRAM changes from the saved branch.
+          if [[ "${SWEEP_TARGET}" == "ulx3s-85f" &&
+                "${HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW}" == "1" ]]; then
+              echo '::error::The experimental cache/SRAM profile requires the separate experimental Hazard3 branch.' >&2
+              exit 1
+          fi
+
           # Validate the seed range with the same generator used for the matrix.
           # Accept any positive signed 32-bit starting seed, up to 512 seeds;
           # GitHub Actions limits the generated matrix to 256 route jobs.
@@ -262,13 +435,29 @@ jobs:
               --last "${SWEEP_SEED_LAST}" \
               --per-job "${SWEEP_SEEDS_PER_JOB}" >/dev/null
 
+          # Only the existing, board-specific HDMI timings are implemented.
+          # Reject cross-board combinations instead of changing display text alone.
+          case "${SWEEP_TARGET}" in
+            ulx3s-85f) expected_hdmi_resolution=640x480 ;;
+            ulx3s-12f|ulx4m-ld-85f) expected_hdmi_resolution=1024x600 ;;
+            ulx5m-gs) expected_hdmi_resolution=headless ;;
+            *) echo "Unknown target: ${SWEEP_TARGET}" >&2; exit 1 ;;
+          esac
+          if [[ "${SWEEP_HDMI_OUTPUT_RESOLUTION}" != "${expected_hdmi_resolution}" ]]; then
+              printf 'Invalid HDMI output resolution %s for %s; this target implements %s.\n' \
+                  "${SWEEP_HDMI_OUTPUT_RESOLUTION}" "${SWEEP_TARGET}" "${expected_hdmi_resolution}" >&2
+              echo 'Changing the physical HDMI resolution requires RTL/PLL changes, not a sweep override.' >&2
+              exit 1
+          fi
+          printf 'HDMI output resolution: %s\n' "${SWEEP_HDMI_OUTPUT_RESOLUTION}"
+
           if [[ ! "${SWEEP_MAX_PARALLEL}" =~ ^[1-9][0-9]*$ ]]; then
               echo "max_parallel must be a positive integer." >&2
               exit 1
           fi
 
-          if [[ ! "${SWEEP_SEEDS_PER_JOB}" =~ ^[1-5]$ ]]; then
-              echo "seeds_per_job must be an integer from 1 through 5." >&2
+          if [[ ! "${SWEEP_SEEDS_PER_JOB}" =~ ^[1-9]$ ]]; then
+              echo "seeds_per_job must be an integer from 1 through 9." >&2
               exit 1
           fi
 
@@ -394,6 +583,18 @@ jobs:
               scripts/sweep-ulx4m-ld.sh \
               scripts/sweep-ulx5m-gs.sh
 
+          if [[ "${SWEEP_TARGET}" == "ulx3s-85f" &&
+                "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" != "25" ]]; then
+              # Check the checked-out gitlink, not an unrelated workspace file.
+              synth_makefile=third_party/Hazard3/example_soc/synth/ULX3S.mk
+              fpga_rtl=third_party/Hazard3/example_soc/fpga/fpga_ulx3s.v
+              if ! grep -Fq 'DEFINES += HAZARD3_ULX3S_85F_SYS_CLK_MHZ=' "${synth_makefile}" ||
+                 ! grep -Fq 'gen_clk_sys_50' "${fpga_rtl}"; then
+                  echo '::error::Pinned Hazard3 submodule does not implement the requested ULX3S-85F system PLL.' >&2
+                  exit 1
+              fi
+          fi
+
           monitor_memory_profile=64m
           case "${SWEEP_TARGET}" in
           ulx3s-85f)
@@ -467,6 +668,29 @@ jobs:
               printf '::error::Frozen netlist is missing or empty: %s\n' "${netlist}" >&2
               exit 1
           fi
+          # In 40/50 MHz mode the 85F netlist must have both the system and
+          # video PLLs. A 25 MHz oscillator-only system has just the video PLL.
+          if [[ "${SWEEP_TARGET}" == "ulx3s-85f" &&
+                "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" != "25" ]]; then
+              python3 - "${netlist}" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              netlist = json.load(handle)
+
+          pll_count = sum(
+              cell.get("type") == "EHXPLLL"
+              for module in netlist["modules"].values()
+              for cell in module.get("cells", {}).values()
+          )
+          if pll_count != 2:
+              print(f"::error::Expected system and video PLLs, found {pll_count}.")
+              raise SystemExit(1)
+          print("Synthesized ULX3S-85F system and video PLLs verified.")
+          PY
+          fi
+
           if [[ -z "${route_constraint}" ]]; then
               echo '::error::Route constraint query returned an empty value.' >&2
               exit 1
@@ -524,8 +748,9 @@ jobs:
               printf 'seeds_per_job=%s\n' "${SWEEP_SEEDS_PER_JOB}"
               printf 'retain_bitstreams=%s\n' "${RETAIN_BITSTREAMS}"
               printf 'synth_oss_cad_suite_version=%s\n' "${OSS_CAD_SUITE_VERSION}"
-              printf 'route_oss_cad_suite_version=%s\n' "${ROUTE_OSS_CAD_SUITE_VERSION}"
+              printf 'route_oss_cad_suite_version=%s\n' "${OSS_CAD_SUITE_VERSION}"
               printf 'ulx3s_85f_extended_modes=%s\n' "${HAZARD3_HDMI_EXTENDED_MODES}"
+              printf 'hdmi_output_resolution=%s\n' "${SWEEP_HDMI_OUTPUT_RESOLUTION}"
               printf 'ulx3s_12f_memory_profile=%s\n' "${HAZARD3_MEMORY_PROFILE}"
               printf 'ulx4m_sys_clk_mhz=%s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
               printf 'ulx4m_litedram_cpu=%s\n' "${ULX4M_LITEDRAM_CPU}"
@@ -559,33 +784,6 @@ jobs:
                   --per-job "${SWEEP_SEEDS_PER_JOB}"
           )"
           printf 'matrix=%s\n' "${matrix}" >> "${GITHUB_OUTPUT}"
-
-      - name: Prepare route OSS CAD Suite cache
-        if: env.ROUTE_OSS_CAD_SUITE_VERSION != env.OSS_CAD_SUITE_VERSION
-        shell: bash
-        run: rm -rf "${RUNNER_TEMP}/oss-cad-suite"
-
-      - name: Restore route OSS CAD Suite cache
-        if: env.ROUTE_OSS_CAD_SUITE_VERSION != env.OSS_CAD_SUITE_VERSION
-        id: route-oss-cad-cache
-        uses: actions/cache/restore@v6
-        with:
-          path: ${{ runner.temp }}/oss-cad-suite
-          key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.ROUTE_OSS_CAD_SUITE_VERSION }}-v1
-
-      - name: Set up route OSS CAD Suite
-        if: env.ROUTE_OSS_CAD_SUITE_VERSION != env.OSS_CAD_SUITE_VERSION && steps.route-oss-cad-cache.outputs.cache-hit != 'true'
-        uses: YosysHQ/setup-oss-cad-suite@v4
-        with:
-          version: ${{ env.ROUTE_OSS_CAD_SUITE_VERSION }}
-          github-token: ${{ github.token }}
-
-      - name: Save route OSS CAD Suite cache
-        if: env.ROUTE_OSS_CAD_SUITE_VERSION != env.OSS_CAD_SUITE_VERSION && steps.route-oss-cad-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v6
-        with:
-          path: ${{ runner.temp }}/oss-cad-suite
-          key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.ROUTE_OSS_CAD_SUITE_VERSION }}-v1
 
       - name: Record route nextpnr version
         shell: bash
@@ -653,9 +851,10 @@ jobs:
           printf '  SWEEP_SEED_FIRST:    %s\n' "${SWEEP_SEED_FIRST}"
           printf '  SWEEP_SEED_LAST:     %s\n' "${SWEEP_SEED_LAST}"
           printf '  SWEEP_SEEDS_PER_JOB: %s\n' "${SWEEP_SEEDS_PER_JOB}"
+          printf '  HDMI output resolution: %s\n' "${SWEEP_HDMI_OUTPUT_RESOLUTION}"
           case "${SWEEP_TARGET}" in
           ulx3s-85f)
-              printf '  System clock:                  25 MHz (fixed; 640x480 HDMI)\n'
+              printf '  System clock:            %s MHz (640x480 HDMI)\n' "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}"
               printf '  HAZARD3_HDMI_EXTENDED_MODES: %s\n' "${HAZARD3_HDMI_EXTENDED_MODES}"
               ;;
           ulx3s-12f)
@@ -708,7 +907,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: ${{ runner.temp }}/oss-cad-suite
-          key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.ROUTE_OSS_CAD_SUITE_VERSION }}-v1
+          key: oss-cad-suite-${{ runner.os }}-${{ runner.arch }}-${{ env.OSS_CAD_SUITE_VERSION }}-v1
 
       - name: Activate route OSS CAD Suite
         shell: bash
@@ -869,6 +1068,7 @@ jobs:
           printf 'status=%s\n' "${overall_status}" >> "${GITHUB_OUTPUT}"
 
       - name: Publish seed group status
+        id: publish
         if: always()
         shell: bash
         run: |
@@ -914,27 +1114,119 @@ jobs:
                   >> "${status_file}"
           done
 
-          pass_seeds="$(awk -F, '$2 == "PASS" {if (s != "") s=s " "; s=s $1} END {print s}' "${status_file}")"
+          pass_seeds="$(awk -F, '$2 == "PASS" && $4 == "0" {if (s != "") s=s " "; s=s $1} END {print s}' "${status_file}")"
           fail_seeds="$(awk -F, '$2 == "FAIL" {if (s != "") s=s " "; s=s $1} END {print s}' "${status_file}")"
           timeout_seeds="$(awk -F, '$2 ~ /TIMEOUT/ {if (s != "") s=s " "; s=s $1} END {print s}' "${status_file}")"
 
           if [[ -n "${pass_seeds}" ]]; then
+              printf 'any_pass=true\n' >> "${GITHUB_OUTPUT}"
               printf '\n============================================================\n'
               printf 'Timing-passing seeds: %s\n' "${pass_seeds}"
               printf '============================================================\n'
           else
+              printf 'any_pass=false\n' >> "${GITHUB_OUTPUT}"
               printf 'Timing-passing seeds: none\n'
           fi
 
           {
               printf '### %s seeds %s\n\n' "${SWEEP_TARGET}" '${{ matrix.seeds }}'
-              printf '| Seed | Timing | Seconds | Route exit |\n'
-              printf '| ---: | :--- | ---: | ---: |\n'
-              while IFS=, read -r seed timing_status seconds route_exit; do
-                  [[ "${seed}" != 'seed' ]] || continue
-                  printf '| %s | %s | %s | %s |\n' \
-                      "${seed}" "${timing_status}" "${seconds}" "${route_exit}"
-              done < "${status_file}"
+
+              # Per-seed result files have no CSV header. The frozen metadata
+              # defines their column order, which varies by FPGA target.
+              python3 - "${artifact_dir}" "${status_file}" reference/sweep-metadata.txt <<'PY' || exit 1
+          import csv
+          import sys
+          from pathlib import Path
+
+          artifact_dir = Path(sys.argv[1])
+          status_file = Path(sys.argv[2])
+          metadata_file = Path(sys.argv[3])
+
+          # The frozen metadata defines both the CSV columns and required clocks.
+          result_columns = []
+          required_clocks = {}
+          for line in metadata_file.read_text(encoding="utf-8").splitlines():
+              key, separator, value = line.partition("=")
+              if not separator:
+                  continue
+              if key == "result_columns":
+                  result_columns = value.split(",")
+              elif key.endswith("_required_mhz"):
+                  required_clocks[key.removesuffix("_required_mhz") + "_mhz"] = float(value)
+
+          if not result_columns:
+              raise SystemExit("Missing result_columns in frozen sweep metadata")
+
+          clock_columns = [column for column in result_columns if column.endswith("_mhz")]
+          required_clocks = {
+              column: required_mhz
+              for column, required_mhz in required_clocks.items()
+              if column in clock_columns
+          }
+          clock_labels = {
+              "clk_sys_mhz": "clk_sys",
+              "litedram_user_mhz": "LiteDRAM user",
+              "clk_video_mhz": "clk_video",
+              "clk_tmds_mhz": "clk_tmds",
+              "init_clk_mhz": "init_clk",
+          }
+
+          headers = ["Seed", "Timing"]
+          headers.extend(f"{clock_labels.get(column, column)} (MHz)" for column in clock_columns)
+          headers.extend(["Seconds", "Route exit"])
+          print("| " + " | ".join(headers) + " |")
+          print("| " + " | ".join(["---:", ":---"] + ["---:"] * len(clock_columns) + ["---:", "---:"]) + " |")
+
+          # Keep the existing four-column group-status CSV unchanged for the watcher.
+          best_seed = None
+          best_ratio = -1.0
+          group_has_pass = False
+          with status_file.open(newline="", encoding="utf-8") as handle:
+              for status in csv.DictReader(handle):
+                  if status["timing_status"] == "PASS" and status["route_exit_status"] == "0":
+                      group_has_pass = True
+                  seed = status["seed"]
+                  result_file = artifact_dir / f"result-seed-{seed}.csv"
+                  measured = {}
+                  if result_file.is_file():
+                      with result_file.open(newline="", encoding="utf-8") as result_handle:
+                          result_rows = list(csv.reader(result_handle))
+                      if len(result_rows) == 1 and len(result_rows[0]) == len(result_columns):
+                          measured = dict(zip(result_columns, result_rows[0]))
+
+                  values = [seed, status["timing_status"]]
+                  for column in clock_columns:
+                      frequency = measured.get(column, "")
+                      try:
+                          values.append(f"{float(frequency):.2f}")
+                      except ValueError:
+                          values.append("N/A")
+                  values.extend([status["seconds"], status["route_exit_status"]])
+                  print("| " + " | ".join(values) + " |")
+
+                  # Compare the weakest required clock, not just the CPU clock.
+                  if status["route_exit_status"] != "0" or status["timing_status"] != "FAIL":
+                      continue
+                  if not required_clocks:
+                      continue
+                  try:
+                      ratio = min(
+                          float(measured[column]) / required_mhz
+                          for column, required_mhz in required_clocks.items()
+                      )
+                  except (KeyError, ValueError, ZeroDivisionError):
+                      continue
+                  if ratio > best_ratio:
+                      best_seed, best_ratio = seed, ratio
+
+          if not group_has_pass:
+              if best_seed is None:
+                  print("\n**Best not passing:** none (no completed timing measurements).")
+              else:
+                  print(f"\n**Best not passing:** seed `{best_seed}` "
+                        f"(weakest clock at {best_ratio:.3f}x required MHz).")
+          PY
+
               printf '\n**Timing-passing seeds:** `%s`\n\n' "${pass_seeds:-none}"
               printf '**Failing seeds:** `%s`\n\n' "${fail_seeds:-none}"
               printf '**Timed-out seeds:** `%s`\n' "${timeout_seeds:-none}"
@@ -951,8 +1243,12 @@ jobs:
           compression-level: 0
 
       - name: Fail incomplete route group
-        if: steps.route.outputs.status != '0'
-        run: exit 1
+        if: steps.route.outputs.status != '0' || steps.publish.outputs.any_pass != 'true'
+        run: |
+          if [[ "${{ steps.publish.outputs.any_pass }}" != "true" ]]; then
+              echo '::error::No timing-passing seeds in this route group.'
+          fi
+          exit 1
 
   summarize:
     name: Summarize ${{ inputs.target }} sweep
@@ -1028,5 +1324,23 @@ jobs:
           compression-level: 0
 
       - name: Verify sweep completeness
-        if: steps.summary.outputs.status != '0'
-        run: exit 1
+        if: always()
+        shell: bash
+        run: |
+          if [[ "${{ steps.summary.outputs.status }}" != "0" ]]; then
+              echo '::error::Sweep summary failed.'
+              exit 1
+          fi
+
+          # The final summarizer recalculates timing closure for every required clock.
+          # Check its result instead of the raw per-seed PASS/FAIL status.
+          python3 - <<'PY'
+          import csv
+
+          with open("final/summary.csv", newline="", encoding="utf-8") as handle:
+              passing = any(row["all_timing_pass"] == "PASS" for row in csv.DictReader(handle))
+
+          if not passing:
+              print("::error::No timing-passing seeds in the complete sweep.")
+              raise SystemExit(1)
+          PY

@@ -17,6 +17,14 @@ Pipeline
 #. The internal frame buffers swap on vertical blank.
 #. A hardware palette converts the indexed pixels for HDMI scanout.
 
+The output raster depends on the board: ULX3S 85F currently uses
+640x480 at 25 MHz pixel / 125 MHz TMDS, while ULX3S 12F and ULX4M-LD
+use 1024x600 at 50 MHz pixel / 250 MHz TMDS. ULX5M-GS is headless in the
+current sweep. The ``hdmi_output_resolution`` workflow dropdown and local
+``SWEEP_HDMI_OUTPUT_RESOLUTION`` setting accept only the existing board
+resolution; they do not reprogram the physical raster. The separate
+``HAZARD3_HDMI_EXTENDED_MODES`` option controls framebuffer capability.
+
 Output geometry
 ---------------
 

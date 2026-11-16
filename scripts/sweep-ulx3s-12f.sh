@@ -50,8 +50,17 @@ SWEEP_ECP5_BOARD_ID="ulx3s-12f"
 source "${COMMON_SCRIPT}"
 printf 'Include source: %s\n' "${COMMON_SCRIPT}" >&2
 
+ecp5_pnr_device_profile "ulx3s-12f"
+sweep_ecp5_clock_targets
 sweep_ecp5_init_tuning
 TUNING_SUFFIX="$(sweep_ecp5_tuning_suffix)"
+# Isolate experimental device-grade sweeps from production profiles.
+DEVICE_SUFFIX=""
+if [[ "${ECP5_PNR_SPEED_GRADE}" != "6" || "${ECP5_PNR_PACKAGE}" != CABGA381 ]]; then
+    DEVICE_SUFFIX="-speed${ECP5_PNR_SPEED_GRADE}-${ECP5_PNR_PACKAGE}"
+fi
+TUNING_SUFFIX="${TUNING_SUFFIX}${DEVICE_SUFFIX}"
+
 SWEEP_DIR="${BUILD_DIR}/ulx3s-12f-seed-sweep/${HAZARD3_MEMORY_PROFILE}${TUNING_SUFFIX}"
 SWEEP_REL_DIR="${SWEEP_DIR#"${REPO_ROOT}"/}"
 
@@ -64,9 +73,15 @@ Usage: $0 SEED [SEED ...]
        $0 --all
 
 Route one or more nextpnr seeds for the ULX3S 12F Hazard3-Doom build.
-Seeds are positive 32-bit decimals; at most 512 seeds per run (--all uses 1-260).
+Seeds are positive signed 32-bit decimals; ranges may exceed 512 seeds.
+--all uses 1-512 by default; SWEEP_ALL_SEED_LAST=N sets its last seed.
 SWEEP_JOBS=N runs up to N routes concurrently (default: 4).
 HAZARD3_MEMORY_PROFILE=32m|64m selects the SDRAM profile (default: 32m).
+ECP5_PNR_SPEED_GRADE=N overrides the nextpnr speed grade (board default 6 or 8).
+ECP5_PNR_PACKAGE=NAME overrides the nextpnr package (default CABGA381).
+SWEEP_SYS_TARGET_MHZ, SWEEP_VIDEO_TARGET_MHZ, SWEEP_TMDS_TARGET_MHZ
+  override reported MHz targets only; they do not reconfigure the FPGA PLL.
+SWEEP_LITEDRAM_TARGET_MHZ and SWEEP_INIT_TARGET_MHZ apply to ULX4M only.
 SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.
 SWEEP_ROUTE_TIMEOUT_SECONDS=N limits each nextpnr route (default: 7200).
 EOF_USAGE
@@ -209,16 +224,17 @@ mkdir -p "${SWEEP_DIR}"
 {
     printf 'target=ulx3s-12f\n'
     printf 'device=12k\n'
-    printf 'speed=6\n'
-    printf 'package=CABGA381\n'
+    printf 'speed=%s\n' "${ECP5_PNR_SPEED_GRADE}"
+    printf 'package=%s\n' "${ECP5_PNR_PACKAGE}"
     printf 'full_route=1\n'
+    printf 'target_overrides_are_reporting_only=1\n'
     printf 'result_columns=seed,clk_sys_mhz,clk_video_mhz,clk_tmds_mhz,route_seconds,timing_status\n'
     printf 'hazard3_memory_profile=%s\n' "${HAZARD3_MEMORY_PROFILE}"
     printf 'dp16kd_used=%s\n' "${ebr_used}"
     sweep_ecp5_write_tuning_metadata
-    printf 'clk_sys_required_mhz=40.00\n'
-    printf 'clk_video_required_mhz=50.00\n'
-    printf 'clk_tmds_required_mhz=250.00\n'
+    printf 'clk_sys_required_mhz=%s\n' "${SWEEP_SYS_TARGET_MHZ}"
+    printf 'clk_video_required_mhz=%s\n' "${SWEEP_VIDEO_TARGET_MHZ}"
+    printf 'clk_tmds_required_mhz=%s\n' "${SWEEP_TMDS_TARGET_MHZ}"
     printf 'synthesis_seconds=%s\n' "${synthesis_seconds}"
     printf 'netlist_sha256=%s\n' "${netlist_sha256}"
     printf 'netlist=fpga_ulx3s_12f.json\n'
@@ -264,9 +280,7 @@ run_seed()
     if sweep_ecp5_run_nextpnr \
         --seed "${seed}" \
         "${SWEEP_NEXTPNR_ARGS[@]}" \
-        --12k \
-        --speed 6 \
-        --package CABGA381 \
+        "${PNR_DEVICE_ARGS[@]}" \
         --lpf "${LPF}" \
         --json "${NETLIST}" \
         --textcfg "${config}" \
@@ -402,5 +416,10 @@ fi
 printf 'Timed-out seeds: %s\n' "${timeout_count}"
 printf 'TIMEOUT seed values: %s\n' "${timeout_seeds:-none}"
 printf 'Results: %s\n' "${results_file}"
+
+if (( pass_count == 0 )); then
+    printf 'ERROR: No timing-passing seeds; sweep failed. Results retained in %s\n' "${results_file}" >&2
+    status=1
+fi
 
 exit "${status}"

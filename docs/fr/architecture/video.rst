@@ -16,6 +16,14 @@ Pipeline
 #. Les framebuffers internes sont permutés pendant le blanking vertical.
 #. Une palette matérielle convertit les pixels indexés pour le scanout HDMI.
 
+Le raster physique dépend de la carte : ULX3S 85F utilise 640x480
+(pixel 25 MHz / TMDS 125 MHz), et ULX3S 12F ainsi que ULX4M-LD utilisent
+1024x600 (pixel 50 MHz / TMDS 250 MHz). ULX5M-GS reste sans HDMI.
+Le sélecteur ``hdmi_output_resolution`` et la variable locale
+``SWEEP_HDMI_OUTPUT_RESOLUTION`` valident seulement la résolution déjà
+implémentée. ``HAZARD3_HDMI_EXTENDED_MODES`` contrôle les modes du
+framebuffer interne, et non le raster de sortie.
+
 Géométrie de sortie
 -------------------
 
