@@ -750,7 +750,14 @@ jobs:
 
           ## ULX3S files
 
-          For ULX3S 85F, use the `64m` software profile and 50 MHz monitor:
+          This standalone Windows software artifact publishes the ULX3S 85F
+          monitor at **50 MHz** for compatibility. The normal 85F FPGA board
+          build defaults to **25 MHz**; a 50 MHz monitor must not be combined
+          with a 25 or 40 MHz bitstream. Use the complete board build to create
+          a clock-matched monitor for the selected 25/40/50 MHz profile.
+
+          For an explicitly selected 50 MHz ULX3S 85F build, use the `64m`
+          software profile and the following monitor artifact:
 
           - `doom-64m/hazard3-doom.h3img`
           - `doom-64m/hazard3-doom.elf` and `.map` for debugging/inspection

@@ -51,7 +51,7 @@ Current primary profiles are:
 
 | Target | Memory profile | Hazard3 clock | Doom/video profile |
 | --- | --- | --- | --- |
-| ULX3S 85F | `64m` | 50 MHz | 320x200 default; extended modes optional |
+| ULX3S 85F | `64m` | 25 MHz default; 40/50 selectable | 320x200 default; extended modes optional |
 | ULX3S 12F | `32m` default, `64m` optional | 40 MHz | 320x200 compact SDRAM scanout |
 | ULX4M-LD 85F | `64m` | 40 MHz | 320x200 default |
 | ULX5M-GS | `32m` | 25 MHz | Phase-1 headless target |
@@ -60,7 +60,7 @@ The monitor, FPGA configuration, Doom image, and SDRAM map must use compatible
 settings. Do not mix 32 MiB and 64 MiB software images.
 
 The authoritative board-specific nextpnr defaults are kept together in
-`build-ecp5-bitstream-common.sh`. The board wrappers consume those shared
+`ecp5-board-defaults.sh`. The board wrappers consume those shared
 settings, so this README does not maintain a second copy of the seed values.
 They are convenience baselines, not permanent optima: rerun a seed sweep after
 placement-sensitive RTL, memory, video, clock, or toolchain changes.
@@ -70,7 +70,7 @@ placement-sensitive RTL, memory, video, clock, or toolchain changes.
 - `build.sh` - Builds the shared Hazard3 monitor firmware. Defaults to the 64 MiB map at 50 MHz. Unless `TOOLCHAIN_PREFIX` is set, it searches `PATH` for supported RISC-V bare-metal prefixes (`riscv-none-elf-*`, `riscv32-unknown-elf-*`, or `riscv64-unknown-elf-*`) and uses the historical `/opt/riscv/bin/riscv32-unknown-elf-*` location only as a compatibility fallback; accepts `HAZARD3_MEMORY_PROFILE`, `HAZARD3_SYS_CLK_HZ`, `HAZARD3_BUILD_DIR`, `TOOLCHAIN_PREFIX`, and `HAZARD3_MONITOR_LINKER_SCRIPT` overrides.
 - `build-ecp5-bitstream-common.sh` - Internal shared ECP5 synthesis/place-and-route implementation used by the board-specific bitstream wrappers. Normally do not invoke it directly.
 - `build-ulx3s-85f-bitstream.sh` - ULX3S 85F entry point for the shared ECP5 flow.
-- `build-ulx3s-85f-doom.sh` - Complete ULX3S 85F build: monitor, boot image, FPGA bitstream, Doom image, and SD-card staging files under `build/ulx3s-85f/`.
+- `build-ulx3s-85f-doom.sh` - Complete ULX3S 85F build: monitor, boot image, FPGA bitstream, Doom image, and SD-card staging files under `build/ulx3s-85f/`. Select the system clock with `HAZARD3_ULX3S_85F_SYS_CLK_MHZ=25|40|50` (default 25); the monitor and RTL use the same value. `40` and `50` are experimental until they pass timing at `--85k --speed 6`. At 40/50 MHz, `HAZARD3_ULX3S_85F_REGISTERED_READ_HITS=1` is the default; override with `0` only for comparisons. `HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER=1` retains the original EBR write buffer; set it to `0` for the experimental one-wait-state write-to-read collision implementation (not yet hardware qualified).
 - `build-ulx3s-12f-bitstream.sh` - ULX3S 12F entry point for the shared ECP5 flow. Defaults to `HAZARD3_MEMORY_PROFILE=32m`.
 - `build-ulx3s-12f-doom.sh` - Complete ULX3S 12F build. Uses a 40 MHz Hazard3 clock, defaults to the 32 MiB map, and intentionally accepts only `HAZARD3_DOOM_HDMI_RESOLUTION=320x200`.
 - `build-ulx4m-ld-bitstream.sh` - ULX4M-LD 85F entry point for the shared ECP5 flow. Supports `SKIP_SYNTH=1` for routing an existing frozen JSON without invoking Make/Yosys.
@@ -79,6 +79,69 @@ placement-sensitive RTL, memory, video, clock, or toolchain changes.
 - `build-ulx5m-gs-doom.sh` - Complete ULX5M-GS phase-1 build using the 32 MiB SDRAM map at 25 MHz.
 - `build-xpack.cmd` - Native Windows monitor build using the repository xPack RISC-V GCC installation. Supports `build`, `clean`, and `rebuild` plus memory-profile and clock arguments, and refuses to build if `src/generated/version.h` is stale relative to the root `VERSION` file.
 - `make-boot-hex.py` - Converts the monitor binary into the hexadecimal initialization format consumed by FPGA boot memory.
+
+### ULX3S 85F system-clock experiments
+
+The 50 MHz seed-11 baseline on November 12, 2026 reached only 30.37 MHz
+with unregistered cache-hit responses. Its critical path ran from the SDRAM
+cache tag RAM through cache/CPU control to the APB bridge. The existing 12F
+registered-read-hit option is now selectable on the 85F. The default remains
+unregistered at 25 MHz and becomes registered at 40/50 MHz. This is an
+**experimental RTL change**, not a certified 50 MHz timing fix. The toggle
+introduces an extra cycle for cache-hit responses. The 85F wrappers, routed
+sweeps and placement sweeps keep separate netlist stamps and output directories
+for registered/unregistered builds. Do not reuse an old netlist across modes.
+
+
+The follow-up 50 MHz registered-hit seed-11 route reached 35.74 MHz with
+`HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER=1`. Its new limiting path ended at
+an on-chip SRAM EBR write-enable pin, with 5.81 ns logic plus 22.17 ns
+routing. The SRAM adapter already supports a no-write-buffer mode. Set
+`HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER=0` to test that existing option.
+It may shorten this critical path, but also adds a wait state on some
+write-to-read sequences; full functional and timing qualification is required.
+The default remains 1 for all clock profiles. Bitstream builds and both
+sweep types stamp this parameter and reject/rebuild mismatched netlists.
+
+The older `synth/build-ulx3s-doom.sh` entry point also accepts this clock
+selection, but use the canonical full board wrapper below for experimental
+clock builds and verified monitor preload generation.
+
+
+The ULX3S 85F is an LFE5U-85F-6BG381C (`--85k --speed 6`), regardless of
+clock selection. The default 25 MHz system clock uses the oscillator; 40/50 MHz
+use the existing 25-to-40/25-to-50 PLLs. All 85F profiles retain independent
+25 MHz pixel and 125 MHz TMDS clocks for 640x480 HDMI. The 12F remains at 40
+MHz and is not affected.
+
+For a fresh 50 MHz build (timing failures cause a nonzero exit):
+
+```bash
+HAZARD3_ULX3S_85F_SYS_CLK_MHZ=50 NEXTPNR_SEED=11 \
+    ./scripts/build-ulx3s-85f-doom.sh
+```
+
+Even if this exploratory build fails P&R, it creates a clock-matched monitor
+preload and stamp for a subsequent seed sweep. Try a small 50 MHz sweep first:
+
+```bash
+HAZARD3_ULX3S_85F_SYS_CLK_MHZ=50 SWEEP_JOBS=4 \
+    ./scripts/sweep-ulx3s-85f.sh 1-32
+```
+
+For an already-synthesized netlist, add `SWEEP_SKIP_SYNTH=1`. This mode rejects
+clock/video profile mismatches rather than silently routing the wrong netlist.
+Sweep outputs go to separate `build/ulx3s-seed-sweep-50mhz-vga640-standard*/`
+directories. Timing status checks the actual 50 MHz system PLL and the separate
+25/125 MHz video clocks, not `--freq` alone. Neither a historical pass under
+`--um5g-85k` nor a pass at the 25 MHz clock certifies the correct speed-grade-6
+50 MHz configuration. Do not load an experimental failing bitstream into flash.
+After a timing-passing seed is found, rerun the complete 50 MHz build with
+`NEXTPNR_SEED` set to that seed to produce a matched monitor, bitstream, and
+Doom image. The default 25 MHz build remains unchanged in its invocation.
+
+The normal build writes canonical outputs in `build/`; back up any existing
+qualified bitstream before building an experimental clock profile.
 
 ### ULX3S 12F compact target
 
@@ -170,7 +233,7 @@ The target-specific scripts remain directly usable:
 - `sweep-ulx3s-12f.sh` - ULX3S 12F full routed sweep.
 - `sweep-ulx4m-ld.sh` - ULX4M-LD 85F full routed sweep.
 - `sweep-ulx5m-gs.sh` - ULX5M-GS GateMate A1 full routed sweep.
-- `sweep-peek.sh` - ULX3S 85F placement-only prescreen.
+- `sweep-peek.sh` - ULX3S 85F placement-only prescreen; uses the same 25/40/50 MHz and video profile selections and preserves separate result directories.
 - `sweep-peek-ulx3s-12f.sh` - ULX3S 12F placement-only prescreen.
 - `sweep-peek-ulx3s-12f-best-peek.sh` - routes selected strong 12F placement candidates.
 
@@ -407,3 +470,171 @@ The directory intentionally contains several types of files:
 
 The Read the Docs version of the script reference is in
 `docs/reference/scripts.rst`.
+
+### ULX3S 85F experimental dual-port EBR SRAM timing mode
+
+The verified 50 MHz seed-11 timing experiments produced 30.37 MHz with the
+original cache response, 35.74 MHz with registered cache hits and SRAM write
+buffering, and 35.15 MHz with registered hits and write buffering disabled.
+These are FAIL results for a 50 MHz speed-grade-6 target. Do not run a large
+seed sweep before checking the critical path of a new architectural variant.
+
+`HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW=1` selects a new, opt-in adapter with
+independent synchronous EBR read and write ports. A bypass merges bytes from
+a simultaneous read of the word being written. It removes the live AHB read
+address/HTRANS condition from the RAM write-enable path; the separate read
+address and collision check may still be critical. This is NOT timing or
+hardware qualified. Default 0 preserves the original adapter, and ULX3S 12F
+and ULX4M are unchanged. The option requires `SRAM_WRITE_BUFFER=1` (the
+original default), so the no-buffer experiment is kept separate.
+
+Before an FPGA build, check functional behavior with Icarus Verilog in WSL:
+
+```bash
+cd /mnt/c/workspace/Hazard3-Doom
+iverilog -g2012 -DSIM -s tb_ulx3s_sram_dualport \
+  -o /tmp/tb_ulx3s_sram_dualport.vvp \
+  tests/tb_ulx3s_sram_dualport.v \
+  third_party/Hazard3/example_soc/libfpga/mem/ahb_sync_sram.v \
+  third_party/Hazard3/example_soc/libfpga/mem/sram_sync.v
+vvp /tmp/tb_ulx3s_sram_dualport.vvp
+```
+
+Expected result: `PASS: ... AHB cycles; original and dual-port SRAM match
+reference`. A failing or unavailable simulation must not be treated as a pass.
+The regression covers partial writes and read/write collisions but is not a
+complete proof of all AHB stall/error or cold-boot cases.
+
+After a simulation PASS, run one correct-device routed build:
+
+```bash
+HAZARD3_ULX3S_85F_SYS_CLK_MHZ=50 \
+HAZARD3_ULX3S_85F_REGISTERED_READ_HITS=1 \
+HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER=1 \
+HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW=1 \
+NEXTPNR_SEED=11 ./scripts/build-ulx3s-85f-doom.sh
+```
+
+Compare the last `clk_sys` reported in `build/fpga_ulx3s_85f.pnr.log`
+against the original registered-hit 35.74 MHz result. Only if the new Fmax
+approaches 50 MHz should you attempt a small, fully routed seed sweep using
+exactly the same environment settings. Build and sweep scripts stamp the
+experimental option and refuse to reuse a mismatched frozen netlist.
+Do not program flash or treat any timing-failing bitstream as qualified.
+
+
+### ULX3S 85F experimental registered SDRAM cache tag lookup (November 2026)
+
+The November 14 seed-11 50 MHz build with registered cache hits and the
+independent EBR SRAM read/write ports passed its 4010-cycle SRAM adapter
+simulation and routed at 39.32 MHz, still **FAIL** against 50 MHz on the
+LFE5U-85F speed grade 6. The next opt-in experiment adds a register after the
+SDRAM cache's synchronous tag RAM lookup. It registers hit/miss status, dirty
+status, selected way, and dirty victim address before downstream bus control.
+The writeback cache's original behaviour is retained when the parameter is 0.
+
+The extra lookup stage introduces one additional AHB stall cycle on cached
+lookups, even hits. This changes memory latency and needs functional and
+performance validation; no 50 MHz timing closure is implied. No ULX3S 12F,
+ULX4M, or ULX5M top-level configuration enables this experiment by default.
+
+Select it only alongside registered cache-hit responses. Retain the previously
+successful independent SRAM R/W port configuration for comparison:
+
+```bash
+cd /mnt/c/workspace/Hazard3-Doom
+
+HAZARD3_ULX3S_85F_SYS_CLK_MHZ=50 \
+HAZARD3_ULX3S_85F_REGISTERED_READ_HITS=1 \
+HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER=1 \
+HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW=1 \
+HAZARD3_ULX3S_85F_CACHE_TAG_PIPELINE=1 \
+NEXTPNR_SEED=11 \
+./scripts/build-ulx3s-85f-doom.sh
+```
+
+The build and both sweep scripts stamp `fpga_ulx3s_85f.cache-tag-pipeline`,
+reject mismatched frozen netlists, and separate timing results by `tagp0` or
+`tagp1`. This is *not* a timing-allow-fail production build. The timing model
+remains `--85k --speed 6` and all clocks must pass.
+
+First run the cache regression with Icarus Verilog:
+
+```bash
+cd /mnt/c/workspace/Hazard3-Doom
+iverilog -g2012 -DSIM -DHAS_REGISTERED_READ_HITS \
+  -s tb_ulx3s_cache_tag_pipeline \
+  -o /tmp/tb_ulx3s_cache_tag_pipeline.vvp \
+  tests/tb_ulx3s_cache_tag_pipeline.v \
+  third_party/Hazard3/example_soc/libfpga/mem/ahb_cache_writeback.v \
+  third_party/Hazard3/example_soc/libfpga/mem/cache_mem_set_associative.v \
+  third_party/Hazard3/example_soc/libfpga/mem/ahb_sync_sram.v \
+  third_party/Hazard3/example_soc/libfpga/mem/sram_sync.v
+vvp /tmp/tb_ulx3s_cache_tag_pipeline.vvp
+```
+
+A `PASS` for both pipeline modes is necessary before proceeding to a single
+seed-11 synthesis/route. The test covers read/write hits and misses, partial
+writes and dirty evictions, but is not a replacement for SoC-level simulation,
+physical RAM collision testing, Doom operation, or hardware qualification.
+Do not flash an unqualified 50 MHz image.
+
+
+### ULX3S 85F fast tag-RAM write-data experiment (November 2026)
+
+The 50 MHz seed-11 design with cache tag pipeline enabled reported 36.84 MHz.
+The final path started at Hazard3 `m_result`, crossed CPU/debug and the AHB
+address multiplexers, and ended on the SDRAM cache tag RAM `DIA5` write-data
+input (27.14 ns total, including 21.89 ns routing). The registered tag-hit
+experiment did not cut this write-data path.
+
+`HAZARD3_ULX3S_85F_TAG_RAM_MODE` selects the new opt-in implementation:
+
+- `0`: original shared cache tag RAM and combinational write tag (default).
+- `1`: shared tag RAM using the tag captured at the previous cache lookup.
+- `2`: same registered tag, but one RAM per cache way, each with an independent
+  write enable; avoids the read-modify-write mux for unselected ways. Only use
+  with the zero-filled ULX3S tag preload file. Nonzero preload files would
+  need to be split into one file per way first.
+
+For the speed-grade-6 experiment, retain the best tested SRAM/cache settings
+(`REGISTERED_READ_HITS=1`, `SRAM_WRITE_BUFFER=1`, `SRAM_DUAL_PORT_RW=1`) and
+turn the unsuccessful `CACHE_TAG_PIPELINE` option back off (`0`). Test
+`TAG_RAM_MODE=2` first, using the `tests/tb_ulx3s_fast_tag_ram.v` regression
+and a single nextpnr seed. A change to tag RAM mode invalidates the saved
+netlist and makes its own sweep directory (`trm0`, `trm1`, or `trm2`). The
+qualified 25 MHz profile and the ULX3S 12F retain mode `0`.
+
+The change targets a measured path, but no 50 MHz route is yet verified.
+
+### ULX3S 85F AHB cache address pipeline experiment (November 2026)
+
+The speed-grade-6 seed-11 route with `TAG_RAM_MODE=2` failed at 35.82 MHz.
+Its critical path ends at cache **data** RAM pin `ADA1` (27.92 ns total,
+6.47 ns logic + 21.45 ns routing). The cache previously drove that RAM
+address directly from the live AHB address bus.
+
+`HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE=1` adds an AHB wait cycle for
+cacheable accesses: the cache captures the address in its existing
+`src_addr_dphase` register, then reads synchronous tag/data RAM in a new
+`S_READ_LOOKUP` / `S_WRITE_LOOKUP` state. The RAM address mux no longer
+depends on `src_haddr`. It requires registered cache hits, is disabled by
+default, and does not change 12F. This mode is unqualified until simulation,
+routing and board-level testing pass.
+
+For the next comparison, use the best previously measured settings:
+
+```bash
+HAZARD3_ULX3S_85F_SYS_CLK_MHZ=50 \
+HAZARD3_ULX3S_85F_REGISTERED_READ_HITS=1 \
+HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER=1 \
+HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW=1 \
+HAZARD3_ULX3S_85F_CACHE_TAG_PIPELINE=0 \
+HAZARD3_ULX3S_85F_TAG_RAM_MODE=0 \
+HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE=1 \
+NEXTPNR_SEED=11 ./scripts/build-ulx3s-85f-doom.sh
+```
+
+For the AHB cache address-stage regression, run `tests/tb_ulx3s_cache_addr_pipeline.v`
+with `iverilog -g2012 -DSIM -DHAS_REGISTERED_READ_HITS`, the cache RTL,
+`cache_mem_set_associative.v`, `ahb_sync_sram.v`, and `sram_sync.v`.

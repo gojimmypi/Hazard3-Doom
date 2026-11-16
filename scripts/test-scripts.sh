@@ -783,8 +783,10 @@ run_integration_tests()
                 "${SCRIPT_DIR}/sweep-ecp5.sh" ulx3s-85f \
                 "${ulx3s_85f_seeds[@]}"
         if (( dry_run == 0 && LAST_COMMAND_STATUS == 0 )); then
+            ulx3s_85f_sweep_dir="$("${SCRIPT_DIR}/sweep-ecp5.sh" \
+                --print-sweep-dir ulx3s-85f)"
             check_sweep_timing 'ULX3S 85F routed sample' \
-                "${REPO_ROOT}/build/ulx3s-seed-sweep/results-selected.csv"
+                "${REPO_ROOT}/${ulx3s_85f_sweep_dir}/results-selected.csv"
         fi
     else
         skip 'sweep-ecp5.sh: ULX3S 85F build prerequisite failed'

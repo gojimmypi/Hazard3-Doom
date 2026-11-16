@@ -101,6 +101,11 @@ BOOT_HEX_OUTPUT="${BOARD_BUILD_DIR}/hazard3-boot-monitor.hex"
 SDCARD_DIR="${BOARD_BUILD_DIR}/sdcard"
 DOOM_OUTPUT="${DOOM_BUILD_DIR}/hazard3-doom.h3img"
 HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-0}"
+# shellcheck source=scripts/ecp5-board-defaults.sh
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/ecp5-board-defaults.sh"
+ecp5_ulx3s_85f_clock_profile
+SYS_CLK_HZ="$((HAZARD3_ULX3S_85F_SYS_CLK_MHZ * 1000000))"
 
 
 require_file()
@@ -196,8 +201,8 @@ case "${HAZARD3_HDMI_EXTENDED_MODES}" in
     ;;
 esac
 
-printf 'ULX3S 85F build configuration: system clock=25 MHz, HDMI profile=%s, extended modes=%s\n' \
-    "${VIDEO_PROFILE}" "${HAZARD3_HDMI_EXTENDED_MODES}"
+printf 'ULX3S 85F build configuration: system clock=%s MHz, HDMI profile=%s, extended modes=%s\n' \
+    "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" "${VIDEO_PROFILE}" "${HAZARD3_HDMI_EXTENDED_MODES}"
 
 require_tool make
 require_tool install
@@ -214,10 +219,11 @@ require_executable "${ROOT_DIR}/scripts/build.sh"
 require_executable "${ROOT_DIR}/scripts/make-boot-hex.py"
 require_executable "${ROOT_DIR}/doom/build-doom-image.sh"
 
-printf 'Building the shared 25 MHz monitor with the 64 MiB map...\n'
+printf 'Building the shared %s MHz monitor with the 64 MiB map...\n' \
+    "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}"
 HAZARD3_BUILD_DIR="${MONITOR_BUILD_DIR}" \
 HAZARD3_MEMORY_PROFILE=64m \
-HAZARD3_SYS_CLK_HZ=25000000 \
+HAZARD3_SYS_CLK_HZ="${SYS_CLK_HZ}" \
     "${ROOT_DIR}/scripts/build.sh"
 
 require_file "${MONITOR_OUTPUT}"
@@ -228,9 +234,13 @@ mkdir -p "${BOARD_BUILD_DIR}"
 "${ROOT_DIR}/scripts/make-boot-hex.py" \
     "${MONITOR_BIN}" "${BOOT_HEX_WORK}" --bytes 0x10000 --load-address 0x40
 install -m 0644 "${BOOT_HEX_WORK}" "${BOOT_HEX_OUTPUT}"
+# This stamp identifies the monitor clock embedded in subsequent FPGA builds.
+printf '%s\n' "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" > \
+    "${BOARD_BUILD_DIR}/monitor-sys-clk-mhz"
 
 printf '\nBuilding the Hazard3 ULX3S 85F FPGA target with cold-boot monitor...\n'
 FORCE_BITSTREAM_REBUILD=1 \
+HAZARD3_ULX3S_85F_SYS_CLK_MHZ="${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" \
 HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES}" \
 HAZARD3_ROOT="${HAZARD3_ROOT}" \
     "${ROOT_DIR}/scripts/build-ulx3s-85f-bitstream.sh"
@@ -262,7 +272,8 @@ printf '  Log:     %s\n' "${BUILD_LOG}"
 print_final_timing_summary "${PNR_LOG}"
 printf '  SD H3IMG:  %s\n' "${SDCARD_DIR}/DOOM.IMG"
 printf '  Boot HEX: %s\n' "${BOOT_HEX_OUTPUT}"
-printf '  Profile: 64m SDRAM, 25 MHz, HDMI %s\n\n' "${VIDEO_PROFILE}"
+printf '  Profile: 64m SDRAM, %s MHz, HDMI %s\n\n' \
+    "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" "${VIDEO_PROFILE}"
 printf 'To load the FPGA bitstream into SRAM (temporary; lost on power-cycle):\n\n'
 if (( IS_WSL == 1 )); then
     printf '  ./bin/fujprog-v48-win64.exe  ./build/fpga_ulx3s_85f.bit\n\n'

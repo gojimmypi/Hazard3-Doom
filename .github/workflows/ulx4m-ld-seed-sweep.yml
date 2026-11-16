@@ -52,6 +52,11 @@ on:
         required: true
         default: false
         type: boolean
+      ulx3s_85f_50mhz_best_config:
+        description: ULX3S 85F 50 MHz, registered hits and dual-port SRAM (ignored for other targets)
+        required: true
+        default: false
+        type: boolean
       ulx3s_85f_extended_modes:
         description: ULX3S 85F extended HDMI modes (ignored for other targets)
         required: true
@@ -195,6 +200,15 @@ env:
   OSS_CAD_SUITE_VERSION: ${{ inputs.synth_oss_cad_suite_version }}
   ROUTE_OSS_CAD_SUITE_VERSION: ${{ inputs.route_oss_cad_suite_version }}
   HAZARD3_HDMI_EXTENDED_MODES: ${{ inputs.ulx3s_85f_extended_modes }}
+  # Keep the qualified 25 MHz profile as default. The opt-in 50 MHz profile
+  # reproduces the 39.32 MHz candidate, not a timing-qualified build.
+  HAZARD3_ULX3S_85F_SYS_CLK_MHZ: ${{ inputs.ulx3s_85f_50mhz_best_config && '50' || '25' }}
+  HAZARD3_ULX3S_85F_REGISTERED_READ_HITS: ${{ inputs.ulx3s_85f_50mhz_best_config && '1' || '0' }}
+  HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER: "1"
+  HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW: ${{ inputs.ulx3s_85f_50mhz_best_config && '1' || '0' }}
+  HAZARD3_ULX3S_85F_CACHE_TAG_PIPELINE: "0"
+  HAZARD3_ULX3S_85F_TAG_RAM_MODE: "0"
+  HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE: "0"
   HAZARD3_MEMORY_PROFILE: ${{ inputs.ulx3s_12f_memory_profile }}
   HAZARD3_ULX4M_SYS_CLK_MHZ: ${{ inputs.ulx4m_sys_clk_mhz }}
   ULX4M_LITEDRAM_CPU: ${{ inputs.ulx4m_litedram_cpu }}
@@ -383,7 +397,7 @@ jobs:
           monitor_memory_profile=64m
           case "${SWEEP_TARGET}" in
           ulx3s-85f)
-              monitor_clock_hz=25000000
+              monitor_clock_hz="$((HAZARD3_ULX3S_85F_SYS_CLK_MHZ * 1000000))"
               ;;
           ulx4m-ld-85f)
               monitor_clock_hz="$((HAZARD3_ULX4M_SYS_CLK_MHZ * 1000000))"
@@ -408,6 +422,11 @@ jobs:
                   --bytes 0x10000 \
                   --load-address 0x40
               test -s third_party/Hazard3/example_soc/soc/hazard3-boot-monitor.hex
+              if [[ "${SWEEP_TARGET}" == "ulx3s-85f" ]]; then
+                  mkdir -p build/ulx3s-85f
+                  printf '%s\n' "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" \
+                      > build/ulx3s-85f/monitor-sys-clk-mhz
+              fi
           fi
 
           ./scripts/sweep-ecp5.sh --prepare "${SWEEP_TARGET}"

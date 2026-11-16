@@ -31,6 +31,14 @@ SWEEP_SKIP_SYNTH="${SWEEP_SKIP_SYNTH:-0}"
 SWEEP_PREPARE_ONLY="${SWEEP_PREPARE_ONLY:-0}"
 HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES:-0}"
 SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.video-profile"
+SYS_CLK_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.sys-clk-mhz"
+REGISTERED_HITS_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.registered-read-hits"
+SRAM_WRITE_BUFFER_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.sram-write-buffer"
+SRAM_DUAL_PORT_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.sram-dual-port-rw"
+CACHE_TAG_PIPELINE_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.cache-tag-pipeline"
+TAG_RAM_MODE_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.tag-ram-mode"
+CACHE_ADDR_PIPELINE_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.cache-addr-pipeline"
+MONITOR_SYS_CLK_STAMP="${BUILD_DIR}/ulx3s-85f/monitor-sys-clk-mhz"
 SYNTH_DURATION_STAMP="${BUILD_DIR}/fpga_ulx3s_85f.synth-seconds"
 SYNTH_LOG="${BUILD_DIR}/fpga_ulx3s_85f.synth.log"
 NETLIST="${BUILD_DIR}/fpga_ulx3s_85f.json"
@@ -39,6 +47,7 @@ LPF="${SYNTH_DIR}/fpga_ulx3s.lpf"
 # shellcheck source=scripts/ecp5-board-defaults.sh
 source "${SCRIPT_DIR}/ecp5-board-defaults.sh"
 SWEEP_ECP5_BOARD_ID="ulx3s-85f"
+ecp5_ulx3s_85f_clock_profile
 
 # shellcheck source=scripts/sweep-ecp5-common.sh
 source "${COMMON_SCRIPT}"
@@ -46,7 +55,13 @@ echo "Include source: ${COMMON_SCRIPT}" >&2
 
 sweep_ecp5_init_tuning
 TUNING_SUFFIX="$(sweep_ecp5_tuning_suffix)"
-SWEEP_DIR="${BUILD_DIR}/ulx3s-seed-sweep${TUNING_SUFFIX}"
+# Keep different clock and video profiles from overwriting each other's runs.
+case "${HAZARD3_HDMI_EXTENDED_MODES}" in
+0) VIDEO_PROFILE="vga640-standard" ;;
+1) VIDEO_PROFILE="vga640-extended" ;;
+*) echo "HAZARD3_HDMI_EXTENDED_MODES must be 0 or 1." >&2; exit 1 ;;
+esac
+SWEEP_DIR="${BUILD_DIR}/ulx3s-seed-sweep-${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}mhz-${VIDEO_PROFILE}-rh${HAZARD3_ULX3S_85F_REGISTERED_READ_HITS}-swb${HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER}-dp${HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW}-tagp${HAZARD3_ULX3S_85F_CACHE_TAG_PIPELINE}-trm${HAZARD3_ULX3S_85F_TAG_RAM_MODE}-cap${HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE}${TUNING_SUFFIX}"
 SWEEP_REL_DIR="${SWEEP_DIR#"${REPO_ROOT}"/}"
 
 usage()
@@ -61,6 +76,14 @@ Route one or more nextpnr seeds for the ULX3S 85F Hazard3-Doom build.
 Seeds are positive 32-bit decimals; at most 512 seeds per run (--all uses 1-260).
 SWEEP_JOBS=N runs up to N routes concurrently (default: 4).
 HAZARD3_HDMI_EXTENDED_MODES=0|1 selects standard/extended video.
+HAZARD3_ULX3S_85F_SYS_CLK_MHZ=25|40|50 selects the actual system PLL.
+HAZARD3_ULX3S_85F_REGISTERED_READ_HITS=0|1 selects cache-hit pipelining.
+HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER=0|1 selects EBR SRAM write buffering (default 1).
+HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW=0|1 selects experimental read/write RAM ports (default 0).
+HAZARD3_ULX3S_85F_CACHE_TAG_PIPELINE=0|1 adds a registered tag-hit/way-select stage (default 0).
+HAZARD3_ULX3S_85F_TAG_RAM_MODE=0|1|2: original, registered tag, or registered tag+per-way RAM.
+HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE=0|1: capture cache AHB address before EBR lookup.
+The monitor preload must be built for the same clock before sweeping.
 SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.
 SWEEP_ROUTE_TIMEOUT_SECONDS=N limits each nextpnr route (default: 600).
 EOF_USAGE
@@ -97,14 +120,8 @@ if [[ ! "${SWEEP_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
     exit 1
 fi
 
-case "${HAZARD3_HDMI_EXTENDED_MODES}" in
-0) VIDEO_PROFILE="vga640-standard" ;;
-1) VIDEO_PROFILE="vga640-extended" ;;
-*) echo "HAZARD3_HDMI_EXTENDED_MODES must be 0 or 1." >&2; exit 1 ;;
-esac
-
-printf 'ULX3S 85F sweep configuration: system clock=25 MHz, HDMI profile=%s, extended modes=%s\n' \
-    "${VIDEO_PROFILE}" "${HAZARD3_HDMI_EXTENDED_MODES}"
+printf 'ULX3S 85F sweep configuration: system clock=%s MHz, HDMI profile=%s, extended modes=%s\n' \
+    "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" "${VIDEO_PROFILE}" "${HAZARD3_HDMI_EXTENDED_MODES}"
 
 if [[ "${SWEEP_PREPARE_ONLY}" != "1" ]]; then
     if (( $# == 0 )); then
@@ -122,6 +139,20 @@ sweep_ecp5_require_tool sed
 sweep_ecp5_require_file "${LPF}"
 mkdir -p "${BUILD_DIR}"
 
+monitor_sys_clock=""
+if [[ -f "${MONITOR_SYS_CLK_STAMP}" ]]; then
+    read -r monitor_sys_clock < "${MONITOR_SYS_CLK_STAMP}" || true
+fi
+if [[ "${monitor_sys_clock}" != "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" ]]; then
+    if [[ "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" != 25 || -n "${monitor_sys_clock}" ]]; then
+        printf 'ERROR: ULX3S 85F monitor preload clock is %s; requested %s MHz.\n' \
+            "${monitor_sys_clock:-unrecorded}" "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" >&2
+        printf 'Run the full ULX3S 85F build for this clock first (a failed experimental P&R still generates the monitor).\n' >&2
+        exit 1
+    fi
+    printf 'WARNING: Legacy 25 MHz monitor has no clock stamp; rebuild the monitor to validate its provenance.\n' >&2
+fi
+
 synthesis_seconds="NA"
 if [[ -f "${SYNTH_DURATION_STAMP}" ]]; then
     read -r synthesis_seconds < "${SYNTH_DURATION_STAMP}" || true
@@ -135,8 +166,53 @@ if [[ "${SWEEP_SKIP_SYNTH}" == "1" ]]; then
     if [[ -f "${SYNTH_PROFILE_STAMP}" ]]; then
         read -r recorded_profile < "${SYNTH_PROFILE_STAMP}" || true
     fi
-    if [[ "${recorded_profile}" != "${VIDEO_PROFILE}" ]]; then
-        echo "Frozen ULX3S 85F netlist video profile does not match requested ${VIDEO_PROFILE}." >&2
+    recorded_sys_clock=""
+    if [[ -f "${SYS_CLK_PROFILE_STAMP}" ]]; then
+        read -r recorded_sys_clock < "${SYS_CLK_PROFILE_STAMP}" || true
+    fi
+    recorded_registered_hits=""
+    recorded_sram_write_buffer=""
+    recorded_sram_dual_port=""
+    recorded_cache_tag_pipeline=""
+    recorded_tag_ram_mode=""
+    recorded_cache_addr_pipeline=""
+    if [[ -f "${CACHE_TAG_PIPELINE_PROFILE_STAMP}" ]]; then
+        read -r recorded_cache_tag_pipeline < "${CACHE_TAG_PIPELINE_PROFILE_STAMP}" || true
+    fi
+    if [[ -f "${TAG_RAM_MODE_PROFILE_STAMP}" ]]; then
+        read -r recorded_tag_ram_mode < "${TAG_RAM_MODE_PROFILE_STAMP}" || true
+    fi
+    if [[ -f "${CACHE_ADDR_PIPELINE_PROFILE_STAMP}" ]]; then
+        read -r recorded_cache_addr_pipeline < "${CACHE_ADDR_PIPELINE_PROFILE_STAMP}" || true
+    fi
+    if [[ -f "${REGISTERED_HITS_PROFILE_STAMP}" ]]; then
+        read -r recorded_registered_hits < "${REGISTERED_HITS_PROFILE_STAMP}" || true
+    fi
+    if [[ -f "${SRAM_WRITE_BUFFER_PROFILE_STAMP}" ]]; then
+        read -r recorded_sram_write_buffer < "${SRAM_WRITE_BUFFER_PROFILE_STAMP}" || true
+    fi
+    if [[ -f "${SRAM_DUAL_PORT_PROFILE_STAMP}" ]]; then
+        read -r recorded_sram_dual_port < "${SRAM_DUAL_PORT_PROFILE_STAMP}" || true
+    fi
+    if [[ "${recorded_profile}" != "${VIDEO_PROFILE}" ||
+          "${recorded_sys_clock}" != "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" ||
+          "${recorded_registered_hits}" != "${HAZARD3_ULX3S_85F_REGISTERED_READ_HITS}" ||
+          "${recorded_sram_write_buffer}" != "${HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER}" ||
+          "${recorded_sram_dual_port}" != "${HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW}" ||
+          "${recorded_cache_tag_pipeline}" != "${HAZARD3_ULX3S_85F_CACHE_TAG_PIPELINE}" ||
+          "${recorded_tag_ram_mode}" != "${HAZARD3_ULX3S_85F_TAG_RAM_MODE}" ||
+          "${recorded_cache_addr_pipeline}" != "${HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE}" ]]; then
+        printf 'ERROR: Frozen ULX3S 85F netlist profile mismatch.\n' >&2
+        printf '  Recorded: video=%s clk=%s rh=%s swb=%s dp=%s tagp=%s trm=%s cap=%s\n' \
+            "${recorded_profile:-unrecorded}" "${recorded_sys_clock:-unrecorded}" \
+            "${recorded_registered_hits:-unrecorded}" "${recorded_sram_write_buffer:-unrecorded}" \
+            "${recorded_sram_dual_port:-unrecorded}" "${recorded_cache_tag_pipeline:-unrecorded}" \
+            "${recorded_tag_ram_mode:-unrecorded}" "${recorded_cache_addr_pipeline:-unrecorded}" >&2
+        printf '  Requested: video=%s clk=%s rh=%s swb=%s dp=%s tagp=%s trm=%s cap=%s\n' \
+            "${VIDEO_PROFILE}" "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" \
+            "${HAZARD3_ULX3S_85F_REGISTERED_READ_HITS}" "${HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER}" \
+            "${HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW}" "${HAZARD3_ULX3S_85F_CACHE_TAG_PIPELINE}" \
+            "${HAZARD3_ULX3S_85F_TAG_RAM_MODE}" "${HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE}" >&2
         exit 1
     fi
     printf 'Using existing synthesized ULX3S 85F netlist; synthesis skipped.\n'
@@ -148,20 +224,62 @@ else
     if [[ -f "${SYNTH_PROFILE_STAMP}" ]]; then
         read -r current_profile < "${SYNTH_PROFILE_STAMP}" || true
     fi
-    if [[ "${current_profile}" != "${VIDEO_PROFILE}" ]]; then
+    current_sys_clock=""
+    if [[ -f "${SYS_CLK_PROFILE_STAMP}" ]]; then
+        read -r current_sys_clock < "${SYS_CLK_PROFILE_STAMP}" || true
+    fi
+    current_registered_hits=""
+    current_sram_write_buffer=""
+    current_sram_dual_port=""
+    current_cache_tag_pipeline=""
+    current_tag_ram_mode=""
+    current_cache_addr_pipeline=""
+    if [[ -f "${CACHE_TAG_PIPELINE_PROFILE_STAMP}" ]]; then
+        read -r current_cache_tag_pipeline < "${CACHE_TAG_PIPELINE_PROFILE_STAMP}" || true
+    fi
+    if [[ -f "${TAG_RAM_MODE_PROFILE_STAMP}" ]]; then
+        read -r current_tag_ram_mode < "${TAG_RAM_MODE_PROFILE_STAMP}" || true
+    fi
+    if [[ -f "${CACHE_ADDR_PIPELINE_PROFILE_STAMP}" ]]; then
+        read -r current_cache_addr_pipeline < "${CACHE_ADDR_PIPELINE_PROFILE_STAMP}" || true
+    fi
+    if [[ -f "${REGISTERED_HITS_PROFILE_STAMP}" ]]; then
+        read -r current_registered_hits < "${REGISTERED_HITS_PROFILE_STAMP}" || true
+    fi
+    if [[ -f "${SRAM_WRITE_BUFFER_PROFILE_STAMP}" ]]; then
+        read -r current_sram_write_buffer < "${SRAM_WRITE_BUFFER_PROFILE_STAMP}" || true
+    fi
+    if [[ -f "${SRAM_DUAL_PORT_PROFILE_STAMP}" ]]; then
+        read -r current_sram_dual_port < "${SRAM_DUAL_PORT_PROFILE_STAMP}" || true
+    fi
+    if [[ "${current_profile}" != "${VIDEO_PROFILE}" ||
+          "${current_sys_clock}" != "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" ||
+          "${current_registered_hits}" != "${HAZARD3_ULX3S_85F_REGISTERED_READ_HITS}" ||
+          "${current_sram_write_buffer}" != "${HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER}" ||
+          "${current_sram_dual_port}" != "${HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW}" ||
+          "${current_cache_tag_pipeline}" != "${HAZARD3_ULX3S_85F_CACHE_TAG_PIPELINE}" ||
+          "${current_tag_ram_mode}" != "${HAZARD3_ULX3S_85F_TAG_RAM_MODE}" ||
+          "${current_cache_addr_pipeline}" != "${HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE}" ]]; then
         rm -f \
             "${NETLIST}" \
             "${SYNTH_LOG}" \
             "${SYNTH_DURATION_STAMP}"
     fi
 
-    printf 'ULX3S 85F HDMI video profile: %s (extended modes=%s)\n' \
-        "${VIDEO_PROFILE}" "${HAZARD3_HDMI_EXTENDED_MODES}"
+    printf 'ULX3S 85F synthesis profile: %s MHz, HDMI %s (extended modes=%s)\n' \
+        "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" "${VIDEO_PROFILE}" "${HAZARD3_HDMI_EXTENDED_MODES}"
 
     synth_start_seconds="$(date +%s)"
     sweep_ecp5_run_synthesis "${SYNTH_DIR}" "${SYNTH_LOG}" \
         -f ULX3S.mk \
         CHIPNAME="${BUILD_DIR}/fpga_ulx3s_85f" \
+        HAZARD3_ULX3S_85F_SYS_CLK_MHZ="${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" \
+        HAZARD3_ULX3S_85F_REGISTERED_READ_HITS="${HAZARD3_ULX3S_85F_REGISTERED_READ_HITS}" \
+        HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER="${HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER}" \
+        HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW="${HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW}" \
+        HAZARD3_ULX3S_85F_CACHE_TAG_PIPELINE="${HAZARD3_ULX3S_85F_CACHE_TAG_PIPELINE}" \
+        HAZARD3_ULX3S_85F_TAG_RAM_MODE="${HAZARD3_ULX3S_85F_TAG_RAM_MODE}" \
+        HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE="${HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE}" \
         HAZARD3_HDMI_EXTENDED_MODES="${HAZARD3_HDMI_EXTENDED_MODES}" synth
     if [[ "${SWEEP_SYNTHESIS_RAN}" == 1 ]]; then
         synthesis_seconds="$(( $(date +%s) - synth_start_seconds ))"
@@ -171,6 +289,13 @@ else
             "${synthesis_seconds}"
     fi
     printf '%s\n' "${VIDEO_PROFILE}" > "${SYNTH_PROFILE_STAMP}"
+    printf '%s\n' "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" > "${SYS_CLK_PROFILE_STAMP}"
+    printf '%s\n' "${HAZARD3_ULX3S_85F_REGISTERED_READ_HITS}" > "${REGISTERED_HITS_PROFILE_STAMP}"
+    printf '%s\n' "${HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER}" > "${SRAM_WRITE_BUFFER_PROFILE_STAMP}"
+    printf '%s\n' "${HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW}" > "${SRAM_DUAL_PORT_PROFILE_STAMP}"
+    printf '%s\n' "${HAZARD3_ULX3S_85F_CACHE_TAG_PIPELINE}" > "${CACHE_TAG_PIPELINE_PROFILE_STAMP}"
+    printf '%s\n' "${HAZARD3_ULX3S_85F_TAG_RAM_MODE}" > "${TAG_RAM_MODE_PROFILE_STAMP}"
+    printf '%s\n' "${HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE}" > "${CACHE_ADDR_PIPELINE_PROFILE_STAMP}"
 fi
 
 [[ -s "${NETLIST}" ]] || {
@@ -193,8 +318,15 @@ mkdir -p "${SWEEP_DIR}"
     printf 'full_route=1\n'
     printf 'result_columns=seed,clk_sys_mhz,clk_video_mhz,clk_tmds_mhz,route_seconds,timing_status\n'
     printf 'video_profile=%s\n' "${VIDEO_PROFILE}"
+    printf 'system_clock_mhz=%s\n' "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}"
+    printf 'registered_read_hits=%s\n' "${HAZARD3_ULX3S_85F_REGISTERED_READ_HITS}"
+    printf 'sram_write_buffer=%s\n' "${HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER}"
+    printf 'sram_dual_port_rw=%s\n' "${HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW}"
+    printf 'cache_tag_pipeline=%s\n' "${HAZARD3_ULX3S_85F_CACHE_TAG_PIPELINE}"
+    printf 'tag_ram_mode=%s\n' "${HAZARD3_ULX3S_85F_TAG_RAM_MODE}"
+    printf 'cache_addr_pipeline=%s\n' "${HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE}"
     sweep_ecp5_write_tuning_metadata
-    printf 'clk_sys_required_mhz=25.00\n'
+    printf 'clk_sys_required_mhz=%s.00\n' "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}"
     printf 'clk_video_required_mhz=25.00\n'
     printf 'clk_tmds_required_mhz=125.00\n'
     printf 'synthesis_seconds=%s\n' "${synthesis_seconds}"
@@ -283,8 +415,8 @@ run_seed()
         ;;
     esac
 
-    # The 85F's 25 MHz direct clock is clk_osc; older PLL builds used clk_sys.
-    # Detect the reported clock to avoid false FAIL classifications after RTL changes.
+    # At 25 MHz clk_sys is an oscillator alias; at 40/50 MHz it is PLL-derived.
+    # Detect the reported clock and check nextpnr's actual timing verdict.
     if ! sys_clock="$(sweep_ecp5_ulx3s_85f_system_clock "${pnr_log}")"; then
         printf '%d,ERROR,ERROR,ERROR,%s,ERROR\n' "${seed}" "${route_seconds}" > "${result}"
         [[ -f "${pnr_log}" ]] && mv "${pnr_log}" "${failed_log}"
