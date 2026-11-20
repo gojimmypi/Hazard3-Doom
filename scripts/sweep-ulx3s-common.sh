@@ -46,6 +46,7 @@ COMMON_SCRIPT="${SCRIPT_DIR}/sweep-ecp5-common.sh"
 SWEEP_JOBS="${SWEEP_JOBS:-4}"
 SWEEP_SKIP_SYNTH="${SWEEP_SKIP_SYNTH:-0}"
 SWEEP_PREPARE_ONLY="${SWEEP_PREPARE_ONLY:-0}"
+SWEEP_AUTO_BUILD_MONITOR="${SWEEP_AUTO_BUILD_MONITOR:-1}"
 
 # shellcheck source=scripts/ecp5-board-defaults.sh
 source "${SCRIPT_DIR}/ecp5-board-defaults.sh"
@@ -137,7 +138,9 @@ HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW=0|1 selects experimental ports.
 HAZARD3_ULX3S_85F_CACHE_TAG_PIPELINE=0|1 selects tag-hit pipelining.
 HAZARD3_ULX3S_85F_TAG_RAM_MODE=0|1|2 selects tag-RAM mode.
 HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE=0|1 selects AHB address pipelining.
-Build the 85F monitor for the selected clock before sweeping.
+SWEEP_AUTO_BUILD_MONITOR=1 builds a matching 85F monitor when needed (default).
+Set to 0 to require a previously prepared clock-matched monitor.
+Frozen sweeps (SWEEP_SKIP_SYNTH=1) never rebuild the monitor.
 EOF_85F
     fi
 }
@@ -164,6 +167,10 @@ esac
 case "${SWEEP_PREPARE_ONLY}" in
 0|1) ;;
 *) echo 'SWEEP_PREPARE_ONLY must be 0 or 1.' >&2; exit 1 ;;
+esac
+case "${SWEEP_AUTO_BUILD_MONITOR}" in
+0|1) ;;
+*) echo 'SWEEP_AUTO_BUILD_MONITOR must be 0 or 1.' >&2; exit 1 ;;
 esac
 if [[ ! "${SWEEP_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
     printf 'Invalid SWEEP_JOBS: %s; expected a positive integer.\n' "${SWEEP_JOBS}" >&2
@@ -195,21 +202,68 @@ sweep_ecp5_require_tool sed
 sweep_ecp5_require_file "${LPF}"
 mkdir -p "${BUILD_DIR}"
 
-# At 40/50 MHz the 85F firmware must match the PLL clock selected for its RTL.
-# The 12F bootstrap uses its established fixed 40 MHz configuration.
+# The 85F resident monitor embeds the selected system clock in its firmware.
+# Local sweeps may switch clocks without running the full Doom/FPGA build.
+# CI route jobs use SWEEP_SKIP_SYNTH=1 and must keep the frozen preload intact.
 if [[ "${SWEEP_ECP5_BOARD_ID}" == 'ulx3s-85f' ]]; then
     monitor_sys_clock=""
     if [[ -f "${MONITOR_SYS_CLK_STAMP}" ]]; then
         read -r monitor_sys_clock < "${MONITOR_SYS_CLK_STAMP}" || true
     fi
+
+    monitor_hex="${HAZARD3_ROOT}/example_soc/soc/hazard3-boot-monitor.hex"
+    monitor_needs_build=0
     if [[ "${monitor_sys_clock}" != "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" ]]; then
-        if [[ "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" != 25 || -n "${monitor_sys_clock}" ]]; then
+        monitor_needs_build=1
+    fi
+    if [[ ! -s "${monitor_hex}" ]]; then
+        monitor_needs_build=1
+    fi
+
+    if [[ "${monitor_needs_build}" == 1 ]]; then
+        if [[ "${SWEEP_SKIP_SYNTH}" == 1 || "${SWEEP_AUTO_BUILD_MONITOR}" == 0 ]]; then
             printf 'ERROR: ULX3S 85F monitor preload clock is %s; requested %s MHz.\n' \
                 "${monitor_sys_clock:-unrecorded}" "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" >&2
-            printf 'Run the full ULX3S 85F build for this clock first (a failed experimental P&R still generates the monitor).\n' >&2
+            printf 'The monitor is missing, mismatched, or unstamped.\n' >&2
+            printf 'Prepare a clock-matched preload before frozen routing.\n' >&2
             exit 1
         fi
-        printf 'WARNING: Legacy 25 MHz monitor has no clock stamp; rebuild the monitor to validate its provenance.\n' >&2
+
+        printf 'Preparing ULX3S 85F monitor for %s MHz (previous: %s).\n' \
+            "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" "${monitor_sys_clock:-unrecorded}"
+        sweep_ecp5_require_tool python3
+        sweep_ecp5_require_tool install
+        sweep_ecp5_require_file "${SCRIPT_DIR}/build.sh"
+        sweep_ecp5_require_file "${SCRIPT_DIR}/make-boot-hex.py"
+
+        monitor_build_dir="${BUILD_DIR}/ulx3s-85f/monitor"
+        monitor_binary="${monitor_build_dir}/hazard3-boot-monitor.bin"
+        monitor_copy="${BUILD_DIR}/ulx3s-85f/hazard3-boot-monitor.hex"
+
+        # Clear the stamp first so a failed firmware build cannot leave the
+        # earlier clock profile falsely marked as current.
+        rm -f "${MONITOR_SYS_CLK_STAMP}"
+        HAZARD3_BUILD_DIR="${monitor_build_dir}" \
+        HAZARD3_MEMORY_PROFILE=64m \
+        HAZARD3_SYS_CLK_HZ="$((HAZARD3_ULX3S_85F_SYS_CLK_MHZ * 1000000))" \
+            "${SCRIPT_DIR}/build.sh"
+        if [[ ! -s "${monitor_binary}" ]]; then
+            printf 'ERROR: Monitor build did not produce %s\n' "${monitor_binary}" >&2
+            exit 1
+        fi
+
+        "${SCRIPT_DIR}/make-boot-hex.py" \
+            "${monitor_binary}" "${monitor_hex}" \
+            --bytes 0x10000 --load-address 0x40
+        if [[ ! -s "${monitor_hex}" ]]; then
+            printf 'ERROR: Monitor preload was not generated: %s\n' "${monitor_hex}" >&2
+            exit 1
+        fi
+        mkdir -p "${BUILD_DIR}/ulx3s-85f"
+        install -m 0644 "${monitor_hex}" "${monitor_copy}"
+        printf '%s\n' "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" > "${MONITOR_SYS_CLK_STAMP}"
+        printf 'ULX3S 85F monitor preload ready for %s MHz.\n' \
+            "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}"
     fi
 fi
 

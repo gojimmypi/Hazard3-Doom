@@ -8,9 +8,18 @@ name: FPGA seed sweep
 #   ULX3S-12F: fixed 40 MHz.
 #   ULX4M-LD: selected ULX4M system clock.
 #   ULX5M-GS: selected ULX5M system clock (last fallback).
+# The selected ECP5 part appears after the board name. When board-default
+# is selected, show the board's resolved part number instead of that label.
+# Distinguish ECP5-5G from ordinary ECP5 grade 8 in the run list.
+# ULX5M uses a GateMate FPGA, so label it GateMate rather than an ECP5 part.
 # The optional breadcrumb adds " - label" only when nonempty.
 run-name: >-
   FPGA seed sweep${{ inputs.breadcrumb && format(' - {0}', inputs.breadcrumb) || '' }} - ${{ inputs.target }} -
+  ${{ inputs.target == 'ulx5m-gs' && 'GateMate' ||
+      inputs.ecp5_fpga_part != 'board-default' && inputs.ecp5_fpga_part ||
+      inputs.target == 'ulx3s-12f' && 'LFE5U-12F-6' ||
+      inputs.target == 'ulx3s-85f' && 'LFE5U-85F-6' ||
+      'LFE5UM-85F-8' }} -
   ${{ inputs.target == 'ulx3s-85f' && (inputs.ulx3s_85f_50mhz_best_config && '50' || inputs.ulx3s_85f_sys_clk_mhz) ||
       inputs.target == 'ulx3s-12f' && '40' ||
       inputs.target == 'ulx4m-ld-85f' && inputs.ulx4m_sys_clk_mhz ||
@@ -43,6 +52,25 @@ on:
           - ulx3s-12f
           - ulx4m-ld-85f
           - ulx5m-gs
+      ecp5_fpga_part:
+        # Exact chip marking (without package/temperature suffix), not just its speed.
+        # Grade 8 ECP5-5G uses different timing data from ordinary ECP5 grade 8.
+        description: ECP5 FPGA part fitted to the board (family, capacity, speed)
+        required: true
+        default: board-default
+        type: choice
+        options:
+          - board-default
+          - LFE5U-12F-6
+          - LFE5U-12F-7
+          - LFE5U-12F-8
+          - LFE5U-85F-6
+          - LFE5U-85F-7
+          - LFE5U-85F-8
+          - LFE5UM-85F-6
+          - LFE5UM-85F-7
+          - LFE5UM-85F-8
+          - LFE5UM5G-85F-8
       seed_first:
         description: First seed to route (positive 32-bit integer)
         required: true
@@ -176,27 +204,14 @@ on:
           - "0.6"
           - "0.7"
           - "0.8"
-      ecp5_fpga_part:
-        # Exact chip marking (without package/temperature suffix), not just its speed.
-        # Grade 8 ECP5-5G uses different timing data from ordinary ECP5 grade 8.
-        description: ECP5 FPGA part fitted to the board (family, capacity, speed)
-        required: true
-        default: board-default
-        type: choice
-        options:
-          - board-default
-          - LFE5U-12F-6
-          - LFE5U-12F-7
-          - LFE5U-12F-8
-          - LFE5U-85F-6
-          - LFE5U-85F-7
-          - LFE5U-85F-8
-          - LFE5UM-85F-6
-          - LFE5UM-85F-7
-          - LFE5UM-85F-8
-          - LFE5UM5G-85F-8
+      # Timing targets qualify the routed Fmax in each clock domain.
+      # They do NOT set PLL frequencies or change the generated hardware clocks.
+      # 'board-default' follows the clock required by the selected board/mode.
+      # Higher or lower values are allowed for diagnostic Fmax comparisons.
+      # Baseline/hardware qualification is still checked independently.
+      # These three ECP5 controls are ignored for the headless ULX5M-GS.
       sweep_sys_target_mhz:
-        description: ECP5 system timing PASS threshold (MHz; board-default follows chosen clock)
+        description: Experimental system Fmax target (MHz; board-default uses configured clock)
         required: true
         default: board-default
         type: choice
@@ -207,33 +222,41 @@ on:
           - "25.00"
           - "40.00"
           - "50.00"
+          - "55.00"
+          - "60.00"
       sweep_video_target_mhz:
-        description: ECP5 video timing PASS threshold (MHz; default 25 for 85F, 50 for 12F/ULX4M)
+        description: Experimental video Fmax target (MHz; default 25 on 85F, 50 on 12F/ULX4M)
         required: true
         default: board-default
         type: choice
         options:
           - board-default
           - "25.00"
+          - "30.00"
           - "50.00"
+          - "60.00"
       sweep_tmds_target_mhz:
-        description: ECP5 HDMI TMDS timing PASS threshold (MHz; default 125 for 85F, 250 for 12F/ULX4M)
+        description: Experimental TMDS Fmax target (MHz; default 125 on 85F, 250 on 12F/ULX4M)
         required: true
         default: board-default
         type: choice
         options:
           - board-default
           - "125.00"
+          - "150.00"
+          - "200.00"
           - "250.00"
+          - "300.00"
+      # Keep these ULX4M one-choice controls for additional options later.
       sweep_litedram_target_mhz:
-        description: ULX4M LiteDRAM user-clock minimum Fmax for timing PASS (MHz)
+        description: ULX4M experimental LiteDRAM user Fmax (MHz; baseline 60.01)
         required: true
         default: "60.01"
         type: choice
         options:
           - "60.01"
       sweep_init_target_mhz:
-        description: ULX4M initialization-clock minimum Fmax for timing PASS (MHz)
+        description: ULX4M experimental initialization Fmax (MHz; baseline 25.00)
         required: true
         default: "25.00"
         type: choice
@@ -291,19 +314,26 @@ env:
   ULX4M_LITEDRAM_CPU: ${{ inputs.ulx4m_litedram_cpu }}
   ULX5M_SYS_CLK_MHZ: ${{ inputs.ulx5m_sys_clk_mhz }}
   SWEEP_ULX5M_HEAP_BETA: ${{ inputs.ulx5m_heap_beta }}
-  # These are minimum achieved Fmax values for timing qualification.
-  # They do not change the actual PLL frequencies or nextpnr constraints.
-  # Keep board-default unless intentionally testing a stricter timing goal.
   # The shared resolver derives --85k/--um-85k/--um5g-85k, speed and
   # bitstream IDCODE from this single part selector. No speed-only override
   # is set in CI, so mismatched family and grade cannot be selected.
   ECP5_PNR_DEVICE: ${{ inputs.ecp5_fpga_part }}
   ECP5_PNR_PACKAGE: "CABGA381"
-  SWEEP_SYS_TARGET_MHZ: ${{ inputs.sweep_sys_target_mhz == 'board-default' && (inputs.target == 'ulx3s-85f' && (inputs.ulx3s_85f_50mhz_best_config && '50.00' || format('{0}.00', inputs.ulx3s_85f_sys_clk_mhz)) || inputs.target == 'ulx3s-12f' && '40.00' || inputs.target == 'ulx4m-ld-85f' && format('{0}.00', inputs.ulx4m_sys_clk_mhz) || format('{0}.00', inputs.ulx5m_sys_clk_mhz)) || inputs.sweep_sys_target_mhz }}
-  SWEEP_VIDEO_TARGET_MHZ: ${{ inputs.sweep_video_target_mhz == 'board-default' && (inputs.target == 'ulx3s-85f' && '25.00' || '50.00') || inputs.sweep_video_target_mhz }}
-  SWEEP_TMDS_TARGET_MHZ: ${{ inputs.sweep_tmds_target_mhz == 'board-default' && (inputs.target == 'ulx3s-85f' && '125.00' || '250.00') || inputs.sweep_tmds_target_mhz }}
-  SWEEP_LITEDRAM_TARGET_MHZ: ${{ inputs.sweep_litedram_target_mhz }}
-  SWEEP_INIT_TARGET_MHZ: ${{ inputs.sweep_init_target_mhz }}
+  # Sweep scripts and their PASS/FAIL status always use the original board
+  # requirements. This protects the live collector, bitstreams, and the final
+  # hardware/baseline qualification from lowered diagnostic thresholds.
+  SWEEP_SYS_TARGET_MHZ: ${{ inputs.target == 'ulx3s-85f' && (inputs.ulx3s_85f_50mhz_best_config && '50.00' || format('{0}.00', inputs.ulx3s_85f_sys_clk_mhz)) || inputs.target == 'ulx3s-12f' && '40.00' || inputs.target == 'ulx4m-ld-85f' && format('{0}.00', inputs.ulx4m_sys_clk_mhz) || format('{0}.00', inputs.ulx5m_sys_clk_mhz) }}
+  SWEEP_VIDEO_TARGET_MHZ: ${{ inputs.target == 'ulx3s-85f' && '25.00' || '50.00' }}
+  SWEEP_TMDS_TARGET_MHZ: ${{ inputs.target == 'ulx3s-85f' && '125.00' || '250.00' }}
+  SWEEP_LITEDRAM_TARGET_MHZ: "60.01"
+  SWEEP_INIT_TARGET_MHZ: "25.00"
+  # Diagnostic-only targets are evaluated from the routed Fmax values in the
+  # final summary. 'board-default' uses the corresponding SWEEP_* baseline.
+  EXPERIMENT_SYS_TARGET_MHZ: ${{ inputs.sweep_sys_target_mhz }}
+  EXPERIMENT_VIDEO_TARGET_MHZ: ${{ inputs.sweep_video_target_mhz }}
+  EXPERIMENT_TMDS_TARGET_MHZ: ${{ inputs.sweep_tmds_target_mhz }}
+  EXPERIMENT_LITEDRAM_TARGET_MHZ: ${{ inputs.sweep_litedram_target_mhz }}
+  EXPERIMENT_INIT_TARGET_MHZ: ${{ inputs.sweep_init_target_mhz }}
   SWEEP_NEXTPNR_PLACER: ${{ inputs.target == 'ulx5m-gs' && 'heap' || inputs.placer }}
   SWEEP_NEXTPNR_ROUTER: ${{ inputs.target == 'ulx5m-gs' && 'router2' || 'router1' }}
   SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT: ${{ inputs.target == 'ulx4m-ld-85f' && inputs.ulx4m_heap_timingweight || '10' }}
@@ -386,9 +416,12 @@ jobs:
           ]
           if target != "ulx5m-gs":
               resolved += [
-                  ("Minimum system Fmax for PASS (MHz)", os.environ["SWEEP_SYS_TARGET_MHZ"]),
-                  ("Minimum video Fmax for PASS (MHz)", os.environ["SWEEP_VIDEO_TARGET_MHZ"]),
-                  ("Minimum HDMI TMDS Fmax for PASS (MHz)", os.environ["SWEEP_TMDS_TARGET_MHZ"]),
+                  ("Baseline system Fmax (MHz)", os.environ["SWEEP_SYS_TARGET_MHZ"]),
+                  ("Baseline video Fmax (MHz)", os.environ["SWEEP_VIDEO_TARGET_MHZ"]),
+                  ("Baseline HDMI TMDS Fmax (MHz)", os.environ["SWEEP_TMDS_TARGET_MHZ"]),
+                  ("Experimental system Fmax target", os.environ["EXPERIMENT_SYS_TARGET_MHZ"]),
+                  ("Experimental video Fmax target", os.environ["EXPERIMENT_VIDEO_TARGET_MHZ"]),
+                  ("Experimental TMDS Fmax target", os.environ["EXPERIMENT_TMDS_TARGET_MHZ"]),
                   ("Installed FPGA part", selected_fpga_part),
                   ("ECP5 package", os.environ["ECP5_PNR_PACKAGE"]),
               ]
@@ -403,8 +436,10 @@ jobs:
           elif target == "ulx4m-ld-85f":
               resolved += [
                   ("LiteDRAM initialization CPU", os.environ["ULX4M_LITEDRAM_CPU"]),
-                  ("Minimum LiteDRAM Fmax for PASS (MHz)", os.environ["SWEEP_LITEDRAM_TARGET_MHZ"]),
-                  ("Minimum initialization Fmax for PASS (MHz)", os.environ["SWEEP_INIT_TARGET_MHZ"]),
+                  ("Baseline LiteDRAM Fmax (MHz)", os.environ["SWEEP_LITEDRAM_TARGET_MHZ"]),
+                  ("Baseline initialization Fmax (MHz)", os.environ["SWEEP_INIT_TARGET_MHZ"]),
+                  ("Experimental LiteDRAM target", os.environ["EXPERIMENT_LITEDRAM_TARGET_MHZ"]),
+                  ("Experimental initialization target", os.environ["EXPERIMENT_INIT_TARGET_MHZ"]),
               ]
           elif target == "ulx5m-gs":
               resolved.append(("GateMate HeAP beta", os.environ["SWEEP_ULX5M_HEAP_BETA"]))
@@ -428,7 +463,7 @@ jobs:
               summary.write(f"\n### Dispatch inputs ({len(inputs)})\n\n| Input | Selected value |\n| --- | --- |\n")
               for name, value in inputs.items():
                   summary.write(f"| `{markdown_value(name)}` | `{markdown_value(json.dumps(value, ensure_ascii=True))}` |\n")
-              summary.write("\nTiming thresholds affect PASS/FAIL qualification, not the physical PLL frequencies.\n")
+              summary.write("\nSweep PASS means the original board/baseline timing requirements are met. Experimental targets are evaluated separately in the final summary; neither changes the PLL frequencies.\n")
           PY
 
       - name: Check out repository
@@ -485,6 +520,34 @@ jobs:
           fi
           printf 'HDMI output resolution: %s\n' "${SWEEP_HDMI_OUTPUT_RESOLUTION}"
 
+          # Experimental Fmax thresholds do not drive a PLL or determine
+          # hardware PASS. They may be lower or higher than the board clocks.
+          # Validate numeric overrides; 'board-default' is resolved when the
+          # final summary compares each measured Fmax against both targets.
+          python3 - <<'PY'
+          from decimal import Decimal, InvalidOperation
+          import os
+
+          names = (
+              "EXPERIMENT_SYS_TARGET_MHZ",
+              "EXPERIMENT_VIDEO_TARGET_MHZ",
+              "EXPERIMENT_TMDS_TARGET_MHZ",
+              "EXPERIMENT_LITEDRAM_TARGET_MHZ",
+              "EXPERIMENT_INIT_TARGET_MHZ",
+          )
+          for name in names:
+              value = os.environ[name]
+              if value == "board-default":
+                  continue
+              try:
+                  frequency = Decimal(value)
+              except InvalidOperation:
+                  raise SystemExit(f"::error::{name} must be a frequency in MHz")
+              if not frequency.is_finite() or frequency <= 0:
+                  raise SystemExit(f"::error::{name} must be positive and finite")
+          print("Experimental Fmax targets validated independently of board clocks.")
+          PY
+
           if [[ ! "${SWEEP_MAX_PARALLEL}" =~ ^[1-9][0-9]*$ ]]; then
               echo "max_parallel must be a positive integer." >&2
               exit 1
@@ -498,6 +561,7 @@ jobs:
           chmod +x \
               scripts/sweep-ecp5.sh \
               scripts/sweep-ecp5-common.sh \
+              scripts/sweep-ulx3s-common.sh \
               scripts/sweep-ulx3s-85f.sh \
               scripts/sweep-ulx3s-12f.sh \
               scripts/sweep-ulx4m-ld.sh \
@@ -612,6 +676,7 @@ jobs:
           chmod +x \
               scripts/sweep-ecp5.sh \
               scripts/sweep-ecp5-common.sh \
+              scripts/sweep-ulx3s-common.sh \
               scripts/sweep-ulx3s-85f.sh \
               scripts/sweep-ulx3s-12f.sh \
               scripts/sweep-ulx4m-ld.sh \
@@ -805,6 +870,11 @@ jobs:
               printf 'netlist=%s\n' "${netlist}"
               printf 'route_constraint=%s\n' "${route_constraint}"
               printf 'timing_constraint=%s\n' "${timing_constraint}"
+              printf 'experiment_sys_target_mhz=%s\n' "${EXPERIMENT_SYS_TARGET_MHZ}"
+              printf 'experiment_video_target_mhz=%s\n' "${EXPERIMENT_VIDEO_TARGET_MHZ}"
+              printf 'experiment_tmds_target_mhz=%s\n' "${EXPERIMENT_TMDS_TARGET_MHZ}"
+              printf 'experiment_litedram_target_mhz=%s\n' "${EXPERIMENT_LITEDRAM_TARGET_MHZ}"
+              printf 'experiment_init_target_mhz=%s\n' "${EXPERIMENT_INIT_TARGET_MHZ}"
           } > reference/workflow.txt
 
       - name: Generate seed matrix
@@ -987,6 +1057,7 @@ jobs:
           chmod +x \
               scripts/sweep-ecp5.sh \
               scripts/sweep-ecp5-common.sh \
+              scripts/sweep-ulx3s-common.sh \
               scripts/sweep-ulx3s-85f.sh \
               scripts/sweep-ulx3s-12f.sh \
               scripts/sweep-ulx4m-ld.sh \
@@ -1012,8 +1083,13 @@ jobs:
               printf 'ecppack: %s\n' "$(command -v ecppack)"
           fi
 
+      # Mark the route step's raw outcome as failure when any seed misses
+      # baseline timing, while allowing artifacts and the final sweep summary
+      # to run. GitHub applies continue-on-error to the step conclusion.
+      # Real tool failures still fail the job in "Fail route group on tool errors".
       - name: Route seed group
         id: route
+        continue-on-error: true
         shell: bash
         run: |
           set -u -o pipefail
@@ -1029,6 +1105,7 @@ jobs:
           expected_sha="$(awk '{print $1}' reference/netlist.sha256)"
           artifact_dir="seed-artifact"
           overall_status=0
+          timing_failed_seeds=()
           mkdir -p "${artifact_dir}"
 
           for seed in ${{ matrix.seeds }}; do
@@ -1051,12 +1128,38 @@ jobs:
 
               printf '%s\n' "$((end_seconds - start_seconds))" \
                   > "${artifact_dir}/elapsed-${seed}.txt"
+              # The sweep wrapper exits 1 when no seed meets baseline timing.
+              # That is a completed timing miss, not a nextpnr/tool failure.
+              # Preserve the raw process exit for diagnostics and normalize only
+              # a completed per-seed FAIL result for the summary/collector.
+              printf '%s\n' "${route_status}" \
+                  > "${artifact_dir}/sweep-exit-${seed}.txt"
+              if [[ "${route_status}" == "1" &&
+                    -s "${sweep_dir}/result-seed-${seed}.csv" ]]; then
+                  result_timing_status="$(
+                      awk -F, 'NF {gsub(/\r/, "", $NF); print $NF}' \
+                          "${sweep_dir}/result-seed-${seed}.csv" | tail -n 1
+                  )"
+                  if [[ "${result_timing_status}" == "FAIL" ]]; then
+                      echo "Seed ${seed}: route completed but missed baseline timing."
+                      route_status=0
+                  fi
+              fi
               printf '%s\n' "${route_status}" \
                   > "${artifact_dir}/exit-${seed}.txt"
 
               result="${sweep_dir}/result-seed-${seed}.csv"
               if [[ -f "${result}" ]]; then
                   cp "${result}" "${artifact_dir}/"
+                  # Even when the sweep wrapper returns normally, its timing
+                  # result is authoritative. A timing FAIL is not a tool error.
+                  result_timing_status="$(
+                      awk -F, 'NF {gsub(/\r/, "", $NF); print $NF}' \
+                          "${result}" | tail -n 1
+                  )"
+                  if [[ "${result_timing_status}" == "FAIL" ]]; then
+                      timing_failed_seeds+=("${seed}")
+                  fi
               fi
 
               shopt -s nullglob
@@ -1099,7 +1202,15 @@ jobs:
           done
 
           cp reference/sweep-metadata.txt "${artifact_dir}/metadata-${{ matrix.group }}.txt"
+          # Persist tool status before deliberately returning a timing failure.
           printf 'status=%s\n' "${overall_status}" >> "${GITHUB_OUTPUT}"
+
+          if (( ${#timing_failed_seeds[@]} > 0 )); then
+              printf '::error::Baseline timing FAIL for seed(s): %s\n' "${timing_failed_seeds[*]}"
+              # The ROUTE STEP has outcome=failure. continue-on-error keeps the
+              # JOB eligible for success if the final sweep has another PASS.
+              exit 1
+          fi
 
       - name: Publish seed group status
         id: publish
@@ -1276,12 +1387,14 @@ jobs:
           retention-days: 1
           compression-level: 0
 
-      - name: Fail incomplete route group
-        if: steps.route.outputs.status != '0' || steps.publish.outputs.any_pass != 'true'
+      # A completed timing miss is a valid seed result. Some route groups may
+      # have no passing seeds even when the overall sweep has a passing seed.
+      # Fail here only for actual route/tool errors; the final summary checks
+      # whether at least one seed meets all baseline clock requirements.
+      - name: Fail route group on tool errors
+        if: steps.route.outputs.status != '0'
         run: |
-          if [[ "${{ steps.publish.outputs.any_pass }}" != "true" ]]; then
-              echo '::error::No timing-passing seeds in this route group.'
-          fi
+          echo '::error::Route group had a tool failure or changed the frozen netlist.'
           exit 1
 
   summarize:
@@ -1339,6 +1452,109 @@ jobs:
           cat final/summary.md >> "${GITHUB_STEP_SUMMARY}"
           printf 'status=%s\n' "${status}" >> "${GITHUB_OUTPUT}"
 
+      - name: Report independent experimental timing results
+        if: ${{ steps.summary.outputs.status == '0' && inputs.target != 'ulx5m-gs' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import csv
+          from decimal import Decimal, InvalidOperation
+          import os
+          from pathlib import Path
+
+          # The sweep scripts, live watcher, and existing summary.csv use the
+          # actual board/baseline clocks, not the experimental override.
+          clocks = {
+              "clk_sys_mhz": ("SWEEP_SYS_TARGET_MHZ", "EXPERIMENT_SYS_TARGET_MHZ"),
+              "clk_video_mhz": ("SWEEP_VIDEO_TARGET_MHZ", "EXPERIMENT_VIDEO_TARGET_MHZ"),
+              "clk_tmds_mhz": ("SWEEP_TMDS_TARGET_MHZ", "EXPERIMENT_TMDS_TARGET_MHZ"),
+          }
+          if os.environ["SWEEP_TARGET"] == "ulx4m-ld-85f":
+              clocks["litedram_user_mhz"] = (
+                  "SWEEP_LITEDRAM_TARGET_MHZ", "EXPERIMENT_LITEDRAM_TARGET_MHZ"
+              )
+              clocks["init_clk_mhz"] = (
+                  "SWEEP_INIT_TARGET_MHZ", "EXPERIMENT_INIT_TARGET_MHZ"
+              )
+
+          baseline = {}
+          experimental = {}
+          for column, (baseline_name, requested_name) in clocks.items():
+              baseline[column] = Decimal(os.environ[baseline_name])
+              requested = os.environ[requested_name]
+              experimental[column] = (
+                  baseline[column] if requested == "board-default"
+                  else Decimal(requested)
+              )
+
+          with Path("final/summary.csv").open(newline="", encoding="utf-8") as source:
+              rows = list(csv.DictReader(source))
+
+          results = []
+          for row in rows:
+              # A missing/incomplete route is never an experimental PASS.
+              route_ok = row["route_exit"] == "0"
+              measured = {}
+              for column in clocks:
+                  raw = row.get(column, "")
+                  try:
+                      measured[column] = Decimal(raw)
+                  except (InvalidOperation, TypeError):
+                      route_ok = False
+                      break
+              passed = route_ok and all(
+                  measured[column] >= experimental[column] for column in clocks
+              )
+              results.append({
+                  "seed": row["seed"],
+                  "baseline_status": row["all_timing_pass"],
+                  "experimental_status": "PASS" if passed else "FAIL",
+                  **{column: row.get(column, "") for column in clocks},
+              })
+
+          output = Path("final/experimental-timing.csv")
+          columns = ["seed", "baseline_status", "experimental_status", *clocks]
+          with output.open("w", newline="", encoding="utf-8") as handle:
+              writer = csv.DictWriter(handle, fieldnames=columns)
+              writer.writeheader()
+              writer.writerows(results)
+
+          baseline_passes = sum(row["baseline_status"] == "PASS" for row in results)
+          experimental_passes = sum(row["experimental_status"] == "PASS" for row in results)
+
+          with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as summary:
+              summary.write("\n### Experimental timing comparison\n\n")
+              summary.write("The normal sweep PASS uses board/baseline requirements. ")
+              summary.write("Experimental PASS uses the selected diagnostic Fmax targets. ")
+              summary.write("Lower diagnostic targets **do not qualify hardware**.\n\n")
+              summary.write("| Clock | Baseline MHz | Experimental MHz |\n")
+              summary.write("| --- | ---: | ---: |\n")
+              for column in clocks:
+                  summary.write(
+                      f"| {column} | {baseline[column]} | {experimental[column]} |\n"
+                  )
+              summary.write("\n| Seed | Baseline | Experimental |\n")
+              summary.write("| ---: | :---: | :---: |\n")
+              for row in results:
+                  summary.write(
+                      f"| {row['seed']} | {row['baseline_status']} | "
+                      f"{row['experimental_status']} |\n"
+                  )
+              summary.write(
+                  f"\nBaseline PASS: **{baseline_passes}**; "
+                  f"Experimental PASS: **{experimental_passes}**.\n"
+              )
+              if os.environ["SWEEP_TARGET"] == "ulx4m-ld-85f":
+                  summary.write(
+                      "ULX4M baseline qualification retains the project's "
+                      "60.01 MHz LiteDRAM policy.\n"
+                  )
+
+          print(f"Baseline-qualified seeds: {baseline_passes}")
+          print(f"Experimental-target passing seeds: {experimental_passes}")
+          PY
+
       - name: Inventory final artifact
         shell: bash
         run: |
@@ -1366,8 +1582,8 @@ jobs:
               exit 1
           fi
 
-          # The final summarizer recalculates timing closure for every required clock.
-          # Check its result instead of the raw per-seed PASS/FAIL status.
+          # Require at least one board/baseline-qualified seed. Diagnostic
+          # experimental PASS is reported separately and never changes this gate.
           python3 - <<'PY'
           import csv
 

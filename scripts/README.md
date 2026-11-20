@@ -121,8 +121,34 @@ HAZARD3_ULX3S_85F_SYS_CLK_MHZ=50 NEXTPNR_SEED=11 \
     ./scripts/build-ulx3s-85f-doom.sh
 ```
 
-Even if this exploratory build fails P&R, it creates a clock-matched monitor
-preload and stamp for a subsequent seed sweep. Try a small 50 MHz sweep first:
+The local sweep now rebuilds the 85F resident monitor preload automatically
+when its clock stamp differs from the selected 25/40/50 MHz system clock. It
+uses `scripts/build.sh` with the 64 MiB memory map and regenerates
+`hazard3-boot-monitor.hex`; it does not run the Doom image build or the complete
+FPGA bitstream build. You no longer need a full build just to change the clock
+for a seed sweep. A full build is still needed to produce final deployable
+firmware, FPGA, and Doom outputs together.
+
+Set `SWEEP_AUTO_BUILD_MONITOR=0` to require a previously prepared, clock-matched
+monitor. `SWEEP_SKIP_SYNTH=1` always refuses mismatched monitor stamps and
+synthesized-netlist configurations; it never rebuilds either of them. The
+shared `build/fpga_ulx3s_85f.json` is also regenerated whenever the selected
+clock or cache/SRAM profile changes, so sweep profiles remain distinct from
+reused frozen netlists. For example:
+
+```bash
+ECP5_PNR_DEVICE=LFE5U-85F-6 \
+HAZARD3_ULX3S_85F_SYS_CLK_MHZ=40 \
+HAZARD3_ULX3S_85F_REGISTERED_READ_HITS=0 \
+HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER=1 \
+HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW=0 \
+HAZARD3_ULX3S_85F_CACHE_TAG_PIPELINE=0 \
+HAZARD3_ULX3S_85F_TAG_RAM_MODE=0 \
+HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE=0 \
+    ./scripts/sweep-ecp5.sh ulx3s-85f 11
+```
+
+Try a small 50 MHz sweep, optionally selecting the registered-hit cache mode:
 
 ```bash
 HAZARD3_ULX3S_85F_SYS_CLK_MHZ=50 SWEEP_JOBS=4 \
