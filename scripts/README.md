@@ -243,9 +243,10 @@ SWEEP_JOBS=8 \
 
 The target-specific scripts remain directly usable:
 
-- `sweep-ulx3s-85f.sh` - ULX3S 85F full routed sweep.
+- `sweep-ulx3s-85f.sh` - ULX3S 85F sweep wrapper (selects 85F defaults).
+- `sweep-ulx3s-12f.sh` - ULX3S 12F sweep wrapper (selects 12F defaults).
+- `sweep-ulx3s-common.sh` - shared ULX3S synthesis, routing, and reporting driver.
 - `sweep.sh` - backward-compatible alias for `sweep-ulx3s-85f.sh`.
-- `sweep-ulx3s-12f.sh` - ULX3S 12F full routed sweep.
 - `sweep-ulx4m-ld.sh` - ULX4M-LD 85F full routed sweep.
 - `sweep-ulx5m-gs.sh` - ULX5M-GS GateMate A1 full routed sweep.
 - `sweep-peek.sh` - ULX3S 85F placement-only prescreen; uses the same 25/40/50 MHz and video profile selections and preserves separate result directories.
@@ -675,9 +676,32 @@ settings. Unset settings retain the established board defaults:
 | ULX3S 12F | `--12k` | 6 | CABGA381 | 40 / 50 / 250 |
 | ULX4M-LD 85F | `--um-85k` | 8 | CABGA381 | 40 / 50 / 250 |
 
-Use `ECP5_PNR_SPEED_GRADE` and `ECP5_PNR_PACKAGE` to control nextpnr
-for local ECP5 builds and sweeps; the device family is fixed by the board.
-The GitHub Actions inputs are `ecp5_speed_grade` and `ecp5_package`.
+By default, the ULX3S 12F uses `LFE5U-12F-6`, the ULX3S 85F uses
+`LFE5U-85F-6`, and ULX4M-LD uses `LFE5UM-85F-8`. These are **board
+baselines**; the chip fitted to an individual unit may differ.
+
+Set `ECP5_PNR_DEVICE` to the exact device family/capacity/speed, such as
+`LFE5UM5G-85F-8`, for local builds and sweeps. GitHub Actions offers the
+same choice as the single `ecp5_fpga_part` dropdown. The selection changes
+nextpnr's device/timing model **and** ecppack's JTAG IDCODE. It does not
+change the RTL, physical clock, or the installed chip. Do not use a faster
+chip model to qualify a slower chip's bitstream.
+
+`ECP5_PNR_SPEED_GRADE=6|7|8` remains available for local, same-family
+speed-only experiments. Omit `ECP5_PNR_DEVICE` when using this override;
+if both are supplied, they must agree. The optional `ECP5_PNR_PACKAGE`
+continues to default to `CABGA381`. A different family/package must be
+verified for physical pin and electrical compatibility with the board.
+
+The ECP5-5G (`LFE5UM5G`) family supports speed grade 8 only. In particular,
+`LFE5U-85F-8` and `LFE5UM5G-85F-8` have **different timing models**.
+The 12F and 85F sweep entry points retain their original filenames but now
+call `sweep-ulx3s-common.sh`. This shared driver handles seed parsing, routing,
+bitstream packaging and CSV reporting. Board-specific synthesis and validation
+remain explicit: the 12F keeps its fixed 40 MHz PLL, memory profile and 32-EBR
+limit; the 85F keeps its selectable clock, cache/SRAM synthesis stamps, and
+physical clock PASS checks. Changing `ECP5_PNR_DEVICE` selects the actual chip,
+not a different board configuration. ULX4M-LD is unchanged by this refactor.
 
 For the **physical** ULX3S 85F or ULX4M system clock, use
 `HAZARD3_ULX3S_85F_SYS_CLK_MHZ` (25, 40, 50) or
@@ -701,13 +725,14 @@ Other board sweep scripts still rely on nextpnr's clock verdict; the CI
 summarizer independently checks their reported MHz targets. No reporting
 override by itself is evidence of timing qualification.
 
-Example (experimental speed-grade route, without changing physical clock):
+Examples (experimental device selection; physical clocks unchanged):
 
 ```bash
+ECP5_PNR_DEVICE=LFE5UM5G-85F-8 SWEEP_JOBS=4 ./scripts/sweep-ulx3s-85f.sh 11
 ECP5_PNR_SPEED_GRADE=6 SWEEP_JOBS=4 ./scripts/sweep-ulx4m-ld.sh 1-32
 ```
 
-Default-speed sweep directories remain unchanged. Nondefault speed grades
-or packages create separate sweep output directories to avoid overwriting
-existing results. For consistency, set the same ECP5 options in both
-local runs and GitHub Actions.
+Default-device sweep directories remain unchanged. Different chip families,
+speed grades, or packages create separate sweep output directories so a 5G
+PASS cannot be confused with an ordinary ECP5 route. The selected part and
+IDCODE are recorded in per-sweep metadata.

@@ -647,7 +647,6 @@ ulx3s-85f)
     FPGA_NAME="fpga_ulx3s_85f"
     MAKEFILE="ULX3S.mk"
     LPF="${HAZARD3_SYNTH}/fpga_ulx3s.lpf"
-    IDCODE="0x41113043"
     NEXTPNR_SEED="${NEXTPNR_SEED:-${ULX3S_85F_DEFAULT_NEXTPNR_SEED}}"
     LAST_SEEN_ROUTE_MINUTES="${ULX3S_85F_LAST_SEEN_ROUTE_MINUTES}"
     ecp5_pnr_device_profile "ulx3s-85f"
@@ -670,7 +669,6 @@ ulx3s-12f)
     FPGA_NAME="fpga_ulx3s_12f"
     MAKEFILE="ULX3S_12F.mk"
     LPF="${HAZARD3_SYNTH}/fpga_ulx3s.lpf"
-    IDCODE="0x21111043"
     NEXTPNR_SEED="${NEXTPNR_SEED:-${ECP5_DEFAULT_NEXTPNR_SEED}}"
     LAST_SEEN_ROUTE_MINUTES="${ULX3S_12F_LAST_SEEN_ROUTE_MINUTES}"
     ecp5_pnr_device_profile "ulx3s-12f"
@@ -684,7 +682,6 @@ ulx4m-ld-85f)
     FPGA_NAME="fpga_ulx4m_ld"
     MAKEFILE="ULX4M_LD_85F.mk"
     LPF="${HAZARD3_SYNTH}/fpga_ulx4m_ld.lpf"
-    IDCODE="0x01113043"
     NEXTPNR_SEED="${NEXTPNR_SEED:-${ECP5_DEFAULT_NEXTPNR_SEED}}"
     LAST_SEEN_ROUTE_MINUTES="${ULX4M_LD_85F_LAST_SEEN_ROUTE_MINUTES}"
     NEXTPNR_HEAP_TIMINGWEIGHT="${NEXTPNR_HEAP_TIMINGWEIGHT:-${SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT:-${ECP5_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT}}}"
@@ -721,6 +718,10 @@ ulx4m-ld-85f)
     exit 2
     ;;
 esac
+
+# Use the selected part's IDCODE, including substituted UM/UM5G variants.
+# This must match nextpnr's selected FPGA family when packaging the bitstream.
+IDCODE="${ECP5_PNR_IDCODE}"
 
 # Validate before starting synthesis; only nonnegative whole minutes are valid.
 if [[ ! "${LAST_SEEN_ROUTE_MINUTES}" =~ ^(0|[1-9][0-9]*)$ ]]; then

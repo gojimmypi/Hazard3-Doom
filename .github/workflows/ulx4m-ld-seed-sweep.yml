@@ -176,16 +176,25 @@ on:
           - "0.6"
           - "0.7"
           - "0.8"
-      ecp5_speed_grade:
-        description: ECP5 nextpnr speed grade (board default is 6 for ULX3S, 8 for ULX4M)
+      ecp5_fpga_part:
+        # Exact chip marking (without package/temperature suffix), not just its speed.
+        # Grade 8 ECP5-5G uses different timing data from ordinary ECP5 grade 8.
+        description: ECP5 FPGA part fitted to the board (family, capacity, speed)
         required: true
         default: board-default
         type: choice
         options:
           - board-default
-          - "6"
-          - "7"
-          - "8"
+          - LFE5U-12F-6
+          - LFE5U-12F-7
+          - LFE5U-12F-8
+          - LFE5U-85F-6
+          - LFE5U-85F-7
+          - LFE5U-85F-8
+          - LFE5UM-85F-6
+          - LFE5UM-85F-7
+          - LFE5UM-85F-8
+          - LFE5UM5G-85F-8
       sweep_sys_target_mhz:
         description: ECP5 system timing PASS threshold (MHz; board-default follows chosen clock)
         required: true
@@ -285,7 +294,10 @@ env:
   # These are minimum achieved Fmax values for timing qualification.
   # They do not change the actual PLL frequencies or nextpnr constraints.
   # Keep board-default unless intentionally testing a stricter timing goal.
-  ECP5_PNR_SPEED_GRADE: ${{ inputs.ecp5_speed_grade == 'board-default' && (inputs.target == 'ulx4m-ld-85f' && '8' || '6') || inputs.ecp5_speed_grade }}
+  # The shared resolver derives --85k/--um-85k/--um5g-85k, speed and
+  # bitstream IDCODE from this single part selector. No speed-only override
+  # is set in CI, so mismatched family and grade cannot be selected.
+  ECP5_PNR_DEVICE: ${{ inputs.ecp5_fpga_part }}
   ECP5_PNR_PACKAGE: "CABGA381"
   SWEEP_SYS_TARGET_MHZ: ${{ inputs.sweep_sys_target_mhz == 'board-default' && (inputs.target == 'ulx3s-85f' && (inputs.ulx3s_85f_50mhz_best_config && '50.00' || format('{0}.00', inputs.ulx3s_85f_sys_clk_mhz)) || inputs.target == 'ulx3s-12f' && '40.00' || inputs.target == 'ulx4m-ld-85f' && format('{0}.00', inputs.ulx4m_sys_clk_mhz) || format('{0}.00', inputs.ulx5m_sys_clk_mhz)) || inputs.sweep_sys_target_mhz }}
   SWEEP_VIDEO_TARGET_MHZ: ${{ inputs.sweep_video_target_mhz == 'board-default' && (inputs.target == 'ulx3s-85f' && '25.00' || '50.00') || inputs.sweep_video_target_mhz }}
@@ -342,6 +354,17 @@ jobs:
               "ulx5m-gs": os.environ["ULX5M_SYS_CLK_MHZ"],
           }[target]
 
+          # Show the chip's full part identifier rather than a standalone
+          # speed grade. The ECP5-5G timing database differs from ECP5 grade 8.
+          selected_fpga_part = os.environ["ECP5_PNR_DEVICE"]
+          if selected_fpga_part == "board-default":
+              default_parts = {
+                  "ulx3s-12f": "LFE5U-12F-6",
+                  "ulx3s-85f": "LFE5U-85F-6",
+                  "ulx4m-ld-85f": "LFE5UM-85F-8",
+              }
+              selected_fpga_part = default_parts.get(target, "not applicable")
+
           resolved = [
               ("FPGA target", target),
               ("Seed range", f'{os.environ["SWEEP_SEED_FIRST"]}-{os.environ["SWEEP_SEED_LAST"]}'),
@@ -366,7 +389,7 @@ jobs:
                   ("Minimum system Fmax for PASS (MHz)", os.environ["SWEEP_SYS_TARGET_MHZ"]),
                   ("Minimum video Fmax for PASS (MHz)", os.environ["SWEEP_VIDEO_TARGET_MHZ"]),
                   ("Minimum HDMI TMDS Fmax for PASS (MHz)", os.environ["SWEEP_TMDS_TARGET_MHZ"]),
-                  ("ECP5 speed grade", os.environ["ECP5_PNR_SPEED_GRADE"]),
+                  ("Installed FPGA part", selected_fpga_part),
                   ("ECP5 package", os.environ["ECP5_PNR_PACKAGE"]),
               ]
           if target == "ulx3s-85f":
@@ -425,6 +448,17 @@ jobs:
                 "${HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW}" == "1" ]]; then
               echo '::error::The experimental cache/SRAM profile requires the separate experimental Hazard3 branch.' >&2
               exit 1
+          fi
+
+          # Reject a 12F/85F mismatch or an unsupported family/grade before
+          # spending CI minutes on installation and synthesis. This resolves the
+          # same ECP5_PNR_DEVICE value later used by both build and sweep paths.
+          if [[ "${SWEEP_TARGET}" != "ulx5m-gs" ]]; then
+              source scripts/ecp5-board-defaults.sh
+              ecp5_pnr_device_profile "${SWEEP_TARGET}"
+              printf 'Selected FPGA: %s (nextpnr %s --speed %s; IDCODE %s)\n' \
+                  "${ECP5_PNR_DEVICE}" "${ECP5_PNR_DEVICE_OPTION}" \
+                  "${ECP5_PNR_SPEED_GRADE}" "${ECP5_PNR_IDCODE}"
           fi
 
           # Validate the seed range with the same generator used for the matrix.

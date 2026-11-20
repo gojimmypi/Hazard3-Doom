@@ -139,32 +139,124 @@ ecp5_board_defaults()
     esac
 }
 
-# ECP5 nextpnr device options shared by local builds and seed sweeps.
-# The device family stays board-specific; override speed/package only for
-# experiments. Changing these options does not modify the installed FPGA.
+# FPGA device selection for all local builds and seed sweeps.
+#
+# Board ID chooses the SoC RTL, memory profile, pins and clocks. The FPGA part
+# chooses the nextpnr timing model and ecppack IDCODE. These are independent:
+# a board may ship with a different, pin-compatible ECP5 family or speed grade.
+# Always use the exact chip marking. A faster timing model cannot qualify a
+# design for a slower or otherwise different chip.
+#
+# ECP5_PNR_DEVICE accepts a full family/capacity/speed identifier, for example
+# LFE5UM5G-85F-8. Omit it or set board-default to keep the board baseline.
+# The older ECP5_PNR_SPEED_GRADE override remains supported for SAME-family
+# experiments; when specifying a full part, its suffix determines the grade.
 ecp5_pnr_device_profile()
 {
     local board_id="$1"
-    local device_option default_speed
+    local default_family default_speed selected_family selected_speed
+
     case "${board_id}" in
-    ulx3s-85f) device_option="--85k"; default_speed=6 ;;
-    ulx3s-12f) device_option="--12k"; default_speed=6 ;;
-    ulx4m-ld-85f) device_option="--um-85k"; default_speed=8 ;;
-    *) echo "Unsupported ECP5 device profile: ${board_id}" >&2; return 1 ;;
+    ulx3s-12f)
+        default_family="LFE5U-12F"
+        default_speed=6
+        ;;
+    ulx3s-85f)
+        default_family="LFE5U-85F"
+        default_speed=6
+        ;;
+    ulx4m-ld-85f)
+        default_family="LFE5UM-85F"
+        default_speed=8
+        ;;
+    *)
+        printf 'Unsupported ECP5 board: %s\n' "${board_id}" >&2
+        return 1
+        ;;
     esac
 
-    ECP5_PNR_SPEED_GRADE="${ECP5_PNR_SPEED_GRADE:-${default_speed}}"
+    ECP5_PNR_DEFAULT_DEVICE="${default_family}-${default_speed}"
     ECP5_PNR_PACKAGE="${ECP5_PNR_PACKAGE:-CABGA381}"
-    if [[ ! "${ECP5_PNR_SPEED_GRADE}" =~ ^[1-9][0-9]*$ ]]; then
-        echo "ECP5_PNR_SPEED_GRADE must be a positive integer." >&2
-        return 1
-    fi
     if [[ ! "${ECP5_PNR_PACKAGE}" =~ ^[A-Za-z0-9]+$ ]]; then
         echo "ECP5_PNR_PACKAGE must be an alphanumeric nextpnr package name." >&2
         return 1
     fi
-    # This array is populated for the build/sweep script that sources this file.
-    # ShellCheck cannot see the use across independently checked source files.
+
+    if [[ -z "${ECP5_PNR_DEVICE:-}" || "${ECP5_PNR_DEVICE}" == board-default ]]; then
+        # Legacy speed-only override retains the established board family.
+        selected_speed="${ECP5_PNR_SPEED_GRADE:-${default_speed}}"
+        ECP5_PNR_DEVICE="${default_family}-${selected_speed}"
+    else
+        selected_speed="${ECP5_PNR_DEVICE##*-}"
+        # Do not silently accept conflicting family+grade inputs.
+        if [[ -n "${ECP5_PNR_SPEED_GRADE:-}" &&
+              "${ECP5_PNR_SPEED_GRADE}" != "${selected_speed}" ]]; then
+            printf 'ECP5_PNR_SPEED_GRADE=%s conflicts with ECP5_PNR_DEVICE=%s\n' \
+                "${ECP5_PNR_SPEED_GRADE}" "${ECP5_PNR_DEVICE}" >&2
+            return 1
+        fi
+    fi
+
+    # A 12F board cannot be routed for an 85F FPGA, and vice versa. All ECP5
+    # UM5G parts have only speed grade 8. Family changes require a matching
+    # physical chip and electrically compatible board.
+    case "${board_id}:${ECP5_PNR_DEVICE}" in
+    ulx3s-12f:LFE5U-12F-[678]) ;;
+    ulx3s-85f:LFE5U-85F-[678]|ulx3s-85f:LFE5UM-85F-[678]|ulx3s-85f:LFE5UM5G-85F-8) ;;
+    ulx4m-ld-85f:LFE5U-85F-[678]|ulx4m-ld-85f:LFE5UM-85F-[678]|ulx4m-ld-85f:LFE5UM5G-85F-8) ;;
+    *)
+        printf 'Unsupported FPGA part %s for board %s.\n' \
+            "${ECP5_PNR_DEVICE}" "${board_id}" >&2
+        return 1
+        ;;
+    esac
+
+    ECP5_PNR_SPEED_GRADE="${selected_speed}"
+    selected_family="${ECP5_PNR_DEVICE%-*}"
+    case "${selected_family}" in
+    LFE5U-12F)
+        ECP5_PNR_DEVICE_OPTION="--12k"
+        # Assigned for scripts that source this file (ShellCheck cannot see those readers).
+        # shellcheck disable=SC2034
+        ECP5_PNR_IDCODE="0x21111043"
+        ;;
+    LFE5U-85F)
+        ECP5_PNR_DEVICE_OPTION="--85k"
+        # Assigned for scripts that source this file (ShellCheck cannot see those readers).
+        # shellcheck disable=SC2034
+        ECP5_PNR_IDCODE="0x41113043"
+        ;;
+    LFE5UM-85F)
+        ECP5_PNR_DEVICE_OPTION="--um-85k"
+        # Assigned for scripts that source this file (ShellCheck cannot see those readers).
+        # shellcheck disable=SC2034
+        ECP5_PNR_IDCODE="0x01113043"
+        ;;
+    LFE5UM5G-85F)
+        ECP5_PNR_DEVICE_OPTION="--um5g-85k"
+        # Assigned for scripts that source this file (ShellCheck cannot see those readers).
+        # shellcheck disable=SC2034
+        ECP5_PNR_IDCODE="0x81113043"
+        ;;
+    esac
+
+    # Read by the independently ShellCheck-checked build and sweep scripts.
     # shellcheck disable=SC2034
-    PNR_DEVICE_ARGS=("${device_option}" --speed "${ECP5_PNR_SPEED_GRADE}" --package "${ECP5_PNR_PACKAGE}")
+    PNR_DEVICE_ARGS=("${ECP5_PNR_DEVICE_OPTION}" --speed "${ECP5_PNR_SPEED_GRADE}" --package "${ECP5_PNR_PACKAGE}")
+}
+
+# Keep existing output paths for each board's original family at any grade;
+# distinguish a different family explicitly so results can never overlap.
+ecp5_pnr_device_suffix()
+{
+    local default_family="${ECP5_PNR_DEFAULT_DEVICE%-*}"
+    local selected_family="${ECP5_PNR_DEVICE%-*}"
+    local default_speed="${ECP5_PNR_DEFAULT_DEVICE##*-}"
+
+    if [[ "${selected_family}" != "${default_family}" ]]; then
+        printf -- '-%s-%s\n' "${ECP5_PNR_DEVICE}" "${ECP5_PNR_PACKAGE}"
+    elif [[ "${ECP5_PNR_SPEED_GRADE}" != "${default_speed}" ||
+            "${ECP5_PNR_PACKAGE}" != CABGA381 ]]; then
+        printf -- '-speed%s-%s\n' "${ECP5_PNR_SPEED_GRADE}" "${ECP5_PNR_PACKAGE}"
+    fi
 }

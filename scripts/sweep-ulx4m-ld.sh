@@ -62,12 +62,8 @@ ecp5_pnr_device_profile "ulx4m-ld-85f"
 sweep_ecp5_clock_targets
 sweep_ecp5_init_tuning
 TUNING_SUFFIX="$(sweep_ecp5_tuning_suffix)"
-# Isolate experimental device-grade sweeps from production profiles.
-DEVICE_SUFFIX=""
-if [[ "${ECP5_PNR_SPEED_GRADE}" != "8" || "${ECP5_PNR_PACKAGE}" != CABGA381 ]]; then
-    DEVICE_SUFFIX="-speed${ECP5_PNR_SPEED_GRADE}-${ECP5_PNR_PACKAGE}"
-fi
-TUNING_SUFFIX="${TUNING_SUFFIX}${DEVICE_SUFFIX}"
+# Preserve default output paths; isolate routes for different FPGA parts.
+TUNING_SUFFIX="${TUNING_SUFFIX}$(ecp5_pnr_device_suffix)"
 
 SWEEP_DIR="${BUILD_DIR}/ulx4m-ld-seed-sweep/${HAZARD3_ULX4M_SYS_CLK_MHZ}mhz-${ULX4M_LITEDRAM_CPU}${TUNING_SUFFIX}"
 SWEEP_REL_DIR="${SWEEP_DIR#"${REPO_ROOT}"/}"
@@ -86,7 +82,8 @@ Seeds are positive signed 32-bit decimals; ranges may exceed 512 seeds.
 SWEEP_JOBS=N runs up to N routes concurrently (default: 2).
 HAZARD3_ULX4M_SYS_CLK_MHZ=25|40|50 selects the Hazard3 system clock.
 ULX4M_LITEDRAM_CPU=serv|vexrisc selects the LiteDRAM initialization CPU.
-ECP5_PNR_SPEED_GRADE=N overrides the nextpnr speed grade (board default 6 or 8).
+ECP5_PNR_DEVICE=PART selects the installed chip (example: LFE5UM5G-85F-8).
+ECP5_PNR_SPEED_GRADE=N overrides the speed of the board-default chip family.
 ECP5_PNR_PACKAGE=NAME overrides the nextpnr package (default CABGA381).
 SWEEP_SYS_TARGET_MHZ, SWEEP_VIDEO_TARGET_MHZ, SWEEP_TMDS_TARGET_MHZ
   override reported MHz targets only; they do not reconfigure the FPGA PLL.
@@ -265,7 +262,9 @@ install -m 0644 "${config_snapshot}" "${SWEEP_DIR}/litedram-config.yml"
 
 {
     printf 'target=ulx4m-ld-85f\n'
-    printf 'device=um-85k\n'
+    printf 'device=%s\n' "${ECP5_PNR_DEVICE_OPTION#--}"
+    printf 'fpga_part=%s\n' "${ECP5_PNR_DEVICE}"
+    printf 'idcode=%s\n' "${ECP5_PNR_IDCODE}"
     printf 'speed=%s\n' "${ECP5_PNR_SPEED_GRADE}"
     printf 'package=%s\n' "${ECP5_PNR_PACKAGE}"
     printf 'full_route=1\n'
@@ -391,7 +390,7 @@ run_seed()
     if [[ "${timing_status}" == "PASS" ]]; then
         if ! ecppack \
             --compress \
-            --idcode 0x01113043 \
+            --idcode "${ECP5_PNR_IDCODE}" \
             "${config}" \
             "${bit}"; then
             printf '%d,%s,%s,%s,%s,%s,%s,PACK_ERROR\n' \
