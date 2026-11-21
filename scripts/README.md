@@ -706,6 +706,19 @@ By default, the ULX3S 12F uses `LFE5U-12F-6`, the ULX3S 85F uses
 `LFE5U-85F-6`, and ULX4M-LD uses `LFE5UM-85F-8`. These are **board
 baselines**; the chip fitted to an individual unit may differ.
 
+ULX3S boards also exist with an **LFE5U-45F** in `CABGA381`. The workflow's
+`ecp5_fpga_part` dropdown accepts `LFE5U-45F-6`, `LFE5U-45F-7`, and
+`LFE5U-45F-8`; local builds accept the same `ECP5_PNR_DEVICE` values.
+These select nextpnr `--45k --speed N` and ecppack IDCODE `0x41112043`.
+They do **not** introduce a separate, qualified 45F Doom SoC. To attempt
+routing a 45F with the existing compact SoC, choose `target=ulx3s-12f`
+(fixed 40 MHz) and the installed 45F part. The existing `ulx3s-85f`
+profile is also selectable for experiments, but its full netlist has been
+observed using 164 DP16KD blocks, exceeding the **45F capacity of 108**.
+The ULX3S sweep checks 45F EBR usage before routing, and will reject
+an oversized synthesized design. Timing and physical-board behavior are
+not yet qualified on the 45F; do not program a mismatched device.
+
 Set `ECP5_PNR_DEVICE` to the exact device family/capacity/speed, such as
 `LFE5UM5G-85F-8`, for local builds and sweeps. GitHub Actions offers the
 same choice as the single `ecp5_fpga_part` dropdown. The selection changes
@@ -754,6 +767,7 @@ override by itself is evidence of timing qualification.
 Examples (experimental device selection; physical clocks unchanged):
 
 ```bash
+ECP5_PNR_DEVICE=LFE5U-45F-6 SWEEP_JOBS=4 ./scripts/sweep-ulx3s-12f.sh 151
 ECP5_PNR_DEVICE=LFE5UM5G-85F-8 SWEEP_JOBS=4 ./scripts/sweep-ulx3s-85f.sh 11
 ECP5_PNR_SPEED_GRADE=6 SWEEP_JOBS=4 ./scripts/sweep-ulx4m-ld.sh 1-32
 ```

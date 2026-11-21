@@ -197,12 +197,13 @@ ecp5_pnr_device_profile()
         fi
     fi
 
-    # A 12F board cannot be routed for an 85F FPGA, and vice versa. All ECP5
-    # UM5G parts have only speed grade 8. Family changes require a matching
-    # physical chip and electrically compatible board.
+    # 45F ULX3S boards can use either existing SoC profile. The compact
+    # 12F profile is the practical starting point: the full 85F RTL may exceed
+    # the 45F's 108 EBR blocks (checked separately after synthesis).
+    # ULX4M is still restricted to its supported 85F families.
     case "${board_id}:${ECP5_PNR_DEVICE}" in
-    ulx3s-12f:LFE5U-12F-[678]) ;;
-    ulx3s-85f:LFE5U-85F-[678]|ulx3s-85f:LFE5UM-85F-[678]|ulx3s-85f:LFE5UM5G-85F-8) ;;
+    ulx3s-12f:LFE5U-12F-[678]|ulx3s-12f:LFE5U-45F-[678]) ;;
+    ulx3s-85f:LFE5U-45F-[678]|ulx3s-85f:LFE5U-85F-[678]|ulx3s-85f:LFE5UM-85F-[678]|ulx3s-85f:LFE5UM5G-85F-8) ;;
     ulx4m-ld-85f:LFE5U-85F-[678]|ulx4m-ld-85f:LFE5UM-85F-[678]|ulx4m-ld-85f:LFE5UM5G-85F-8) ;;
     *)
         printf 'Unsupported FPGA part %s for board %s.\n' \
@@ -219,6 +220,12 @@ ecp5_pnr_device_profile()
         # Assigned for scripts that source this file (ShellCheck cannot see those readers).
         # shellcheck disable=SC2034
         ECP5_PNR_IDCODE="0x21111043"
+        ;;
+    LFE5U-45F)
+        ECP5_PNR_DEVICE_OPTION="--45k"
+        # Assigned for scripts that source this file (ShellCheck cannot see those readers).
+        # shellcheck disable=SC2034
+        ECP5_PNR_IDCODE="0x41112043"
         ;;
     LFE5U-85F)
         ECP5_PNR_DEVICE_OPTION="--85k"

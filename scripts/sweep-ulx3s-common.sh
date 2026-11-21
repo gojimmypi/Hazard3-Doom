@@ -474,6 +474,26 @@ if [[ ! -s "${SYNTH_LOG}" ]]; then
     exit 1
 fi
 
+# The full 85F SoC currently uses more embedded RAM than a 45F provides.
+# Validate the actual synthesized count rather than rejecting 45F outright:
+# future reduced-resource 85F configurations may eventually fit.
+if [[ "${ECP5_PNR_DEVICE%-*}" == LFE5U-45F ]]; then
+    selected_ebr_used="$(awk '$2 == "DP16KD" {used=$1} END {print used}' "${SYNTH_LOG}")"
+    if [[ -z "${selected_ebr_used}" ]]; then
+        echo "ERROR: Could not determine DP16KD usage for ${ECP5_PNR_DEVICE}." >&2
+        exit 1
+    fi
+    if (( selected_ebr_used > 108 )); then
+        printf 'ERROR: Synthesized %s DP16KD blocks; %s provides only 108.\n' \
+            "${selected_ebr_used}" "${ECP5_PNR_DEVICE}" >&2
+        printf 'Try the compact target=ulx3s-12f with ECP5_PNR_DEVICE=%s, or reduce the 85F RTL EBR usage.\n' \
+            "${ECP5_PNR_DEVICE}" >&2
+        exit 1
+    fi
+    printf 'Selected %s capacity check: %s/108 DP16KD.\n' \
+        "${ECP5_PNR_DEVICE}" "${selected_ebr_used}"
+fi
+
 if [[ "${SWEEP_ECP5_BOARD_ID}" == 'ulx3s-12f' ]]; then
     ebr_used="$(awk '$2 == "DP16KD" {used=$1} END {print used}' "${SYNTH_LOG}")"
     if [[ -z "${ebr_used}" ]]; then

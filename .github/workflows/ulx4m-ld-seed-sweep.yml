@@ -3,6 +3,7 @@ name: FPGA seed sweep
 # timing PASS threshold (sweep_sys_target_mhz). Changing that threshold must
 # not make a 50 MHz build appear to be a different clock configuration.
 # GitHub run-name can use inputs but cannot use the resolved workflow env.
+#
 # The conditions below select the clock for each board:
 #   ULX3S-85F: selected clock, or 50 if the experimental checkbox is enabled.
 #   ULX3S-12F: fixed 40 MHz.
@@ -13,6 +14,9 @@ name: FPGA seed sweep
 # Distinguish ECP5-5G from ordinary ECP5 grade 8 in the run list.
 # ULX5M uses a GateMate FPGA, so label it GateMate rather than an ECP5 part.
 # The optional breadcrumb adds " - label" only when nonempty.
+#
+# A failed seed group can be visible as failed while the full sweep succeeds
+# if at least one other seed passes. The summary independently enforces this.
 run-name: >-
   FPGA seed sweep${{ inputs.breadcrumb && format(' - {0}', inputs.breadcrumb) || '' }} - ${{ inputs.target }} -
   ${{ inputs.target == 'ulx5m-gs' && 'GateMate' ||
@@ -54,6 +58,8 @@ on:
           - ulx5m-gs
       ecp5_fpga_part:
         # Exact chip marking (without package/temperature suffix), not just its speed.
+        # 45F ULX3S boards are selectable with either existing ULX3S SoC profile;
+        # the compact 12F profile is more likely to fit the 45F EBR capacity.
         # Grade 8 ECP5-5G uses different timing data from ordinary ECP5 grade 8.
         description: ECP5 FPGA part fitted to the board (family, capacity, speed)
         required: true
@@ -64,6 +70,9 @@ on:
           - LFE5U-12F-6
           - LFE5U-12F-7
           - LFE5U-12F-8
+          - LFE5U-45F-6
+          - LFE5U-45F-7
+          - LFE5U-45F-8
           - LFE5U-85F-6
           - LFE5U-85F-7
           - LFE5U-85F-8
@@ -919,6 +928,16 @@ jobs:
               route_inputs+=("${timing_constraint}")
           fi
 
+          # The 85F frozen sweep validates its clock-matched monitor preload.
+          # Include the generated HEX: it lives outside build/ and was missing
+          # from the archive, so every CI route runner aborted before nextpnr.
+          if [[ "${SWEEP_TARGET}" == "ulx3s-85f" ]]; then
+              monitor_preload=third_party/Hazard3/example_soc/soc/hazard3-boot-monitor.hex
+              test -s "${monitor_preload}"
+              sha256sum "${monitor_preload}" > reference/monitor-preload.sha256
+              route_inputs+=("${monitor_preload}")
+          fi
+
           tar \
               -czf "${RUNNER_TEMP}/ecp5-sweep-inputs.tar.gz" \
               "${route_inputs[@]}"
@@ -994,6 +1013,9 @@ jobs:
     needs: prepare
     runs-on: ubuntu-24.04
     timeout-minutes: 350
+    # Each matrix group may fail without failing the whole sweep. The summarize
+    # job independently rejects zero baseline PASS seeds and all tool failures.
+    continue-on-error: true
     strategy:
       fail-fast: false
       max-parallel: ${{ fromJSON(inputs.max_parallel) }}
@@ -1052,6 +1074,11 @@ jobs:
           if [[ -n "${timing_constraint}" ]]; then
               test -s "${timing_constraint}"
               sha256sum --check reference/timing-constraint.sha256
+          fi
+          if [[ "${SWEEP_TARGET}" == "ulx3s-85f" ]]; then
+              # Verify that the packaged monitor preload survived transfer.
+              # The frozen ULX3S sweep also checks its clock stamp before route.
+              sha256sum --check reference/monitor-preload.sha256
           fi
 
           chmod +x \
@@ -1207,8 +1234,9 @@ jobs:
 
           if (( ${#timing_failed_seeds[@]} > 0 )); then
               printf '::error::Baseline timing FAIL for seed(s): %s\n' "${timing_failed_seeds[*]}"
-              # The ROUTE STEP has outcome=failure. continue-on-error keeps the
-              # JOB eligible for success if the final sweep has another PASS.
+              # The ROUTE STEP has outcome=failure. Its step-level
+              # continue-on-error lets this group's final gates distinguish
+              # a partial timing miss from a group with zero passing seeds.
               exit 1
           fi
 
@@ -1387,12 +1415,20 @@ jobs:
           retention-days: 1
           compression-level: 0
 
-      # A completed timing miss is a valid seed result. Some route groups may
-      # have no passing seeds even when the overall sweep has a passing seed.
-      # Fail here only for actual route/tool errors; the final summary checks
-      # whether at least one seed meets all baseline clock requirements.
+      # Artifacts are uploaded before either failure gate. A route group with
+      # zero baseline-qualified seeds must be a failed job, even if other route
+      # groups passed. Job-level continue-on-error allows the complete sweep to
+      # succeed only after the final summary validates every result.
+      - name: Fail route group if no seeds pass baseline timing
+        if: ${{ always() && steps.route.outputs.status == '0' && steps.publish.outputs.any_pass != 'true' }}
+        shell: bash
+        run: |
+          echo '::error::No baseline timing PASS in this seed group.'
+          exit 1
+
       - name: Fail route group on tool errors
-        if: steps.route.outputs.status != '0'
+        if: ${{ always() && steps.route.outputs.status != '0' }}
+        shell: bash
         run: |
           echo '::error::Route group had a tool failure or changed the frozen netlist.'
           exit 1
