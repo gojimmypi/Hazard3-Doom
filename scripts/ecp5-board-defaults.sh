@@ -6,6 +6,9 @@
 
 ULX3S_12F_DEFAULT_NEXTPNR_SEED=151
 ULX3S_12F_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT=10
+# Initial, unqualified sweep baseline for the compact 45F implementation.
+ULX3S_45F_DEFAULT_NEXTPNR_SEED=151
+ULX3S_45F_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT=10
 # Seed 11 closed timing at 25 MHz with the correct LFE5U-85F speed grade 6.
 # All 40/50 MHz profiles need new timing qualification before release.
 ULX3S_85F_DEFAULT_NEXTPNR_SEED=11
@@ -120,6 +123,10 @@ ecp5_board_defaults()
         ECP5_DEFAULT_NEXTPNR_SEED="${ULX3S_12F_DEFAULT_NEXTPNR_SEED}"
         ECP5_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT="${ULX3S_12F_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT}"
         ;;
+    ulx3s-45f)
+        ECP5_DEFAULT_NEXTPNR_SEED="${ULX3S_45F_DEFAULT_NEXTPNR_SEED}"
+        ECP5_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT="${ULX3S_45F_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT}"
+        ;;
     ulx3s-85f)
         ECP5_DEFAULT_NEXTPNR_SEED="${ULX3S_85F_DEFAULT_NEXTPNR_SEED}"
         ECP5_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT="${ULX3S_85F_DEFAULT_NEXTPNR_HEAP_TIMINGWEIGHT}"
@@ -161,6 +168,10 @@ ecp5_pnr_device_profile()
         default_family="LFE5U-12F"
         default_speed=6
         ;;
+    ulx3s-45f)
+        default_family="LFE5U-45F"
+        default_speed=6
+        ;;
     ulx3s-85f)
         default_family="LFE5U-85F"
         default_speed=6
@@ -197,12 +208,14 @@ ecp5_pnr_device_profile()
         fi
     fi
 
-    # A 12F board cannot be routed for an 85F FPGA, and vice versa. All ECP5
-    # UM5G parts have only speed grade 8. Family changes require a matching
-    # physical chip and electrically compatible board.
+    # The dedicated 45F sweep uses the compact 12F-style SoC. Legacy 12F
+    # and experimental 85F profiles can also target a 45F. Full 85F RTL may exceed
+    # the 45F's 108 EBR blocks (checked separately after synthesis).
+    # ULX4M is still restricted to its supported 85F families.
     case "${board_id}:${ECP5_PNR_DEVICE}" in
-    ulx3s-12f:LFE5U-12F-[678]) ;;
-    ulx3s-85f:LFE5U-85F-[678]|ulx3s-85f:LFE5UM-85F-[678]|ulx3s-85f:LFE5UM5G-85F-8) ;;
+    ulx3s-12f:LFE5U-12F-[678]|ulx3s-12f:LFE5U-45F-[678]) ;;
+    ulx3s-45f:LFE5U-45F-[678]) ;;
+    ulx3s-85f:LFE5U-45F-[678]|ulx3s-85f:LFE5U-85F-[678]|ulx3s-85f:LFE5UM-85F-[678]|ulx3s-85f:LFE5UM5G-85F-8) ;;
     ulx4m-ld-85f:LFE5U-85F-[678]|ulx4m-ld-85f:LFE5UM-85F-[678]|ulx4m-ld-85f:LFE5UM5G-85F-8) ;;
     *)
         printf 'Unsupported FPGA part %s for board %s.\n' \
@@ -219,6 +232,12 @@ ecp5_pnr_device_profile()
         # Assigned for scripts that source this file (ShellCheck cannot see those readers).
         # shellcheck disable=SC2034
         ECP5_PNR_IDCODE="0x21111043"
+        ;;
+    LFE5U-45F)
+        ECP5_PNR_DEVICE_OPTION="--45k"
+        # Assigned for scripts that source this file (ShellCheck cannot see those readers).
+        # shellcheck disable=SC2034
+        ECP5_PNR_IDCODE="0x41112043"
         ;;
     LFE5U-85F)
         ECP5_PNR_DEVICE_OPTION="--85k"

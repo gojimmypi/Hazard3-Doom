@@ -226,7 +226,7 @@ load_seed_metrics()
 
     IFS=, read -r -a fields < "${result}" || true
     case "${SWEEP_TARGET}" in
-    ulx3s-85f|ulx3s-12f)
+    ulx3s-85f|ulx3s-12f|ulx3s-45f)
         seed_clk_sys["${seed}"]="${fields[1]:-NA}"
         seed_clk_video["${seed}"]="${fields[2]:-NA}"
         seed_clk_tmds["${seed}"]="${fields[3]:-NA}"
@@ -458,7 +458,7 @@ ulx3s-85f)
     printf 'Timing targets (reported): sys=%s MHz | video=%s MHz | tmds=%s MHz\n' \
         "${sys_target}" "${video_target}" "${tmds_target}"
     ;;
-ulx3s-12f)
+ulx3s-12f|ulx3s-45f)
     printf 'Timing targets (reported): sys=%s MHz | video=%s MHz | tmds=%s MHz\n' \
         "${SWEEP_SYS_TARGET_MHZ:-40.00}" "${SWEEP_VIDEO_TARGET_MHZ:-50.00}" "${SWEEP_TMDS_TARGET_MHZ:-250.00}"
     ;;

@@ -3,6 +3,7 @@ name: FPGA seed sweep
 # timing PASS threshold (sweep_sys_target_mhz). Changing that threshold must
 # not make a 50 MHz build appear to be a different clock configuration.
 # GitHub run-name can use inputs but cannot use the resolved workflow env.
+#
 # The conditions below select the clock for each board:
 #   ULX3S-85F: selected clock, or 50 if the experimental checkbox is enabled.
 #   ULX3S-12F: fixed 40 MHz.
@@ -13,15 +14,19 @@ name: FPGA seed sweep
 # Distinguish ECP5-5G from ordinary ECP5 grade 8 in the run list.
 # ULX5M uses a GateMate FPGA, so label it GateMate rather than an ECP5 part.
 # The optional breadcrumb adds " - label" only when nonempty.
+#
+# A failed seed group can be visible as failed while the full sweep succeeds
+# if at least one other seed passes. The summary independently enforces this.
 run-name: >-
   FPGA seed sweep${{ inputs.breadcrumb && format(' - {0}', inputs.breadcrumb) || '' }} - ${{ inputs.target }} -
   ${{ inputs.target == 'ulx5m-gs' && 'GateMate' ||
       inputs.ecp5_fpga_part != 'board-default' && inputs.ecp5_fpga_part ||
       inputs.target == 'ulx3s-12f' && 'LFE5U-12F-6' ||
+      inputs.target == 'ulx3s-45f' && 'LFE5U-45F-6' ||
       inputs.target == 'ulx3s-85f' && 'LFE5U-85F-6' ||
       'LFE5UM-85F-8' }} -
   ${{ inputs.target == 'ulx3s-85f' && (inputs.ulx3s_85f_50mhz_best_config && '50' || inputs.ulx3s_85f_sys_clk_mhz) ||
-      inputs.target == 'ulx3s-12f' && '40' ||
+      (inputs.target == 'ulx3s-12f' || inputs.target == 'ulx3s-45f') && '40' ||
       inputs.target == 'ulx4m-ld-85f' && inputs.ulx4m_sys_clk_mhz ||
       inputs.ulx5m_sys_clk_mhz }} MHz -
   seeds ${{ inputs.seed_first }}-${{ inputs.seed_last }}
@@ -48,12 +53,15 @@ on:
         default: ulx3s-85f
         type: choice
         options:
-          - ulx3s-85f
           - ulx3s-12f
+          - ulx3s-45f
+          - ulx3s-85f
           - ulx4m-ld-85f
           - ulx5m-gs
       ecp5_fpga_part:
         # Exact chip marking (without package/temperature suffix), not just its speed.
+        # 45F ULX3S boards are selectable with either existing ULX3S SoC profile;
+        # the compact 12F profile is more likely to fit the 45F EBR capacity.
         # Grade 8 ECP5-5G uses different timing data from ordinary ECP5 grade 8.
         description: ECP5 FPGA part fitted to the board (family, capacity, speed)
         required: true
@@ -64,6 +72,9 @@ on:
           - LFE5U-12F-6
           - LFE5U-12F-7
           - LFE5U-12F-8
+          - LFE5U-45F-6
+          - LFE5U-45F-7
+          - LFE5U-45F-8
           - LFE5U-85F-6
           - LFE5U-85F-7
           - LFE5U-85F-8
@@ -150,7 +161,7 @@ on:
           - "1"
           - "0"
       ulx3s_12f_memory_profile:
-        description: ULX3S 12F SDRAM profile (ignored for other targets)
+        description: Compact ULX3S 12F/45F SDRAM profile (ignored for other targets)
         required: true
         default: 32m
         type: choice
@@ -322,7 +333,7 @@ env:
   # Sweep scripts and their PASS/FAIL status always use the original board
   # requirements. This protects the live collector, bitstreams, and the final
   # hardware/baseline qualification from lowered diagnostic thresholds.
-  SWEEP_SYS_TARGET_MHZ: ${{ inputs.target == 'ulx3s-85f' && (inputs.ulx3s_85f_50mhz_best_config && '50.00' || format('{0}.00', inputs.ulx3s_85f_sys_clk_mhz)) || inputs.target == 'ulx3s-12f' && '40.00' || inputs.target == 'ulx4m-ld-85f' && format('{0}.00', inputs.ulx4m_sys_clk_mhz) || format('{0}.00', inputs.ulx5m_sys_clk_mhz) }}
+  SWEEP_SYS_TARGET_MHZ: ${{ inputs.target == 'ulx3s-85f' && (inputs.ulx3s_85f_50mhz_best_config && '50.00' || format('{0}.00', inputs.ulx3s_85f_sys_clk_mhz)) || (inputs.target == 'ulx3s-12f' || inputs.target == 'ulx3s-45f') && '40.00' || inputs.target == 'ulx4m-ld-85f' && format('{0}.00', inputs.ulx4m_sys_clk_mhz) || format('{0}.00', inputs.ulx5m_sys_clk_mhz) }}
   SWEEP_VIDEO_TARGET_MHZ: ${{ inputs.target == 'ulx3s-85f' && '25.00' || '50.00' }}
   SWEEP_TMDS_TARGET_MHZ: ${{ inputs.target == 'ulx3s-85f' && '125.00' || '250.00' }}
   SWEEP_LITEDRAM_TARGET_MHZ: "60.01"
@@ -380,6 +391,7 @@ jobs:
           actual_mhz = {
               "ulx3s-85f": os.environ["HAZARD3_ULX3S_85F_SYS_CLK_MHZ"],
               "ulx3s-12f": "40",
+              "ulx3s-45f": "40",
               "ulx4m-ld-85f": os.environ["HAZARD3_ULX4M_SYS_CLK_MHZ"],
               "ulx5m-gs": os.environ["ULX5M_SYS_CLK_MHZ"],
           }[target]
@@ -390,6 +402,7 @@ jobs:
           if selected_fpga_part == "board-default":
               default_parts = {
                   "ulx3s-12f": "LFE5U-12F-6",
+                  "ulx3s-45f": "LFE5U-45F-6",
                   "ulx3s-85f": "LFE5U-85F-6",
                   "ulx4m-ld-85f": "LFE5UM-85F-8",
               }
@@ -431,7 +444,7 @@ jobs:
                   ("SRAM write buffer", os.environ["HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER"]),
                   ("SRAM dual-port read/write", os.environ["HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW"]),
               ]
-          elif target == "ulx3s-12f":
+          elif target in ("ulx3s-12f", "ulx3s-45f"):
               resolved.append(("SDRAM memory profile", os.environ["HAZARD3_MEMORY_PROFILE"]))
           elif target == "ulx4m-ld-85f":
               resolved += [
@@ -508,7 +521,7 @@ jobs:
           # Reject cross-board combinations instead of changing display text alone.
           case "${SWEEP_TARGET}" in
             ulx3s-85f) expected_hdmi_resolution=640x480 ;;
-            ulx3s-12f|ulx4m-ld-85f) expected_hdmi_resolution=1024x600 ;;
+            ulx3s-12f|ulx3s-45f|ulx4m-ld-85f) expected_hdmi_resolution=1024x600 ;;
             ulx5m-gs) expected_hdmi_resolution=headless ;;
             *) echo "Unknown target: ${SWEEP_TARGET}" >&2; exit 1 ;;
           esac
@@ -564,6 +577,7 @@ jobs:
               scripts/sweep-ulx3s-common.sh \
               scripts/sweep-ulx3s-85f.sh \
               scripts/sweep-ulx3s-12f.sh \
+              scripts/sweep-ulx3s-45f.sh \
               scripts/sweep-ulx4m-ld.sh \
               scripts/sweep-ulx5m-gs.sh
 
@@ -679,6 +693,7 @@ jobs:
               scripts/sweep-ulx3s-common.sh \
               scripts/sweep-ulx3s-85f.sh \
               scripts/sweep-ulx3s-12f.sh \
+              scripts/sweep-ulx3s-45f.sh \
               scripts/sweep-ulx4m-ld.sh \
               scripts/sweep-ulx5m-gs.sh
 
@@ -706,7 +721,7 @@ jobs:
               monitor_clock_hz="$((ULX5M_SYS_CLK_MHZ * 1000000))"
               monitor_memory_profile=32m
               ;;
-          ulx3s-12f)
+          ulx3s-12f|ulx3s-45f)
               monitor_clock_hz=""
               ;;
           esac
@@ -919,6 +934,16 @@ jobs:
               route_inputs+=("${timing_constraint}")
           fi
 
+          # The 85F frozen sweep validates its clock-matched monitor preload.
+          # Include the generated HEX: it lives outside build/ and was missing
+          # from the archive, so every CI route runner aborted before nextpnr.
+          if [[ "${SWEEP_TARGET}" == "ulx3s-85f" ]]; then
+              monitor_preload=third_party/Hazard3/example_soc/soc/hazard3-boot-monitor.hex
+              test -s "${monitor_preload}"
+              sha256sum "${monitor_preload}" > reference/monitor-preload.sha256
+              route_inputs+=("${monitor_preload}")
+          fi
+
           tar \
               -czf "${RUNNER_TEMP}/ecp5-sweep-inputs.tar.gz" \
               "${route_inputs[@]}"
@@ -961,7 +986,7 @@ jobs:
               printf '  System clock:            %s MHz (640x480 HDMI)\n' "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}"
               printf '  HAZARD3_HDMI_EXTENDED_MODES: %s\n' "${HAZARD3_HDMI_EXTENDED_MODES}"
               ;;
-          ulx3s-12f)
+          ulx3s-12f|ulx3s-45f)
               printf '  System clock:            40 MHz (fixed)\n'
               printf '  HAZARD3_MEMORY_PROFILE: %s\n' "${HAZARD3_MEMORY_PROFILE}"
               ;;
@@ -994,6 +1019,9 @@ jobs:
     needs: prepare
     runs-on: ubuntu-24.04
     timeout-minutes: 350
+    # Each matrix group may fail without failing the whole sweep. The summarize
+    # job independently rejects zero baseline PASS seeds and all tool failures.
+    continue-on-error: true
     strategy:
       fail-fast: false
       max-parallel: ${{ fromJSON(inputs.max_parallel) }}
@@ -1053,6 +1081,11 @@ jobs:
               test -s "${timing_constraint}"
               sha256sum --check reference/timing-constraint.sha256
           fi
+          if [[ "${SWEEP_TARGET}" == "ulx3s-85f" ]]; then
+              # Verify that the packaged monitor preload survived transfer.
+              # The frozen ULX3S sweep also checks its clock stamp before route.
+              sha256sum --check reference/monitor-preload.sha256
+          fi
 
           chmod +x \
               scripts/sweep-ecp5.sh \
@@ -1060,6 +1093,7 @@ jobs:
               scripts/sweep-ulx3s-common.sh \
               scripts/sweep-ulx3s-85f.sh \
               scripts/sweep-ulx3s-12f.sh \
+              scripts/sweep-ulx3s-45f.sh \
               scripts/sweep-ulx4m-ld.sh \
               scripts/sweep-ulx5m-gs.sh
 
@@ -1131,7 +1165,7 @@ jobs:
               # The sweep wrapper exits 1 when no seed meets baseline timing.
               # That is a completed timing miss, not a nextpnr/tool failure.
               # Preserve the raw process exit for diagnostics and normalize only
-              # a completed per-seed FAIL result for the summary/collector.
+              # a completed per-seed FAIL or TIMEOUT for the summary/collector.
               printf '%s\n' "${route_status}" \
                   > "${artifact_dir}/sweep-exit-${seed}.txt"
               if [[ "${route_status}" == "1" &&
@@ -1143,6 +1177,9 @@ jobs:
                   if [[ "${result_timing_status}" == "FAIL" ]]; then
                       echo "Seed ${seed}: route completed but missed baseline timing."
                       route_status=0
+                  elif [[ "${result_timing_status}" == "TIMEOUT" ]]; then
+                      echo "Seed ${seed}: per-route watchdog expired; continuing."
+                      route_status=124
                   fi
               fi
               printf '%s\n' "${route_status}" \
@@ -1207,8 +1244,9 @@ jobs:
 
           if (( ${#timing_failed_seeds[@]} > 0 )); then
               printf '::error::Baseline timing FAIL for seed(s): %s\n' "${timing_failed_seeds[*]}"
-              # The ROUTE STEP has outcome=failure. continue-on-error keeps the
-              # JOB eligible for success if the final sweep has another PASS.
+              # The ROUTE STEP has outcome=failure. Its step-level
+              # continue-on-error lets this group's final gates distinguish
+              # a partial timing miss from a group with zero passing seeds.
               exit 1
           fi
 
@@ -1387,12 +1425,20 @@ jobs:
           retention-days: 1
           compression-level: 0
 
-      # A completed timing miss is a valid seed result. Some route groups may
-      # have no passing seeds even when the overall sweep has a passing seed.
-      # Fail here only for actual route/tool errors; the final summary checks
-      # whether at least one seed meets all baseline clock requirements.
+      # Artifacts are uploaded before either failure gate. A route group with
+      # zero baseline-qualified seeds must be a failed job, even if other route
+      # groups passed. Job-level continue-on-error allows the complete sweep to
+      # succeed only after the final summary validates every result.
+      - name: Fail route group if no seeds pass baseline timing
+        if: ${{ always() && steps.route.outputs.status == '0' && steps.publish.outputs.any_pass != 'true' }}
+        shell: bash
+        run: |
+          echo '::error::No baseline timing PASS in this seed group.'
+          exit 1
+
       - name: Fail route group on tool errors
-        if: steps.route.outputs.status != '0'
+        if: ${{ always() && steps.route.outputs.status != '0' }}
+        shell: bash
         run: |
           echo '::error::Route group had a tool failure or changed the frozen netlist.'
           exit 1

@@ -12,9 +12,9 @@ Project version: v0.2.1
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 100
+Files inventoried: 101
 
-Total bytes: 862300
+Total bytes: 867182
 
 ## Verification
 
@@ -27,7 +27,7 @@ should be identified before a public release.
 
 | Path | Bytes | SHA-256 | Component | Kind |
 |---|---:|---|---|---|
-| `README.md` | 42400 | `697e4cb085681c9e9abe72e50221f1f4ca62cb2fe0462b634aa446a97d742f68` | REVIEW | Markdown documentation |
+| `README.md` | 43797 | `809d4569261ab59d82c238f61fe2e2df4753e8a918b519d5438cdab07755253f` | REVIEW | Markdown documentation |
 | `apply-doom-noncombat.py` | 6775 | `3a8062684727b572d903c3a53ef729d64438b6f3c2bdfdd5c426bfe5bec08658` | REVIEW | File |
 | `build-coremark.sh` | 7696 | `bf3456ab3951439cde96e6301f961526893f80e51e02ca5d19f0de933008e2f6` | REVIEW | Shell script |
 | `build-doom-noncombat.sh` | 5708 | `1a904b485825762b1502ede99245f64db1121e3d8a3d2fee944fad9a08218b23` | REVIEW | Shell script |
@@ -57,7 +57,7 @@ should be identified before a public release.
 | `check_submodules.bat` | 10617 | `8f05a6d9f9738ddea8ebc84f4b4cdef7df848824a0b5d971e0a9a5f4675cc98b` | REVIEW | File |
 | `dev-prompt.cmd` | 3874 | `1159bbdaf78a2e185ec8cf0d41b2fe836274c0d32ff9aa0c550f203cb42bbab5` | REVIEW | File |
 | `doomgeneric-version.sh` | 1591 | `e461166288862ba39a5d5bbd4237b696ccb11153038ba3011665ad636c917971` | REVIEW | Shell script |
-| `ecp5-board-defaults.sh` | 10300 | `06456503a86a43bd3d3215421a059c590764ced846a729d79dc59b4710678df4` | REVIEW | Shell script |
+| `ecp5-board-defaults.sh` | 11129 | `68ac3947d959c13748729d8e22c83404f5755e07eb11d277f01e4ae9f8f68148` | REVIEW | Shell script |
 | `fix-hazard3-symlink.ps1` | 2274 | `32cdc98247b98b9aeb0ac9b5a6bca1ec8f34d9cc455b27744ea49c5c4bda3654` | REVIEW | File |
 | `flash-ulx3s-persistent.sh` | 2500 | `dd42cfef70be760312f31bb7ae4de1273814e3d586d0c1f4b9c2c0efbddb9c7c` | REVIEW | Shell script |
 | `full-clean.sh` | 6201 | `2e167df0d07e94a30dbb12b489ed27154f17f6117e67352ff62b18559c9fef8e` | REVIEW | Shell script |
@@ -106,14 +106,15 @@ should be identified before a public release.
 | `start-openocd.bat` | 8333 | `da858356e9981d5b44447ea17b0f276bc0823848acdf20440c4a19f577b95e21` | REVIEW | File |
 | `start-openocd.sh` | 10021 | `2d08c7ec39d6724f1e28976a09d9d119ad97797a426ba6cc1d85c697f2f3125a` | REVIEW | Shell script |
 | `summarize-ecp5-sweep.py` | 14307 | `7ad20afb90710e25405f69e4ae30990225a4dc3ac84978bea1acdcbbe0e1a55f` | REVIEW | File |
-| `sweep-ecp5-common.sh` | 16551 | `db5b1bfa8c20179eb8a092cfb45fda2957ef01d8b324478e01cb784eaa20ff18` | REVIEW | Shell script |
-| `sweep-ecp5.sh` | 4846 | `b0a42b13a8b5017aba6ad5205351dd5b132833994f70237ab5ce6c9acfb59094` | REVIEW | Shell script |
+| `sweep-ecp5-common.sh` | 16571 | `aa9bf08e6e99c82fe4427e75384246ba249a5dbdd0a3c6d19288b15d3caa8c77` | REVIEW | Shell script |
+| `sweep-ecp5.sh` | 5034 | `92c47513d74441beb816e863c80da6b6681cfbb648dd9a19c85041066dc02ab1` | REVIEW | Shell script |
 | `sweep-peek-ulx3s-12f-best-peek.sh` | 1898 | `fc15e3672a893cc2abe7e292956a4d84437521b286d83224a764cdabf1e6d73e` | REVIEW | Shell script |
 | `sweep-peek-ulx3s-12f.sh` | 11810 | `e58458c8205feaab3f51668207797217980ad014d77837bd78b89a15352bbc21` | REVIEW | Shell script |
 | `sweep-peek.sh` | 13873 | `193994301e9496dac649ecf1ab8c3d4da73e0a455110f30552582cefe0605b33` | REVIEW | Shell script |
 | `sweep-ulx3s-12f.sh` | 907 | `02c3d4c4aa3f5998251f5b7af2e9daa20293b137bbca7ac357d42363e6d6cffc` | REVIEW | Shell script |
+| `sweep-ulx3s-45f.sh` | 891 | `408ba215f382fb9683f2635352f5b3390598d170ad2eb9cf75237f8548cf4bab` | REVIEW | Shell script |
 | `sweep-ulx3s-85f.sh` | 907 | `d4d2785cb1413b5d9ee4c4a9d911f98865106c85328689ba4c46bd01775c7479` | REVIEW | Shell script |
-| `sweep-ulx3s-common.sh` | 33652 | `4d2794fc408fae5a25ebcd98c3faf541abc74fe6c877fbb949db4bfc1aaec088` | REVIEW | Shell script |
+| `sweep-ulx3s-common.sh` | 35189 | `0dcfd3aba88f70ca381843fe3d7158133d0f2676e8a8c5315f613d32f25c501c` | REVIEW | Shell script |
 | `sweep-ulx4m-ld.sh` | 18154 | `2831dc871afa352ee2c8843d40bf72e3aaf21830940e1ee8fad7a18abba3c365` | REVIEW | Shell script |
 | `sweep-ulx5m-bootloader-ci.py` | 12374 | `5138fde6539f428c14073627cbab754871b8bf07a8e1d825519945857e10799d` | REVIEW | File |
 | `sweep-ulx5m-bootloader.sh` | 11177 | `bdd36601cbd182701e27e3040a20cb0b31329ded532b8bfbf3081495d8dc8f26` | REVIEW | Shell script |
@@ -126,4 +127,4 @@ should be identified before a public release.
 | `test-ulx5m-serv-hardware.ps1` | 3240 | `eb028cda2d499010ce857758ee7353a3eb03e14204574e527fb7e5ad2b14846b` | REVIEW | File |
 | `test-ulx5m-serv.sh` | 9383 | `6a67e8680fbbf9b724941b0670609135e520f78b135c9044c396faa1a07d736b` | REVIEW | Shell script |
 | `ulx4m-bootloader.sh` | 30139 | `70842c33881cf42c62d4a290084effed82128d686c71ae957f56347a5e92a8f1` | REVIEW | Shell script |
-| `watch-ecp5-sweep-results.sh` | 19534 | `e738e566191099e92583918ea9789e119600fc0d4f132a9e8c06b4575e98418e` | REVIEW | Shell script |
+| `watch-ecp5-sweep-results.sh` | 19554 | `5c9b280ae70bd09c667c8c8c0397d3f86bd330f6797f8a11395b2fdb8392ad6c` | REVIEW | Shell script |

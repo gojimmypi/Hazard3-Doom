@@ -95,7 +95,7 @@ sweep_ecp5_hdmi_output_resolution()
     local expected_resolution
     case "${SWEEP_ECP5_BOARD_ID}" in
     ulx3s-85f) expected_resolution=640x480 ;;
-    ulx3s-12f|ulx4m-ld-85f) expected_resolution=1024x600 ;;
+    ulx3s-12f|ulx3s-45f|ulx4m-ld-85f) expected_resolution=1024x600 ;;
     *) echo "Unsupported ECP5 HDMI profile: ${SWEEP_ECP5_BOARD_ID}" >&2; return 1 ;;
     esac
 
@@ -117,7 +117,7 @@ sweep_ecp5_clock_targets()
         SWEEP_VIDEO_TARGET_MHZ="${SWEEP_VIDEO_TARGET_MHZ:-25.00}"
         SWEEP_TMDS_TARGET_MHZ="${SWEEP_TMDS_TARGET_MHZ:-125.00}"
         ;;
-    ulx3s-12f)
+    ulx3s-12f|ulx3s-45f)
         SWEEP_SYS_TARGET_MHZ="${SWEEP_SYS_TARGET_MHZ:-40.00}"
         SWEEP_VIDEO_TARGET_MHZ="${SWEEP_VIDEO_TARGET_MHZ:-50.00}"
         SWEEP_TMDS_TARGET_MHZ="${SWEEP_TMDS_TARGET_MHZ:-250.00}"

@@ -4,7 +4,7 @@
 # Path:        scripts/sweep-ulx3s-common.sh
 #
 # Project:     Hazard3-Doom
-# Purpose:     Run fully routed ULX3S 12F/85F nextpnr seed sweeps with a
+# Purpose:     Run fully routed ULX3S 12F/45F/85F nextpnr seed sweeps with a
 #              shared driver and board-specific defaults.
 #
 # Copyright (c) 2026 gojimmypi
@@ -25,13 +25,13 @@ set -euo pipefail
 # A board ID selects the SoC/netlist configuration. ECP5_PNR_DEVICE separately
 # selects the FPGA family and speed grade actually fitted to that board.
 if (( $# < 1 )); then
-    echo 'Usage: sweep-ulx3s-common.sh ulx3s-12f|ulx3s-85f [SEEDS|--print-sweep-dir]' >&2
+    echo 'Usage: sweep-ulx3s-common.sh ulx3s-12f|ulx3s-45f|ulx3s-85f [SEEDS|--print-sweep-dir]' >&2
     exit 1
 fi
 SWEEP_ECP5_BOARD_ID="$1"
 shift
 case "${SWEEP_ECP5_BOARD_ID}" in
-ulx3s-12f|ulx3s-85f) ;;
+ulx3s-12f|ulx3s-45f|ulx3s-85f) ;;
 *) echo "Unknown ULX3S sweep target: ${SWEEP_ECP5_BOARD_ID}" >&2; exit 1 ;;
 esac
 
@@ -47,6 +47,7 @@ SWEEP_JOBS="${SWEEP_JOBS:-4}"
 SWEEP_SKIP_SYNTH="${SWEEP_SKIP_SYNTH:-0}"
 SWEEP_PREPARE_ONLY="${SWEEP_PREPARE_ONLY:-0}"
 SWEEP_AUTO_BUILD_MONITOR="${SWEEP_AUTO_BUILD_MONITOR:-1}"
+IS_COMPACT_ULX3S=0
 
 # shellcheck source=scripts/ecp5-board-defaults.sh
 source "${SCRIPT_DIR}/ecp5-board-defaults.sh"
@@ -55,7 +56,21 @@ source "${COMMON_SCRIPT}"
 printf 'Include source: %s\n' "${COMMON_SCRIPT}" >&2
 
 case "${SWEEP_ECP5_BOARD_ID}" in
+ulx3s-45f)
+    IS_COMPACT_ULX3S=1
+    HAZARD3_MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE:-32m}"
+    NETLIST="${BUILD_DIR}/fpga_ulx3s_45f.json"
+    MAKEFILE="${SYNTH_DIR}/ULX3S_12F.mk"
+    SYNTH_LOG="${BUILD_DIR}/fpga_ulx3s_45f.synth.log"
+    SYNTH_PROFILE_STAMP="${BUILD_DIR}/fpga_ulx3s_45f.memory-profile"
+    SYNTH_DURATION_STAMP="${BUILD_DIR}/fpga_ulx3s_45f.synth-seconds"
+    BOARD_LABEL='ULX3S 45F (compact)'
+    NETLIST_BASE='fpga_ulx3s_45f'
+    EBR_CAPACITY=108
+    ;;
 ulx3s-12f)
+    IS_COMPACT_ULX3S=1
+    EBR_CAPACITY=32
     HAZARD3_MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE:-32m}"
     NETLIST="${BUILD_DIR}/fpga_ulx3s_12f.json"
     MAKEFILE="${SYNTH_DIR}/ULX3S_12F.mk"
@@ -91,8 +106,8 @@ sweep_ecp5_clock_targets
 sweep_ecp5_init_tuning
 TUNING_SUFFIX="$(sweep_ecp5_tuning_suffix)$(ecp5_pnr_device_suffix)"
 
-if [[ "${SWEEP_ECP5_BOARD_ID}" == 'ulx3s-12f' ]]; then
-    SWEEP_DIR="${BUILD_DIR}/ulx3s-12f-seed-sweep/${HAZARD3_MEMORY_PROFILE}${TUNING_SUFFIX}"
+if [[ "${IS_COMPACT_ULX3S}" == 1 ]]; then
+    SWEEP_DIR="${BUILD_DIR}/${SWEEP_ECP5_BOARD_ID}-seed-sweep/${HAZARD3_MEMORY_PROFILE}${TUNING_SUFFIX}"
 else
     case "${HAZARD3_HDMI_EXTENDED_MODES}" in
     0) VIDEO_PROFILE='vga640-standard' ;;
@@ -119,14 +134,14 @@ ECP5_PNR_SPEED_GRADE=N overrides the default device's speed grade.
 ECP5_PNR_PACKAGE=NAME selects the nextpnr package (default CABGA381).
 SWEEP_SYS_TARGET_MHZ, SWEEP_VIDEO_TARGET_MHZ, SWEEP_TMDS_TARGET_MHZ
   are Fmax targets, not PLL controls. The 85F also enforces them for PASS.
-  The 12F retains its historical nextpnr-based PASS qualification.
+  The compact 12F/45F profiles retain nextpnr-based PASS qualification.
 SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.
 SWEEP_ROUTE_TIMEOUT_SECONDS=N limits each route (default: 7200).
 EOF_USAGE
-    if [[ "${SWEEP_ECP5_BOARD_ID}" == 'ulx3s-12f' ]]; then
+    if [[ "${IS_COMPACT_ULX3S}" == 1 ]]; then
         cat >&2 <<'EOF_12F'
 HAZARD3_MEMORY_PROFILE=32m|64m selects SDRAM memory (default: 32m).
-The ULX3S-12F system clock remains fixed at 40 MHz.
+The compact ULX3S 12F/45F system clock remains fixed at 40 MHz.
 EOF_12F
     else
         cat >&2 <<'EOF_85F'
@@ -176,12 +191,12 @@ if [[ ! "${SWEEP_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
     printf 'Invalid SWEEP_JOBS: %s; expected a positive integer.\n' "${SWEEP_JOBS}" >&2
     exit 1
 fi
-if [[ "${SWEEP_ECP5_BOARD_ID}" == 'ulx3s-12f' ]]; then
+if [[ "${IS_COMPACT_ULX3S}" == 1 ]]; then
     case "${HAZARD3_MEMORY_PROFILE}" in
     32m|64m) ;;
     *) echo 'HAZARD3_MEMORY_PROFILE must be 32m or 64m.' >&2; exit 1 ;;
     esac
-    printf 'ULX3S 12F sweep configuration: system clock=40 MHz, SDRAM profile=%s\n' "${HAZARD3_MEMORY_PROFILE}"
+    printf '%s sweep configuration: system clock=40 MHz, SDRAM profile=%s\n' "${BOARD_LABEL}" "${HAZARD3_MEMORY_PROFILE}"
 else
     printf 'ULX3S 85F sweep configuration: system clock=%s MHz, HDMI profile=%s, extended modes=%s\n' \
         "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" "${VIDEO_PROFILE}" "${HAZARD3_HDMI_EXTENDED_MODES}"
@@ -277,17 +292,17 @@ fi
 
 # Board-specific synthesis checks stay independent. The shared routing code
 # below only runs after the proper board netlist has been validated.
-if [[ "${SWEEP_ECP5_BOARD_ID}" == 'ulx3s-12f' ]]; then
+if [[ "${IS_COMPACT_ULX3S}" == 1 ]]; then
     if [[ "${SWEEP_SKIP_SYNTH}" == "1" ]]; then
         recorded_profile=""
         if [[ -f "${SYNTH_PROFILE_STAMP}" ]]; then
             read -r recorded_profile < "${SYNTH_PROFILE_STAMP}" || true
         fi
         if [[ "${recorded_profile}" != "${HAZARD3_MEMORY_PROFILE}" ]]; then
-            echo "Frozen ULX3S 12F netlist memory profile does not match requested ${HAZARD3_MEMORY_PROFILE}." >&2
+            echo "Frozen ${BOARD_LABEL} netlist memory profile does not match requested ${HAZARD3_MEMORY_PROFILE}." >&2
             exit 1
         fi
-        printf 'Using existing synthesized ULX3S 12F netlist; synthesis skipped.\n'
+        printf 'Using existing synthesized %s netlist; synthesis skipped.\n' "${BOARD_LABEL}"
     else
         sweep_ecp5_require_tool make
         sweep_ecp5_require_tool yosys
@@ -306,13 +321,13 @@ if [[ "${SWEEP_ECP5_BOARD_ID}" == 'ulx3s-12f' ]]; then
                 "${SYNTH_DURATION_STAMP}"
         fi
 
-        printf 'ULX3S 12F profile: compact 320x200, %s SDRAM\n' \
-            "${HAZARD3_MEMORY_PROFILE}"
+        printf '%s profile: compact 320x200, %s SDRAM\n' \
+            "${BOARD_LABEL}" "${HAZARD3_MEMORY_PROFILE}"
 
         synth_start_seconds="$(date +%s)"
         sweep_ecp5_run_synthesis "${SYNTH_DIR}" "${SYNTH_LOG}" \
             -f ULX3S_12F.mk \
-            CHIPNAME="${BUILD_DIR}/fpga_ulx3s_12f" \
+            CHIPNAME="${NETLIST%.json}" \
             HAZARD3_MEMORY_PROFILE="${HAZARD3_MEMORY_PROFILE}" \
             HAZARD3_HDMI_EXTENDED_MODES=0 synth
         if [[ "${SWEEP_SYNTHESIS_RAN}" == 1 ]]; then
@@ -474,18 +489,38 @@ if [[ ! -s "${SYNTH_LOG}" ]]; then
     exit 1
 fi
 
-if [[ "${SWEEP_ECP5_BOARD_ID}" == 'ulx3s-12f' ]]; then
-    ebr_used="$(awk '$2 == "DP16KD" {used=$1} END {print used}' "${SYNTH_LOG}")"
-    if [[ -z "${ebr_used}" ]]; then
-        echo "ERROR: Could not determine ULX3S 12F DP16KD usage from synth.log." >&2
+# The full 85F SoC currently uses more embedded RAM than a 45F provides.
+# Validate the actual synthesized count rather than rejecting 45F outright:
+# future reduced-resource 85F configurations may eventually fit.
+if [[ "${ECP5_PNR_DEVICE%-*}" == LFE5U-45F ]]; then
+    selected_ebr_used="$(awk '$2 == "DP16KD" {used=$1} END {print used}' "${SYNTH_LOG}")"
+    if [[ -z "${selected_ebr_used}" ]]; then
+        echo "ERROR: Could not determine DP16KD usage for ${ECP5_PNR_DEVICE}." >&2
         exit 1
     fi
-    if (( ebr_used > 32 )); then
-        echo "ERROR: ULX3S 12F synthesis uses ${ebr_used} DP16KD blocks; LFE5U-12F limit is 32." >&2
+    if (( selected_ebr_used > 108 )); then
+        printf 'ERROR: Synthesized %s DP16KD blocks; %s provides only 108.\n' \
+            "${selected_ebr_used}" "${ECP5_PNR_DEVICE}" >&2
+        printf 'Try target=ulx3s-45f for the compact 45F SoC, or reduce the full 85F RTL EBR usage.\n' >&2
+        exit 1
+    fi
+    printf 'Selected %s capacity check: %s/108 DP16KD.\n' \
+        "${ECP5_PNR_DEVICE}" "${selected_ebr_used}"
+fi
+
+if [[ "${IS_COMPACT_ULX3S}" == 1 ]]; then
+    ebr_used="$(awk '$2 == "DP16KD" {used=$1} END {print used}' "${SYNTH_LOG}")"
+    if [[ -z "${ebr_used}" ]]; then
+        echo "ERROR: Could not determine compact ULX3S DP16KD usage from synth.log." >&2
+        exit 1
+    fi
+    if (( ebr_used > EBR_CAPACITY )); then
+        printf 'ERROR: %s synthesis uses %s DP16KD blocks; device capacity is %s.\n' \
+            "${BOARD_LABEL}" "${ebr_used}" "${EBR_CAPACITY}" >&2
         exit 1
     fi
     if grep -Fq "ulx3s_frame_ram\\BANK_COUNT=" "${SYNTH_LOG}"; then
-        echo "ERROR: ULX3S 12F synthesized the full EBR framebuffer hierarchy." >&2
+        echo "ERROR: Compact ULX3S synthesized the full EBR framebuffer hierarchy." >&2
         exit 1
     fi
 fi
@@ -500,14 +535,14 @@ mkdir -p "${SWEEP_DIR}"
     printf 'speed=%s\n' "${ECP5_PNR_SPEED_GRADE}"
     printf 'package=%s\n' "${ECP5_PNR_PACKAGE}"
     printf 'full_route=1\n'
-    if [[ "${SWEEP_ECP5_BOARD_ID}" == 'ulx3s-12f' ]]; then
+    if [[ "${IS_COMPACT_ULX3S}" == 1 ]]; then
         printf 'target_overrides_are_reporting_only=1\n'
     else
         printf 'target_overrides_are_reporting_only=0\n'
         printf 'target_overrides_change_physical_clocks=0\n'
     fi
     printf 'result_columns=seed,clk_sys_mhz,clk_video_mhz,clk_tmds_mhz,route_seconds,timing_status\n'
-    if [[ "${SWEEP_ECP5_BOARD_ID}" == 'ulx3s-12f' ]]; then
+    if [[ "${IS_COMPACT_ULX3S}" == 1 ]]; then
         printf 'hazard3_memory_profile=%s\n' "${HAZARD3_MEMORY_PROFILE}"
         printf 'dp16kd_used=%s\n' "${ebr_used}"
     else
@@ -530,8 +565,9 @@ mkdir -p "${SWEEP_DIR}"
     printf 'generated_utc=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 } > "${SWEEP_DIR}/metadata.txt"
 
-if [[ "${SWEEP_ECP5_BOARD_ID}" == 'ulx3s-12f' ]]; then
-    printf 'ULX3S 12F synthesis check: compact profile, %s/32 DP16KD.\n' "${ebr_used}"
+if [[ "${IS_COMPACT_ULX3S}" == 1 ]]; then
+    printf '%s synthesis check: compact profile, %s/%s DP16KD.\n' \
+        "${BOARD_LABEL}" "${ebr_used}" "${EBR_CAPACITY}"
 fi
 printf '%s synthesis duration: %s seconds\n' "${BOARD_LABEL}" "${synthesis_seconds}"
 printf '%s routed sweep netlist SHA256: %s\n' "${BOARD_LABEL}" "${netlist_sha256}"
@@ -613,7 +649,7 @@ run_seed()
     esac
 
     # 85F 25 MHz uses an oscillator alias. 40/50 MHz use the system PLL.
-    # The 12F always uses its dedicated fixed 40 MHz system PLL.
+    # The compact 12F/45F SoC uses its dedicated fixed 40 MHz system PLL.
     sys_clock="clk_sys"
     if [[ "${SWEEP_ECP5_BOARD_ID}" == 'ulx3s-85f' ]]; then
         if ! sys_clock="$(sweep_ecp5_ulx3s_85f_system_clock "${pnr_log}")"; then
@@ -631,12 +667,12 @@ run_seed()
     clk_tmds_status="$(sweep_ecp5_extract_clock_status "${pnr_log}" "clk_tmds_x5")"
 
     # The 85F has additional physical-clock qualification checks. Preserve
-    # the 12F baseline behavior, which uses nextpnr's clock PASS verdicts.
+    # the compact 12F/45F behavior, which uses nextpnr's clock PASS verdicts.
     timing_status="FAIL"
     if [[ "${clk_sys_status}" == 'PASS' &&
           "${clk_video_status}" == 'PASS' &&
           "${clk_tmds_status}" == 'PASS' ]]; then
-        if [[ "${SWEEP_ECP5_BOARD_ID}" == 'ulx3s-12f' ]]; then
+        if [[ "${IS_COMPACT_ULX3S}" == 1 ]]; then
             timing_status="PASS"
         elif sweep_ecp5_clock_meets_target "${clk_sys}" "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" &&
              sweep_ecp5_clock_meets_target "${clk_video}" '25.00' &&
@@ -667,7 +703,7 @@ run_seed()
         "${route_seconds}" "${timing_status}" > "${result}"
 
     rm -f "${failed_log}" "${config}" "${svf}"
-    if [[ "${SWEEP_ECP5_BOARD_ID}" == 'ulx3s-12f' ]]; then
+    if [[ "${IS_COMPACT_ULX3S}" == 1 ]]; then
         printf 'Seed %s: clk_sys=%s MHz, clk_video=%s MHz, clk_tmds=%s MHz, route=%ss, %s\n' \
             "${seed}" "${clk_sys}" "${clk_video}" "${clk_tmds}" \
             "${route_seconds}" "${timing_status}"
