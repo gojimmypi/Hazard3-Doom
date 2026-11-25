@@ -16,6 +16,79 @@ utilisé par le bootloader ne doit pas être confondu avec le processeur
 Hazard3 destiné aux applications Doom. L'application secondaire vérifiée
 est une démonstration à LED défilantes, et non Doom.
 
+Carte neuve : première installation du bootloader
+-------------------------------------------------
+
+.. note::
+
+   Cette procédure utilise des opérations de programmation et de relecture
+   de la mémoire flash via JTAG déjà vérifiées. La séquence d'installation
+   complète n'a pas encore été testée indépendamment sur une carte neuve.
+
+.. warning:: Programmation persistante de la mémoire flash.
+
+   Écriture persistante réservée à une ULX5M-GS V005 neuve, avec autorisation
+   explicite de remplacer la configuration d'usine. L'outil de maintenance
+   exige un secondaire existant et une compilation FWTF qualifiée ; ne pas
+   l'utiliser ici. Ne jamais installer FWTF comme primaire permanent.
+
+Aucune compilation nécessaire. Obtenir les fichiers de la même version
+``bin/ulx5m_gs_bootloader.bit`` (FWTN) et ``bin/ulx5m_gs_blinky.bit``
+et le manifeste ``bin/INVENTORY.sha256`` de la même version. Utiliser Tigard, openFPGALoader
+v1.2.0 et Python 3. Sous Windows utiliser l'exécutable fourni ; sous Ubuntu
+natif installer v1.2.0 dans PATH et configurer les permissions USB.
+Sous WSL, le script utilise l’exécutable Windows fourni via
+l’interopérabilité Windows. Conserver le dépôt sur un lecteur Windows
+(par exemple ``/mnt/c``) ; aucun accès USB natif dans WSL n’est requis.
+
+Les deux appareils hors tension, régler SW1 ON/ON. Relier Tigard en logique
+1,8 V, masse commune, VTGT déconnecté ; vérifier les tensions (:doc:`index`).
+Alimenter d'abord ULX5M puis Tigard, BTN2 relâché. Attendre un seul IDCODE
+``0x20000001`` et JEDEC ``1F 42 16`` ; arrêter en cas d'anomalie.
+
+Avant tout accès JTAG, le script vérifie automatiquement les deux fichiers
+avec leurs entrées dans ``bin/INVENTORY.sha256``. Aucune saisie manuelle
+n'est nécessaire. Un manifeste absent, une entrée absente ou en double,
+un SHA-256 invalide ou différent arrête le script avant tout accès JTAG.
+Utiliser le manifeste de la même version de confiance ; ne pas le régénérer
+pour contourner une différence.
+
+Exécuter ``scripts/factory-install-ulx5m-bootloader.py`` depuis la racine
+du projet. Deux lectures indépendantes de 4 Mio par blocs de 128 Kio précèdent
+la confirmation d'écriture. Conserver les sauvegardes hors des dossiers de
+compilation. Le primaire occupe 512 Kio à zéro ; le secondaire commence à
+``0x201000``. Seuls la partition primaire et les secteurs occupés par le
+secondaire sont remplacés ; tout autre octet doit rester intact. Ne pas
+utiliser Python -O.
+
+**Windows PowerShell**
+
+.. code-block:: powershell
+
+   cd C:\workspace\Hazard3-Doom
+   py -3 .\scripts\factory-install-ulx5m-bootloader.py
+
+**Ubuntu sous WSL (Bash)**
+
+.. code-block:: bash
+
+   cd /mnt/c/workspace/Hazard3-Doom
+   python3 ./scripts/factory-install-ulx5m-bootloader.py
+
+**Native Ubuntu / Linux (Bash)**
+
+.. code-block:: bash
+
+   cd ~/Hazard3-Doom
+   python3 ./scripts/factory-install-ulx5m-bootloader.py
+
+Après PASS, couper les deux alimentations, débrancher Tigard, régler SW1
+OFF/OFF. Maintenir BTN2 avant la mise sous tension ; relâcher après détection
+USB ``1D50:614B``. Vérifier FWTN avec la requête d'identité ci-dessous.
+Redémarrer à froid sans BTN2 : attendre les LED défilantes du secondaire de
+démonstration. En cas d'échec, arrêter, conserver les sauvegardes et journaux,
+ne pas réessayer ni restaurer automatiquement. Aucun retour arrière automatique.
+
 Fonctions disponibles
 ---------------------
 
@@ -276,6 +349,97 @@ une mise sous tension distincte avec SW1 OFF/OFF et BTN2 relâché ;
 cela teste ``FWTN`` installé, et non ``FWTF`` chargé en SRAM. Ne pas
 modifier SW1 pendant que la carte est sous tension.
 
+Sauvegarder le bootloader installé
+----------------------------------
+
+Couper les deux alimentations. Régler SW1 sur ON/ON, connecter Tigard avec
+masse commune, logique 1,8 V et VTGT déconnecté. Alimenter d'abord l'ULX5M,
+puis Tigard. Dans PowerShell Windows, effectuer quatre lectures de 128 Kio
+sans écriture. Arrêter si la détection échoue ou si la flash n'est pas
+l'AT25QL321 attendu (JEDEC ``1F 42 16``).
+
+.. code-block:: powershell
+
+   cd C:\workspace\Hazard3-Doom
+   .\bin\openFPGALoader.exe -c tigard --freq 1000k --detect
+   $output = "$HOME\ulx5m-bootloader.bin"
+   $data = New-Object 'System.Collections.Generic.List[byte]'
+   for ($offset = 0; $offset -lt 524288; $offset += 131072) {
+       $chunk = "$output.$offset.chunk"
+       if (Test-Path $chunk) { throw "Chunk already exists: $chunk" }
+       .\bin\openFPGALoader.exe -c tigard --freq 1000k --dump-flash --file-size 131072 -o $offset $chunk
+       if ($LASTEXITCODE -ne 0) { throw "Read failed: $offset" }
+       $bytes = [IO.File]::ReadAllBytes($chunk)
+       if ($bytes.Length -ne 131072) { throw "Invalid chunk size: $offset" }
+       $data.AddRange($bytes)
+   }
+   if (Test-Path $output) { throw "Backup already exists: $output" }
+   [IO.File]::WriteAllBytes($output, $data.ToArray())
+   Get-Item $output
+   Get-FileHash $output -Algorithm SHA256
+
+**Ubuntu / Linux natif (Bash)**
+
+Utiliser une version Linux native d'openFPGALoader prenant en charge GateMate et Tigard (version Windows testée : v1.2.0), disponible dans PATH, avec les permissions USB configurées. Sous WSL dans la configuration Windows testée, utiliser PowerShell ci-dessus. Arrêter si la détection échoue ou si une lecture indique un JEDEC autre que ``1F 42 16``. Exécuter ce bloc dans Bash ; il crée un nouveau répertoire de sauvegarde et refuse de réutiliser un répertoire existant.
+
+.. code-block:: bash
+
+   (
+       set -euo pipefail
+       openFPGALoader -c tigard --freq 1000k --detect
+       backup_dir="$HOME/ulx5m-bootloader-backup"
+       mkdir "$backup_dir"
+       cd "$backup_dir"
+       for offset in 0 131072 262144 393216; do
+           chunk="$offset.chunk"
+           openFPGALoader -c tigard --freq 1000k --dump-flash --file-size 131072 -o "$offset" "$chunk"
+           test "$(wc -c < "$chunk")" -eq 131072
+       done
+       cat 0.chunk 131072.chunk 262144.chunk 393216.chunk > ulx5m-bootloader.bin
+       test "$(wc -c < ulx5m-bootloader.bin)" -eq 524288
+       wc -c ulx5m-bootloader.bin
+       sha256sum ulx5m-bootloader.bin
+   )
+
+Le fichier brut de 524 288 octets couvre ``0x000000..0x07FFFF``, remplissage
+compris ; sa taille peut différer du fichier ``.bit`` original. Conserver
+les fragments jusqu'à vérification. Pour une seconde lecture indépendante,
+changer le nom de sortie et comparer les SHA-256. Une empreinte seule ne
+révèle pas la version. Conserver aussi une sauvegarde complète de 4 Mio
+pour la récupération. Couper les deux alimentations et remettre SW1 OFF/OFF.
+
+Identifier le bootloader
+------------------------
+
+Tigard déconnecté ou éteint, régler SW1 OFF/OFF hors tension. Maintenir BTN2
+à la mise sous tension, puis relâcher après l'énumération DFU. Avec PyUSB
+Windows et libusb (voir prérequis), lire STATUS sans image secondaire :
+
+.. code-block:: powershell
+
+   cd C:\workspace\Hazard3-Doom
+   $env:PATH = "$PWD\bin;$env:PATH"
+   py -3 -c "import usb.core; d=usb.core.find(idVendor=0x1d50,idProduct=0x614b); assert d is not None, 'DFU device not found'; s=bytes(d.ctrl_transfer(0xC0,0x5D,0,0,24)); assert len(s)==24, 'Unexpected STATUS length'; print('Profile:', s[:4].decode('ascii')); print('USB bcdDevice: 0x%04X' % d.bcdDevice)"
+
+**Ubuntu / Linux natif (Bash)**
+
+Sous Ubuntu natif, installer PyUSB et libusb, puis vérifier l'énumération DFU. Les règles udev doivent autoriser l'accès USB. En cas de refus, corriger les permissions avant de réessayer. Sous WSL dans la configuration testée, utiliser PowerShell Windows.
+
+.. code-block:: bash
+
+   sudo apt install python3-usb libusb-1.0-0 usbutils
+   lsusb -d 1d50:614b
+   python3 -c "import usb.core; d=usb.core.find(idVendor=0x1d50,idProduct=0x614b); assert d is not None, 'DFU device not found'; s=bytes(d.ctrl_transfer(0xC0,0x5D,0,0,24)); assert len(s)==24, 'Unexpected STATUS length'; print('Profile:', s[:4].decode('ascii')); print('USB bcdDevice: 0x%04X' % d.bcdDevice)"
+
+Les alternatives Linux natives n'ont pas été testées sur la carte.
+
+Le résultat attendu est ``FWTN`` ou ``FWTF``. Le descripteur USB
+``bcdDevice`` est affiché à titre informatif ; aucun des deux champs n'est
+documenté comme identifiant unique de compilation. Cette commande en lecture
+seule dérivée du protocole STATUS n'a pas été testée ici sur le matériel.
+La procédure ``--probe`` ci-dessous reste l'alternative documentée. Aucune
+requête de version sémantique, de commit Git ou de seed n'est établie.
+
 Lecture USB sans modification de la flash
 -----------------------------------------
 
@@ -406,6 +570,49 @@ Dépannage
 * **Image rejetée :** fournir un secondaire natif, jamais le primaire.
 * **Mise à jour interrompue :** ne pas supposer un retour arrière ;
   utiliser le DFU avec BTN2 ou la restauration externe.
+
+Messages USBView sous Windows
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Lorsque la carte est en mode DFU, ouvrir l'utilitaire Windows fourni
+``bin/usbview.exe``. Sous WSL, utiliser cet utilitaire Windows plutôt
+qu'un outil USB Linux natif sur le banc d'essai actuel. Une énumération
+DFU réussie indique le VID:PID ``1D50:614B``, le nom de produit
+``ULX5M-GS FPGA (DFU Probe)``, la pleine vitesse (Full Speed), la
+configuration ``0x01`` et la classe/sous-classe/protocole ``FE/01/02``.
+
+Les messages suivants de USBView peuvent être trompeurs :
+
+* **Ancien nom ULX4M :** Windows peut conserver le nom convivial
+  ``ULX4M-LS FPGA (DFU)`` pour le VID:PID partagé. Vérifier le nom de
+  produit dans le descripteur de périphérique plutôt que dans l'arborescence.
+* **Open Pipes: 0 / No open pipes!:** normal pour cette interface DFU.
+  Toutes les requêtes DFU utilisent le point de terminaison de contrôle
+  par défaut EP0. Il n'existe aucun point de terminaison supplémentaire
+  (``bNumEndpoints = 0``).
+* **HID Descriptor avec de nombreuses entrées :** USBView peut confondre
+  le descripteur fonctionnel DFU avec un descripteur HID, car tous deux
+  utilisent le type ``0x21``. La taille de transfert DFU de 64 octets est
+  alors interprétée à tort comme un nombre de 64 entrées HID ; l'outil
+  peut afficher des octets sans rapport au-delà du descripteur de neuf
+  octets. Il s'agit d'un problème de décodage de USBView, et non d'une
+  preuve de corruption du descripteur FPGA.
+
+Pour les octets observés ``09 21 09 00 00 40 00 10 01``, le décodage DFU
+correct donne ``bLength = 9``, ``bDescriptorType = 0x21``,
+``bmAttributes = 0x09`` (téléchargement vers le périphérique pris en charge,
+détachement géré par le périphérique), ``wDetachTimeOut = 0``,
+``wTransferSize = 64`` et ``bcdDFUVersion = 0x0110`` (DFU 1.1).
+
+Ne pas modifier le micrologiciel ni réinstaller le pilote USB dans le seul
+but de faire disparaître ces messages. L'énumération ne prouve ni la prise
+en charge de la mise à jour flash ni l'identité du profil actif ; utiliser
+la requête STATUS en lecture seule décrite plus haut. Sous Ubuntu/Linux
+natif, utiliser ``lsusb -v -d 1d50:614b`` dans Bash pour examiner les
+descripteurs (avec les permissions USB appropriées).
+
+Voir le `code source USBView de Microsoft (DisplayHidDescriptor) <https://github.com/microsoft/Windows-driver-samples/blob/main/usb/usbview/display.c>`_
+pour l'implémentation du décodage HID.
 
 Référence de reproductibilité
 -----------------------------

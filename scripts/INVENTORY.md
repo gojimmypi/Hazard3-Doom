@@ -12,9 +12,9 @@ Project version: v0.2.1
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 101
+Files inventoried: 102
 
-Total bytes: 867182
+Total bytes: 880068
 
 ## Verification
 
@@ -58,6 +58,7 @@ should be identified before a public release.
 | `dev-prompt.cmd` | 3874 | `1159bbdaf78a2e185ec8cf0d41b2fe836274c0d32ff9aa0c550f203cb42bbab5` | REVIEW | File |
 | `doomgeneric-version.sh` | 1591 | `e461166288862ba39a5d5bbd4237b696ccb11153038ba3011665ad636c917971` | REVIEW | Shell script |
 | `ecp5-board-defaults.sh` | 11129 | `68ac3947d959c13748729d8e22c83404f5755e07eb11d277f01e4ae9f8f68148` | REVIEW | Shell script |
+| `factory-install-ulx5m-bootloader.py` | 12886 | `923bd68e12ab73e37232bec27523a9c68574be424439ed493d997790b1698d68` | REVIEW | File |
 | `fix-hazard3-symlink.ps1` | 2274 | `32cdc98247b98b9aeb0ac9b5a6bca1ec8f34d9cc455b27744ea49c5c4bda3654` | REVIEW | File |
 | `flash-ulx3s-persistent.sh` | 2500 | `dd42cfef70be760312f31bb7ae4de1273814e3d586d0c1f4b9c2c0efbddb9c7c` | REVIEW | Shell script |
 | `full-clean.sh` | 6201 | `2e167df0d07e94a30dbb12b489ed27154f17f6117e67352ff62b18559c9fef8e` | REVIEW | Shell script |

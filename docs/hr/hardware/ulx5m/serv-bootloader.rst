@@ -16,6 +16,78 @@ unutar bootloadera nije isto što i procesor Hazard3 koji pokreće Doom.
 Provjerena sekundarna aplikacija je primjer s pomičnim LED uzorkom,
 a ne Doom.
 
+Nova pločica: prva instalacija bootloadera
+------------------------------------------
+
+.. note::
+
+   Ovaj postupak koristi prethodno provjerene operacije programiranja i
+   povratnog čitanja flash memorije putem JTAG-a. Cijeli postupak instalacije
+   još nije neovisno ispitan na tvornički novoj pločici.
+
+.. warning:: Trajno programiranje flash memorije.
+
+   Trajno pisanje samo na novu ULX5M-GS V005 uz izričito odobrenje zamjene
+   tvorničke konfiguracije. Alat za održavanje zahtijeva postojeći sekundar
+   i kvalificirani FWTF build; ne koristiti ga ovdje. Nikada ne instalirati
+   FWTF kao trajni primarni bootloader.
+
+Kompilacija nije potrebna. Nabaviti datoteke istog izdanja
+``bin/ulx5m_gs_bootloader.bit`` (FWTN) i ``bin/ulx5m_gs_blinky.bit``
+te manifest ``bin/INVENTORY.sha256`` istog izdanja. Potrebni su Tigard,
+openFPGALoader v1.2.0 i Python 3. Na Windowsu koristiti priloženi izvršni
+program; na izvornom Ubuntu sustavu instalirati v1.2.0 u PATH i podesiti
+USB dozvole. U WSL-u skripta koristi priloženi Windows izvršni program
+putem Windows interoperabilnosti. Repozitorij mora biti na Windows pogonu
+(npr. ``/mnt/c``); izravan USB pristup iz WSL-a nije potreban.
+
+Isključiti oba uređaja, postaviti SW1 ON/ON. Spojiti Tigard s logikom 1,8 V,
+zajedničkom masom i odspojenim VTGT; provjeriti napone (:doc:`index`).
+Prvo uključiti ULX5M, zatim Tigard, BTN2 otpušten. Očekuje se jedan IDCODE
+``0x20000001`` i JEDEC ``1F 42 16``; zaustaviti se kod odstupanja.
+
+Prije bilo kakvog JTAG pristupa skripta automatski provjerava obje datoteke
+prema zapisima u ``bin/INVENTORY.sha256``. Ručni unos SHA-256 nije potreban.
+Nedostajući manifest, nedostajući ili dvostruki zapis, neispravna ili
+različita SHA-256 vrijednost zaustavljaju skriptu prije JTAG pristupa.
+Koristiti manifest istog pouzdanog izdanja; ne generirati ga ponovno radi
+zaobilaženja nepodudarnosti.
+
+Pokrenuti ``scripts/factory-install-ulx5m-bootloader.py`` iz korijena projekta.
+Dvije neovisne kopije od 4 MiB čitaju se u blokovima od 128 KiB prije potvrde
+pisanja. Sačuvati kopije izvan direktorija za kompilaciju. Primarna particija
+ima 512 KiB od nule, sekundar počinje na ``0x201000``. Mijenjaju se samo
+primarna particija i sektori koje zauzima sekundar; ostali bajtovi moraju
+ostati isti. Ne koristiti Python -O.
+
+**Windows PowerShell**
+
+.. code-block:: powershell
+
+   cd C:\workspace\Hazard3-Doom
+   py -3 .\scripts\factory-install-ulx5m-bootloader.py
+
+**Ubuntu u WSL-u (Bash)**
+
+.. code-block:: bash
+
+   cd /mnt/c/workspace/Hazard3-Doom
+   python3 ./scripts/factory-install-ulx5m-bootloader.py
+
+**Native Ubuntu / Linux (Bash)**
+
+.. code-block:: bash
+
+   cd ~/Hazard3-Doom
+   python3 ./scripts/factory-install-ulx5m-bootloader.py
+
+Nakon PASS isključiti oba uređaja, odspojiti Tigard i postaviti SW1 OFF/OFF.
+Držati BTN2 prije uključivanja ULX5M i otpustiti nakon USB enumeracije
+``1D50:614B``. Donjim upitom identiteta potvrditi FWTN. Ponovno hladno
+pokrenuti bez BTN2: očekuje se pomični LED uzorak demonstracijskog sekundara.
+Kod pogreške stati, sačuvati kopije i zapisnike, ne ponavljati pisanje niti
+pokušavati automatski povrat. Automatski oporavak nije predviđen.
+
 Dostupne funkcije
 -----------------
 
@@ -272,6 +344,95 @@ odvojenim hladnim uključenjem sa SW1 OFF/OFF i otpuštenim BTN2; time
 se provjerava instalirani ``FWTN``, a ne ``FWTF`` učitan u SRAM.
 Ne mijenjajte SW1 dok je pločica pod napajanjem.
 
+Spremanje instaliranog bootloadera
+----------------------------------
+
+Isključite oba uređaja. Postavite SW1 ON/ON i spojite Tigard sa zajedničkom
+masom, logikom 1,8 V i odspojenim VTGT. Uključite prvo ULX5M, zatim Tigard.
+U Windows PowerShellu izvedite četiri čitanja od 128 KiB bez pisanja.
+Prekinite ako detekcija ne uspije ili flash nije očekivani AT25QL321
+(JEDEC ``1F 42 16``).
+
+.. code-block:: powershell
+
+   cd C:\workspace\Hazard3-Doom
+   .\bin\openFPGALoader.exe -c tigard --freq 1000k --detect
+   $output = "$HOME\ulx5m-bootloader.bin"
+   $data = New-Object 'System.Collections.Generic.List[byte]'
+   for ($offset = 0; $offset -lt 524288; $offset += 131072) {
+       $chunk = "$output.$offset.chunk"
+       if (Test-Path $chunk) { throw "Chunk already exists: $chunk" }
+       .\bin\openFPGALoader.exe -c tigard --freq 1000k --dump-flash --file-size 131072 -o $offset $chunk
+       if ($LASTEXITCODE -ne 0) { throw "Read failed: $offset" }
+       $bytes = [IO.File]::ReadAllBytes($chunk)
+       if ($bytes.Length -ne 131072) { throw "Invalid chunk size: $offset" }
+       $data.AddRange($bytes)
+   }
+   if (Test-Path $output) { throw "Backup already exists: $output" }
+   [IO.File]::WriteAllBytes($output, $data.ToArray())
+   Get-Item $output
+   Get-FileHash $output -Algorithm SHA256
+
+**Izvorni Ubuntu / Linux (Bash)**
+
+Koristite izvornu Linux verziju openFPGALoadera s podrškom za GateMate i Tigard (testirana Windows verzija: v1.2.0), dostupnu u PATH-u, s podešenim USB dozvolama. U testiranom Windows/WSL okruženju koristite PowerShell iznad. Prekinite ako detekcija ne uspije ili bilo koje čitanje prijavi JEDEC različit od ``1F 42 16``. Izvedite ovaj blok u Bashu; stvara novi direktorij sigurnosne kopije i odbija ponovnu uporabu postojećeg direktorija.
+
+.. code-block:: bash
+
+   (
+       set -euo pipefail
+       openFPGALoader -c tigard --freq 1000k --detect
+       backup_dir="$HOME/ulx5m-bootloader-backup"
+       mkdir "$backup_dir"
+       cd "$backup_dir"
+       for offset in 0 131072 262144 393216; do
+           chunk="$offset.chunk"
+           openFPGALoader -c tigard --freq 1000k --dump-flash --file-size 131072 -o "$offset" "$chunk"
+           test "$(wc -c < "$chunk")" -eq 131072
+       done
+       cat 0.chunk 131072.chunk 262144.chunk 393216.chunk > ulx5m-bootloader.bin
+       test "$(wc -c < ulx5m-bootloader.bin)" -eq 524288
+       wc -c ulx5m-bootloader.bin
+       sha256sum ulx5m-bootloader.bin
+   )
+
+Sirova kopija od 524288 bajtova obuhvaća ``0x000000..0x07FFFF``, uključujući
+popunu; duljina se može razlikovati od izvorne ``.bit`` datoteke. Zadržite
+dijelove do provjere. Za drugo neovisno čitanje promijenite naziv izlazne
+datoteke i usporedite SHA-256. Sam hash ne otkriva verziju. Za oporavak
+sačuvajte i cijelu kopiju od 4 MiB. Isključite oba uređaja i vratite SW1 OFF/OFF.
+
+Identifikacija bootloadera
+--------------------------
+
+Dok je Tigard odspojen ili isključen, postavite SW1 OFF/OFF bez napajanja.
+Držite BTN2 pri uključivanju ULX5M-a i otpustite nakon DFU enumeracije.
+Uz Windows PyUSB i libusb (vidi preduvjete), pročitajte STATUS bez sekundarne slike:
+
+.. code-block:: powershell
+
+   cd C:\workspace\Hazard3-Doom
+   $env:PATH = "$PWD\bin;$env:PATH"
+   py -3 -c "import usb.core; d=usb.core.find(idVendor=0x1d50,idProduct=0x614b); assert d is not None, 'DFU device not found'; s=bytes(d.ctrl_transfer(0xC0,0x5D,0,0,24)); assert len(s)==24, 'Unexpected STATUS length'; print('Profile:', s[:4].decode('ascii')); print('USB bcdDevice: 0x%04X' % d.bcdDevice)"
+
+**Izvorni Ubuntu / Linux (Bash)**
+
+Na izvornom Ubuntuu instalirajte PyUSB i libusb, zatim provjerite DFU enumeraciju. Pravila udev moraju dopuštati USB pristup. Ako pristup ne uspije, ispravite dozvole prije ponovnog pokušaja. U testiranom WSL okruženju koristite Windows PowerShell.
+
+.. code-block:: bash
+
+   sudo apt install python3-usb libusb-1.0-0 usbutils
+   lsusb -d 1d50:614b
+   python3 -c "import usb.core; d=usb.core.find(idVendor=0x1d50,idProduct=0x614b); assert d is not None, 'DFU device not found'; s=bytes(d.ctrl_transfer(0xC0,0x5D,0,0,24)); assert len(s)==24, 'Unexpected STATUS length'; print('Profile:', s[:4].decode('ascii')); print('USB bcdDevice: 0x%04X' % d.bcdDevice)"
+
+Izvorne Linux alternative nisu testirane na pločici.
+
+Očekuje se ``FWTN`` ili ``FWTF``. USB deskriptor ``bcdDevice`` prikazuje se
+informativno; nijedno polje nije dokumentirano kao jedinstvena verzija
+izgradnje. Ova naredba samo za čitanje izvedena je iz STATUS protokola i
+ovdje nije testirana na hardveru. Postupak ``--probe`` u nastavku dokumentirana
+je alternativa. Upit semantičke verzije, Git commita ili seeda nije potvrđen.
+
 USB provjera samo čitanjem
 --------------------------
 
@@ -402,6 +563,47 @@ Rješavanje problema
   ne primarni ``PACK-ONLY.bit``.
 * **Prekinuto ažuriranje:** bez pretpostavke automatskog povratka;
   koristiti BTN2 DFU ili vanjski oporavak.
+
+Poruke alata USBView u Windowsu
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Dok je pločica u DFU načinu rada, pokrenite isporučeni Windows alat
+``bin/usbview.exe``. U WSL-u koristite taj Windows alat umjesto izvornog
+Linux USB alata na postojećem ispitnom sustavu. Uspješna DFU enumeracija
+prikazuje VID:PID ``1D50:614B``, naziv proizvoda
+``ULX5M-GS FPGA (DFU Probe)``, punu brzinu (Full Speed), konfiguraciju
+``0x01`` te razred/podrazred/protokol ``FE/01/02``.
+
+Sljedeće poruke alata USBView mogu zavarati:
+
+* **Stari naziv ULX4M:** Windows može zadržati naziv
+  ``ULX4M-LS FPGA (DFU)`` za zajednički VID:PID. Provjerite stvarni naziv
+  proizvoda u deskriptoru uređaja, a ne naziv u stablu uređaja.
+* **Open Pipes: 0 / No open pipes!:** očekivano za ovo DFU sučelje.
+  Svi DFU zahtjevi koriste zadanu kontrolnu krajnju točku EP0. Nema
+  dodatnih krajnjih točaka (``bNumEndpoints = 0``).
+* **HID Descriptor s mnogo stavki:** USBView može pogrešno protumačiti
+  funkcionalni DFU deskriptor kao HID deskriptor jer oba imaju tip
+  ``0x21``. Veličina DFU prijenosa od 64 bajta tada se pogrešno tumači
+  kao 64 HID stavke pa alat može prikazati nepovezane bajtove izvan
+  deskriptora od devet bajtova. To je problem dekodiranja u USBViewu,
+  a ne dokaz oštećenog FPGA deskriptora.
+
+Za opažene bajtove ``09 21 09 00 00 40 00 10 01`` ispravno DFU dekodiranje
+daje ``bLength = 9``, ``bDescriptorType = 0x21``, ``bmAttributes = 0x09``
+(podržano preuzimanje podataka na uređaj, uređaj upravlja odspajanjem),
+``wDetachTimeOut = 0``, ``wTransferSize = 64`` i
+``bcdDFUVersion = 0x0110`` (DFU 1.1).
+
+Nemojte mijenjati firmver ili ponovno instalirati USB upravljački program
+samo radi uklanjanja ovih poruka. Sama enumeracija ne dokazuje podršku za
+flash ažuriranje ni identitet aktivnog profila; koristite prethodno opisani
+STATUS zahtjev samo za čitanje. Na izvornom Ubuntu/Linux sustavu u Bashu
+koristite ``lsusb -v -d 1d50:614b`` za pregled deskriptora (uz odgovarajuće
+USB dozvole).
+
+Pogledajte Microsoftov `izvorni kod USBViewa (DisplayHidDescriptor) <https://github.com/microsoft/Windows-driver-samples/blob/main/usb/usbview/display.c>`_
+za implementaciju HID dekodiranja.
 
 Referentne kontrolne vrijednosti
 --------------------------------
