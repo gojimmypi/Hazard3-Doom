@@ -23,6 +23,7 @@ fail(struct ulx5m_flash_program *s, enum ulx5m_flash_program_result result)
 {
     s->result = result;
     s->active = 0;
+    s->verifying = 0;
     return result;
 }
 
@@ -78,6 +79,7 @@ ulx5m_flash_program_begin(struct ulx5m_flash_program *s,
         return ULX5M_PROGRAM_STATE;
     s->active = 0;
     s->finalized = 0;
+    s->verifying = 0;
     s->result = ULX5M_PROGRAM_DENIED;
 #if !defined(ULX5M_FLASH_PROGRAM_EMULATOR_TEST) && !defined(ULX5M_FLASH_HW_TEST)
     /* FLM1 still reports zero writable regions. Even providing a valid
@@ -91,8 +93,15 @@ ulx5m_flash_program_begin(struct ulx5m_flash_program *s,
         return fail(s, ULX5M_PROGRAM_STATE);
     if (!size || size > ULX5M_FLASH_CANDIDATE_BYTES)
         return fail(s, ULX5M_PROGRAM_RANGE);
+#ifdef ULX5M_DFU_FULL_IMAGE_TEST
+    /* Packed GateMate images have this four-byte synchronization prefix. */
+    if (size < ULX5M_FLASH_PAGE_BYTES)
+        return fail(s, ULX5M_PROGRAM_FORMAT);
+#endif
 #ifdef ULX5M_FLASH_HW_TEST
-#ifdef ULX5M_FLASH_HW_NATIVE_SLOT_TEST
+#if defined(ULX5M_DFU_FULL_IMAGE_TEST)
+    /* Exclusive 0x201000..0x3fffff update window, no 4 KiB test limit. */
+#elif defined(ULX5M_FLASH_HW_NATIVE_SLOT_TEST)
     if (size > ULX5M_FLASH_ERASE_BYTES)
         return fail(s, ULX5M_PROGRAM_RANGE);
 #elif defined(ULX5M_FLASH_HW_QUAD_TEST)
@@ -124,13 +133,23 @@ enum ulx5m_flash_program_result
 ulx5m_flash_program_feed(struct ulx5m_flash_program *s,
                          uint32_t offset, const uint8_t *data, unsigned len)
 {
-    if (!s || !s->active || s->finalized)
+    if (!s || !s->active || s->finalized || s->verifying)
         return s ? fail(s, ULX5M_PROGRAM_STATE) : ULX5M_PROGRAM_STATE;
     if (!data || !len || len > ULX5M_FLASH_STREAM_BLOCK_BYTES ||
         offset != s->received)
         return fail(s, ULX5M_PROGRAM_ORDER);
     if (len > s->image_size - s->received)
         return fail(s, ULX5M_PROGRAM_RANGE);
+#ifdef ULX5M_DFU_FULL_IMAGE_TEST
+    if (offset == 0u) {
+        static const uint8_t sync[4] = {0xd9u, 0x01u, 0xedu, 0x96u};
+        if (len < sizeof(sync))
+            return fail(s, ULX5M_PROGRAM_FORMAT);
+        for (unsigned i = 0; i < sizeof(sync); ++i)
+            if (data[i] != sync[i])
+                return fail(s, ULX5M_PROGRAM_FORMAT);
+    }
+#endif
 
     for (unsigned i = 0; i < len; ++i) {
         s->pending[s->pending_length++] = data[i];
@@ -146,39 +165,69 @@ ulx5m_flash_program_feed(struct ulx5m_flash_program *s,
 }
 
 enum ulx5m_flash_program_result
-ulx5m_flash_program_finish(struct ulx5m_flash_program *s)
+ulx5m_flash_program_finish_start(struct ulx5m_flash_program *s)
 {
-    if (!s || !s->active || s->finalized)
+    if (!s || !s->active || s->finalized || s->verifying)
         return s ? fail(s, ULX5M_PROGRAM_STATE) : ULX5M_PROGRAM_STATE;
     if (s->received != s->image_size)
         return fail(s, ULX5M_PROGRAM_STATE);
     if ((s->running_crc ^ 0xffffffffu) != s->expected_crc32)
         return fail(s, ULX5M_PROGRAM_CRC);
 
-    enum ulx5m_flash_program_result result = flush_page(s);
-    if (result != ULX5M_PROGRAM_OK)
-        return result;
+    /* No SPI operation or full-image scan in the USB completion callback. */
+    s->verify_offset = 0;
+    s->verify_crc = 0xffffffffu;
+    s->verifying = 1;
+    s->result = ULX5M_PROGRAM_PENDING;
+    return s->result;
+}
 
-    /* Independent final readback catches changes after per-page verification. */
-    uint32_t readback_crc = 0xffffffffu;
-    for (uint32_t offset = 0; offset < s->image_size;) {
-        unsigned chunk = s->image_size - offset;
+enum ulx5m_flash_program_result
+ulx5m_flash_program_finish_step(struct ulx5m_flash_program *s)
+{
+    if (!s || !s->active || !s->verifying)
+        return s ? fail(s, ULX5M_PROGRAM_STATE) : ULX5M_PROGRAM_STATE;
+
+    /* At most one page program (including its erase if needed) per tick. */
+    if (s->pending_length) {
+        enum ulx5m_flash_program_result result = flush_page(s);
+        return result == ULX5M_PROGRAM_OK ? ULX5M_PROGRAM_PENDING : result;
+    }
+
+    /* Independent final readback: at most one 256-byte SPI read per tick. */
+    if (s->verify_offset < s->image_size) {
+        unsigned chunk = s->image_size - s->verify_offset;
         if (chunk > ULX5M_FLASH_PAGE_BYTES)
             chunk = ULX5M_FLASH_PAGE_BYTES;
         if (s->ops.read_bytes(s->ops.ctx,
-                              ULX5M_FLASH_CANDIDATE_START + offset,
+                              ULX5M_FLASH_CANDIDATE_START + s->verify_offset,
                               s->verified, chunk) != 0)
             return fail(s, ULX5M_PROGRAM_IO);
         for (unsigned i = 0; i < chunk; ++i)
-            readback_crc = crc_byte(readback_crc, s->verified[i]);
-        offset += chunk;
+            s->verify_crc = crc_byte(s->verify_crc, s->verified[i]);
+        s->verify_offset += chunk;
+        return ULX5M_PROGRAM_PENDING;
     }
-    if ((readback_crc ^ 0xffffffffu) != s->expected_crc32)
+    if ((s->verify_crc ^ 0xffffffffu) != s->expected_crc32)
         return fail(s, ULX5M_PROGRAM_VERIFY);
 
-    /* The image has never been marked bootable. The eventual commit and
-     * boot selection must be a separate, validated recovery-aware step. */
+    /* Never scan or erase sectors beyond the new image. Their contents may
+     * be unrelated data. A shorter replacement is not an automatic scrub. */
     s->active = 0;
+    s->verifying = 0;
     s->finalized = 1;
-    return ULX5M_PROGRAM_OK;
+    s->result = ULX5M_PROGRAM_OK;
+    return s->result;
+}
+
+enum ulx5m_flash_program_result
+ulx5m_flash_program_finish(struct ulx5m_flash_program *s)
+{
+    enum ulx5m_flash_program_result result =
+        ulx5m_flash_program_finish_start(s);
+    /* Synchronous convenience only for existing host/limited-profile paths.
+     * Full-image hardware calls start/step from its USB poll loop instead. */
+    while (result == ULX5M_PROGRAM_PENDING)
+        result = ulx5m_flash_program_finish_step(s);
+    return result;
 }

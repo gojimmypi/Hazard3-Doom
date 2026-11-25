@@ -2,6 +2,14 @@
 
 Features and improvements planned and/or in progress for the v0.3.0 release.
 
+
+Add to docs:
+openFPGALoader returned non-zero exit status 253 
+
+openFPGALoader v1.2.0. Its flash-dump routine caps individual transfers at 1 MiB, but its SPI read routine allocates
+two transfer-sized arrays on the stack. That can exceed the available stack in a Windows executable and terminate the program.
+https://github.com/trabucayre/openFPGALoader/blob/v1.2.0/src/spiFlash.cpp
+
 ## v0.2.0 regression baseline
 
 Preserve the working v0.2.0 behavior while making v0.3.0 changes.

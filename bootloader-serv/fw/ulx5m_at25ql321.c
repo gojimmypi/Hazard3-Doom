@@ -1,7 +1,7 @@
-/* AT25QL321 read commands and gated experimental 0x06/0x04/0x20/0x02.
- * Normal firmware denies erase/program. Hardware authorization exists only
- * in separately built volatile test images, never in a release image.
- * No status-register writes, bulk erase, or boot activation.
+/* AT25QL321 read commands and gated 0x06/0x04/0x20/0x02.
+ * Default firmware denies erase/program. An explicit full-image firmware
+ * profile permits only the native secondary; no status-register writes,
+ * bulk erase, or boot activation are supported.
  */
 #include "ulx5m_at25ql321.h"
 
@@ -173,7 +173,9 @@ static enum ulx5m_at25ql321_result candidate_range(
         len > ULX5M_FLASH_BYTES - address)
         return ULX5M_AT25_RANGE;
 #ifdef ULX5M_FLASH_HW_TEST
-#ifdef ULX5M_FLASH_HW_NATIVE_SLOT_TEST
+#if defined(ULX5M_DFU_FULL_IMAGE_TEST)
+    const unsigned allowed = ULX5M_FLASH_BYTES - ULX5M_AT25QL321_CANDIDATE_START;
+#elif defined(ULX5M_FLASH_HW_NATIVE_SLOT_TEST)
     const unsigned allowed = 4096u;
 #elif defined(ULX5M_FLASH_HW_QUAD_TEST)
     const unsigned allowed = 16384u;

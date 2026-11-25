@@ -65,7 +65,8 @@ Usage: $0 SEED [SEED ...]
        $0 --all
 
 Route one or more nextpnr-himbaechel seeds for the ULX5M-GS GateMate A1
-Hazard3-Doom build. Seeds must be decimal values from 1 through 260.
+Hazard3-Doom build. Seeds are positive signed 32-bit decimals.
+--all uses 1-512 by default; SWEEP_ALL_SEED_LAST=N sets its last seed.
 SWEEP_JOBS=N runs up to N routes concurrently (default: 2).
 ULX5M_SYS_CLK_MHZ=N selects the system clock: 12, 20 or 25 (default: 12).
 SWEEP_ULX5M_HEAP_BETA=N selects the HeAP beta value (default: ${GATEMATE_DEFAULT_NEXTPNR_HEAP_BETA}).
@@ -348,5 +349,10 @@ printf 'Timing-passing seed values: %s\n' "${pass_seeds:-none}"
 printf 'Timed-out seeds: %s\n' "${timeout_count}"
 printf 'TIMEOUT seed values: %s\n' "${timeout_seeds:-none}"
 printf 'Results: %s\n' "${results_file}"
+
+if (( pass_count == 0 )); then
+    printf 'ERROR: No timing-passing seeds; sweep failed. Results retained in %s\n' "${results_file}" >&2
+    status=1
+fi
 
 exit "${status}"

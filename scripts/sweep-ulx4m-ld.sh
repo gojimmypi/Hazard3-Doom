@@ -58,8 +58,13 @@ printf 'Include source: %s\n' "${COMMON_SCRIPT}" >&2
 generated_config="${LITEDRAM_DIR}/generated-${ULX4M_LITEDRAM_CPU}/litedram_ulx4m_cpu.yml"
 config_snapshot="${BUILD_DIR}/fpga_ulx4m_ld.litedram-config.yml"
 
+ecp5_pnr_device_profile "ulx4m-ld-85f"
+sweep_ecp5_clock_targets
 sweep_ecp5_init_tuning
 TUNING_SUFFIX="$(sweep_ecp5_tuning_suffix)"
+# Preserve default output paths; isolate routes for different FPGA parts.
+TUNING_SUFFIX="${TUNING_SUFFIX}$(ecp5_pnr_device_suffix)"
+
 SWEEP_DIR="${BUILD_DIR}/ulx4m-ld-seed-sweep/${HAZARD3_ULX4M_SYS_CLK_MHZ}mhz-${ULX4M_LITEDRAM_CPU}${TUNING_SUFFIX}"
 SWEEP_REL_DIR="${SWEEP_DIR#"${REPO_ROOT}"/}"
 
@@ -72,10 +77,17 @@ Usage: $0 SEED [SEED ...]
        $0 --all
 
 Route one or more nextpnr seeds for the ULX4M-LD 85F Hazard3-Doom build.
-Seeds must be decimal values from 1 through 260.
+Seeds are positive signed 32-bit decimals; ranges may exceed 512 seeds.
+--all uses 1-512 by default; SWEEP_ALL_SEED_LAST=N sets its last seed.
 SWEEP_JOBS=N runs up to N routes concurrently (default: 2).
 HAZARD3_ULX4M_SYS_CLK_MHZ=25|40|50 selects the Hazard3 system clock.
 ULX4M_LITEDRAM_CPU=serv|vexrisc selects the LiteDRAM initialization CPU.
+ECP5_PNR_DEVICE=PART selects the installed chip (example: LFE5UM5G-85F-8).
+ECP5_PNR_SPEED_GRADE=N overrides the speed of the board-default chip family.
+ECP5_PNR_PACKAGE=NAME overrides the nextpnr package (default CABGA381).
+SWEEP_SYS_TARGET_MHZ, SWEEP_VIDEO_TARGET_MHZ, SWEEP_TMDS_TARGET_MHZ
+  override reported MHz targets only; they do not reconfigure the FPGA PLL.
+SWEEP_LITEDRAM_TARGET_MHZ and SWEEP_INIT_TARGET_MHZ apply to ULX4M only.
 SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.
 SWEEP_ROUTE_TIMEOUT_SECONDS=N limits each nextpnr route (default: 7200).
 Generic nextpnr tuning is controlled by SWEEP_NEXTPNR_* variables.
@@ -250,19 +262,22 @@ install -m 0644 "${config_snapshot}" "${SWEEP_DIR}/litedram-config.yml"
 
 {
     printf 'target=ulx4m-ld-85f\n'
-    printf 'device=um-85k\n'
-    printf 'speed=8\n'
-    printf 'package=CABGA381\n'
+    printf 'device=%s\n' "${ECP5_PNR_DEVICE_OPTION#--}"
+    printf 'fpga_part=%s\n' "${ECP5_PNR_DEVICE}"
+    printf 'idcode=%s\n' "${ECP5_PNR_IDCODE}"
+    printf 'speed=%s\n' "${ECP5_PNR_SPEED_GRADE}"
+    printf 'package=%s\n' "${ECP5_PNR_PACKAGE}"
     printf 'full_route=1\n'
+    printf 'target_overrides_are_reporting_only=1\n'
     printf 'result_columns=seed,clk_sys_mhz,litedram_user_mhz,clk_video_mhz,clk_tmds_mhz,init_clk_mhz,route_seconds,timing_status\n'
     printf 'litedram_cpu=%s\n' "${ULX4M_LITEDRAM_CPU}"
     printf 'hazard3_sys_clk_mhz=%s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
     sweep_ecp5_write_tuning_metadata
-    printf 'clk_sys_required_mhz=%s.00\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
-    printf 'litedram_user_required_mhz=60.01\n'
-    printf 'clk_video_required_mhz=50.00\n'
-    printf 'clk_tmds_required_mhz=250.00\n'
-    printf 'init_clk_required_mhz=25.00\n'
+    printf 'clk_sys_required_mhz=%s\n' "${SWEEP_SYS_TARGET_MHZ}"
+    printf 'litedram_user_required_mhz=%s\n' "${SWEEP_LITEDRAM_TARGET_MHZ}"
+    printf 'clk_video_required_mhz=%s\n' "${SWEEP_VIDEO_TARGET_MHZ}"
+    printf 'clk_tmds_required_mhz=%s\n' "${SWEEP_TMDS_TARGET_MHZ}"
+    printf 'init_clk_required_mhz=%s\n' "${SWEEP_INIT_TARGET_MHZ}"
     printf 'synthesis_seconds=%s\n' "${synthesis_seconds}"
     printf 'netlist_sha256=%s\n' "${netlist_sha256}"
     printf 'netlist=fpga_ulx4m_ld.json\n'
@@ -307,9 +322,7 @@ run_seed()
     if sweep_ecp5_run_nextpnr \
         --seed "${seed}" \
         "${SWEEP_NEXTPNR_ARGS[@]}" \
-        --um-85k \
-        --speed 8 \
-        --package CABGA381 \
+        "${PNR_DEVICE_ARGS[@]}" \
         --lpf "${LPF}" \
         --json "${NETLIST}" \
         --textcfg "${config}" \
@@ -377,7 +390,7 @@ run_seed()
     if [[ "${timing_status}" == "PASS" ]]; then
         if ! ecppack \
             --compress \
-            --idcode 0x01113043 \
+            --idcode "${ECP5_PNR_IDCODE}" \
             "${config}" \
             "${bit}"; then
             printf '%d,%s,%s,%s,%s,%s,%s,PACK_ERROR\n' \
@@ -455,5 +468,10 @@ fi
 printf 'Timed-out seeds: %s\n' "${timeout_count}"
 printf 'TIMEOUT seed values: %s\n' "${timeout_seeds:-none}"
 printf 'Results: %s\n' "${results_file}"
+
+if (( pass_count == 0 )); then
+    printf 'ERROR: No timing-passing seeds; sweep failed. Results retained in %s\n' "${results_file}" >&2
+    status=1
+fi
 
 exit "${status}"

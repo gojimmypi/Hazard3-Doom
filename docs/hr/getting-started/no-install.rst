@@ -39,6 +39,15 @@ generirani video timing. Za detalje vidi
 Za UART veze pogledajte :doc:`../user-guide/pinouts`, a za potpuni opis alata
 :doc:`../user-guide/web-tool`.
 
+.. warning::
+
+   Zadana postavka izgradnje za ULX3S 85F u izdanju ``v0.2.0`` odabire
+   ``--um5g-85k`` umjesto ``--85k --speed 6`` za ``LFE5U-85F-6``.
+   FPGA slike izrađene s tom postavkom mogu se ponašati nepredvidivo;
+   koristite sliku izrađenu za ispravan FPGA. Postavka će biti ispravljena
+   u ``v0.2.1`` i kasnijim izdanjima.
+   Vidi `issue #21 <https://github.com/ulx3s/Hazard3-Doom/issues/21>`_.
+
 1. Preuzmite unaprijed izgrađene datoteke
 -----------------------------------------
 

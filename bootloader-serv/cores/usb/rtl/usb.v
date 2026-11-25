@@ -410,7 +410,7 @@ module usb #(
 		.p_din_0(eps_wrdata_0),
 		.p_dout_3(eps_rddata_3),
 		.s_addr_0(bus_addr[7:0]),
-		.s_read_0(eps_bus_ready),
+		.s_read_0(eps_bus_read),
 		.s_zero_0(eps_bus_zero),
 		.s_write_0(eps_bus_write),
 		.s_din_0(bus_din),
@@ -741,7 +741,12 @@ module usb #(
 
 	// Write regs
 	always @(posedge clk)
-		if (cr_bus_we) begin
+		if (rst) begin
+			cr_pu_ena  <= 1'b0;
+			cr_cel_ena <= 1'b0;
+			cr_addr_chk<= 1'b0;
+			cr_addr    <= 7'd0;
+		end else if (cr_bus_we) begin
 			cr_pu_ena  <= bus_din[15];
 			cr_cel_ena <= bus_din[12];
 			cr_addr_chk<= bus_din[7];
@@ -881,7 +886,11 @@ module usb #(
 	always @(posedge clk)
 		if (oob_sof | usb_reset)
 			timeout_suspend <= 20'hdcd80;	// 3 ms
-		else
+		else if (TARGET == "GATEMATE") begin
+			// Shorter 48 MHz carry path; other targets retain their original logic.
+			timeout_suspend[9:0] <= timeout_suspend[9:0] + timeout_suspend[19];
+			timeout_suspend[19:10] <= timeout_suspend[19:10] + (timeout_suspend[19] & (&timeout_suspend[9:0]));
+		end else
 			timeout_suspend <= timeout_suspend + timeout_suspend[19];
 
 	assign usb_suspend = ~timeout_suspend[19];
@@ -889,8 +898,12 @@ module usb #(
 	// Reset timeout counter
 	always @(posedge clk)
 		if (~oob_se0)
-			timeout_reset <= 20'h8ad00;
-		else
+			timeout_reset <= 20'hf4480;	// 1 ms SE0; host reset may last only 10 ms
+		else if (TARGET == "GATEMATE") begin
+			// Shorter 48 MHz carry path; other targets retain their original logic.
+			timeout_reset[9:0] <= timeout_reset[9:0] + timeout_reset[19];
+			timeout_reset[19:10] <= timeout_reset[19:10] + (timeout_reset[19] & (&timeout_reset[9:0]));
+		end else
 			timeout_reset <= timeout_reset + timeout_reset[19];
 
 	assign usb_reset = ~timeout_reset[19];

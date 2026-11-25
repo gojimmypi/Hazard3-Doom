@@ -7,6 +7,7 @@
 module sysmgr_gatemate (
     input  wire clk_in,
     input  wire rst_in,
+    output wire clk_25m,
     output wire clk_48m,
     output wire rst_out,
     output wire locked
@@ -22,6 +23,14 @@ module sysmgr_gatemate (
     ) clk_buf_i (
         .I(clk_in),
         .Y(clk_ref)
+    );
+
+    // GateMate clock inputs must be buffered once, then split to the PLL
+    // reference and an independent global fabric clock. A raw clk_in net
+    // feeding CC_CFG_CTRL can fail routing as a GPIO clock sink.
+    CC_BUFG cfg_clock_i (
+        .I(clk_ref),
+        .O(clk_25m)
     );
 
     CC_PLL #(

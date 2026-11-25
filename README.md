@@ -7,6 +7,15 @@
 
 # Hazard3-Doom for ULX3S and ULX4M
 
+**Release v0.2.0 warning (ULX3S 85F):** The default nextpnr FPGA target
+is incorrectly set to `--um5g-85k` instead of `--85k --speed 6` for the
+`LFE5U-85F-6`. Bitstreams and timing results built with this setting may be
+unreliable for the intended device. The default will be corrected in v0.2.1
+and later releases. See [ulx3s/Hazard3-Doom #21](https://github.com/ulx3s/Hazard3-Doom/issues/21)
+and [ulx3s/Hazard3 #10](https://github.com/ulx3s/Hazard3/issues/10).
+
+There's a new lower frequency, lower resolution ULX3S 85F prebuilt file: `bin/fpga_ulx3s_85f-25MHz-640x480.bit`
+
 This repository contains the standalone monitor firmware, loadable Doom image,
 UART upload tools, Hazard3-specific DoomGeneric port, and board build wrappers
 used by the ULX3S and ULX4M Doom projects.

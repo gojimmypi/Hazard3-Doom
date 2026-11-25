@@ -235,6 +235,11 @@ V005 board measured both ``CFG_MD2`` and ``CFG_MD3`` near 1.8 V with SW1 ON/ON.
      - Unsupported
      - Do not select
 
+.. figure:: ../../images/ULX5M-GS-SW1-ON-ON.png
+   :alt: ULX5M-GS SW1 two-position settings shown in the on-on state
+
+   **ULX5M-GS SW1 Set to ON/ON**
+
 Set both switches with FPGA power removed. Power-cycle the FPGA to sample
 ``CFG_MD[3:0]``; do not change SW1 while powered. ``BTN2`` is a separate,
 latched **firmware** choice after the primary FPGA configuration loads:
@@ -263,17 +268,28 @@ secondary takeover, **not** qualification of a combined BTN2/DFU bootloader.
 See :doc:`multiboot-v72` and :doc:`bringup`. Do not apply ULX4M flash layouts
 or recovery commands to ULX5M.
 
+The integrated **seed-160 SERV primary** has been verified
+persistently from SPI flash in both BTN2-selected USB DFU and autonomous
+secondary-boot modes. The normal path starts the walking-LED secondary at
+``0x201000``; the DFU path enumerates ``1D50:614B`` and reads the installed
+secondary back with a matching SHA-256. The experimental full-image ``FWTF``
+primary also enumerated and verified the secondary while running from JTAG
+SRAM, but its physical erase/program path remains **unqualified**. See
+:doc:`serv-bootloader` for the current technical guide and safety limits.
+
 Development notes and tested configurations
 -------------------------------------------
 
-The October 2026 development record covers SERV DFU, flash backups, BTN2
+The development record covers SERV DFU, flash backups, BTN2
 selection, toolchain, timing and USB-port results. These are development
-checkpoints. Minimal v72 secondary takeover is now physically confirmed,
-but combined persistent DFU plus normal application boot is not complete.
+checkpoints. The older v72 secondary takeover experiment remains a useful
+historical reference; the integrated seed-160 primary now passes both
+persistent startup modes. Full-image USB flash writing is still experimental.
 
 .. toctree::
    :maxdepth: 1
 
+   serv-bootloader
    bringup
    multiboot-v72
 

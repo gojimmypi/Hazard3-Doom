@@ -87,6 +87,69 @@ sweep_ecp5_bool()
     esac
 }
 
+# Physical clocks and nextpnr timing requirements come from the RTL/PLL and
+# generated LPF/SDC. Reported clock targets do not reconfigure those clocks.
+# The ULX3S 85F sweep also checks its reported targets before declaring PASS.
+sweep_ecp5_hdmi_output_resolution()
+{
+    local expected_resolution
+    case "${SWEEP_ECP5_BOARD_ID}" in
+    ulx3s-85f) expected_resolution=640x480 ;;
+    ulx3s-12f|ulx3s-45f|ulx4m-ld-85f) expected_resolution=1024x600 ;;
+    *) echo "Unsupported ECP5 HDMI profile: ${SWEEP_ECP5_BOARD_ID}" >&2; return 1 ;;
+    esac
+
+    SWEEP_HDMI_OUTPUT_RESOLUTION="${SWEEP_HDMI_OUTPUT_RESOLUTION:-${expected_resolution}}"
+    if [[ "${SWEEP_HDMI_OUTPUT_RESOLUTION}" != "${expected_resolution}" ]]; then
+        printf 'Invalid HDMI output resolution %s for %s; this target implements %s.\n' \
+            "${SWEEP_HDMI_OUTPUT_RESOLUTION}" "${SWEEP_ECP5_BOARD_ID}" "${expected_resolution}" >&2
+        echo 'Changing the physical HDMI resolution requires RTL/PLL changes, not a sweep override.' >&2
+        return 1
+    fi
+}
+
+sweep_ecp5_clock_targets()
+{
+    sweep_ecp5_hdmi_output_resolution || return 1
+    case "${SWEEP_ECP5_BOARD_ID}" in
+    ulx3s-85f)
+        SWEEP_SYS_TARGET_MHZ="${SWEEP_SYS_TARGET_MHZ:-${HAZARD3_ULX3S_85F_SYS_CLK_MHZ:-25}.00}"
+        SWEEP_VIDEO_TARGET_MHZ="${SWEEP_VIDEO_TARGET_MHZ:-25.00}"
+        SWEEP_TMDS_TARGET_MHZ="${SWEEP_TMDS_TARGET_MHZ:-125.00}"
+        ;;
+    ulx3s-12f|ulx3s-45f)
+        SWEEP_SYS_TARGET_MHZ="${SWEEP_SYS_TARGET_MHZ:-40.00}"
+        SWEEP_VIDEO_TARGET_MHZ="${SWEEP_VIDEO_TARGET_MHZ:-50.00}"
+        SWEEP_TMDS_TARGET_MHZ="${SWEEP_TMDS_TARGET_MHZ:-250.00}"
+        ;;
+    ulx4m-ld-85f)
+        SWEEP_SYS_TARGET_MHZ="${SWEEP_SYS_TARGET_MHZ:-${HAZARD3_ULX4M_SYS_CLK_MHZ:-40}.00}"
+        SWEEP_VIDEO_TARGET_MHZ="${SWEEP_VIDEO_TARGET_MHZ:-50.00}"
+        SWEEP_TMDS_TARGET_MHZ="${SWEEP_TMDS_TARGET_MHZ:-250.00}"
+        SWEEP_LITEDRAM_TARGET_MHZ="${SWEEP_LITEDRAM_TARGET_MHZ:-60.01}"
+        SWEEP_INIT_TARGET_MHZ="${SWEEP_INIT_TARGET_MHZ:-25.00}"
+        ;;
+    *) echo "Unsupported ECP5 clock profile: ${SWEEP_ECP5_BOARD_ID}" >&2; return 1 ;;
+    esac
+    local name value
+    for name in SWEEP_SYS_TARGET_MHZ SWEEP_VIDEO_TARGET_MHZ SWEEP_TMDS_TARGET_MHZ; do
+        value="${!name}"
+        if [[ ! "${value}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+            echo "${name} must be a nonnegative MHz value." >&2
+            return 1
+        fi
+    done
+    if [[ "${SWEEP_ECP5_BOARD_ID}" == ulx4m-ld-85f ]]; then
+        for name in SWEEP_LITEDRAM_TARGET_MHZ SWEEP_INIT_TARGET_MHZ; do
+            value="${!name}"
+            if [[ ! "${value}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+                echo "${name} must be a nonnegative MHz value." >&2
+                return 1
+            fi
+        done
+    fi
+}
+
 sweep_ecp5_init_tuning()
 {
     ecp5_board_defaults "${SWEEP_ECP5_BOARD_ID}"
@@ -207,16 +270,32 @@ sweep_ecp5_tuning_suffix()
     printf '%s\n' "${suffix}"
 }
 
+# nextpnr accepts signed 32-bit positive seeds; reject overflow before Bash
+# arithmetic, and normalize decimal input (including leading zeros).
+sweep_ecp5_valid_seed()
+{
+    [[ "$1" =~ ^0*([1-9][0-9]*)$ ]] || return 1
+    REPLY="${BASH_REMATCH[1]}"
+    (( ${#REPLY} <= 10 )) && (( 10#${REPLY} <= 2147483647 ))
+}
+
 sweep_ecp5_parse_seeds()
 {
     local usage_function="$1"
     shift
 
     SWEEP_SEEDS=()
+    SWEEP_SEEDS_FROM_ALL=0
     declare -gA SWEEP_SEEN_SEEDS=()
 
     if (( $# == 1 )) && [[ "$1" == "--all" ]]; then
-        mapfile -t SWEEP_SEEDS < <(seq 1 260)
+        local all_seed_last="${SWEEP_ALL_SEED_LAST:-512}"
+        if ! sweep_ecp5_valid_seed "${all_seed_last}"; then
+            echo "Invalid SWEEP_ALL_SEED_LAST: ${all_seed_last}; expected 1-2147483647." >&2
+            exit 1
+        fi
+        SWEEP_SEEDS_FROM_ALL=1
+        mapfile -t SWEEP_SEEDS < <(seq 1 "${REPLY}")
         return
     fi
 
@@ -225,7 +304,7 @@ sweep_ecp5_parse_seeds()
         exit 1
     fi
 
-    local arg seed_arg seed_first seed_last seed_value
+    local arg seed_arg seed_first seed_last seed_value raw_first raw_last
     local arg_seeds=()
 
     for arg in "$@"; do
@@ -238,11 +317,20 @@ sweep_ecp5_parse_seeds()
         IFS=',' read -r -a arg_seeds <<< "${arg}"
         for seed_arg in "${arg_seeds[@]}"; do
             if [[ "${seed_arg}" =~ ^([0-9]+)-([0-9]+)$ ]]; then
-                seed_first=$((10#${BASH_REMATCH[1]}))
-                seed_last=$((10#${BASH_REMATCH[2]}))
-                if (( seed_first < 1 || seed_last > 260 || seed_first > seed_last )); then
-                    echo "Invalid seed range: ${seed_arg}; expected start-end within 1-260." >&2
-                    "${usage_function}"
+                raw_first="${BASH_REMATCH[1]}"
+                raw_last="${BASH_REMATCH[2]}"
+                if ! sweep_ecp5_valid_seed "${raw_first}"; then
+                    echo "Invalid starting seed: ${raw_first}; expected 1-2147483647." >&2
+                    exit 1
+                fi
+                seed_first="${REPLY}"
+                if ! sweep_ecp5_valid_seed "${raw_last}"; then
+                    echo "Invalid ending seed: ${raw_last}; expected 1-2147483647." >&2
+                    exit 1
+                fi
+                seed_last="${REPLY}"
+                if (( seed_first > seed_last )); then
+                    echo "Invalid seed range: ${seed_arg}; first must be <= last." >&2
                     exit 1
                 fi
                 while (( seed_first <= seed_last )); do
@@ -252,19 +340,14 @@ sweep_ecp5_parse_seeds()
                     fi
                     seed_first=$((seed_first + 1))
                 done
-            elif [[ "${seed_arg}" =~ ^[0-9]+$ ]]; then
-                seed_value=$((10#${seed_arg}))
-                if (( seed_value < 1 || seed_value > 260 )); then
-                    echo "Invalid seed: ${seed_arg}; expected 1-260." >&2
-                    "${usage_function}"
-                    exit 1
-                fi
+            elif sweep_ecp5_valid_seed "${seed_arg}"; then
+                seed_value="${REPLY}"
                 if [[ -z "${SWEEP_SEEN_SEEDS[${seed_value}]+x}" ]]; then
                     SWEEP_SEEDS+=("${seed_value}")
                     SWEEP_SEEN_SEEDS["${seed_value}"]=1
                 fi
             else
-                echo "Invalid seed: ${seed_arg}; expected 1-260 or a range such as 1-32." >&2
+                echo "Invalid seed: ${seed_arg}; expected 1-2147483647 or a range such as 750-1261." >&2
                 "${usage_function}"
                 exit 1
             fi
@@ -276,13 +359,46 @@ sweep_ecp5_results_filename()
 {
     local sweep_dir="$1"
 
-    if (( ${#SWEEP_SEEDS[@]} == 260 )); then
+    if [[ "${SWEEP_SEEDS_FROM_ALL:-0}" == "1" ]]; then
+        printf '%s/results.csv\n' "${sweep_dir}"
+    elif (( ${#SWEEP_SEEDS[@]} == 260 )) &&
+         [[ "${SWEEP_SEEDS[0]}" == "1" && "${SWEEP_SEEDS[259]}" == "260" ]]; then
+        # Preserve the legacy filename for the historical 1-260 sweep.
         printf '%s/results.csv\n' "${sweep_dir}"
     elif (( ${#SWEEP_SEEDS[@]} == 1 )); then
         printf '%s/results-seed-%s.csv\n' "${sweep_dir}" "${SWEEP_SEEDS[0]}"
     else
         printf '%s/results-selected.csv\n' "${sweep_dir}"
     fi
+}
+
+# The ULX3S 85F once used a PLL-derived clk_sys (50 MHz). In the 25 MHz
+# direct-oscillator configuration, nextpnr instead reports clk_osc$TRELLIS_IO_IN.
+# Identify the name from the final timing report, never from the requested seed,
+# and reject unknown/ambiguous reports rather than silently marking a pass.
+sweep_ecp5_ulx3s_85f_system_clock()
+{
+    local log="$1"
+    local reports have_sys=0 have_osc=0
+
+    reports="$(grep 'Max frequency for clock' "${log}" 2>/dev/null || true)"
+    if [[ "${reports}" == *"'\$glbnet\$clk_sys'"* ]]; then
+        have_sys=1
+    fi
+    if [[ "${reports}" == *"'\$glbnet\$clk_osc'"* ||
+          "${reports}" == *"'\$glbnet\$clk_osc\$TRELLIS_IO_IN'"* ]]; then
+        have_osc=1
+    fi
+
+    case "${have_sys}${have_osc}" in
+    10) printf 'clk_sys\n' ;;
+    01) printf 'clk_osc\n' ;;
+    *)
+        printf 'ERROR: ULX3S 85F system clock is missing or ambiguous in %s (clk_sys=%s, clk_osc=%s).\n' \
+            "${log}" "${have_sys}" "${have_osc}" >&2
+        return 1
+        ;;
+    esac
 }
 
 sweep_ecp5_extract_clock()
@@ -302,6 +418,20 @@ sweep_ecp5_extract_clock()
     fi
 
     printf '%s\n' "${value}"
+}
+
+# Check a routed Fmax against a MHz target, independently of nextpnr's own
+# PASS/FAIL verdict. Missing or malformed results must never count as PASS.
+sweep_ecp5_clock_meets_target()
+{
+    local measured_mhz="$1"
+    local required_mhz="$2"
+
+    [[ "${measured_mhz}" =~ ^[0-9]+([.][0-9]+)?$ ]] || return 1
+    [[ "${required_mhz}" =~ ^[0-9]+([.][0-9]+)?$ ]] || return 1
+
+    awk -v measured="${measured_mhz}" -v required="${required_mhz}" \
+        'BEGIN { exit ((measured + 0) < (required + 0)) ? 1 : 0 }'
 }
 
 sweep_ecp5_extract_clock_status()
@@ -343,6 +473,7 @@ sweep_ecp5_run_nextpnr()
 
 sweep_ecp5_write_tuning_metadata()
 {
+    printf 'hdmi_output_resolution=%s\n' "${SWEEP_HDMI_OUTPUT_RESOLUTION}"
     printf 'placer=%s\n' "${SWEEP_NEXTPNR_PLACER}"
     printf 'router=%s\n' "${SWEEP_NEXTPNR_ROUTER}"
     printf 'heap_timingweight=%s\n' "${SWEEP_NEXTPNR_HEAP_TIMINGWEIGHT}"

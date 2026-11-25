@@ -13,7 +13,7 @@ Profili pločica
    * - ULX3S 85F
      - ``64m``
      - 16-bitni SDR SDRAM; izvorni ``ahb_sdram`` put kontrolera
-     - 50 MHz
+     - 25 MHz zadano; 40/50 MHz eksperimentalno
      - 320x200 zadano; dostupni su prošireni načini
    * - ULX3S 12F
      - ``32m`` zadano; ``64m`` opcionalno
@@ -50,6 +50,22 @@ datoteke:
 ``NEXTPNR_SEED`` i dalje može nadjačati zadani seed odabrane pločice za izričiti
 route. Ove su vrijednosti release baseline, a ne trajni optimum.
 
+.. warning::
+
+   Zadani nextpnr FPGA tip za ULX3S 85F u izdanju ``v0.2.0`` jest
+   ``--um5g-85k``; za predviđeni ``LFE5U-85F-6`` potreban je
+   ``--85k --speed 6`` (kućište ``CABGA381``). Rezultati timinga dobiveni
+   pogrešnom postavkom ne potvrđuju zadovoljavanje vremenskih zahtjeva
+   za predviđeni FPGA. Trenutačni ECP5 helper koristi ``--85k --speed 6``. Vidi `Hazard3-Doom #21 <https://github.com/ulx3s/Hazard3-Doom/issues/21>`_ i
+   `Hazard3 #10 <https://github.com/ulx3s/Hazard3/issues/10>`_.
+
+Trenutačni ECP5 profili koriste ``--85k --speed 6 --package CABGA381``
+za ULX3S 85F, ``--12k --speed 6 --package CABGA381`` za ULX3S 12F te
+``--um-85k --speed 8 --package CABGA381`` za ULX4M-LD.
+Lokalne zamjene su ``ECP5_PNR_SPEED_GRADE`` i ``ECP5_PNR_PACKAGE``.
+HDMI izlaz je 640x480 (85F) ili 1024x600 (12F/ULX4M-LD); interni
+framebuffer je zasebna postavka. Vidi :doc:`timing-sweeps`.
+
 Trenutačna FPGA provjera
 ------------------------
 
@@ -68,8 +84,8 @@ jamstva timinga:
      - Stanje
    * - ULX3S 85F
      - 11
-     - ``clk_sys`` 52.24 MHz
-     - PASS pri 50 MHz
+     - Ispravni ``--85k --speed 6`` profil na 25 MHz
+     - Stari 50 MHz PASS koristio je pogrešan model; nije kvalificiran
    * - ULX3S 12F
      - 82
      - ``clk_sys`` 42.70 MHz

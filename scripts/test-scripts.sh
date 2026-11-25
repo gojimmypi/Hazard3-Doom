@@ -82,7 +82,7 @@ Integration mode uses the full development requirements check.
 Integration defaults:
   SCRIPT_TEST_ULX3S_85F_SEEDS="11 178"
   SCRIPT_TEST_ULX3S_12F_SEEDS="82 37"
-  SCRIPT_TEST_ULX4M_LD_SEEDS="83 45"
+  SCRIPT_TEST_ULX4M_LD_SEEDS="42 173"
   SCRIPT_TEST_SWEEP_JOBS=1
   SCRIPT_TEST_REQUIRE_TIMING_PASS=0
 
@@ -405,6 +405,27 @@ check_seed_matrix()
     else
         pass 'generate-ecp5-seed-matrix.py: rejects reversed range'
     fi
+
+    if "${SCRIPT_DIR}/generate-ecp5-seed-matrix.py" \
+        --first 750 --last 1261 --per-job 2 > "${COMMAND_LOG}" 2>&1; then
+        pass 'generate-ecp5-seed-matrix.py: arbitrary start, 512 seeds'
+    else
+        fail 'generate-ecp5-seed-matrix.py: arbitrary start, 512 seeds'
+    fi
+
+    if "${SCRIPT_DIR}/generate-ecp5-seed-matrix.py" \
+        --first 750 --last 1262 --per-job 2 > "${COMMAND_LOG}" 2>&1; then
+        fail 'generate-ecp5-seed-matrix.py: rejects 513 seeds'
+    else
+        pass 'generate-ecp5-seed-matrix.py: rejects 513 seeds'
+    fi
+
+    if "${SCRIPT_DIR}/generate-ecp5-seed-matrix.py" \
+        --first 750 --last 1261 --per-job 1 > "${COMMAND_LOG}" 2>&1; then
+        fail 'generate-ecp5-seed-matrix.py: rejects >256 jobs'
+    else
+        pass 'generate-ecp5-seed-matrix.py: rejects >256 jobs'
+    fi
 }
 
 check_riscv_runtime_detection()
@@ -676,8 +697,9 @@ validate_integration_settings()
             return 1
         fi
         for seed in "${seeds[@]}"; do
-            if [[ ! "${seed}" =~ ^[1-9][0-9]*$ ]] || (( seed > 260 )); then
-                printf 'Invalid seed in %s: %s (expected 1 through 260).\n' \
+            if [[ ! "${seed}" =~ ^[1-9][0-9]*$ ]] ||
+               (( ${#seed} > 10 )) || (( seed > 2147483647 )); then
+                printf 'Invalid seed in %s: %s (expected 1 through 2147483647).\n' \
                     "${label}" "${seed}" >&2
                 return 1
             fi
@@ -712,7 +734,7 @@ run_integration_tests()
     read -r -a ulx3s_12f_seeds <<< \
         "${SCRIPT_TEST_ULX3S_12F_SEEDS:-${shared_seeds:-82 37}}"
     read -r -a ulx4m_ld_seeds <<< \
-        "${SCRIPT_TEST_ULX4M_LD_SEEDS:-${shared_seeds:-83 45}}"
+        "${SCRIPT_TEST_ULX4M_LD_SEEDS:-${shared_seeds:-42 173}}"
 
     printf '\nIntegration sample: parallel routes=%s\n' "${jobs}"
     printf '  ULX3S 85F seeds:  %s\n' "${ulx3s_85f_seeds[*]}"
@@ -761,8 +783,10 @@ run_integration_tests()
                 "${SCRIPT_DIR}/sweep-ecp5.sh" ulx3s-85f \
                 "${ulx3s_85f_seeds[@]}"
         if (( dry_run == 0 && LAST_COMMAND_STATUS == 0 )); then
+            ulx3s_85f_sweep_dir="$("${SCRIPT_DIR}/sweep-ecp5.sh" \
+                --print-sweep-dir ulx3s-85f)"
             check_sweep_timing 'ULX3S 85F routed sample' \
-                "${REPO_ROOT}/build/ulx3s-seed-sweep/results-selected.csv"
+                "${REPO_ROOT}/${ulx3s_85f_sweep_dir}/results-selected.csv"
         fi
     else
         skip 'sweep-ecp5.sh: ULX3S 85F build prerequisite failed'
@@ -870,7 +894,7 @@ main()
             SCRIPT_TEST_ULX3S_12F_SEEDS \
                 "${SCRIPT_TEST_ULX3S_12F_SEEDS:-${shared_seeds:-82 37}}" \
             SCRIPT_TEST_ULX4M_LD_SEEDS \
-                "${SCRIPT_TEST_ULX4M_LD_SEEDS:-${shared_seeds:-83 45}}"; then
+                "${SCRIPT_TEST_ULX4M_LD_SEEDS:-${shared_seeds:-42 173}}"; then
             run_integration_tests
         else
             fail 'integration settings'

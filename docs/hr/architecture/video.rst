@@ -17,6 +17,14 @@ Pipeline
 #. Interni framebufferi zamjenjuju se tijekom vertical blankinga.
 #. Hardverska paleta pretvara indeksirane piksele za HDMI scanout.
 
+Fizički raster ovisi o pločici: ULX3S 85F koristi 640x480
+(pixel 25 MHz / TMDS 125 MHz), dok ULX3S 12F i ULX4M-LD koriste
+1024x600 (pixel 50 MHz / TMDS 250 MHz). ULX5M-GS nema HDMI.
+Odabir ``hdmi_output_resolution`` i lokalna varijabla
+``SWEEP_HDMI_OUTPUT_RESOLUTION`` samo provjeravaju već implementiranu
+rezoluciju. ``HAZARD3_HDMI_EXTENDED_MODES`` upravlja internim
+framebuffer načinima, a ne izlaznim rasterom.
+
 Geometrija izlaza
 -----------------
 

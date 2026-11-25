@@ -43,6 +43,7 @@ Usage: $0 TARGET SEED [SEED ...]
 
 Targets:
     ulx3s-85f
+    ulx3s-45f
     ulx3s-12f
     ulx4m-ld-85f
     ulx5m-gs
@@ -57,6 +58,9 @@ target_script()
     case "$1" in
     ulx3s-85f)
         printf '%s/sweep-ulx3s-85f.sh\n' "${SCRIPT_DIR}"
+        ;;
+    ulx3s-45f)
+        printf '%s/sweep-ulx3s-45f.sh\n' "${SCRIPT_DIR}"
         ;;
     ulx3s-12f)
         printf '%s/sweep-ulx3s-12f.sh\n' "${SCRIPT_DIR}"
@@ -110,7 +114,7 @@ fi
 
 case "$1" in
 --list-targets)
-    printf '%s\n' ulx3s-85f ulx3s-12f ulx4m-ld-85f ulx5m-gs
+    printf '%s\n' ulx3s-85f ulx3s-45f ulx3s-12f ulx4m-ld-85f ulx5m-gs
     exit 0
     ;;
 --prepare)
@@ -132,6 +136,9 @@ case "$1" in
     ulx3s-85f)
         printf 'build/fpga_ulx3s_85f.json\n'
         ;;
+    ulx3s-45f)
+        printf 'build/fpga_ulx3s_45f.json\n'
+        ;;
     ulx3s-12f)
         printf 'build/fpga_ulx3s_12f.json\n'
         ;;
@@ -148,7 +155,7 @@ case "$1" in
     (( $# == 2 )) || { usage; exit 1; }
     target="$(canonical_target "$2")"
     case "${target}" in
-    ulx3s-85f|ulx3s-12f)
+    ulx3s-85f|ulx3s-45f|ulx3s-12f)
         printf 'third_party/Hazard3/example_soc/synth/fpga_ulx3s.lpf\n'
         ;;
     ulx4m-ld-85f)

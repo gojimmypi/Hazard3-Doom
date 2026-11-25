@@ -40,6 +40,14 @@ accepts the generated video timing. See
 See :doc:`../user-guide/pinouts` for the UART connections and
 :doc:`../user-guide/web-tool` for the complete browser-tool reference.
 
+.. warning::
+
+   The ``v0.2.0`` ULX3S 85F build default selects ``--um5g-85k`` instead
+   of ``--85k --speed 6`` for the ``LFE5U-85F-6``. FPGA images built with
+   that setting may behave unpredictably; use an image built for the correct
+   device. The default will be corrected in ``v0.2.1`` and later releases.
+   See `issue #21 <https://github.com/ulx3s/Hazard3-Doom/issues/21>`_.
+
 1. Get the prebuilt files
 -------------------------
 

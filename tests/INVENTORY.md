@@ -1,0 +1,54 @@
+# Hazard3-Doom Inventory
+
+This manifest identifies every Git-tracked file under `tests/`,
+except the generated `INVENTORY.*` manifest files themselves.
+Ignored and untracked local files are intentionally not inventoried.
+
+It is intended to support integrity verification, reproducibility, release
+auditing, and exact identification of tracked artifacts. A hash identifies
+the bytes in a file; it does not by itself establish provenance or intent.
+
+Project version: v0.2.1
+
+Git source: current index (`git ls-files --cached`)
+
+Files inventoried: 25
+
+Total bytes: 161277
+
+## Verification
+
+```bash
+(cd tests && sha256sum -c INVENTORY.sha256)
+```
+
+The `component` column is an identification aid. Any entry marked `REVIEW`
+should be identified before a public release.
+
+| Path | Bytes | SHA-256 | Component | Kind |
+|---|---:|---|---|---|
+| `doom-init-verify/README.md` | 1826 | `546aab5eda8b9d8ed0dd6f2d92975b47f3afff9d6e7eb41dc90189d73c1709c9` | REVIEW | Markdown documentation |
+| `doom-init-verify/build.sh` | 2804 | `9dbf11e1405645ce632a5d566aee2470941ca6660a8960c42bf1b056926f3faf` | REVIEW | Shell script |
+| `doom-init-verify/r_data.c` | 21156 | `f2aa19330457eca6e4348730cd987e6fe8adde1e266aaaa68c93135bfcaf3fec` | REVIEW | File |
+| `doom-init-verify/reference-wad.py` | 2472 | `fec26f79feec2d04107193526bd21bcbbec530edbbe737c8e8d77145b97cd670` | REVIEW | File |
+| `doom-init-verify/w_file_stdc.c` | 3775 | `837020fd2042b1b179774ad53ce20622cb91ce7456e326cb6092312fd5f37f91` | REVIEW | File |
+| `manual-test-output.txt` | 9110 | `5306a8edc72bc134334db23ba5b2bdfd2a52657c566528f0911a317e21a8a769` | REVIEW | File |
+| `sao-bridge/run.sh` | 1058 | `2e459a3e370f5c02937fc01323b866d6be9d8d0fb45fe2ffc13cf4583056f8c7` | REVIEW | Shell script |
+| `sao-bridge/tb_apb_sao_bridge.v` | 6122 | `647875efa18a1d134c64d96f4ac0991aaf8680129d75dfb2558411a2f219d833` | REVIEW | File |
+| `software-verify/README.md` | 3303 | `354aae90d5c455369e79a348f26f70030ebf73a13fd961d54557321eeb738b19` | REVIEW | Markdown documentation |
+| `software-verify/build.sh` | 2231 | `9268c0a2ee920be79248b5b09960f751d7fabcad2eac1630d2bea18aa81c7c39` | REVIEW | Shell script |
+| `software-verify/capture.py` | 1830 | `dc91f97b8b2bd005a89aa2f1fb501fd380a84d90987a9d3cf87809c0c3b8a19e` | REVIEW | File |
+| `software-verify/link.ld` | 1363 | `03abbbd0fddb83e2b2493944b8f0edd01e0ce3f3f2b4ffc1e6c7e2da9fac7ed2` | REVIEW | File |
+| `software-verify/run.sh` | 1841 | `a54233c9ee7644c992c334da9b677b84ba775ef893c27c2470c277da593e5b55` | REVIEW | Shell script |
+| `software-verify/start.S` | 1524 | `95b40648e6da8bfea2586e7fd93e6747510696aec64feb6f0bf7d19f75bef40b` | REVIEW | File |
+| `software-verify/verify.c` | 18437 | `4b0f0debba0b6286e82b9ce95f4a98f5087e9bbd78b70b0aae8b3e192b66d9bf` | REVIEW | File |
+| `tb_ulx3s_cache_addr_pipeline.v` | 7765 | `395e5f1401da358a4207753c0ae98895541ec89116ea72ebda6124a30e4c011a` | REVIEW | File |
+| `tb_ulx3s_cache_tag_pipeline.v` | 7186 | `f94d72bb6ef1b83736fc7a9930dd184577e40c020616e4ec159bb93ec188eb7c` | REVIEW | File |
+| `tb_ulx3s_fast_tag_ram.v` | 7496 | `a69d37a4a653dcf40df7bf9f68c1b952c6a02b61c4545e993c159b8ef2e6ac43` | REVIEW | File |
+| `tb_ulx3s_sram_dualport.v` | 5083 | `8404898390ab5300aa25031846a727bb69136d6869df61f3cf63a96c2a3bc946` | REVIEW | File |
+| `test-ecp5-seed-policy.sh` | 5584 | `99e4de1295cb5dfde4ff8d682315a48837309729018fbba05cda58fc848f9f37` | REVIEW | Shell script |
+| `test-ulx3s-85f-sweep-timing.sh` | 6146 | `3cfe757b75c9158998e08ddd1e61686b7ae180d4458d4d2e2361fed0753c955c` | REVIEW | Shell script |
+| `test_host_tools.py` | 11216 | `a366d848a6a755411247a0eb3d5da4fe89e80106b4f54dd7a254d7aedd8ad3c1` | REVIEW | File |
+| `texture-verify/README.md` | 1939 | `7fcb52ce681009b52894ce8eed4c132642fb54aa132b60bfe140f65e50787bd5` | REVIEW | Markdown documentation |
+| `texture-verify/build.sh` | 1455 | `566a13f4879c7542999f642500d7da25e95a450c9ace3614f4cae233b4594c25` | REVIEW | Shell script |
+| `texture-verify/r_data.c` | 28555 | `83d05206f68f2d757260beef1e1b99839375da2c2ab0e49d5088267119d46dc1` | REVIEW | File |

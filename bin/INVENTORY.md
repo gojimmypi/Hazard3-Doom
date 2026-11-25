@@ -12,9 +12,9 @@ Project version: v0.2.1
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 36
+Files inventoried: 39
 
-Total bytes: 63775632
+Total bytes: 65084317
 
 ## Verification
 
@@ -27,12 +27,13 @@ should be identified before a public release.
 
 | Path | Bytes | SHA-256 | Component | Kind |
 |---|---:|---|---|---|
-| `README.md` | 9985 | `e7c6ff4d369ad2626b3e742cbb6a0cfb9b05952df4f03b1b59d3ec459e1e1cd8` | REVIEW | Markdown documentation |
+| `README.md` | 10222 | `bb8b2b55ec714b5681d73787ce725957b9b081e5d660041bc71587fb2af687c2` | REVIEW | Markdown documentation |
 | `dfu-prefix.exe` | 178765 | `96f1d24e00d1772e2c2721e100d86da4f7489af82fef1481819705bd0636d42e` | REVIEW | Windows executable |
 | `dfu-suffix.exe` | 179276 | `22946fa4cea2fd1396d5716af43b40e89e0096245135ae8080a09309880e4f0c` | REVIEW | Windows executable |
 | `dfu-util-static.exe` | 799602 | `1f4687d0f11f0eede72d582fb5174537d5820de515862a8041ac9506b4a6fa1e` | REVIEW | Windows executable |
 | `dfu-util.exe` | 290852 | `e27acab246d0c806033110bfd4330709bc3f0dbebc6440baada667f94fa54839` | REVIEW | Windows executable |
 | `fpga_ulx3s_12f.bit` | 309906 | `da68d4c3049fb1ee2ded4a3da8ac81c9e5d7efc646b162075f0464b1dc094084` | Hazard3-Doom project output | FPGA bitstream |
+| `fpga_ulx3s_85f-25MHz-640x480.bit` | 881177 | `1b191ec18b5c12e9098ac6b3e3952e00f81971707c564cba2ae1eab49cf212f2` | Hazard3-Doom project output | FPGA bitstream |
 | `fpga_ulx3s_85f.bit` | 981156 | `9a7265336898e8aa52c627bb3ce84b46f65a56b420299d3f091237cb091bf125` | Hazard3-Doom project output | FPGA bitstream |
 | `fpga_ulx4m_ld.bit` | 993246 | `1e7be30f31f6aefc4c4c3aff67b6614b27221e627012404cd9863a7b531badb7` | Hazard3-Doom project output | FPGA bitstream |
 | `fpga_ulx5m_gs_bringup.bit` | 9868 | `dc28bb1ea52a979e285bd498cac8ec9cef7c413123c5be0c6ae98e02195e9be1` | Hazard3-Doom project output | FPGA bitstream |
@@ -61,5 +62,7 @@ should be identified before a public release.
 | `openFPGALoader.exe` | 7039645 | `9be9dcdb6e00e6d473f1031a459658561c95630584b1a5739aa2b8788237adea` | openFPGALoader | Windows executable |
 | `openocd.exe` | 4490254 | `10567f01d37c66a0975537960d66e61f7b4e2a17eb2c9637e2c2cbc569f70c79` | OpenOCD | Windows executable |
 | `putty.exe` | 1647912 | `fc6f9dbdf4b9f8dd1f5f3a74cb6e55119d3fe2c9db52436e10ba07842e6c3d7c` | PuTTY | Windows executable |
+| `ulx5m_gs_blinky.bit` | 7096 | `25334f8fb384c413ee192d1ceab8b4940604eb53972217fbb232baba33e507f5` | REVIEW | FPGA bitstream |
+| `ulx5m_gs_bootloader.bit` | 420175 | `c73b8d6fe1ac1150ad3e3bba72c6d64664ee495185fade339f188f628dcfe167` | REVIEW | FPGA bitstream |
 | `usbview.exe` | 842072 | `0e3fc15abc73d204b9b72e4bc286b14992f7d8726075aa19126d48801423d818` | REVIEW | Windows executable |
 | `zadig-2.5.exe` | 5157432 | `78a1a26854fbc848284588a62c7fbec9c652f6a3218ba543783d369265df00d6` | Zadig/libwdi | Windows executable |

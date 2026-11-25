@@ -1,8 +1,9 @@
-# Generated ULX5M SERV build products
+/build-tmp/
 /build-ulx5m-gs/
-
-# Pinned SERV checkout fetched by the Makefile
 /third_party/serv/
-
-# Local preserved BTN2 routing candidates; not part of the source tree
-/bitstreams/local-candidates/
+/fw/*.bin
+/fw/*.elf
+/fw/fw_dfu.hex
+/fw/usb_str_dfu.gen.h
+/__pycache__/
+/tests/__pycache__/

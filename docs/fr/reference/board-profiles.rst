@@ -13,7 +13,7 @@ Profils de cartes
    * - ULX3S 85F
      - ``64m``
      - SDR SDRAM 16 bits ; chemin du contrôleur natif ``ahb_sdram``
-     - 50 MHz
+     - 25 MHz par défaut ; 40/50 MHz expérimentaux
      - 320x200 par défaut ; modes étendus disponibles
    * - ULX3S 12F
      - ``32m`` par défaut ; ``64m`` en option
@@ -52,6 +52,23 @@ la documentation n'en conserve pas une seconde copie :
 un routage explicite. Ces valeurs sont des références de release, pas des
 optima permanents.
 
+.. warning::
+
+   Dans ``v0.2.0``, la cible nextpnr par défaut de l'ULX3S 85F est
+   ``--um5g-85k`` ; le ``LFE5U-85F-6`` prévu exige ``--85k --speed 6``
+   (boîtier ``CABGA381``). Les résultats de timing obtenus avec le réglage
+   incorrect ne prouvent pas la fermeture temporelle pour le FPGA prévu.
+   Le helper ECP5 actuel utilise ``--85k --speed 6``. Voir
+   `Hazard3-Doom #21 <https://github.com/ulx3s/Hazard3-Doom/issues/21>`_ et
+   `Hazard3 #10 <https://github.com/ulx3s/Hazard3/issues/10>`_.
+
+Les profils ECP5 actuels utilisent ``--85k --speed 6 --package CABGA381``
+pour ULX3S 85F, ``--12k --speed 6 --package CABGA381`` pour ULX3S 12F
+et ``--um-85k --speed 8 --package CABGA381`` pour ULX4M-LD.
+Les overrides locaux sont ``ECP5_PNR_SPEED_GRADE`` et ``ECP5_PNR_PACKAGE``.
+La sortie HDMI est 640x480 (85F) ou 1024x600 (12F/ULX4M-LD) ; les modes
+internes du framebuffer sont indépendants. Voir :doc:`timing-sweeps`.
+
 Validation FPGA actuelle
 ------------------------
 
@@ -70,8 +87,8 @@ correspondant ; ces valeurs ne sont pas des garanties de timing portables :
      - État
    * - ULX3S 85F
      - 11
-     - ``clk_sys`` 52.24 MHz
-     - PASS à 50 MHz
+     - Profil 25 MHz avec ``--85k --speed 6`` correct
+     - Ancien PASS 50 MHz obtenu avec un modèle incorrect ; non qualifié
    * - ULX3S 12F
      - 82
      - ``clk_sys`` 42.70 MHz

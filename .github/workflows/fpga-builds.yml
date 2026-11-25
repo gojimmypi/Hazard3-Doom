@@ -3,7 +3,18 @@ name: Board integration builds
 on:
   schedule:
     - cron: "23 8 * * 1"
+  pull_request:
   workflow_dispatch:
+    inputs:
+      ulx3s_85f_sys_clk_mhz:
+        description: ULX3S 85F system clock (MHz); 40/50 are experimental
+        type: choice
+        required: true
+        default: "25"
+        options:
+          - "25"
+          - "40"
+          - "50"
 
 permissions:
   # explicit least-privilege setting for GITHUB_TOKEN, no write permissions needed
@@ -136,6 +147,7 @@ jobs:
       - name: Build FPGA, monitor, and Doom image
         env:
           FORCE_BITSTREAM_REBUILD: "1"
+          HAZARD3_ULX3S_85F_SYS_CLK_MHZ: ${{ inputs.ulx3s_85f_sys_clk_mhz || '25' }}
           ULX5M_SYS_CLK_MHZ: ${{ matrix.ulx5m_sys_clk_mhz }}
 
         run: |
@@ -145,6 +157,10 @@ jobs:
 
           test -s "build/${{ matrix.fpga_name }}.bit"
           test -s "build/${{ matrix.fpga_name }}.pnr.log"
+          if [[ "${{ matrix.board }}" == "ulx3s-85f" ]]; then
+              test -s "build/${{ matrix.fpga_name }}.sys-clk-mhz"
+              test "$(cat "build/${{ matrix.fpga_name }}.sys-clk-mhz")" = "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}"
+          fi
           if [[ "${{ matrix.board }}" == "ulx5m-gs" ]]; then
               # GateMate uses gmpack and does not produce ECP5 config/SVF files.
               test -s "build/${{ matrix.fpga_name }}.clock_mhz"

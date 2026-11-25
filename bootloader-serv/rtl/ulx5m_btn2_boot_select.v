@@ -17,6 +17,7 @@ module ulx5m_btn2_boot_select #(
     (* async_reg = "true" *) reg btn2_sync = 1'b1;
     reg [2:0] settle = 3'd0;
     reg [HOLD_BITS-1:0] hold_count = 0;
+    localparam integer HOLD_SPLIT = (HOLD_BITS + 1) / 2;
     reg held_through_window = 1'b1;
 
     assign btn2_pressed = !btn2_sync;
@@ -40,7 +41,10 @@ module ulx5m_btn2_boot_select #(
                 end else begin
                     if (btn2_sync)
                         held_through_window <= 1'b0;
-                    hold_count <= hold_count + 1'b1;
+                    // Carry lookahead shortens the 48 MHz startup timer.
+                    // The full counter still advances by exactly one cycle.
+                    hold_count[HOLD_SPLIT-1:0] <= hold_count[HOLD_SPLIT-1:0] + 1'b1;
+                    hold_count[HOLD_BITS-1:HOLD_SPLIT] <= hold_count[HOLD_BITS-1:HOLD_SPLIT] + (&hold_count[HOLD_SPLIT-1:0]);
                     if (&hold_count) begin
                         mode_valid <= 1'b1;
                         dfu_selected <= held_through_window && !btn2_sync;

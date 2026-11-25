@@ -23,6 +23,32 @@
 # This uses the same direct SPI-flash target already present in ULX3S.mk.
 set -euo pipefail
 
+echo "ULX3S /build/fpga_ulx3s_85f.bit loader only. See also flash-ulx3s-persistent.sh (TODO merge into one script)"
+
+
+printf '\n'
+printf 'WARNING: This operation will permanently modify the FPGA SPI flash.\n'
+printf 'The existing persistent bootloader/configuration will be overwritten.\n'
+printf 'Recovery may require JTAG programming.\n\n'
+
+while true; do
+    read -r -n 1 -p "Continue? [Y/n]: " answer
+    printf '\n'
+
+    case "${answer}" in
+        [Yy])
+            break
+            ;;
+        [Nn])
+            echo "Aborted. No changes made."
+            exit 0
+            ;;
+        *)
+            echo "Please press Y to continue or N to abort."
+            ;;
+    esac
+done
+
 # Verify this script against the recorded inventory without blocking normal execution.
 "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/inventory.sh" \
     --check-file "${BASH_SOURCE[0]}" || true

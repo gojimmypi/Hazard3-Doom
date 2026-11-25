@@ -1,5 +1,5 @@
-/* ULX5M-GS candidate-slot flash programming logic.
- * No SPI opcodes in this module. Production builds are fail-closed.
+/* ULX5M-GS bounded candidate-slot flash programming logic.
+ * No SPI opcodes in this module. Default builds are fail-closed.
  * The emulator-only build switch MUST NOT be used in FPGA firmware.
  */
 #ifndef ULX5M_FLASH_PROGRAM_H
@@ -8,12 +8,12 @@
 #include <stdint.h>
 #include "ulx5m_flash_layout.h"
 
-#if defined(ULX5M_FLASH_HW_NATIVE_SLOT_TEST)
+#if defined(ULX5M_FLASH_HW_NATIVE_SLOT_TEST) || defined(ULX5M_DFU_FULL_IMAGE_TEST)
 #define ULX5M_FLASH_CANDIDATE_START 0x00201000u
 #else
 #define ULX5M_FLASH_CANDIDATE_START 0x00200000u
 #endif
-#define ULX5M_FLASH_CANDIDATE_BYTES 0x00200000u
+#define ULX5M_FLASH_CANDIDATE_BYTES (ULX5M_FLASH_BYTES - ULX5M_FLASH_CANDIDATE_START)
 #define ULX5M_FLASH_STREAM_BLOCK_BYTES 64u
 
 enum ulx5m_flash_program_result {
@@ -24,7 +24,9 @@ enum ulx5m_flash_program_result {
     ULX5M_PROGRAM_IO = 4,
     ULX5M_PROGRAM_VERIFY = 5,
     ULX5M_PROGRAM_CRC = 6,
-    ULX5M_PROGRAM_STATE = 7
+    ULX5M_PROGRAM_STATE = 7,
+    ULX5M_PROGRAM_FORMAT = 8,
+    ULX5M_PROGRAM_PENDING = 9
 };
 
 struct ulx5m_flash_program_ops {
@@ -43,6 +45,8 @@ struct ulx5m_flash_program {
     uint32_t expected_crc32;
     uint32_t received;
     uint32_t running_crc;
+    uint32_t verify_crc;
+    uint32_t verify_offset;
     uint32_t next_page_address;
     uint32_t next_sector_address;
     unsigned pending_length;
@@ -51,6 +55,7 @@ struct ulx5m_flash_program {
     enum ulx5m_flash_program_result result;
     uint8_t active;
     uint8_t finalized;
+    uint8_t verifying;
 };
 
 /* The only way to enable the mock backend is ULX5M_FLASH_PROGRAM_EMULATOR_TEST.
@@ -64,6 +69,14 @@ ulx5m_flash_program_begin(struct ulx5m_flash_program *session,
 enum ulx5m_flash_program_result
 ulx5m_flash_program_feed(struct ulx5m_flash_program *session,
                          uint32_t offset, const uint8_t *data, unsigned length);
+
+/* FINISH begins without SPI IO; each step performs at most one page write
+ * or 256-byte read. PENDING is not successful verification. */
+enum ulx5m_flash_program_result
+ulx5m_flash_program_finish_start(struct ulx5m_flash_program *session);
+
+enum ulx5m_flash_program_result
+ulx5m_flash_program_finish_step(struct ulx5m_flash_program *session);
 
 enum ulx5m_flash_program_result
 ulx5m_flash_program_finish(struct ulx5m_flash_program *session);

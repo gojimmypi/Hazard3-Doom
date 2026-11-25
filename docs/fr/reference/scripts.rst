@@ -22,12 +22,11 @@ Les wrappers complets de cartes maintiennent le moniteur, le design FPGA,
 l'image Doom et la cartographie mémoire SDRAM cohérents.
 
 ``scripts/build-ulx3s-85f-doom.sh``
-   Build complet ULX3S 85F. Il construit le moniteur 50 MHz/64 Mio, prépare
+   Build complet ULX3S 85F. Il construit par défaut le moniteur 25 MHz/64 Mio, prépare
    l'image de boot résidente du FPGA, construit ou réutilise le bitstream 85F,
    construit l'image Doom et prépare les fichiers utilisés par le workflow de
-   carte SD. Le wrapper 85F active par défaut les modes HDMI étendus ; réglez
-   ``HAZARD3_HDMI_EXTENDED_MODES=0`` pour le profil framebuffer allégé limité à
-   320x200.
+   carte SD. Le wrapper 85F utilise ``HAZARD3_HDMI_EXTENDED_MODES=0`` par défaut
+   (framebuffer 320x200). Réglez-le sur ``1`` pour les modes internes étendus.
 
 ``scripts/build-ulx3s-12f-doom.sh``
    Build compact complet ULX3S 12F. Le profil par défaut utilise 32 Mio de
@@ -128,6 +127,22 @@ Outils de build Doom et Supercon
 ``scripts/cleanup-supercon-dev.py.bak``
    Sauvegarde conservée d'un ancien outil de nettoyage de développement
    Supercon. Il ne fait pas partie du workflow normalement pris en charge.
+
+Paramètres ECP5 et rapports vidéo configurables
+-----------------------------------------------
+
+``scripts/ecp5-board-defaults.sh`` fournit les tableaux d'arguments nextpnr :
+ULX3S 85F (``--85k --speed 6``), ULX3S 12F (``--12k --speed 6``) et
+ULX4M-LD (``--um-85k --speed 8``), tous en ``CABGA381``.
+``ECP5_PNR_SPEED_GRADE`` et ``ECP5_PNR_PACKAGE`` permettent des overrides
+locaux. Le tableau ``PNR_DEVICE_ARGS`` est consommé par le script appelant
+qui source ce helper ; il n'est pas exporté dans l'environnement.
+
+``SWEEP_SYS_TARGET_MHZ``, ``SWEEP_VIDEO_TARGET_MHZ``,
+``SWEEP_TMDS_TARGET_MHZ``, ``SWEEP_LITEDRAM_TARGET_MHZ`` et
+``SWEEP_INIT_TARGET_MHZ`` ne modifient que les **valeurs affichées**.
+``SWEEP_HDMI_OUTPUT_RESOLUTION`` valide la sortie réelle 640x480 ou
+1024x600 : il ne crée pas un autre raster. Voir :doc:`timing-sweeps`.
 
 Sweeps de placement et de seeds routés
 --------------------------------------

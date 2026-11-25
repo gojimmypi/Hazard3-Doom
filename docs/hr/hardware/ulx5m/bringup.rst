@@ -98,3 +98,20 @@ GateMate toolchain quickstart
 <https://colognechip.com/programmable-logic/gatemate/gatemate-toolchain-quickstart/>`_.
 For GPIO overstress research and its limitations see `gm_gpio_ringosc
 <https://github.com/pu-cc/gm_gpio_ringosc>`_.
+
+Provjerena integrirana konfiguracija
+------------------------------------
+
+Trajni SERV primarni bitstream sa sjemenom 160 potvrđen je na hardveru za
+oba aktivna SPI načina pokretanja. Kad je SW1 OFF/OFF i BTN2 pritisnut
+prije uključivanja, trajni ``FWTN`` enumerira ``1D50:614B`` te ostaje u
+DFU načinu nakon otpuštanja gumba. S otpuštenim BTN2 autonomno pokreće
+izvornu sekundarnu sliku s ``0x201000`` i pomični LED uzorak, bez Tigarda.
+Eksperimentalni ``FWTF`` učitan samo u JTAG SRAM također enumerira USB i
+čita sekundarnu sliku. SHA-256 provjera svih 3026 bajtova prošla je za
+oba profila.
+
+Ovaj rezultat od 30. listopada 2026. nadilazi ranija ograničenja pokusa
+FWT3 i v72 zapisana iznad. USB brisanje i programiranje cijele slike još
+nije provjereno u fizičkom flashu. Za postupke i granice oporavka
+pogledajte :doc:`serv-bootloader`.

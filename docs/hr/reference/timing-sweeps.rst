@@ -5,7 +5,7 @@ Hazard3-Doom pokreće više nextpnr-ecp5 place-and-route prolaza radi
 karakterizacije ECP5 timinga, odabira korisnih seedova, usporedbe placement i
 routing postavki te otkrivanja timing regresija nakon promjena RTL-a ili
 generiranog jezgrenog modula. Iste sweep skripte koriste se lokalno i u GitHub
-Actions workflowu ``ECP5 seed sweep``.
+Actions workflowu ``FPGA seed sweep``.
 
 Sweep nije samo traženje sretnog seeda. To je i reproducibilan eksperiment:
 sintetizirati jedan netlist, routati upravo taj netlist mnogo puta, zabilježiti
@@ -42,10 +42,10 @@ ograničenja u istom routeu.
      - TMDS x5
      - LiteDRAM init
    * - ULX3S 85F
-     - 50 MHz
+     - 25 MHz (40/50 experimental)
      - n/a
-     - 50 MHz
-     - 250 MHz
+     - 25 MHz
+     - 125 MHz
      - n/a
    * - ULX3S 12F
      - 40 MHz
@@ -55,7 +55,7 @@ ograničenja u istom routeu.
      - n/a
    * - ULX4M-LD 85F
      - Odabire workflow; zadano 40 MHz
-     - 60 MHz
+     - 60.01 MHz
      - 50 MHz
      - 250 MHz
      - 25 MHz
@@ -202,13 +202,105 @@ GitHub Actions sweep
 
 Trenutačni workflow je
 ``.github/workflows/ulx4m-ld-seed-sweep.yml``. U sučelju se prikazuje kao
-``ECP5 seed sweep``, a birač cilja podržava ULX3S 85F, ULX3S 12F i ULX4M-LD 85F.
+``FPGA seed sweep``, a birač cilja podržava ULX3S 85F, ULX3S 12F,
+ULX4M-LD 85F i ULX5M-GS bez HDMI-ja.
 
 Workflow se ručno pokreće preko ``workflow_dispatch`` i namjerno odvaja sintezu
 od routinga kako bi svi route jobovi koristili isti zamrznuti netlist.
 
 Concurrency je grupiran po cilju i Git refu uz ``cancel-in-progress: false`` pa
 novi run za isti cilj/ref ne služi za prekid već pokrenutog sweepa.
+
+Podesive ciljne frekvencije, ECP5 model i HDMI izlaz
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+GitHub Actions odabiri i odgovarajuće lokalne varijable okruženja opisani
+su niže. ``board-default`` je izričita opcija padajućeg izbornika, a ne
+prazna vrijednost. Workflow je prije pokretanja skripte pretvara u broj.
+
+.. list-table:: Zadane vrijednosti po pločici
+   :header-rows: 1
+   :widths: 21 12 15 16 16 20
+
+   * - Cilj
+     - nextpnr brzina
+     - Sustav MHz
+     - Video MHz
+     - TMDS MHz
+     - HDMI izlaz
+   * - ``ulx3s-85f``
+     - 6
+     - 25 (40/50 eksperimentalno)
+     - 25.00
+     - 125.00
+     - ``640x480``
+   * - ``ulx3s-12f``
+     - 6
+     - 40
+     - 50.00
+     - 250.00
+     - ``1024x600``
+   * - ``ulx4m-ld-85f``
+     - 8
+     - 40
+     - 50.00
+     - 250.00
+     - ``1024x600``
+   * - ``ulx5m-gs``
+     - nije primjenjivo (GateMate)
+     - 12 (moguće 20/25)
+     - nije primjenjivo
+     - nije primjenjivo
+     - bez HDMI-ja
+
+Sve ECP5 pločice koriste kućište ``CABGA381``. Za ULX4M-LD dodatno se
+ispisuju ``SWEEP_LITEDRAM_TARGET_MHZ=60.01`` i
+``SWEEP_INIT_TARGET_MHZ=25.00``.
+
+``ecp5_speed_grade`` nudi ``board-default``, ``6``, ``7`` i ``8``, a
+``ecp5_package`` samo ``CABGA381``. Sustavske ciljne vrijednosti su
+``board-default``, ``12.00``, ``20.00``, ``25.00``, ``40.00`` i
+``50.00``; video vrijednosti su ``board-default``, ``25.00`` i ``50.00``;
+TMDS vrijednosti su ``board-default``, ``125.00`` i ``250.00``.
+LiteDRAM i init vrijednosti su ``60.01`` odnosno ``25.00``. Izbori se
+prikazuju za sve pločice, ali nisu svi smisleni za svaku pločicu.
+
+**Važno:** ``SWEEP_SYS_TARGET_MHZ``, ``SWEEP_VIDEO_TARGET_MHZ``,
+``SWEEP_TMDS_TARGET_MHZ``, ``SWEEP_LITEDRAM_TARGET_MHZ`` i
+``SWEEP_INIT_TARGET_MHZ`` mijenjaju samo **prikazane** ciljne vrijednosti
+i metapodatke. Ne mijenjaju PLL-ove, LPF/SDC ograničenja ni nextpnr
+PASS/FAIL odluke. Za stvarni sustavski takt koristite
+``HAZARD3_ULX3S_85F_SYS_CLK_MHZ=25|40|50`` ili
+``HAZARD3_ULX4M_SYS_CLK_MHZ=25|40|50``. Promjena speed gradea mijenja
+timing model, ali ne i fizičku brzinsku klasu FPGA sklopa.
+
+Izbornik ``hdmi_output_resolution`` nudi ``board-default``, ``640x480`` i
+``1024x600``. Lokalna varijabla je ``SWEEP_HDMI_OUTPUT_RESOLUTION``.
+ULX3S 85F podržava samo 640x480, ULX3S 12F i ULX4M-LD 1024x600,
+a ULX5M-GS nema HDMI. Nevažeće kombinacije skripta odbija; postavka
+ne stvara novi hardverski raster. Zasebni ``ulx3s_85f_extended_modes``
+(``HAZARD3_HDMI_EXTENDED_MODES``, zadano ``0``) odnosi se na **interni**
+framebuffer, a ne HDMI izlaz.
+
+Primjer lokalnog 85F sweepa na 50 MHz sa stvarnim speed-6 modelom:
+
+.. code-block:: bash
+
+   HAZARD3_ULX3S_85F_SYS_CLK_MHZ=50 \
+   ECP5_PNR_SPEED_GRADE=6 \
+   ECP5_PNR_PACKAGE=CABGA381 \
+   SWEEP_HDMI_OUTPUT_RESOLUTION=640x480 \
+   SWEEP_JOBS=4 ./scripts/sweep-ulx3s-85f.sh 1-32
+
+Promjena speed gradea, kućišta, PLL-a, video profila ili verzije alata
+zahtijeva novu usporedbu timinga i zapisivanje SHA256 netliste.
+
+.. warning:: Ograničenje GitHub Actions ručnih parametara
+
+   GitHub Actions ``workflow_dispatch`` dopušta najviše 25 parametara.
+   Kombinirani workflow ima 32 parametra (uključujući HDMI). Prije ručnog
+   pokretanja s padajućim izbornicima potrebno je objediniti najmanje sedam
+   kontrola. Lokalne sweep skripte nemaju to ograničenje.
 
 Parametri workflowa
 ~~~~~~~~~~~~~~~~~~~
@@ -222,11 +314,11 @@ Parametri workflowa
      - Namjena
    * - ``target``
      - ``ulx3s-85f``
-     - ``ulx3s-85f``, ``ulx3s-12f`` ili ``ulx4m-ld-85f``.
+     - ``ulx3s-85f``, ``ulx3s-12f``, ``ulx4m-ld-85f`` ili ``ulx5m-gs``.
    * - ``seed_first`` / ``seed_last``
-     - 1 / 260
-     - Uključivi raspon seedova. Trenutačni GitHub workflow dopušta 1-260.
-       Za eksperimente prvo koristite manji raspon.
+     - 1 / 50
+     - Uključivi raspon: najviše 512 uzastopnih pozitivnih seedova,
+       uz najviše 256 routing poslova u GitHub matrici.
    * - ``max_parallel``
      - 20
      - Najveći broj istodobnih GitHub route jobova: 4, 8, 12 ili 20.
@@ -239,8 +331,8 @@ Parametri workflowa
      - Čuvanje ``.bit`` datoteke za svaki seed. Za velike istraživačke sweepove
        ostavite isključeno ako bitstreamovi neće biti testirani na pločici.
    * - ``ulx3s_85f_extended_modes``
-     - 1
-     - Uključuje prošireni HDMI profil za ULX3S 85F.
+     - 0
+     - Uključuje načine internog framebuffera, ne HDMI izlaznu rezoluciju.
    * - ``ulx3s_12f_memory_profile``
      - ``32m``
      - SDRAM profil 12F: ``32m`` ili ``64m``.
@@ -287,7 +379,7 @@ Parametri workflowa
 ``max_parallel`` i ``seeds_per_job`` imaju različite uloge. Za ``N`` seedova
 workflow stvara približno ``ceil(N / seeds_per_job)`` route jobova. Najviše
 ``max_parallel`` jobova radi istodobno, a seedovi unutar svakog joba obrađuju se
-serijski. Raspon 1-260 s dva seeda po jobu daje 130 route jobova.
+serijski. Zadani raspon 1-50 s dva seeda po jobu daje 25 route jobova.
 
 
 Zašto dva seeda po GitHub jobu

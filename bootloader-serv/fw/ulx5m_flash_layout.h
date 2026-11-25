@@ -8,11 +8,12 @@
 #define ULX5M_FLASH_LAYOUT_REQ    0x58u
 #define ULX5M_FLASH_LAYOUT_BYTES  32u
 
-/* Layout classification is incomplete; firmware permits zero writable regions. */
+/* Default layout remains entirely protected; full-image opt-in exposes only the native secondary. */
 #define ULX5M_FLASH_LAYOUT_UNVERIFIED  0x01u
 #define ULX5M_FLASH_WRITES_DISABLED    0x02u
 
 enum ulx5m_flash_write_result {
+    ULX5M_FLASH_WRITE_OK = 0,
     ULX5M_FLASH_WRITE_BAD_RANGE = 1,
     ULX5M_FLASH_WRITE_BAD_GEOMETRY = 2,
     ULX5M_FLASH_WRITE_PROTECTED = 3

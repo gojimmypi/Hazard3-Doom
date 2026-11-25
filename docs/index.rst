@@ -27,6 +27,16 @@ Hazard3 RISC-V processor and the ULX3S and ULX4M ECP5 FPGA families.
    * `Raspberry Pi Pico 2 <https://www.raspberrypi.com/products/raspberry-pi-pico-2/>`_
    * `Upstream Hazard3 RTL <https://github.com/Wren6991/Hazard3>`_
 
+.. warning::
+
+   Release ``v0.2.0`` selects the wrong FPGA device by default for ULX3S 85F:
+   nextpnr uses ``--um5g-85k`` instead of ``--85k --speed 6`` for the
+   ``LFE5U-85F-6``. Timing results and bitstreams built with this setting
+   should not be considered qualified for the intended device. The default
+   will be corrected in ``v0.2.1`` and later releases. See
+   `Hazard3-Doom issue #21 <https://github.com/ulx3s/Hazard3-Doom/issues/21>`_ and
+   `Hazard3 issue #10 <https://github.com/ulx3s/Hazard3/issues/10>`_.
+
 The project brings together C and Verilog examples, FPGA board designs, HDMI
 video and framebuffer support, external memory controllers, SD card access,
 UART and JTAG debugging, a resident boot monitor, host-side upload tools, and a

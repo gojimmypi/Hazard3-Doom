@@ -62,6 +62,7 @@ _start:
 	addi x31, zero, 0
 
 #ifdef BOOT_DEBUG
+#ifndef ULX5M_SERV_TEST
 	// Set UART divisor
 	li a0, 0x81000000
 	li a1, 414
@@ -70,6 +71,7 @@ _start:
 	// Output '1'
 	li a1, 49
 	sw a1, 0(a0)
+#endif
 
 	// Light 1 LED
 	li a0, 0x80000000
@@ -91,10 +93,12 @@ loop_init_data:
 end_init_data:
 
 #ifdef BOOT_DEBUG
+#ifndef ULX5M_SERV_TEST
 	// Output '2'
 	li a0, 0x81000000
 	li a1, 51
 	sw a1, 0(a0)
+#endif
 
 	// Light 2 LED
 	li a0, 0x80000000
@@ -113,10 +117,12 @@ loop_init_bss:
 end_init_bss:
 
 #ifdef BOOT_DEBUG
+#ifndef ULX5M_SERV_TEST
 	// Output '3'
 	li a0, 0x81000000
 	li a1, 52
 	sw a1, 0(a0)
+#endif
 
 	// Light 3 LED
 	li a0, 0x80000000
