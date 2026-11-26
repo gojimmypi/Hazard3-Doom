@@ -21,6 +21,9 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
+import statistics
+import math
 from pathlib import Path
 
 
@@ -50,8 +53,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed-dir", type=Path, required=True)
     parser.add_argument("--metadata", type=Path, required=True)
     parser.add_argument("--configuration", type=Path)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    return parser.parse_args()
+    parser.add_argument("--output-dir", type=Path)
+    parser.add_argument("--validate-completed-seed", action="store_true",
+                        help="validate exactly one completed result without writing a summary")
+    args = parser.parse_args()
+    if args.validate_completed_seed:
+        if args.seed_first != args.seed_last:
+            parser.error("--validate-completed-seed requires exactly one seed")
+    elif args.output_dir is None:
+        parser.error("--output-dir is required for summary generation")
+    return args
 
 
 def read_key_values(path: Path) -> dict[str, str]:
@@ -68,7 +79,8 @@ def read_key_values(path: Path) -> dict[str, str]:
 
 def numeric(value: str | None) -> float | None:
     try:
-        return float(value) if value is not None else None
+        number = float(value) if value is not None else None
+        return number if number is not None and math.isfinite(number) else None
     except ValueError:
         return None
 
@@ -111,26 +123,105 @@ def format_elapsed(value: str) -> str:
     return f"{minutes}:{seconds:02d}"
 
 
+def performance_row(args, metadata, configuration, rows):
+    """A stable one-row-per-run schema, including valid timing misses."""
+    complete = [row for row in rows if row['route_exit'] == 0
+                and row['timing_status'] in ('PASS', 'FAIL')]
+    record = {
+        'run_id': os.environ.get('GITHUB_RUN_ID', ''),
+        'run_attempt': os.environ.get('GITHUB_RUN_ATTEMPT', ''),
+        'ref': os.environ.get('GITHUB_REF', ''),
+        'generated_utc': metadata.get('generated_utc', ''),
+        'board': args.target,
+        'suite_version': configuration.get('synth_oss_cad_suite_version', ''),
+        'route_suite_version': configuration.get('route_oss_cad_suite_version', ''),
+        'yosys_version': configuration.get('yosys_version', ''),
+        'nextpnr_version': configuration.get('nextpnr_version', ''),
+        'packer_name': configuration.get('packer_name', ''),
+        'packer_sha256': configuration.get('packer_sha256', ''),
+        'git_sha': configuration.get('git_sha', ''),
+        'netlist_sha256': metadata.get('netlist_sha256', ''),
+        'device': metadata.get('fpga_part', metadata.get('device', '')),
+        'speed_grade': metadata.get('speed', ''),
+        'package': metadata.get('package', ''),
+        'seed_first': args.seed_first,
+        'seed_last': args.seed_last,
+        'seeds': len(rows),
+        'completed': len(complete),
+        'pass_count': sum(row['all_timing_pass'] == 'PASS' for row in rows),
+        'timing_fail_count': sum(row['all_timing_pass'] != 'PASS' for row in complete),
+        'timeout_count': sum(row['route_exit'] in (124, 137) or row['timing_status'] == 'TIMEOUT' for row in rows),
+        'missing_count': sum(row['route_exit'] == '' for row in rows),
+        'tool_error_count': sum(row['route_exit'] not in (0, 124, 137, '') or
+                                (row['route_exit'] == 0 and row['timing_status'] not in ('PASS', 'FAIL'))
+                                for row in rows),
+        'synthesis_seconds': metadata.get('synthesis_seconds', ''),
+    }
+    def values(column):
+        numbers = [numeric(str(row.get(column, ''))) for row in complete]
+        return [number for number in numbers if number is not None and math.isfinite(number)]
+    for column in CLOCK_COLUMNS:
+        prefix = column.removesuffix('_mhz')
+        numbers = values(column)
+        record[f'{prefix}_required_mhz'] = metadata.get(f'{prefix}_required_mhz', '')
+        for name, function in [('min', min), ('median', statistics.median), ('max', max)]:
+            record[f'{prefix}_{name}_mhz'] = f'{function(numbers):.2f}' if numbers else ''
+    durations = values('route_seconds')
+    record['median_route_seconds'] = statistics.median(durations) if durations else ''
+    # Preserve comparable configuration, including any route tuning and cache flags.
+    for key in ('hdmi_output_resolution', 'ulx3s_85f_extended_modes', 'ulx3s_12f_memory_profile',
+                'ulx4m_sys_clk_mhz', 'ulx4m_litedram_cpu', 'ulx5m_sys_clk_mhz',
+                'ulx5m_heap_beta', 'placer', 'router', 'heap_timingweight', 'heap_critexp',
+                'tmg_ripup', 'router2_alt_weights', 'nextpnr_extra_args',
+                'ulx3s_85f_registered_read_hits', 'ulx3s_85f_sram_write_buffer',
+                'ulx3s_85f_sram_dual_port_rw', 'ulx3s_85f_cache_tag_pipeline',
+                'ulx3s_85f_tag_ram_mode', 'ulx3s_85f_cache_addr_pipeline'):
+        record[key] = configuration.get(key, metadata.get(key, ''))
+    return record
+
+
+def write_performance(path, record):
+    with path.open('w', newline='', encoding='utf-8') as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(record))
+        writer.writeheader()
+        writer.writerow(record)
+
+
 def main() -> int:
     args = parse_args()
     metadata = read_key_values(args.metadata)
     configuration = read_key_values(args.configuration) if args.configuration else {}
     schema = result_schema(metadata)
 
+    board_clocks = {
+        'ulx3s-12f': ('clk_sys_mhz', 'clk_video_mhz', 'clk_tmds_mhz'),
+        'ulx3s-45f': ('clk_sys_mhz', 'clk_video_mhz', 'clk_tmds_mhz'),
+        'ulx3s-85f': ('clk_sys_mhz', 'clk_video_mhz', 'clk_tmds_mhz'),
+        'ulx4m-ld-85f': ('clk_sys_mhz', 'litedram_user_mhz', 'clk_video_mhz',
+                         'clk_tmds_mhz', 'init_clk_mhz'),
+        'ulx5m-gs': ('clk_sys_mhz',),
+    }
+    if args.target not in board_clocks:
+        raise ValueError(f'Unsupported sweep target: {args.target}')
+    expected = board_clocks[args.target]
+    if schema != ('seed', *expected, 'route_seconds', 'timing_status'):
+        raise ValueError(f'Invalid result schema for {args.target}: {schema}')
+    if args.seed_first < 1 or args.seed_last < args.seed_first:
+        raise ValueError('Invalid seed range')
     requirements: dict[str, float] = {}
-    for metadata_key, raw_value in metadata.items():
-        if not metadata_key.endswith("_required_mhz"):
-            continue
-        column = metadata_key.removesuffix("_required_mhz") + "_mhz"
-        if column not in schema:
-            continue
-        value = numeric(raw_value)
-        if value is not None:
-            requirements[column] = value
+    for column in expected:
+        key = column.removesuffix('_mhz') + '_required_mhz'
+        value = numeric(metadata.get(key))
+        if value is None or value <= 0:
+            raise ValueError(f'Missing or invalid clock requirement: {key}')
+        requirements[column] = value
 
     rows: list[dict[str, object]] = []
     for seed in range(args.seed_first, args.seed_last + 1):
         result = read_result(args.seed_dir / f"result-seed-{seed}.csv", schema)
+        # Never attribute a result from another seed to this seed.
+        if result is not None and result.get('seed') != str(seed):
+            result = None
         route_exit = read_int(args.seed_dir / f"exit-{seed}.txt")
         job_elapsed = read_int(args.seed_dir / f"elapsed-{seed}.txt")
         result_route_seconds = numeric(result.get("route_seconds")) if result else None
@@ -143,9 +234,26 @@ def main() -> int:
             clock_values[column] = numeric(result.get(column)) if result else None
 
         clocks_present = bool(requirements) and all(
-            clock_values[column] is not None for column in requirements
+            clock_values[column] is not None and clock_values[column] > 0
+            for column in requirements
         )
         timing_status = result.get("timing_status", "") if result else ""
+        if route_exit in (124, 137):
+            timing_status = "TIMEOUT"
+        elif route_exit not in (None, 0) and timing_status in ("PASS", "FAIL"):
+            timing_status = "ERROR"
+        if route_exit == 0 and timing_status == "PASS" and clocks_present and any(
+            clock_values[column] < requirements[column] for column in requirements
+        ):
+            # A claimed PASS below any frozen requirement is an inconsistent report.
+            timing_status = "ERROR"
+        # A successful process exit is insufficient if the per-seed result is
+        # absent, malformed, or missing any required clock measurement.
+        duration_valid = (result_route_seconds is not None and result_route_seconds >= 0
+                          and result_route_seconds.is_integer())
+        if route_exit == 0 and (not clocks_present or not duration_valid
+                                or timing_status not in ("PASS", "FAIL")):
+            timing_status = "ERROR"
         all_timing_pass = (
             route_exit == 0
             and clocks_present
@@ -189,6 +297,14 @@ def main() -> int:
         )
         rows.append(row)
 
+    if args.validate_completed_seed:
+        row = rows[0]
+        if row["route_exit"] == 0 and row["timing_status"] in ("PASS", "FAIL"):
+            return 0
+        print(f"Invalid completed result for seed {row['seed']}: "
+              f"status={row['timing_status']}, exit={row['route_exit']}")
+        return 1
+
     args.output_dir.mkdir(parents=True, exist_ok=True)
     summary_csv = args.output_dir / "summary.csv"
     summary_md = args.output_dir / "summary.md"
@@ -199,6 +315,9 @@ def main() -> int:
         writer.writeheader()
         writer.writerows(rows)
 
+    write_performance(args.output_dir / "toolchain-performance.csv",
+                      performance_row(args, metadata, configuration, rows))
+
     timed_out = [
         row
         for row in rows
@@ -207,12 +326,13 @@ def main() -> int:
     completed = [
         row
         for row in rows
-        if row["route_exit"] == 0 and row["timing_status"] != "TIMEOUT"
+        if row["route_exit"] == 0 and row["timing_status"] in ("PASS", "FAIL")
     ]
     passing = [row for row in rows if row["all_timing_pass"] == "PASS"]
     missing = [row for row in rows if row["route_exit"] == ""]
     tool_failures = [
         row for row in rows if row["route_exit"] not in (0, 124, 137, "")
+        or (row["route_exit"] == 0 and row["timing_status"] not in ("PASS", "FAIL"))
     ]
     timing_failures = [row for row in completed if row["all_timing_pass"] != "PASS"]
     closest = sorted(
@@ -360,6 +480,7 @@ def main() -> int:
             "",
             "The complete per-seed data is in `summary.csv`. Timing PASS/FAIL is",
             "recomputed from the required clocks in the frozen sweep metadata.",
+            "`toolchain-performance.csv` records distributions and run provenance for comparison.",
             "",
         ]
     )

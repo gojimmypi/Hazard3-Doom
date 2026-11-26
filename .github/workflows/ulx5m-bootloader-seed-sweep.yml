@@ -35,13 +35,8 @@ on:
         type: boolean
         required: true
         default: false
-      synth_oss_cad_suite_version:
-        description: OSS CAD Suite version for synthesis
-        type: string
-        required: true
-        default: '2026-07-20'
-      route_oss_cad_suite_version:
-        description: OSS CAD Suite version for routing (must equal synthesis for full builds)
+      oss_cad_suite_version:
+        description: OSS CAD Suite snapshot used for synthesis and routing
         type: string
         required: true
         default: '2026-07-20'
@@ -72,8 +67,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  SYNTH_SUITE: ${{ inputs.synth_oss_cad_suite_version }}
-  ROUTE_SUITE: ${{ inputs.route_oss_cad_suite_version }}
+  OSS_CAD_SUITE_VERSION: ${{ inputs.oss_cad_suite_version }}
   SWEEP_FIRST: ${{ inputs.seed_first }}
   SWEEP_COUNT: ${{ inputs.seed_count }}
   SWEEP_PER_JOB: ${{ inputs.seeds_per_job }}
@@ -100,17 +94,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for version in "$SYNTH_SUITE" "$ROUTE_SUITE"; do
-            [[ "$version" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || { echo "Bad suite: $version" >&2; exit 2; }
-          done
-          [[ "$SYNTH_SUITE" == "$ROUTE_SUITE" ]] || {
-            echo 'Full build uses one toolchain for synthesis and routing; versions must match' >&2
+          if [[ ! "$OSS_CAD_SUITE_VERSION" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            echo "Invalid OSS CAD Suite version: $OSS_CAD_SUITE_VERSION" >&2
             exit 2
-          }
-          default_suite="$(make -s -C bootloader-serv -f Makefile.ulx5m-gs show-settings | sed -n 's/^OSS_CAD_SUITE_VERSION=//p')"
-          if [[ "$SYNTH_SUITE" == '2026-07-20' && "$default_suite" != "$SYNTH_SUITE" ]]; then
-            echo "Workflow default differs from Makefile release: $default_suite" >&2; exit 2
           fi
+          # Read the Makefile default without the selected CI version overriding it.
+          default_suite="$(env -u OSS_CAD_SUITE_VERSION make -s -C bootloader-serv -f Makefile.ulx5m-gs show-settings | sed -n 's/^OSS_CAD_SUITE_VERSION=//p')"
+          if [[ "$OSS_CAD_SUITE_VERSION" == '2026-07-20' && "$default_suite" != "$OSS_CAD_SUITE_VERSION" ]]; then
+            echo "Workflow default differs from Makefile release: $default_suite" >&2
+            exit 2
+          fi
+          echo "OSS CAD Suite for synthesis and routing: $OSS_CAD_SUITE_VERSION"
           python3 -m unittest discover -s .github/scripts -p 'test_ulx5m_bootloader_sweep.py' -v
           value="$(python3 .github/scripts/ulx5m_bootloader_sweep.py matrix \
             --first "$SWEEP_FIRST" --count "$SWEEP_COUNT" --per-job "$SWEEP_PER_JOB")"
@@ -141,6 +135,7 @@ jobs:
         if: always()
         with:
           name: ulx5m-live-timing-${{ github.run_id }}
+          overwrite: true
           path: live-results/
           if-no-files-found: warn
           retention-days: 14
@@ -161,7 +156,7 @@ jobs:
           submodules: recursive
       - uses: YosysHQ/setup-oss-cad-suite@v4
         with:
-          version: ${{ env.ROUTE_SUITE }}
+          version: ${{ env.OSS_CAD_SUITE_VERSION }}
           github-token: ${{ github.token }}
           python-override: true
       - name: Install checksum-verified RISC-V compiler
@@ -221,18 +216,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          summary_status=0
           python3 .github/scripts/ulx5m_bootloader_sweep.py summarize \
-            --input groups --output summary
+            --first "$SWEEP_FIRST" --count "$SWEEP_COUNT" \
+            --input groups --output summary || summary_status=$?
           {
             printf 'Ref: %s / %s\n\n' "$GITHUB_REF" "$GITHUB_SHA"
-            printf 'Full-build OSS CAD Suite: %s; HeAP beta: %s\n\n' "$ROUTE_SUITE" "$SWEEP_HEAP_BETA"
+            printf 'Full-build OSS CAD Suite: %s; HeAP beta: %s\n\n' "$OSS_CAD_SUITE_VERSION" "$SWEEP_HEAP_BETA"
             printf 'Extra nextpnr args: %s\n\n' "$SWEEP_NEXTPNR_EXTRA_ARGS"
-            cat summary/summary.md
+            if [[ -f summary/summary.md ]]; then
+              cat summary/summary.md
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
+          exit "$summary_status"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ulx5m-timing-summary-${{ github.run_id }}
+          overwrite: true
           path: summary/
           if-no-files-found: warn
           retention-days: 30

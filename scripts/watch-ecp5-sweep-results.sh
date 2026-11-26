@@ -95,9 +95,12 @@ done
 
 expected_seeds=$((SWEEP_SEED_LAST - SWEEP_SEED_FIRST + 1))
 expected_groups=$(((expected_seeds + SWEEP_SEEDS_PER_JOB - 1) / SWEEP_SEEDS_PER_JOB))
+if [[ "${SWEEP_TARGET}" != ulx5m-gs ]]; then
+    # The first seed is its own global preflight artifact.
+    expected_groups=$((1 + (expected_seeds - 1 + SWEEP_SEEDS_PER_JOB - 1) / SWEEP_SEEDS_PER_JOB))
+fi
 artifact_prefix="${SWEEP_ARTIFACT_PREFIX:-ecp5-sweep-seeds-}"
 clock_label="${SWEEP_CLOCK_LABEL:-sys}"
-clock_target_mhz="${SWEEP_CLOCK_TARGET_MHZ:-}"
 artifact_suffix="-${GITHUB_RUN_ID}"
 work_dir="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/ecp5-live-seed-results-${GITHUB_RUN_ID}"
 mkdir -p "${work_dir}"
@@ -447,30 +450,39 @@ print_consolidated()
     printf '%s\n' '------------------------------------------------------------'
 }
 
-printf 'HDMI output resolution: %s\n' "${SWEEP_HDMI_OUTPUT_RESOLUTION:-unspecified}"
 printf 'Watching %s seeds %s-%s.\n' \
     "${SWEEP_TARGET}" "${SWEEP_SEED_FIRST}" "${SWEEP_SEED_LAST}"
-case "${SWEEP_TARGET}" in
-ulx3s-85f)
-    sys_target="${SWEEP_SYS_TARGET_MHZ:-${HAZARD3_ULX3S_85F_SYS_CLK_MHZ:-25}.00}"
-    video_target="${SWEEP_VIDEO_TARGET_MHZ:-25.00}"
-    tmds_target="${SWEEP_TMDS_TARGET_MHZ:-125.00}"
-    printf 'Timing targets (reported): sys=%s MHz | video=%s MHz | tmds=%s MHz\n' \
-        "${sys_target}" "${video_target}" "${tmds_target}"
-    ;;
-ulx3s-12f|ulx3s-45f)
-    printf 'Timing targets (reported): sys=%s MHz | video=%s MHz | tmds=%s MHz\n' \
-        "${SWEEP_SYS_TARGET_MHZ:-40.00}" "${SWEEP_VIDEO_TARGET_MHZ:-50.00}" "${SWEEP_TMDS_TARGET_MHZ:-250.00}"
-    ;;
-ulx4m-ld-85f)
-    printf 'Timing targets (reported): sys=%s MHz | litedram_user=%s MHz | video=%s MHz | tmds=%s MHz | init=%s MHz\n' \
-        "${SWEEP_SYS_TARGET_MHZ:-${HAZARD3_ULX4M_SYS_CLK_MHZ:-40}.00}" "${SWEEP_LITEDRAM_TARGET_MHZ:-60.01}" \
-        "${SWEEP_VIDEO_TARGET_MHZ:-50.00}" "${SWEEP_TMDS_TARGET_MHZ:-250.00}" "${SWEEP_INIT_TARGET_MHZ:-25.00}"
-    ;;
-ulx5m-gs)
-    printf 'Timing target: %s=%s MHz\n' "${clock_label}" "${clock_target_mhz:-25.00}"
-    ;;
-esac
+if [[ "${SWEEP_TARGET}" == ulx5m-gs ]]; then
+    # GateMate's sweep uses the selected system clock as its Fmax requirement.
+    # Match the default and allowed values in sweep-ulx5m-gs.sh.
+    ULX5M_SYS_CLK_MHZ="${ULX5M_SYS_CLK_MHZ:-12}"
+    case "${ULX5M_SYS_CLK_MHZ}" in
+    12|20|25) ;;
+    *) echo 'ULX5M_SYS_CLK_MHZ must be 12, 20 or 25.' >&2; exit 1 ;;
+    esac
+    printf 'HDMI output resolution: %s\n' "${SWEEP_HDMI_OUTPUT_RESOLUTION:-headless}"
+    printf 'Physical clock frequencies:\n'
+    printf '  System:         %s MHz\n' "${ULX5M_SYS_CLK_MHZ}"
+    printf 'Timing qualification requirements (MHz):\n'
+    printf 'clk_sys_required_mhz=%s.00\n' "${ULX5M_SYS_CLK_MHZ}"
+else
+    # Use the same physical clocks and qualification floors as the routing scripts.
+    SWEEP_ECP5_BOARD_ID="${SWEEP_TARGET}"
+    # shellcheck source=scripts/sweep-ecp5-common.sh
+    source "${SCRIPT_DIR}/sweep-ecp5-common.sh"
+    sweep_ecp5_clock_targets || exit 1
+    printf 'HDMI output resolution: %s\n' "${SWEEP_HDMI_OUTPUT_RESOLUTION}"
+    printf 'Physical clock frequencies:\n'
+    printf '  System:         %s MHz\n' "${SWEEP_PHYSICAL_SYS_MHZ}"
+    printf '  Video pixel:    %s MHz\n' "${SWEEP_PHYSICAL_VIDEO_MHZ}"
+    printf '  HDMI TMDS:      %s MHz\n' "${SWEEP_PHYSICAL_TMDS_MHZ}"
+    if [[ "${SWEEP_TARGET}" == ulx4m-ld-85f ]]; then
+        printf '  LiteDRAM user:  %s MHz\n' "${SWEEP_PHYSICAL_LITEDRAM_MHZ}"
+        printf '  Initialization: %s MHz\n' "${SWEEP_PHYSICAL_INIT_MHZ}"
+    fi
+    printf 'Timing qualification requirements (MHz):\n'
+    sweep_ecp5_write_clock_requirements
+fi
 
 printf 'Expected seed groups: %s (%s seed(s) per job).\n' \
     "${expected_groups}" "${SWEEP_SEEDS_PER_JOB}"
@@ -508,6 +520,10 @@ while :; do
             status="${status%$'\r'}"
             seconds="${seconds%$'\r'}"
             route_exit="${route_exit%$'\r'}"
+            # Defend against old or inconsistent group artifacts.
+            if [[ "${status}" == PASS && "${route_exit}" != 0 ]]; then
+                status=ERROR
+            fi
             seed_status["${seed}"]="${status}"
             seed_seconds["${seed}"]="${seconds}"
             seed_exit["${seed}"]="${route_exit}"

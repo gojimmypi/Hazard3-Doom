@@ -86,8 +86,11 @@ ECP5_PNR_DEVICE=PART selects the installed chip (example: LFE5UM5G-85F-8).
 ECP5_PNR_SPEED_GRADE=N overrides the speed of the board-default chip family.
 ECP5_PNR_PACKAGE=NAME overrides the nextpnr package (default CABGA381).
 SWEEP_SYS_TARGET_MHZ, SWEEP_VIDEO_TARGET_MHZ, SWEEP_TMDS_TARGET_MHZ
-  override reported MHz targets only; they do not reconfigure the FPGA PLL.
+  are local Fmax qualification targets, not PLL controls.
+  PASS requires both physical and configured Fmax targets (LiteDRAM >= 60.01 MHz).
 SWEEP_LITEDRAM_TARGET_MHZ and SWEEP_INIT_TARGET_MHZ apply to ULX4M only.
+SWEEP_PACK_BITSTREAMS=0 skips packing; 1 packs PASS seeds (default);
+  2 also packs timing FAIL seeds for diagnostic preflight only.
 SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.
 SWEEP_ROUTE_TIMEOUT_SECONDS=N limits each nextpnr route (default: 7200).
 Generic nextpnr tuning is controlled by SWEEP_NEXTPNR_* variables.
@@ -268,16 +271,13 @@ install -m 0644 "${config_snapshot}" "${SWEEP_DIR}/litedram-config.yml"
     printf 'speed=%s\n' "${ECP5_PNR_SPEED_GRADE}"
     printf 'package=%s\n' "${ECP5_PNR_PACKAGE}"
     printf 'full_route=1\n'
-    printf 'target_overrides_are_reporting_only=1\n'
+    printf 'target_overrides_are_reporting_only=0\n'
+    printf 'target_overrides_change_physical_clocks=0\n'
     printf 'result_columns=seed,clk_sys_mhz,litedram_user_mhz,clk_video_mhz,clk_tmds_mhz,init_clk_mhz,route_seconds,timing_status\n'
     printf 'litedram_cpu=%s\n' "${ULX4M_LITEDRAM_CPU}"
     printf 'hazard3_sys_clk_mhz=%s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
     sweep_ecp5_write_tuning_metadata
-    printf 'clk_sys_required_mhz=%s\n' "${SWEEP_SYS_TARGET_MHZ}"
-    printf 'litedram_user_required_mhz=%s\n' "${SWEEP_LITEDRAM_TARGET_MHZ}"
-    printf 'clk_video_required_mhz=%s\n' "${SWEEP_VIDEO_TARGET_MHZ}"
-    printf 'clk_tmds_required_mhz=%s\n' "${SWEEP_TMDS_TARGET_MHZ}"
-    printf 'init_clk_required_mhz=%s\n' "${SWEEP_INIT_TARGET_MHZ}"
+    sweep_ecp5_write_clock_requirements
     printf 'synthesis_seconds=%s\n' "${synthesis_seconds}"
     printf 'netlist_sha256=%s\n' "${netlist_sha256}"
     printf 'netlist=fpga_ulx4m_ld.json\n'
@@ -286,12 +286,16 @@ install -m 0644 "${config_snapshot}" "${SWEEP_DIR}/litedram-config.yml"
     printf 'generated_utc=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 } > "${SWEEP_DIR}/metadata.txt"
 
-printf 'ULX4M-LD synthesis duration: %s seconds\n' "${synthesis_seconds}"
+if [[ "${SWEEP_SKIP_SYNTH}" == 1 ]]; then
+    printf 'Original frozen ULX4M-LD synthesis duration: %s seconds\n' "${synthesis_seconds}"
+else
+    printf 'ULX4M-LD synthesis duration: %s seconds\n' "${synthesis_seconds}"
+fi
 printf 'ULX4M-LD routed sweep netlist SHA256: %s\n' "${netlist_sha256}"
 printf 'ULX4M-LD routed sweep directory: %s\n' "${SWEEP_DIR}"
 
 # Discover before routing (including the CI prepare-only job).
-sweep_ecp5_discover_clocks "${NETLIST}" "${HAZARD3_ULX4M_SYS_CLK_MHZ}" || exit 1
+sweep_ecp5_discover_clocks "${NETLIST}" || exit 1
 
 if [[ "${SWEEP_PREPARE_ONLY}" == "1" ]]; then
     printf 'ULX4M-LD frozen sweep netlist prepared; routing skipped.\n'
@@ -300,7 +304,10 @@ fi
 
 sweep_ecp5_require_tool nextpnr-ecp5
 sweep_ecp5_require_tool timeout
-sweep_ecp5_require_tool ecppack
+sweep_ecp5_init_pack_mode || exit 1
+if [[ "${SWEEP_PACK_BITSTREAMS}" != 0 ]]; then
+    sweep_ecp5_require_tool ecppack
+fi
 
 run_seed()
 {
@@ -379,16 +386,22 @@ run_seed()
           "${litedram_user_status}" == "PASS" &&
           "${clk_video_status}" == "PASS" &&
           "${clk_tmds_status}" == "PASS" &&
-          "${init_clk_status}" == "PASS" ]]; then
+          "${init_clk_status}" == "PASS" ]] &&
+       sweep_ecp5_clock_meets_target "${clk_sys}" "${SWEEP_SYS_REQUIRED_MHZ}" &&
+       sweep_ecp5_clock_meets_target "${litedram_user}" "${SWEEP_LITEDRAM_REQUIRED_MHZ}" &&
+       sweep_ecp5_clock_meets_target "${clk_video}" "${SWEEP_VIDEO_REQUIRED_MHZ}" &&
+       sweep_ecp5_clock_meets_target "${clk_tmds}" "${SWEEP_TMDS_REQUIRED_MHZ}" &&
+       sweep_ecp5_clock_meets_target "${init_clk}" "${SWEEP_INIT_REQUIRED_MHZ}"; then
         timing_status="PASS"
     fi
 
-    if [[ "${timing_status}" == "PASS" ]]; then
+    if [[ "${SWEEP_PACK_BITSTREAMS}" == 2 ||
+          ( "${SWEEP_PACK_BITSTREAMS}" == 1 && "${timing_status}" == PASS ) ]]; then
         if ! ecppack \
             --compress \
             --idcode "${ECP5_PNR_IDCODE}" \
             "${config}" \
-            "${bit}"; then
+            "${bit}" || [[ ! -s "${bit}" ]]; then
             printf '%d,%s,%s,%s,%s,%s,%s,PACK_ERROR\n' \
                 "${seed}" "${clk_sys}" "${litedram_user}" "${clk_video}" \
                 "${clk_tmds}" "${init_clk}" "${route_seconds}" > "${result}"
@@ -465,19 +478,21 @@ pass_count="$(awk -F, 'NR > 1 && $8 == "PASS" {count++} END {print count + 0}' "
 pass_seeds="$(awk -F, 'NR > 1 && $8 == "PASS" {if (s != "") s=s ", "; s=s $1} END {print s}' "${results_file}")"
 timeout_count="$(awk -F, 'NR > 1 && $8 == "TIMEOUT" {count++} END {print count + 0}' "${results_file}")"
 timeout_seeds="$(awk -F, 'NR > 1 && $8 == "TIMEOUT" {if (s != "") s=s ", "; s=s $1} END {print s}' "${results_file}")"
-printf 'Timing-passing seeds: %s\n' "${pass_count}"
+printf 'Timing PASS count: %s\n' "${pass_count}"
 
 if [[ "${pass_seeds:-none}" != "none" ]]; then
     printf '\n------------- PASS -------------\n'
 fi
 
-printf 'Timing-passing seeds: %s\n' "${pass_seeds:-none}"
+printf 'Timing PASS seeds: %s\n' "${pass_seeds:-none}"
 
 if [[ "${pass_seeds:-none}" != "none" ]]; then
     printf '\n--------------------------------\n'
 fi
 
-printf 'Timed-out seeds: %s\n' "${timeout_count}"
+printf 'Timing FAIL count: %s\n' "$(awk -F, 'NR > 1 && $NF == "FAIL" {n++} END {print n+0}' "${results_file}")"
+printf 'Routing/packing ERROR count: %s\n' "$(awk -F, 'NR > 1 && $NF ~ /^(ERROR|PACK_ERROR|MISSING)$/ {n++} END {print n+0}' "${results_file}")"
+printf 'Routing TIMEOUT count: %s\n' "${timeout_count}"
 printf 'TIMEOUT seed values: %s\n' "${timeout_seeds:-none}"
 printf 'Results: %s\n' "${results_file}"
 

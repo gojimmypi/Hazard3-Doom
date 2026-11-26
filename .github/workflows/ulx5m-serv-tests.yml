@@ -1,5 +1,5 @@
 
-name: ULX5M-GS SERV bootloader offline checks
+name: ULX5M-GS SERV bootloader regression tests
 
 on:
   push:
@@ -29,6 +29,7 @@ concurrency:
 
 jobs:
   offline:
+    name: Regression tests and synthesis
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
@@ -72,13 +73,13 @@ jobs:
           set -euo pipefail
           make -C bootloader-serv -f Makefile.ulx5m-gs synth-check
           test -s bootloader-serv/build-ulx5m-gs/bootloader/top_ulx5m_gs_bootloader.json
-          echo 'Offline tests and offline synthesis smoke check passed (routing and boot NOT verified).' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Software regression tests, RTL checks and FPGA synthesis passed. Routing, timing closure, bitstream generation and hardware operation were not tested.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload synthesis log only
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ulx5m-offline-synth-${{ github.run_id }}
+          name: ulx5m-synth-check-${{ github.run_id }}
           path: bootloader-serv/build-ulx5m-gs/bootloader/synth.log
           if-no-files-found: warn
           retention-days: 14

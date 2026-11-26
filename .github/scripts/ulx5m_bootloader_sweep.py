@@ -202,7 +202,7 @@ def full_build(args):
 def gh_api(path, binary=False):
     result = subprocess.run(['gh', 'api', path], capture_output=True, check=False)
     if result.returncode:
-        raise OSError('GitHub artifact API failed: ' +
+        raise OSError('GitHub Actions API failed: ' +
                       result.stderr.decode(errors='replace')[-1000:])
     return result.stdout if binary else json.loads(result.stdout)
 
@@ -215,6 +215,20 @@ def list_run_artifacts(repo, run_id):
         if len(data['artifacts']) < 100:
             break
     return artifacts
+
+
+def final_summary_completed(repo, run_id):
+    # The summary job runs only after all matrix jobs have finished.
+    # Query the current attempt so a rerun cannot see an old completed summary.
+    for page in range(1, 20):
+        data = gh_api(f'repos/{repo}/actions/runs/{run_id}/jobs?filter=latest&per_page=100&page={page}')
+        jobs = data['jobs']
+        for job in jobs:
+            if job['name'] == 'Rank fully qualified images (not hardware-tested)':
+                return job['status'] == 'completed'
+        if len(jobs) < 100:
+            break
+    return False
 
 
 def fetch_group_csv(repo, artifact_id, group):
@@ -239,6 +253,7 @@ def watch(args):
     summary_path.write_text('# Live ULX5M full-build timing passes\n\n'
                             'Final PACK-ONLY images; NOT hardware-tested.\n\n', encoding='ascii')
     print(f'LIVE final-image collector: {len(expected)} groups, both clocks required', flush=True)
+    summary_finished = False
     while seen != expected:
         for artifact in list_run_artifacts(args.repo, args.run_id):
             name = artifact['name']
@@ -278,6 +293,14 @@ def watch(args):
             write_csv(args.output / 'live-results.csv', [rows[k] for k in sorted(rows)])
         if seen == expected:
             break
+        # Allow one final poll after the summary finishes to collect late artifacts.
+        if summary_finished:
+            missing_groups = sorted(expected - seen, key=lambda group: int(group.split('-')[0]))
+            message = 'Missing artifact groups: ' + ', '.join(missing_groups)
+            with summary_path.open('a', encoding='ascii') as file:
+                file.write(f'\n- INCOMPLETE: {message}\n')
+            raise ValueError(message)
+        summary_finished = final_summary_completed(args.repo, args.run_id)
         if time.monotonic() >= deadline:
             raise ValueError('live collector timed out waiting for groups')
         time.sleep(args.interval)
@@ -300,16 +323,23 @@ def summarize(args):
     seeds = [int(r['seed']) for r in rows]
     if len(set(seeds)) != len(seeds):
         raise ValueError('duplicate seeds')
-    seed_range(min(seeds), max(seeds))
-    if len(rows) != max(seeds) - min(seeds) + 1:
-        raise ValueError('incomplete sweep results')
+    expected_first = args.first
+    expected_last = sweep_last(args.first, args.last, args.count)
+    seed_range(expected_first, expected_last)
+    expected_seeds = set(range(expected_first, expected_last + 1))
+    missing_seeds = sorted(expected_seeds - set(seeds))
+    unexpected_seeds = sorted(set(seeds) - expected_seeds)
     rows.sort(key=lambda x: int(x['seed']))
     args.output.mkdir(parents=True, exist_ok=True)
     write_csv(args.output / 'results.csv', rows)
     passed = sorted((r for r in rows if r['status'] == PASS),
                     key=lambda r: (-float(r['bram48_mhz']), -float(r['cfg25_mhz']), int(r['seed'])))
     summary = ['# ULX5M-GS bootloader full-image sweep', '',
-               f'- Checked: {len(rows)} seeds ({min(seeds)}..{max(seeds)})',
+               f'- Requested: {len(expected_seeds)} seeds ({expected_first}..{expected_last})',
+               f'- Checked: {len(rows)} seeds',
+               f'- Missing seeds: {", ".join(map(str, missing_seeds)) or "none"}',
+               f'- Unexpected seeds: {", ".join(map(str, unexpected_seeds)) or "none"}',
+               f'- Coverage: {"INCOMPLETE" if missing_seeds or unexpected_seeds else "COMPLETE"}',
                f'- Timing + final-image qualification PASS: {len(passed)} seeds',
                '- Uses the same `Makefile.ulx5m-gs build SEED=N` and `qualify SEED=N` as local WSL.',
                '- Requirements: cfg25_i.clk25 >= 25 MHz and bram_i.clk >= 48 MHz.',
@@ -322,6 +352,8 @@ def summarize(args):
     summary.append('')
     (args.output / 'summary.md').write_text('\n'.join(summary) + '\n', encoding='ascii')
     print('\n'.join(summary))
+    if missing_seeds or unexpected_seeds:
+        raise ValueError('incomplete sweep results; see summary.md for missing or unexpected seeds')
 
 
 def main(argv=None):
@@ -356,6 +388,10 @@ def main(argv=None):
     s = commands.add_parser('summarize')
     s.add_argument('--input', type=Path, required=True)
     s.add_argument('--output', type=Path, required=True)
+    s.add_argument('--first', type=int, required=True)
+    summary_range = s.add_mutually_exclusive_group(required=True)
+    summary_range.add_argument('--last', type=int)
+    summary_range.add_argument('--count', type=int)
     args = parser.parse_args(argv)
     try:
         {'matrix': matrix, 'full-build': full_build,

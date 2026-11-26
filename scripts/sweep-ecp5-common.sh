@@ -89,7 +89,7 @@ sweep_ecp5_bool()
 
 # Physical clocks and nextpnr timing requirements come from the RTL/PLL and
 # generated LPF/SDC. Reported clock targets do not reconfigure those clocks.
-# The ULX3S 85F sweep also checks its reported targets before declaring PASS.
+# All routed ECP5 sweeps check physical and configured targets before PASS.
 sweep_ecp5_hdmi_output_resolution()
 {
     local expected_resolution
@@ -108,46 +108,79 @@ sweep_ecp5_hdmi_output_resolution()
     fi
 }
 
+# Resolve the board clock profile in Python, the same source used to verify
+# nextpnr constraints. Keep physical clocks, qualification floors and user
+# requests separate. No shell code is evaluated from the helper output.
 sweep_ecp5_clock_targets()
 {
     sweep_ecp5_hdmi_output_resolution || return 1
+    local helper_dir profile role nominal floor target_name required_name requested
+    local -a system_arg=()
+    helper_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
     case "${SWEEP_ECP5_BOARD_ID}" in
     ulx3s-85f)
-        SWEEP_SYS_TARGET_MHZ="${SWEEP_SYS_TARGET_MHZ:-${HAZARD3_ULX3S_85F_SYS_CLK_MHZ:-25}.00}"
-        SWEEP_VIDEO_TARGET_MHZ="${SWEEP_VIDEO_TARGET_MHZ:-25.00}"
-        SWEEP_TMDS_TARGET_MHZ="${SWEEP_TMDS_TARGET_MHZ:-125.00}"
+        if [[ -n "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ:-}" ]]; then
+            system_arg=("${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}")
+        fi
         ;;
-    ulx3s-12f|ulx3s-45f)
-        SWEEP_SYS_TARGET_MHZ="${SWEEP_SYS_TARGET_MHZ:-40.00}"
-        SWEEP_VIDEO_TARGET_MHZ="${SWEEP_VIDEO_TARGET_MHZ:-50.00}"
-        SWEEP_TMDS_TARGET_MHZ="${SWEEP_TMDS_TARGET_MHZ:-250.00}"
-        ;;
+    ulx3s-12f|ulx3s-45f) ;;
     ulx4m-ld-85f)
-        SWEEP_SYS_TARGET_MHZ="${SWEEP_SYS_TARGET_MHZ:-${HAZARD3_ULX4M_SYS_CLK_MHZ:-40}.00}"
-        SWEEP_VIDEO_TARGET_MHZ="${SWEEP_VIDEO_TARGET_MHZ:-50.00}"
-        SWEEP_TMDS_TARGET_MHZ="${SWEEP_TMDS_TARGET_MHZ:-250.00}"
-        SWEEP_LITEDRAM_TARGET_MHZ="${SWEEP_LITEDRAM_TARGET_MHZ:-60.01}"
-        SWEEP_INIT_TARGET_MHZ="${SWEEP_INIT_TARGET_MHZ:-25.00}"
+        if [[ -n "${HAZARD3_ULX4M_SYS_CLK_MHZ:-}" ]]; then
+            system_arg=("${HAZARD3_ULX4M_SYS_CLK_MHZ}")
+        fi
         ;;
     *) echo "Unsupported ECP5 clock profile: ${SWEEP_ECP5_BOARD_ID}" >&2; return 1 ;;
     esac
-    local name value
-    for name in SWEEP_SYS_TARGET_MHZ SWEEP_VIDEO_TARGET_MHZ SWEEP_TMDS_TARGET_MHZ; do
-        value="${!name}"
-        if [[ ! "${value}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
-            echo "${name} must be a nonnegative MHz value." >&2
+    sweep_ecp5_require_tool python3
+    profile="$(python3 "${helper_dir}/sweep-ecp5-clocks.py" profile \
+        "${SWEEP_ECP5_BOARD_ID}" "${system_arg[@]}")" || return 1
+
+    while read -r role nominal floor; do
+        case "${role}" in
+        sys)
+            SWEEP_PHYSICAL_SYS_MHZ="${nominal}"
+            target_name=SWEEP_SYS_TARGET_MHZ
+            required_name=SWEEP_SYS_REQUIRED_MHZ
+            ;;
+        video)
+            # Output variable read by watch-ecp5-sweep-results.sh; do not export.
+            # shellcheck disable=SC2034
+            SWEEP_PHYSICAL_VIDEO_MHZ="${nominal}"
+            target_name=SWEEP_VIDEO_TARGET_MHZ
+            required_name=SWEEP_VIDEO_REQUIRED_MHZ
+            ;;
+        tmds)
+            # Output variable read by watch-ecp5-sweep-results.sh; do not export.
+            # shellcheck disable=SC2034
+            SWEEP_PHYSICAL_TMDS_MHZ="${nominal}"
+            target_name=SWEEP_TMDS_TARGET_MHZ
+            required_name=SWEEP_TMDS_REQUIRED_MHZ
+            ;;
+        litedram_user)
+            # Output variable read by watch-ecp5-sweep-results.sh; do not export.
+            # shellcheck disable=SC2034
+            SWEEP_PHYSICAL_LITEDRAM_MHZ="${nominal}"
+            target_name=SWEEP_LITEDRAM_TARGET_MHZ
+            required_name=SWEEP_LITEDRAM_REQUIRED_MHZ
+            ;;
+        init)
+            # Output variable read by watch-ecp5-sweep-results.sh; do not export.
+            # shellcheck disable=SC2034
+            SWEEP_PHYSICAL_INIT_MHZ="${nominal}"
+            target_name=SWEEP_INIT_TARGET_MHZ
+            required_name=SWEEP_INIT_REQUIRED_MHZ
+            ;;
+        *) echo "Unknown ECP5 clock role: ${role}" >&2; return 1 ;;
+        esac
+        # Default to the board floor; local overrides may only raise it.
+        requested="${!target_name:-${floor}}"
+        if [[ ! "${requested}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+            echo "${target_name} must be a nonnegative MHz value." >&2
             return 1
         fi
-    done
-    if [[ "${SWEEP_ECP5_BOARD_ID}" == ulx4m-ld-85f ]]; then
-        for name in SWEEP_LITEDRAM_TARGET_MHZ SWEEP_INIT_TARGET_MHZ; do
-            value="${!name}"
-            if [[ ! "${value}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
-                echo "${name} must be a nonnegative MHz value." >&2
-                return 1
-            fi
-        done
-    fi
+        printf -v "${target_name}" '%s' "${requested}"
+        printf -v "${required_name}" '%s' "$(sweep_ecp5_effective_clock_requirement "${floor}" "${requested}")"
+    done <<< "${profile}"
 }
 
 sweep_ecp5_init_tuning()
@@ -406,15 +439,29 @@ sweep_ecp5_ulx3s_85f_system_clock()
 sweep_ecp5_discover_clocks()
 {
     local netlist="$1"
-    local system_mhz="$2"
     local helper_dir
     helper_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
     sweep_ecp5_require_tool python3
     if ! SWEEP_CLOCK_MAP="$(python3 "${helper_dir}/sweep-ecp5-clocks.py" \
-        discover "${netlist}" "${SWEEP_ECP5_BOARD_ID}" "${system_mhz}")"; then
+        discover "${netlist}" "${SWEEP_ECP5_BOARD_ID}" "${SWEEP_PHYSICAL_SYS_MHZ}")"; then
         return 1
     fi
-    printf 'Discovered clock aliases: %s\n' "${SWEEP_CLOCK_MAP}"
+}
+
+# Pack mode: 1 = timing-passing seeds (local default), 0 = timing only.
+# CI preflight uses 2 to exercise ecppack even when timing misses.
+sweep_ecp5_init_pack_mode()
+{
+    SWEEP_PACK_BITSTREAMS="${SWEEP_PACK_BITSTREAMS:-1}"
+    case "${SWEEP_PACK_BITSTREAMS}" in
+    0|1|2) ;;
+    *) echo 'SWEEP_PACK_BITSTREAMS must be 0, 1 or 2.' >&2; return 1 ;;
+    esac
+    case "${SWEEP_PACK_BITSTREAMS}" in
+    0) echo 'Bitstream packing: skipped (timing only)' ;;
+    1) echo 'Bitstream packing: timing PASS seeds only' ;;
+    2) echo 'Bitstream packing: all completed routes (preflight)' ;;
+    esac
 }
 
 sweep_ecp5_read_routed_clocks()
@@ -422,7 +469,8 @@ sweep_ecp5_read_routed_clocks()
     local log="$1"
     local helper_dir
     helper_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-    python3 "${helper_dir}/sweep-ecp5-clocks.py" read "${SWEEP_CLOCK_MAP}" "${log}"
+    python3 "${helper_dir}/sweep-ecp5-clocks.py" read "${SWEEP_CLOCK_MAP}" "${log}" \
+        "${SWEEP_ECP5_BOARD_ID}" "${SWEEP_PHYSICAL_SYS_MHZ}"
 }
 
 sweep_ecp5_extract_clock()
@@ -456,6 +504,41 @@ sweep_ecp5_clock_meets_target()
 
     awk -v measured="${measured_mhz}" -v required="${required_mhz}" \
         'BEGIN { exit ((measured + 0) < (required + 0)) ? 1 : 0 }'
+}
+
+# Compute once during profile initialization, then reuse for PASS and metadata.
+sweep_ecp5_effective_clock_requirement()
+{
+    local minimum="$1"
+    local requested="$2"
+    if sweep_ecp5_clock_meets_target "${requested}" "${minimum}"; then
+        printf '%s\n' "${requested}"
+    else
+        printf '%s\n' "${minimum}"
+    fi
+}
+
+sweep_ecp5_write_clock_requirement()
+{
+    local role="$1"
+    local requested="$2"
+    local effective="$3"
+    printf '%s_requested_mhz=%s\n' "${role}" "${requested}"
+    printf '%s_required_mhz=%s\n' "${role}" "${effective}"
+}
+
+# The same effective values are consumed by the board routing verdicts.
+sweep_ecp5_write_clock_requirements()
+{
+    sweep_ecp5_write_clock_requirement clk_sys "${SWEEP_SYS_TARGET_MHZ}" "${SWEEP_SYS_REQUIRED_MHZ}"
+    if [[ "${SWEEP_ECP5_BOARD_ID}" == ulx4m-ld-85f ]]; then
+        sweep_ecp5_write_clock_requirement litedram_user "${SWEEP_LITEDRAM_TARGET_MHZ}" "${SWEEP_LITEDRAM_REQUIRED_MHZ}"
+    fi
+    sweep_ecp5_write_clock_requirement clk_video "${SWEEP_VIDEO_TARGET_MHZ}" "${SWEEP_VIDEO_REQUIRED_MHZ}"
+    sweep_ecp5_write_clock_requirement clk_tmds "${SWEEP_TMDS_TARGET_MHZ}" "${SWEEP_TMDS_REQUIRED_MHZ}"
+    if [[ "${SWEEP_ECP5_BOARD_ID}" == ulx4m-ld-85f ]]; then
+        sweep_ecp5_write_clock_requirement init_clk "${SWEEP_INIT_TARGET_MHZ}" "${SWEEP_INIT_REQUIRED_MHZ}"
+    fi
 }
 
 sweep_ecp5_extract_clock_status()

@@ -8,15 +8,23 @@ LiteDRAM uses its generated CLKDIVF and EHXPLLL output ports.
 """
 
 import argparse
+from decimal import Decimal
 import json
 import re
 import sys
 from pathlib import Path
 
 
-BOARDS = ("ulx3s-12f", "ulx3s-45f", "ulx3s-85f", "ulx4m-ld-85f")
+DEFAULT_SYSTEM_MHZ = {
+    'ulx3s-12f': 40,
+    'ulx3s-45f': 40,
+    'ulx3s-85f': 25,
+    'ulx4m-ld-85f': 40,
+}
+BOARDS = tuple(DEFAULT_SYSTEM_MHZ)
+LITEDRAM_MIN_FMAX_MHZ = Decimal('60.01')
 FMAX = re.compile(
-    r"^Info:\s+Max frequency for clock\s+'([^']+)':\s+"
+    r"^(?:Info|Warning):\s+Max frequency for clock\s+'([^']+)':\s+"
     r"([0-9]+(?:\.[0-9]+)?) MHz\s+\((PASS|FAIL) at "
     r"([0-9]+(?:\.[0-9]+)?) MHz\)\s*$"
 )
@@ -36,6 +44,7 @@ def bit(bits, description):
 
 
 def discover(netlist, board, sys_mhz):
+    physical_constraints(board, sys_mhz)  # Reject unsupported profiles before discovery.
     top = one([
         module for module in netlist['modules'].values()
         if int(module.get('attributes', {}).get('top', '0'), 2)
@@ -102,14 +111,41 @@ def discover(netlist, board, sys_mhz):
     return aliases
 
 
-def routed_report(log, aliases):
+def physical_constraints(board, sys_mhz):
+    """Nominal physical clocks, independent of Fmax qualification overrides."""
+    if board not in BOARDS:
+        raise ValueError(f'unsupported board: {board}')
+    allowed = (DEFAULT_SYSTEM_MHZ[board],) if board in ('ulx3s-12f', 'ulx3s-45f') else (25, 40, 50)
+    if sys_mhz not in allowed:
+        raise ValueError(f'{board}: unsupported system clock {sys_mhz} MHz')
+    pixel = 25 if board == 'ulx3s-85f' else 50
+    targets = {'sys': sys_mhz, 'video': pixel, 'tmds': pixel * 5}
+    if board == 'ulx4m-ld-85f':
+        targets.update(litedram_user=60, init=25)
+    return targets
+
+
+def minimum_fmax(board, sys_mhz):
+    """Board qualification floors, distinct from physical constraints."""
+    targets = physical_constraints(board, sys_mhz)
+    if board == 'ulx4m-ld-85f':
+        targets['litedram_user'] = LITEDRAM_MIN_FMAX_MHZ
+    return targets
+
+
+def routed_report(log, aliases, expected):
+    if set(aliases) != set(expected):
+        raise ValueError('clock mapping and physical constraints disagree')
     # Do not accidentally use the placement Fmax when the routed report is
     # absent. Both router implementations must emit the routing completion
     # marker; an unsupported log format must fail closed.
     marker = 'Info: Routing complete.'
-    if marker not in log or 'Info: Program finished normally.' not in log:
-        raise ValueError('missing routing completion or normal completion marker')
-    final = log.rsplit(marker, 1)[1].split('Info: Program finished normally.', 1)[0]
+    if marker not in log:
+        raise ValueError('missing routing completion marker')
+    final = log.rsplit(marker, 1)[1]
+    if 'Info: Program finished normally.' not in final:
+        raise ValueError('missing normal completion marker after routing')
+    final = final.split('Info: Program finished normally.', 1)[0]
     reports = {}
     for line in final.splitlines():
         if 'Max frequency for clock' not in line:
@@ -139,15 +175,22 @@ def routed_report(log, aliases):
             raise ValueError(f'{role}: clock {name} already mapped to another role')
         used.add(name)
         mhz, status, target = reports[name]
-        if float(target) <= 0:
-            raise ValueError(f'{role}: nonpositive timing constraint')
-        results[role] = (name, mhz, status)
+        # nextpnr rounds period-derived frequencies to two decimal places;
+        # 60.01 MHz is the existing LiteDRAM qualification threshold, not
+        # a separate physical PLL setting. Allow one displayed centi-MHz.
+        if abs(Decimal(target) - Decimal(str(expected[role]))) > Decimal('0.01'):
+            raise ValueError(f'{role}: unexpected clock constraint {target} MHz; '
+                             f'expected {expected[role]} MHz (±0.01 MHz)')
+        results[role] = (name, mhz, status, target)
     return results
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
+    profile = sub.add_parser('profile', help='print nominal and minimum Fmax MHz for each clock')
+    profile.add_argument('board', choices=BOARDS)
+    profile.add_argument('sys_mhz', type=int, nargs='?')
     mapping = sub.add_parser('discover')
     mapping.add_argument('netlist', type=Path)
     mapping.add_argument('board', choices=BOARDS)
@@ -155,18 +198,36 @@ def main():
     report = sub.add_parser('read')
     report.add_argument('mapping', help='JSON returned by discover')
     report.add_argument('log', type=Path)
+    report.add_argument('board', choices=BOARDS)
+    report.add_argument('sys_mhz', type=int, choices=(25, 40, 50))
     args = parser.parse_args()
     try:
-        if args.command == 'discover':
+        if args.command == 'profile':
+            sys_mhz = args.sys_mhz if args.sys_mhz is not None else DEFAULT_SYSTEM_MHZ[args.board]
+            physical = physical_constraints(args.board, sys_mhz)
+            floors = minimum_fmax(args.board, sys_mhz)
+            # Stable whitespace-separated rows: role, physical MHz, minimum Fmax MHz.
+            for role, nominal in physical.items():
+                print(f'{role} {nominal} {floors[role]:.2f}')
+        elif args.command == 'discover':
             aliases = discover(json.loads(args.netlist.read_text()), args.board, args.sys_mhz)
+            print('Discovered Yosys clock aliases:', file=sys.stderr)
+            for role, names in aliases.items():
+                print(f'  {role}:', file=sys.stderr)
+                for name in names:
+                    print(f'    {name}', file=sys.stderr)
             print(json.dumps(aliases, separators=(',', ':')))
         else:
-            results = routed_report(args.log.read_text(errors='replace'), json.loads(args.mapping))
-            for role, (name, mhz, status) in results.items():
-                print(f'Clock {role}: {name} = {mhz} MHz ({status})', file=sys.stderr)
+            results = routed_report(args.log.read_text(errors='replace'), json.loads(args.mapping),
+                                    physical_constraints(args.board, args.sys_mhz))
+            print('Matched nextpnr clocks:', file=sys.stderr)
+            for role, (name, mhz, status, target) in results.items():
+                print(f'  {role:14}: {name}', file=sys.stderr)
+                print(f'                  Fmax={mhz} MHz, constraint={target} MHz, {status}',
+                      file=sys.stderr)
             # Fixed order is the role insertion order produced by discover.
-            print(' '.join(mhz for _, mhz, _ in results.values()),
-                  ' '.join(status for _, _, status in results.values()))
+            print(' '.join(mhz for _, mhz, _, _ in results.values()),
+                  ' '.join(status for _, _, status, _ in results.values()))
     except (OSError, ValueError, KeyError, TypeError) as error:
         print(f'ERROR: ECP5 clock discovery/report: {error}', file=sys.stderr)
         return 2

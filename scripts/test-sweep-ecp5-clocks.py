@@ -7,9 +7,12 @@ from the 2026-11-24 toolchain sweep to also replay the 260 real routes.
 """
 
 import importlib.util
+from decimal import Decimal
 import json
 import os
 import re
+import subprocess
+import tempfile
 import unittest
 import zipfile
 from pathlib import Path
@@ -60,7 +63,86 @@ def routed(lines):
     return 'Info: Routing complete.\n' + ''.join(lines) + 'Info: Program finished normally.\n'
 
 
+# Independent reference frequencies: do not derive test expectations from
+# the implementation under test. LiteDRAM's nominal constraint is 60 MHz.
+PROFILES = {
+    ('ulx3s-12f', 40): (40, 50, 250),
+    ('ulx3s-45f', 40): (40, 50, 250),
+    ('ulx3s-85f', 25): (25, 25, 125),
+    ('ulx3s-85f', 40): (40, 25, 125),
+    ('ulx3s-85f', 50): (50, 25, 125),
+    ('ulx4m-ld-85f', 25): (25, 50, 250),
+    ('ulx4m-ld-85f', 40): (40, 50, 250),
+    ('ulx4m-ld-85f', 50): (50, 50, 250),
+}
+
+
+def expected_constraints(board, mhz):
+    system, video, tmds = PROFILES[(board, mhz)]
+    expected = {'sys': system, 'video': video, 'tmds': tmds}
+    if board == 'ulx4m-ld-85f':
+        expected.update(litedram_user=60, init=25)
+    return expected
+
+
 class ClockTests(unittest.TestCase):
+    def test_physical_constraints(self):
+        self.assertEqual(set(CLOCKS.BOARDS), {board for board, _ in PROFILES})
+        for board, mhz in PROFILES:
+            with self.subTest(board=board, mhz=mhz):
+                self.assertEqual(CLOCKS.physical_constraints(board, mhz),
+                                 expected_constraints(board, mhz))
+        for board, mhz in [('ulx3s-12f', 25), ('ulx3s-45f', 50),
+                           ('ulx3s-85f', 30), ('ulx4m-ld-85f', 75),
+                           ('ulx5m-gs', 25), ('unknown', 40)]:
+            with self.subTest(board=board, mhz=mhz), self.assertRaises(ValueError):
+                CLOCKS.physical_constraints(board, mhz)
+
+    def test_minimum_fmax_and_shell_profile(self):
+        # Run the real Bash profile initialization and metadata writer. The
+        # expected values are independent of both the CLI and the Python API.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ('sweep-ecp5-common.sh', 'sweep-ecp5-clocks.py'):
+                (root / name).write_bytes(Path(__file__).with_name(name).read_bytes())
+            inventory = root / 'inventory.sh'
+            inventory.write_text('#!/bin/bash\nexit 0\n')
+            inventory.chmod(0o755)
+            env = {key: value for key, value in os.environ.items()
+                   if not key.startswith(('SWEEP_', 'HAZARD3_'))}
+            columns = {'sys': 'clk_sys', 'video': 'clk_video', 'tmds': 'clk_tmds',
+                       'litedram_user': 'litedram_user', 'init': 'init_clk'}
+            overrides = {'sys': 'SWEEP_SYS_TARGET_MHZ', 'video': 'SWEEP_VIDEO_TARGET_MHZ',
+                         'tmds': 'SWEEP_TMDS_TARGET_MHZ', 'litedram_user': 'SWEEP_LITEDRAM_TARGET_MHZ',
+                         'init': 'SWEEP_INIT_TARGET_MHZ'}
+            for board, mhz in PROFILES:
+                nominal = expected_constraints(board, mhz)
+                floors = {role: Decimal(value) for role, value in nominal.items()}
+                if board == 'ulx4m-ld-85f':
+                    floors['litedram_user'] = Decimal('60.01')
+                self.assertEqual(CLOCKS.minimum_fmax(board, mhz), floors)
+                for delta in (None, Decimal('-1'), Decimal('5.125')):
+                    with self.subTest(board=board, mhz=mhz, delta=delta):
+                        config = dict(env, SWEEP_ECP5_BOARD_ID=board,
+                                      HAZARD3_ULX3S_85F_SYS_CLK_MHZ=str(mhz),
+                                      HAZARD3_ULX4M_SYS_CLK_MHZ=str(mhz))
+                        if delta is not None:
+                            config.update({overrides[role]: str(floors[role] + delta)
+                                           for role in floors})
+                        result = subprocess.run([
+                            'bash', '-eu', '-o', 'pipefail', '-c',
+                            'source "$1"; sweep_ecp5_clock_targets; sweep_ecp5_write_clock_requirements',
+                            'test', str(root / 'sweep-ecp5-common.sh')],
+                            env=config, text=True, capture_output=True, check=True)
+                        metadata = dict(line.split('=', 1) for line in result.stdout.splitlines())
+                        expected = {}
+                        for role, floor in floors.items():
+                            requested = floor if delta is None else floor + delta
+                            prefix = columns[role]
+                            expected[f'{prefix}_requested_mhz'] = requested
+                            expected[f'{prefix}_required_mhz'] = max(floor, requested)
+                        self.assertEqual({key: Decimal(value) for key, value in metadata.items()}, expected)
+
     def test_old_and_arbitrary_aliases(self):
         for legacy in (False, True):
             netlist, system, pix, tmds = fixture(legacy=legacy)
@@ -68,8 +150,8 @@ class ClockTests(unittest.TestCase):
             log = fmax(pix, '99.00') + routed([
                 fmax(system + '$TRELLIS_IO_IN'), fmax(pix, '44.00'),
                 fmax(tmds, '200.00', target='125.00'), fmax(pix + '_not_the_clock')])
-            result = CLOCKS.routed_report(log, aliases)
-            self.assertEqual(result['video'][1:], ('44.00', 'PASS'))
+            result = CLOCKS.routed_report(log, aliases, CLOCKS.physical_constraints('ulx3s-85f', 25))
+            self.assertEqual(result['video'][1:], ('44.00', 'PASS', '25.00'))
             self.assertEqual(result['sys'][0], '$glbnet$clk_osc$TRELLIS_IO_IN')
 
     def test_all_board_profiles(self):
@@ -79,25 +161,42 @@ class ClockTests(unittest.TestCase):
                 with self.subTest(board=board, mhz=mhz):
                     netlist, system, pix, tmds = fixture(board, mhz)
                     mapping = CLOCKS.discover(netlist, board, mhz)
-                    rows = [fmax(system), fmax(pix), fmax(tmds)]
+                    expected = expected_constraints(board, mhz)
+                    rows = [fmax(system, target=str(mhz)),
+                            fmax(pix, target=str(expected['video'])),
+                            fmax(tmds, '300.00', target=str(expected['tmds']))]
                     if board == 'ulx4m-ld-85f':
-                        rows.extend([fmax('renamed.ddr_user'), fmax('renamed.ddr_init')])
-                    self.assertTrue(all(x[2] == 'PASS' for x in CLOCKS.routed_report(routed(rows), mapping).values()))
+                        rows.extend([fmax('renamed.ddr_user', '65.00', target='60.01'),
+                                     fmax('renamed.ddr_init')])
+                    self.assertTrue(all(x[2] == 'PASS' for x in CLOCKS.routed_report(routed(rows), mapping, expected).values()))
 
     def test_failure_modes(self):
         netlist, system, pix, tmds = fixture()
         mapping = CLOCKS.discover(netlist, 'ulx3s-85f', 25)
-        base = [fmax(system), fmax(pix), fmax(tmds)]
+        expected = CLOCKS.physical_constraints('ulx3s-85f', 25)
+        base = [fmax(system), fmax(pix), fmax(tmds, '200.00', target='125.00')]
         for log in (''.join(base), routed(base).replace('Info: Program finished normally.', ''),
+                    'Info: Program finished normally.\n' + routed(base).replace('Info: Program finished normally.', ''),
                     fmax(pix) + routed([base[0], base[2]]),
                     routed(base + [fmax('another.pixel.alias')]),
                     routed(base + [fmax(pix)]),
                     routed(base).replace('55.00 MHz', 'malformed MHz'),
-                    routed(base).replace('at 25.00 MHz', 'at 0.00 MHz')):
+                    routed(base).replace('at 25.00 MHz', 'at 0.00 MHz'),
+                    routed(base).replace('at 125.00 MHz', 'at 25.00 MHz'),
+                    routed(base).replace('at 25.00 MHz', 'at 24.98 MHz')):
             with self.subTest(log=log), self.assertRaises(ValueError):
-                CLOCKS.routed_report(log, mapping)
-        fail = routed([base[0], fmax(pix, '20.00', 'FAIL'), base[2]])
-        self.assertEqual(CLOCKS.routed_report(fail, mapping)['video'][1:], ('20.00', 'FAIL'))
+                CLOCKS.routed_report(log, mapping, expected)
+        # nextpnr can emit Warning rather than Info for a completed timing miss.
+        for prefix in ('Info', 'Warning'):
+            with self.subTest(prefix=prefix):
+                failed_clock = fmax(pix, '20.00', 'FAIL').replace('Info:', prefix + ':')
+                fail = routed([base[0], failed_clock, base[2]])
+                self.assertEqual(CLOCKS.routed_report(fail, mapping, expected)['video'][1:],
+                                 ('20.00', 'FAIL', '25.00'))
+        # An unrelated failed clock must not prevent required clock discovery.
+        unrelated = fmax('unrelated', '10.00', 'FAIL').replace('Info:', 'Warning:')
+        result = CLOCKS.routed_report(routed(base + [unrelated]), mapping, expected)
+        self.assertTrue(all(value[2] == 'PASS' for value in result.values()))
 
     def test_missing_pll_and_shared_bits(self):
         netlist, *_ = fixture()
@@ -121,7 +220,8 @@ class ClockTests(unittest.TestCase):
             for name in archive.namelist():
                 if not re.fullmatch(r'seeds/pnr-\d+\.log', name):
                     continue
-                result = CLOCKS.routed_report(archive.read(name).decode(), aliases)
+                result = CLOCKS.routed_report(archive.read(name).decode(), aliases,
+                                              CLOCKS.physical_constraints('ulx3s-85f', 25))
                 self.assertTrue(all(value[2] == 'PASS' for value in result.values()), name)
                 if name == 'seeds/pnr-72.log':
                     self.assertEqual([x[1] for x in result.values()], ['34.28', '49.62', '253.23'])

@@ -47,19 +47,24 @@ def main() -> None:
     parser.add_argument("--first", type=seed_integer, required=True)
     parser.add_argument("--last", type=seed_integer, required=True)
     parser.add_argument("--per-job", type=positive_integer, required=True)
+    parser.add_argument("--target", choices=("ulx3s-12f", "ulx3s-45f",
+                        "ulx3s-85f", "ulx4m-ld-85f", "ulx5m-gs"),
+                        help="emit the complete workflow plan, including ECP5 preflight")
     args = parser.parse_args()
 
     if args.first > args.last:
         parser.error("--first must be less than or equal to --last")
 
-    seed_count = args.last - args.first + 1
+    preflight = args.target is not None and args.target != "ulx5m-gs"
+    first = args.first + int(preflight)
+    seed_count = args.last - first + 1
     if (seed_count + args.per_job - 1) // args.per_job > MAX_MATRIX_JOBS:
         parser.error(
             f"GitHub Actions allows at most {MAX_MATRIX_JOBS} matrix jobs; "
             "increase --per-job for this seed count"
         )
 
-    seeds = range(args.first, args.last + 1)
+    seeds = range(first, args.last + 1)
     groups = []
     current = []
     for seed in seeds:
@@ -79,6 +84,12 @@ def main() -> None:
             for index, group in enumerate(groups, start=1)
         ]
     }
+    if args.target is not None:
+        preflight_matrix = {"include": []}
+        if preflight:
+            preflight_matrix["include"].append({"group": "preflight", "seeds": str(args.first)})
+        matrix = {"matrix": matrix, "preflight_matrix": preflight_matrix,
+                  "has_remaining": bool(groups)}
     print(json.dumps(matrix, separators=(",", ":")))
 
 
