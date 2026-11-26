@@ -401,6 +401,30 @@ sweep_ecp5_ulx3s_85f_system_clock()
     esac
 }
 
+# Resolve logical clock roles once per frozen netlist. The helper uses the
+# PLL output connections and exact bit aliases rather than timing-log names.
+sweep_ecp5_discover_clocks()
+{
+    local netlist="$1"
+    local system_mhz="$2"
+    local helper_dir
+    helper_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+    sweep_ecp5_require_tool python3
+    if ! SWEEP_CLOCK_MAP="$(python3 "${helper_dir}/sweep-ecp5-clocks.py" \
+        discover "${netlist}" "${SWEEP_ECP5_BOARD_ID}" "${system_mhz}")"; then
+        return 1
+    fi
+    printf 'Discovered clock aliases: %s\n' "${SWEEP_CLOCK_MAP}"
+}
+
+sweep_ecp5_read_routed_clocks()
+{
+    local log="$1"
+    local helper_dir
+    helper_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+    python3 "${helper_dir}/sweep-ecp5-clocks.py" read "${SWEEP_CLOCK_MAP}" "${log}"
+}
+
 sweep_ecp5_extract_clock()
 {
     local log="$1"

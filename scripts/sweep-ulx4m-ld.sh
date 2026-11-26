@@ -290,6 +290,9 @@ printf 'ULX4M-LD synthesis duration: %s seconds\n' "${synthesis_seconds}"
 printf 'ULX4M-LD routed sweep netlist SHA256: %s\n' "${netlist_sha256}"
 printf 'ULX4M-LD routed sweep directory: %s\n' "${SWEEP_DIR}"
 
+# Discover before routing (including the CI prepare-only job).
+sweep_ecp5_discover_clocks "${NETLIST}" "${HAZARD3_ULX4M_SYS_CLK_MHZ}" || exit 1
+
 if [[ "${SWEEP_PREPARE_ONLY}" == "1" ]]; then
     printf 'ULX4M-LD frozen sweep netlist prepared; routing skipped.\n'
     exit 0
@@ -307,7 +310,7 @@ run_seed()
     local bit="${SWEEP_DIR}/fpga_ulx4m_ld-${seed}.bit"
     local result="${SWEEP_DIR}/result-seed-${seed}.csv"
     local clk_sys litedram_user clk_video clk_tmds init_clk
-    local clk_sys_clock clk_sys_status litedram_user_status
+    local clock_report clk_sys_status litedram_user_status
     local clk_video_status clk_tmds_status init_clk_status
     local route_start_seconds route_start_time
     local route_end_seconds route_end_time
@@ -362,21 +365,14 @@ run_seed()
         ;;
     esac
 
-    clk_sys_clock="clk_sys"
-    if [[ "${HAZARD3_ULX4M_SYS_CLK_MHZ}" == "25" ]]; then
-        clk_sys_clock="clk_osc"
+    if ! clock_report="$(sweep_ecp5_read_routed_clocks "${log}")"; then
+        printf '%d,ERROR,ERROR,ERROR,ERROR,ERROR,%s,ERROR\n' "${seed}" "${route_seconds}" > "${result}"
+        rm -f "${config}" "${bit}"
+        return 2
     fi
-
-    clk_sys="$(sweep_ecp5_extract_clock "${log}" "${clk_sys_clock}")"
-    litedram_user="$(sweep_ecp5_extract_clock "${log}" "litedram_user_clk")"
-    clk_video="$(sweep_ecp5_extract_clock "${log}" "clk_video_pix")"
-    clk_tmds="$(sweep_ecp5_extract_clock "${log}" "clk_tmds_x5")"
-    init_clk="$(sweep_ecp5_extract_clock "${log}" "init_clk")"
-    clk_sys_status="$(sweep_ecp5_extract_clock_status "${log}" "${clk_sys_clock}")"
-    litedram_user_status="$(sweep_ecp5_extract_clock_status "${log}" "litedram_user_clk")"
-    clk_video_status="$(sweep_ecp5_extract_clock_status "${log}" "clk_video_pix")"
-    clk_tmds_status="$(sweep_ecp5_extract_clock_status "${log}" "clk_tmds_x5")"
-    init_clk_status="$(sweep_ecp5_extract_clock_status "${log}" "init_clk")"
+    read -r clk_sys litedram_user clk_video clk_tmds init_clk \
+        clk_sys_status litedram_user_status clk_video_status clk_tmds_status init_clk_status <<< "${clock_report}"
+    clock_report_valid=1
 
     timing_status="FAIL"
     if [[ "${clk_sys_status}" == "PASS" &&
@@ -423,7 +419,23 @@ printf 'Per-seed nextpnr timeout: %ss (+%ss kill grace)\n' \
 
 status=0
 running=0
+clock_report_valid=0
 for seed in "${SWEEP_SEEDS[@]}"; do
+    # Validate the first successfully routed report before starting parallel
+    # routes. Ordinary route failures/timeouts can be retried with other seeds.
+    if [[ "${clock_report_valid}" == 0 ]]; then
+        if run_seed "${seed}"; then
+            :
+        else
+            seed_status=$?
+            status=1
+            if [[ "${seed_status}" == 2 ]]; then
+                echo 'ERROR: Clock report preflight failed; remaining seeds not routed.' >&2
+                break
+            fi
+        fi
+        continue
+    fi
     run_seed "${seed}" &
     running=$((running + 1))
     if (( running >= SWEEP_JOBS )); then

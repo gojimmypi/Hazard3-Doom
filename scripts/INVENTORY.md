@@ -12,9 +12,9 @@ Project version: v0.2.1
 
 Git source: current index (`git ls-files --cached`)
 
-Files inventoried: 102
+Files inventoried: 104
 
-Total bytes: 880068
+Total bytes: 894832
 
 ## Verification
 
@@ -107,7 +107,8 @@ should be identified before a public release.
 | `start-openocd.bat` | 8333 | `da858356e9981d5b44447ea17b0f276bc0823848acdf20440c4a19f577b95e21` | REVIEW | File |
 | `start-openocd.sh` | 10021 | `2d08c7ec39d6724f1e28976a09d9d119ad97797a426ba6cc1d85c697f2f3125a` | REVIEW | Shell script |
 | `summarize-ecp5-sweep.py` | 14307 | `7ad20afb90710e25405f69e4ae30990225a4dc3ac84978bea1acdcbbe0e1a55f` | REVIEW | File |
-| `sweep-ecp5-common.sh` | 16571 | `aa9bf08e6e99c82fe4427e75384246ba249a5dbdd0a3c6d19288b15d3caa8c77` | REVIEW | Shell script |
+| `sweep-ecp5-clocks.py` | 7343 | `9945d03b0bb99507999743492aa93bbef81aaf67c09baa89d02e7d2e67e22a86` | REVIEW | File |
+| `sweep-ecp5-common.sh` | 17405 | `2a6bd20c1f56a0b5dfd2aab21bb6b5b6893da39360feebc34c2222a93e32df10` | REVIEW | Shell script |
 | `sweep-ecp5.sh` | 5034 | `92c47513d74441beb816e863c80da6b6681cfbb648dd9a19c85041066dc02ab1` | REVIEW | Shell script |
 | `sweep-peek-ulx3s-12f-best-peek.sh` | 1898 | `fc15e3672a893cc2abe7e292956a4d84437521b286d83224a764cdabf1e6d73e` | REVIEW | Shell script |
 | `sweep-peek-ulx3s-12f.sh` | 11810 | `e58458c8205feaab3f51668207797217980ad014d77837bd78b89a15352bbc21` | REVIEW | Shell script |
@@ -115,15 +116,16 @@ should be identified before a public release.
 | `sweep-ulx3s-12f.sh` | 907 | `02c3d4c4aa3f5998251f5b7af2e9daa20293b137bbca7ac357d42363e6d6cffc` | REVIEW | Shell script |
 | `sweep-ulx3s-45f.sh` | 891 | `408ba215f382fb9683f2635352f5b3390598d170ad2eb9cf75237f8548cf4bab` | REVIEW | Shell script |
 | `sweep-ulx3s-85f.sh` | 907 | `d4d2785cb1413b5d9ee4c4a9d911f98865106c85328689ba4c46bd01775c7479` | REVIEW | Shell script |
-| `sweep-ulx3s-common.sh` | 35189 | `0dcfd3aba88f70ca381843fe3d7158133d0f2676e8a8c5315f613d32f25c501c` | REVIEW | Shell script |
-| `sweep-ulx4m-ld.sh` | 18154 | `2831dc871afa352ee2c8843d40bf72e3aaf21830940e1ee8fad7a18abba3c365` | REVIEW | Shell script |
+| `sweep-ulx3s-common.sh` | 35025 | `d058423f2510948609c2a8bf63521aca6f2c2966a440af56bc2b3d670bf4f9e1` | REVIEW | Shell script |
+| `sweep-ulx4m-ld.sh` | 18402 | `9059b82e8266c2e1513806a398b9b089ea5d6b70091e72373f0adc01d2cabd48` | REVIEW | Shell script |
 | `sweep-ulx5m-bootloader-ci.py` | 12374 | `5138fde6539f428c14073627cbab754871b8bf07a8e1d825519945857e10799d` | REVIEW | File |
 | `sweep-ulx5m-bootloader.sh` | 11177 | `bdd36601cbd182701e27e3040a20cb0b31329ded532b8bfbf3081495d8dc8f26` | REVIEW | Shell script |
 | `sweep-ulx5m-gs.sh` | 12485 | `2bcc7ecc92e3c90889710a068e71b5a2dc95fbde6e00db79afa0e0a3a666c5e3` | REVIEW | Shell script |
 | `sweep-ulx5m-spi-secondary.sh` | 7163 | `8a8b7466f12802cb0483159a2c22f6012a005d42d505df5278202bafec9ce95d` | REVIEW | Shell script |
 | `sweep.sh` | 980 | `0ea3290a5ef9f6fe7a386d46add42cf7bb0e217023beb2b79713a463aa92f9d6` | REVIEW | Shell script |
 | `test-readthedocs.sh` | 11128 | `cb4c49cf3e3065fdc851d66c193b23966d615c10721cdb889e7ae4cdd0d70f4b` | REVIEW | Shell script |
-| `test-scripts.sh` | 28885 | `39487973a74ac2a81d9eb1b3453e95dd535db67da4c7644993dcdfe6f21e071e` | REVIEW | Shell script |
+| `test-scripts.sh` | 29023 | `9d61d0dd14589067a0dd635a35f02ee4be90ae961957ce67c671aa1be8457f25` | REVIEW | Shell script |
+| `test-sweep-ecp5-clocks.py` | 6365 | `ccf8b30922d0827a3a285ade5866611d7aa6b531a10fa7bcf874b17d35a96f90` | REVIEW | File |
 | `test-ulx5m-gs-bootloader-toolchain.py` | 4655 | `aae8647d29f774b4f96a966c1ad18f83d6f17c02e14c4cdb76e1ad98e8fed7e6` | REVIEW | File |
 | `test-ulx5m-serv-hardware.ps1` | 3240 | `eb028cda2d499010ce857758ee7353a3eb03e14204574e527fb7e5ad2b14846b` | REVIEW | File |
 | `test-ulx5m-serv.sh` | 9383 | `6a67e8680fbbf9b724941b0670609135e520f78b135c9044c396faa1a07d736b` | REVIEW | Shell script |

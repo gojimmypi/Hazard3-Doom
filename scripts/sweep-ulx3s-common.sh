@@ -573,6 +573,13 @@ printf '%s synthesis duration: %s seconds\n' "${BOARD_LABEL}" "${synthesis_secon
 printf '%s routed sweep netlist SHA256: %s\n' "${BOARD_LABEL}" "${netlist_sha256}"
 printf '%s routed sweep directory: %s\n' "${BOARD_LABEL}" "${SWEEP_DIR}"
 
+# Discover before routing (including the CI prepare-only job).
+physical_sys_mhz=40
+if [[ "${IS_COMPACT_ULX3S}" != 1 ]]; then
+    physical_sys_mhz="${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}"
+fi
+sweep_ecp5_discover_clocks "${NETLIST}" "${physical_sys_mhz}" || exit 1
+
 if [[ "${SWEEP_PREPARE_ONLY}" == "1" ]]; then
     printf '%s frozen sweep netlist prepared; routing skipped.\n' "${BOARD_LABEL}"
     exit 0
@@ -591,7 +598,7 @@ run_seed()
     local svf="${SWEEP_DIR}/${NETLIST_BASE}-${seed}.svf"
     local bit="${SWEEP_DIR}/${NETLIST_BASE}-${seed}.bit"
     local result="${SWEEP_DIR}/result-seed-${seed}.csv"
-    local clk_sys clk_video clk_tmds sys_clock
+    local clk_sys clk_video clk_tmds clock_report
     local route_start_seconds route_start_time
     local route_end_seconds route_end_time
     local route_seconds route_status
@@ -648,23 +655,13 @@ run_seed()
         ;;
     esac
 
-    # 85F 25 MHz uses an oscillator alias. 40/50 MHz use the system PLL.
-    # The compact 12F/45F SoC uses its dedicated fixed 40 MHz system PLL.
-    sys_clock="clk_sys"
-    if [[ "${SWEEP_ECP5_BOARD_ID}" == 'ulx3s-85f' ]]; then
-        if ! sys_clock="$(sweep_ecp5_ulx3s_85f_system_clock "${pnr_log}")"; then
-            printf '%d,ERROR,ERROR,ERROR,%s,ERROR\n' "${seed}" "${route_seconds}" > "${result}"
-            [[ -f "${pnr_log}" ]] && mv "${pnr_log}" "${failed_log}"
-            rm -f "${config}" "${svf}" "${bit}"
-            return 1
-        fi
+    if ! clock_report="$(sweep_ecp5_read_routed_clocks "${pnr_log}")"; then
+        printf '%d,ERROR,ERROR,ERROR,%s,ERROR\n' "${seed}" "${route_seconds}" > "${result}"
+        rm -f "${config}" "${svf}" "${bit}"
+        return 2
     fi
-    clk_sys="$(sweep_ecp5_extract_clock "${pnr_log}" "${sys_clock}")"
-    clk_video="$(sweep_ecp5_extract_clock "${pnr_log}" "clk_video_pix")"
-    clk_tmds="$(sweep_ecp5_extract_clock "${pnr_log}" "clk_tmds_x5")"
-    clk_sys_status="$(sweep_ecp5_extract_clock_status "${pnr_log}" "${sys_clock}")"
-    clk_video_status="$(sweep_ecp5_extract_clock_status "${pnr_log}" "clk_video_pix")"
-    clk_tmds_status="$(sweep_ecp5_extract_clock_status "${pnr_log}" "clk_tmds_x5")"
+    read -r clk_sys clk_video clk_tmds clk_sys_status clk_video_status clk_tmds_status <<< "${clock_report}"
+    clock_report_valid=1
 
     # The 85F has additional physical-clock qualification checks. Preserve
     # the compact 12F/45F behavior, which uses nextpnr's clock PASS verdicts.
@@ -703,15 +700,9 @@ run_seed()
         "${route_seconds}" "${timing_status}" > "${result}"
 
     rm -f "${failed_log}" "${config}" "${svf}"
-    if [[ "${IS_COMPACT_ULX3S}" == 1 ]]; then
-        printf 'Seed %s: clk_sys=%s MHz, clk_video=%s MHz, clk_tmds=%s MHz, route=%ss, %s\n' \
-            "${seed}" "${clk_sys}" "${clk_video}" "${clk_tmds}" \
-            "${route_seconds}" "${timing_status}"
-    else
-        printf 'Seed %s: clk_sys=%s MHz (nextpnr: %s), clk_video=%s MHz, clk_tmds=%s MHz, route=%ss, %s\n' \
-            "${seed}" "${clk_sys}" "${sys_clock}" "${clk_video}" "${clk_tmds}" \
-            "${route_seconds}" "${timing_status}"
-    fi
+    printf 'Seed %s: clk_sys=%s MHz, clk_video=%s MHz, clk_tmds=%s MHz, route=%ss, %s\n' \
+        "${seed}" "${clk_sys}" "${clk_video}" "${clk_tmds}" \
+        "${route_seconds}" "${timing_status}"
 }
 
 
@@ -727,7 +718,23 @@ printf 'Per-seed nextpnr timeout: %ss (+%ss kill grace)\n' \
 
 status=0
 running=0
+clock_report_valid=0
 for seed in "${SWEEP_SEEDS[@]}"; do
+    # Validate the first successfully routed report before starting parallel
+    # routes. Ordinary route failures/timeouts can be retried with other seeds.
+    if [[ "${clock_report_valid}" == 0 ]]; then
+        if run_seed "${seed}"; then
+            :
+        else
+            seed_status=$?
+            status=1
+            if [[ "${seed_status}" == 2 ]]; then
+                echo 'ERROR: Clock report preflight failed; remaining seeds not routed.' >&2
+                break
+            fi
+        fi
+        continue
+    fi
     run_seed "${seed}" &
     running=$((running + 1))
     if (( running >= SWEEP_JOBS )); then
