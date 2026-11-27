@@ -133,8 +133,10 @@ ECP5_PNR_DEVICE=PART selects the installed FPGA (e.g. LFE5UM5G-85F-8).
 ECP5_PNR_SPEED_GRADE=N overrides the default device's speed grade.
 ECP5_PNR_PACKAGE=NAME selects the nextpnr package (default CABGA381).
 SWEEP_SYS_TARGET_MHZ, SWEEP_VIDEO_TARGET_MHZ, SWEEP_TMDS_TARGET_MHZ
-  are Fmax targets, not PLL controls. The 85F also enforces them for PASS.
-  The compact 12F/45F profiles retain nextpnr-based PASS qualification.
+  are local Fmax qualification targets, not PLL controls.
+  All ULX3S boards must meet both physical and configured Fmax targets.
+SWEEP_PACK_BITSTREAMS=0 skips packing; 1 packs PASS seeds (default);
+  2 also packs timing FAIL seeds for diagnostic preflight only.
 SWEEP_SKIP_SYNTH=1 routes an already-frozen synthesized netlist.
 SWEEP_ROUTE_TIMEOUT_SECONDS=N limits each route (default: 7200).
 EOF_USAGE
@@ -535,12 +537,8 @@ mkdir -p "${SWEEP_DIR}"
     printf 'speed=%s\n' "${ECP5_PNR_SPEED_GRADE}"
     printf 'package=%s\n' "${ECP5_PNR_PACKAGE}"
     printf 'full_route=1\n'
-    if [[ "${IS_COMPACT_ULX3S}" == 1 ]]; then
-        printf 'target_overrides_are_reporting_only=1\n'
-    else
-        printf 'target_overrides_are_reporting_only=0\n'
-        printf 'target_overrides_change_physical_clocks=0\n'
-    fi
+    printf 'target_overrides_are_reporting_only=0\n'
+    printf 'target_overrides_change_physical_clocks=0\n'
     printf 'result_columns=seed,clk_sys_mhz,clk_video_mhz,clk_tmds_mhz,route_seconds,timing_status\n'
     if [[ "${IS_COMPACT_ULX3S}" == 1 ]]; then
         printf 'hazard3_memory_profile=%s\n' "${HAZARD3_MEMORY_PROFILE}"
@@ -556,9 +554,7 @@ mkdir -p "${SWEEP_DIR}"
         printf 'cache_addr_pipeline=%s\n' "${HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE}"
     fi
     sweep_ecp5_write_tuning_metadata
-    printf 'clk_sys_required_mhz=%s\n' "${SWEEP_SYS_TARGET_MHZ}"
-    printf 'clk_video_required_mhz=%s\n' "${SWEEP_VIDEO_TARGET_MHZ}"
-    printf 'clk_tmds_required_mhz=%s\n' "${SWEEP_TMDS_TARGET_MHZ}"
+    sweep_ecp5_write_clock_requirements
     printf 'synthesis_seconds=%s\n' "${synthesis_seconds}"
     printf 'netlist_sha256=%s\n' "${netlist_sha256}"
     printf 'netlist=%s.json\n' "${NETLIST_BASE}"
@@ -569,9 +565,16 @@ if [[ "${IS_COMPACT_ULX3S}" == 1 ]]; then
     printf '%s synthesis check: compact profile, %s/%s DP16KD.\n' \
         "${BOARD_LABEL}" "${ebr_used}" "${EBR_CAPACITY}"
 fi
-printf '%s synthesis duration: %s seconds\n' "${BOARD_LABEL}" "${synthesis_seconds}"
+if [[ "${SWEEP_SKIP_SYNTH}" == 1 ]]; then
+    printf 'Original frozen %s synthesis duration: %s seconds\n' "${BOARD_LABEL}" "${synthesis_seconds}"
+else
+    printf '%s synthesis duration: %s seconds\n' "${BOARD_LABEL}" "${synthesis_seconds}"
+fi
 printf '%s routed sweep netlist SHA256: %s\n' "${BOARD_LABEL}" "${netlist_sha256}"
 printf '%s routed sweep directory: %s\n' "${BOARD_LABEL}" "${SWEEP_DIR}"
+
+# Discover before routing (including the CI prepare-only job).
+sweep_ecp5_discover_clocks "${NETLIST}" || exit 1
 
 if [[ "${SWEEP_PREPARE_ONLY}" == "1" ]]; then
     printf '%s frozen sweep netlist prepared; routing skipped.\n' "${BOARD_LABEL}"
@@ -580,7 +583,10 @@ fi
 
 sweep_ecp5_require_tool nextpnr-ecp5
 sweep_ecp5_require_tool timeout
-sweep_ecp5_require_tool ecppack
+sweep_ecp5_init_pack_mode || exit 1
+if [[ "${SWEEP_PACK_BITSTREAMS}" != 0 ]]; then
+    sweep_ecp5_require_tool ecppack
+fi
 
 run_seed()
 {
@@ -591,7 +597,7 @@ run_seed()
     local svf="${SWEEP_DIR}/${NETLIST_BASE}-${seed}.svf"
     local bit="${SWEEP_DIR}/${NETLIST_BASE}-${seed}.bit"
     local result="${SWEEP_DIR}/result-seed-${seed}.csv"
-    local clk_sys clk_video clk_tmds sys_clock
+    local clk_sys clk_video clk_tmds clock_report
     local route_start_seconds route_start_time
     local route_end_seconds route_end_time
     local route_seconds route_status
@@ -648,54 +654,40 @@ run_seed()
         ;;
     esac
 
-    # 85F 25 MHz uses an oscillator alias. 40/50 MHz use the system PLL.
-    # The compact 12F/45F SoC uses its dedicated fixed 40 MHz system PLL.
-    sys_clock="clk_sys"
-    if [[ "${SWEEP_ECP5_BOARD_ID}" == 'ulx3s-85f' ]]; then
-        if ! sys_clock="$(sweep_ecp5_ulx3s_85f_system_clock "${pnr_log}")"; then
-            printf '%d,ERROR,ERROR,ERROR,%s,ERROR\n' "${seed}" "${route_seconds}" > "${result}"
+    if ! clock_report="$(sweep_ecp5_read_routed_clocks "${pnr_log}")"; then
+        printf '%d,ERROR,ERROR,ERROR,%s,ERROR\n' "${seed}" "${route_seconds}" > "${result}"
+        rm -f "${config}" "${svf}" "${bit}"
+        return 2
+    fi
+    read -r clk_sys clk_video clk_tmds clk_sys_status clk_video_status clk_tmds_status <<< "${clock_report}"
+    clock_report_valid=1
+
+    # Require nextpnr closure and the effective qualification targets.
+    timing_status="FAIL"
+    if [[ "${clk_sys_status}" == 'PASS' &&
+          "${clk_video_status}" == 'PASS' &&
+          "${clk_tmds_status}" == 'PASS' ]] &&
+       sweep_ecp5_clock_meets_target "${clk_sys}" "${SWEEP_SYS_REQUIRED_MHZ}" &&
+       sweep_ecp5_clock_meets_target "${clk_video}" "${SWEEP_VIDEO_REQUIRED_MHZ}" &&
+       sweep_ecp5_clock_meets_target "${clk_tmds}" "${SWEEP_TMDS_REQUIRED_MHZ}"; then
+        timing_status="PASS"
+    fi
+
+    if [[ "${SWEEP_PACK_BITSTREAMS}" == 2 ||
+          ( "${SWEEP_PACK_BITSTREAMS}" == 1 && "${timing_status}" == PASS ) ]]; then
+        if ! ecppack \
+            --compress \
+            --svf "${svf}" \
+            --idcode "${ECP5_PNR_IDCODE}" \
+            "${config}" \
+            "${bit}" || [[ ! -s "${bit}" ]]; then
+            printf '%d,%s,%s,%s,%s,PACK_ERROR\n' \
+                "${seed}" "${clk_sys}" "${clk_video}" "${clk_tmds}" \
+                "${route_seconds}" > "${result}"
             [[ -f "${pnr_log}" ]] && mv "${pnr_log}" "${failed_log}"
             rm -f "${config}" "${svf}" "${bit}"
             return 1
         fi
-    fi
-    clk_sys="$(sweep_ecp5_extract_clock "${pnr_log}" "${sys_clock}")"
-    clk_video="$(sweep_ecp5_extract_clock "${pnr_log}" "clk_video_pix")"
-    clk_tmds="$(sweep_ecp5_extract_clock "${pnr_log}" "clk_tmds_x5")"
-    clk_sys_status="$(sweep_ecp5_extract_clock_status "${pnr_log}" "${sys_clock}")"
-    clk_video_status="$(sweep_ecp5_extract_clock_status "${pnr_log}" "clk_video_pix")"
-    clk_tmds_status="$(sweep_ecp5_extract_clock_status "${pnr_log}" "clk_tmds_x5")"
-
-    # The 85F has additional physical-clock qualification checks. Preserve
-    # the compact 12F/45F behavior, which uses nextpnr's clock PASS verdicts.
-    timing_status="FAIL"
-    if [[ "${clk_sys_status}" == 'PASS' &&
-          "${clk_video_status}" == 'PASS' &&
-          "${clk_tmds_status}" == 'PASS' ]]; then
-        if [[ "${IS_COMPACT_ULX3S}" == 1 ]]; then
-            timing_status="PASS"
-        elif sweep_ecp5_clock_meets_target "${clk_sys}" "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}" &&
-             sweep_ecp5_clock_meets_target "${clk_video}" '25.00' &&
-             sweep_ecp5_clock_meets_target "${clk_tmds}" '125.00' &&
-             sweep_ecp5_clock_meets_target "${clk_sys}" "${SWEEP_SYS_TARGET_MHZ}" &&
-             sweep_ecp5_clock_meets_target "${clk_video}" "${SWEEP_VIDEO_TARGET_MHZ}" &&
-             sweep_ecp5_clock_meets_target "${clk_tmds}" "${SWEEP_TMDS_TARGET_MHZ}"; then
-            timing_status="PASS"
-        fi
-    fi
-
-    if ! ecppack \
-        --compress \
-        --svf "${svf}" \
-        --idcode "${ECP5_PNR_IDCODE}" \
-        "${config}" \
-        "${bit}"; then
-        printf '%d,%s,%s,%s,%s,PACK_ERROR\n' \
-            "${seed}" "${clk_sys}" "${clk_video}" "${clk_tmds}" \
-            "${route_seconds}" > "${result}"
-        [[ -f "${pnr_log}" ]] && mv "${pnr_log}" "${failed_log}"
-        rm -f "${config}" "${svf}" "${bit}"
-        return 1
     fi
 
     printf '%d,%s,%s,%s,%s,%s\n' \
@@ -703,15 +695,9 @@ run_seed()
         "${route_seconds}" "${timing_status}" > "${result}"
 
     rm -f "${failed_log}" "${config}" "${svf}"
-    if [[ "${IS_COMPACT_ULX3S}" == 1 ]]; then
-        printf 'Seed %s: clk_sys=%s MHz, clk_video=%s MHz, clk_tmds=%s MHz, route=%ss, %s\n' \
-            "${seed}" "${clk_sys}" "${clk_video}" "${clk_tmds}" \
-            "${route_seconds}" "${timing_status}"
-    else
-        printf 'Seed %s: clk_sys=%s MHz (nextpnr: %s), clk_video=%s MHz, clk_tmds=%s MHz, route=%ss, %s\n' \
-            "${seed}" "${clk_sys}" "${sys_clock}" "${clk_video}" "${clk_tmds}" \
-            "${route_seconds}" "${timing_status}"
-    fi
+    printf 'Seed %s: clk_sys=%s MHz, clk_video=%s MHz, clk_tmds=%s MHz, route=%ss, %s\n' \
+        "${seed}" "${clk_sys}" "${clk_video}" "${clk_tmds}" \
+        "${route_seconds}" "${timing_status}"
 }
 
 
@@ -727,7 +713,23 @@ printf 'Per-seed nextpnr timeout: %ss (+%ss kill grace)\n' \
 
 status=0
 running=0
+clock_report_valid=0
 for seed in "${SWEEP_SEEDS[@]}"; do
+    # Validate the first successfully routed report before starting parallel
+    # routes. Ordinary route failures/timeouts can be retried with other seeds.
+    if [[ "${clock_report_valid}" == 0 ]]; then
+        if run_seed "${seed}"; then
+            :
+        else
+            seed_status=$?
+            status=1
+            if [[ "${seed_status}" == 2 ]]; then
+                echo 'ERROR: Clock report preflight failed; remaining seeds not routed.' >&2
+                break
+            fi
+        fi
+        continue
+    fi
     run_seed "${seed}" &
     running=$((running + 1))
     if (( running >= SWEEP_JOBS )); then
@@ -757,19 +759,21 @@ pass_count="$(awk -F, 'NR > 1 && $6 == "PASS" {count++} END {print count + 0}' "
 pass_seeds="$(awk -F, 'NR > 1 && $6 == "PASS" {if (s != "") s=s ", "; s=s $1} END {print s}' "${results_file}")"
 timeout_count="$(awk -F, 'NR > 1 && $6 == "TIMEOUT" {count++} END {print count + 0}' "${results_file}")"
 timeout_seeds="$(awk -F, 'NR > 1 && $6 == "TIMEOUT" {if (s != "") s=s ", "; s=s $1} END {print s}' "${results_file}")"
-printf 'Timing-passing seeds: %s\n' "${pass_count}"
+printf 'Timing PASS count: %s\n' "${pass_count}"
 
 if [[ "${pass_seeds:-none}" != "none" ]]; then
     printf '\n------------- PASS -------------\n'
 fi
 
-printf 'Timing-passing seeds: %s\n' "${pass_seeds:-none}"
+printf 'Timing PASS seeds: %s\n' "${pass_seeds:-none}"
 
 if [[ "${pass_seeds:-none}" != "none" ]]; then
     printf '\n--------------------------------\n'
 fi
 
-printf 'Timed-out seeds: %s\n' "${timeout_count}"
+printf 'Timing FAIL count: %s\n' "$(awk -F, 'NR > 1 && $NF == "FAIL" {n++} END {print n+0}' "${results_file}")"
+printf 'Routing/packing ERROR count: %s\n' "$(awk -F, 'NR > 1 && $NF ~ /^(ERROR|PACK_ERROR|MISSING)$/ {n++} END {print n+0}' "${results_file}")"
+printf 'Routing TIMEOUT count: %s\n' "${timeout_count}"
 printf 'TIMEOUT seed values: %s\n' "${timeout_seeds:-none}"
 printf 'Results: %s\n' "${results_file}"
 

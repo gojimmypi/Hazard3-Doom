@@ -1,0 +1,86 @@
+name: Monthly FPGA seed sweeps
+
+on:
+  schedule:
+    - cron: '23 8 1 * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: monthly-fpga-seed-sweeps
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Dispatch all board seed sweeps
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_REF: develop
+      SWEEP_WORKFLOW: ulx4m-ld-seed-sweep.yml
+      SEED_FIRST: '1'
+      SEED_LAST: '260'
+      MAX_PARALLEL: '4'
+      SEEDS_PER_JOB: '2'
+    steps:
+      - name: Resolve latest OSS CAD Suite and launch sweeps
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="$(gh api repos/YosysHQ/oss-cad-suite-build/releases/latest --jq '.tag_name')"
+          if [[ ! "${version}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+              echo "::error::Unexpected OSS CAD Suite release tag: ${version}"
+              exit 1
+          fi
+
+          echo "OSS CAD Suite: ${version}"
+          echo "Target branch: ${TARGET_REF}"
+          echo "Seed range: ${SEED_FIRST}-${SEED_LAST}"
+
+          # Read the target workflow to verify its current input schema.
+          # Support both the existing dual-version interface and the newer
+          # single-version interface without selecting different toolchains.
+          workflow_yaml="$(gh api --method GET \
+              "repos/${GITHUB_REPOSITORY}/contents/.github/workflows/${SWEEP_WORKFLOW}" \
+              -f ref="${TARGET_REF}" --jq '.content' | base64 --decode)"
+
+          version_args=()
+          if grep -Eq '^      oss_cad_suite_version:' <<< "${workflow_yaml}"; then
+              version_args=(-f "oss_cad_suite_version=${version}")
+          elif grep -Eq '^      synth_oss_cad_suite_version:' <<< "${workflow_yaml}" &&
+               grep -Eq '^      route_oss_cad_suite_version:' <<< "${workflow_yaml}"; then
+              version_args=(-f "synth_oss_cad_suite_version=${version}"
+                            -f "route_oss_cad_suite_version=${version}")
+          else
+              echo '::error::Unrecognized OSS CAD Suite workflow inputs.'
+              exit 1
+          fi
+
+          targets=(ulx3s-85f ulx3s-12f ulx3s-45f ulx4m-ld-85f ulx5m-gs)
+          failures=0
+          for target in "${targets[@]}"; do
+              echo "Dispatching ${target} (${SEEDS_PER_JOB} seeds/job)"
+              if gh workflow run "${SWEEP_WORKFLOW}" \
+                  --repo "${GITHUB_REPOSITORY}" \
+                  --ref "${TARGET_REF}" \
+                  -f "target=${target}" \
+                  -f "seed_first=${SEED_FIRST}" \
+                  -f "seed_last=${SEED_LAST}" \
+                  -f "max_parallel=${MAX_PARALLEL}" \
+                  -f "seeds_per_job=${SEEDS_PER_JOB}" \
+                  -f retain_bitstreams=false \
+                  "${version_args[@]}"; then
+                  echo "Dispatched ${target} using ${version}"
+              else
+                  echo "::error::Dispatch failed for ${target}"
+                  failures=$((failures + 1))
+              fi
+          done
+          if (( failures > 0 )); then
+              exit 1
+          fi

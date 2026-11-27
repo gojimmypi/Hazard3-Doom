@@ -863,6 +863,10 @@ main()
 
     check_shell_scripts
     check_python_scripts
+    run_quiet 'test-sweep-ecp5-clocks.py: clock discovery and timing reports' \
+        python3 "${SCRIPT_DIR}/test-sweep-ecp5-clocks.py"
+    run_quiet 'test-sweep-reporting.py: summary and history' \
+        python3 "${SCRIPT_DIR}/test-sweep-reporting.py"
     check_powershell_scripts
     report_target_specific_scripts
     check_seed_matrix

@@ -126,6 +126,7 @@ else:
             summary = root / 'summary'
             proc = subprocess.run([
                 sys.executable, str(TOOL), 'summarize',
+                '--first', '1', '--count', '3',
                 '--input', str(out), '--output', str(summary)],
                 capture_output=True, text=True, check=False)
             self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
@@ -177,6 +178,7 @@ else:
                 max_minutes=5, interval=1, step_summary=str(root / 'step.md')))()
             with patch.object(SWEEP, 'list_run_artifacts', side_effect=artifact_list), \
                     patch.object(SWEEP, 'fetch_group_csv', side_effect=artifact_fetch), \
+                    patch.object(SWEEP, 'final_summary_completed', return_value=False), \
                     patch.object(SWEEP.time, 'sleep', return_value=None):
                 self.assertEqual(SWEEP.watch(args), 0)
             self.assertEqual(len(calls), 2)
@@ -187,16 +189,54 @@ else:
             with (root / 'live-results.csv').open(newline='', encoding='ascii') as fp:
                 self.assertEqual(len(list(csv.DictReader(fp))), 3)
 
+    def test_live_collector_stops_after_summary_with_missing_group(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            row = dict(zip(SWEEP.FIELDS, ('1', 'PASS_FINAL', '66.56', '49.67', '0', '12.3')))
+            artifacts = [{'name': 'ulx5m-group-1-1-1234', 'id': 10, 'expired': False}]
+            args = type('Args', (), dict(first=1, last=None, count=2, per_job=1,
+                repo='org/example', run_id=1234, output=root,
+                max_minutes=5, interval=1, step_summary=''))()
+            with patch.object(SWEEP, 'list_run_artifacts', return_value=artifacts) as listing, \
+                    patch.object(SWEEP, 'fetch_group_csv', return_value=[row]), \
+                    patch.object(SWEEP, 'final_summary_completed', return_value=True), \
+                    patch.object(SWEEP.time, 'sleep', return_value=None):
+                with self.assertRaisesRegex(ValueError, 'Missing artifact groups: 2-2'):
+                    SWEEP.watch(args)
+                self.assertEqual(listing.call_count, 2)
+            self.assertIn('INCOMPLETE', (root / 'live.md').read_text())
+            self.assertTrue((root / 'live-results.csv').is_file())
+
+    def test_summary_rejects_missing_first_or_last_seed_and_keeps_results(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            row = dict(zip(SWEEP.FIELDS, ('2', 'PASS_FINAL', '66.56', '49.67', '0', '12.3')))
+            SWEEP.write_csv(root / 'group-2-2.csv', [row])
+            args = type('Args', (), dict(first=1, last=None, count=3,
+                input=root, output=root / 'summary'))()
+            with self.assertRaisesRegex(ValueError, 'incomplete sweep results'):
+                SWEEP.summarize(args)
+            summary = (args.output / 'summary.md').read_text()
+            self.assertIn('Missing seeds: 1, 3', summary)
+            self.assertIn('Coverage: INCOMPLETE', summary)
+            self.assertTrue((args.output / 'results.csv').is_file())
+
     def test_workflow_has_live_watcher_and_operational_inputs(self):
         workflow = (ROOT / '.github/workflows/ulx5m-bootloader-seed-sweep.yml').read_text()
-        for item in ('retain_bitstreams:', 'synth_oss_cad_suite_version:',
-                     'route_oss_cad_suite_version:', 'ulx5m_heap_beta:',
+        for item in ('retain_bitstreams:', 'oss_cad_suite_version:',
+                     'ulx5m_heap_beta:',
                      'nextpnr_extra_args:', 'LIVE timing-pass collector',
                      'SWEEP_HEAP_BETA', 'SWEEP_NEXTPNR_EXTRA_ARGS',
                      'RETAIN_BITSTREAMS', 'actions: read'):
             self.assertIn(item, workflow)
         self.assertIn('description: Consecutive seeds to test (1..512)', workflow)
         self.assertIn('SWEEP_COUNT: ${{ inputs.seed_count }}', workflow)
+        self.assertIn('OSS_CAD_SUITE_VERSION: ${{ inputs.oss_cad_suite_version }}', workflow)
+        self.assertIn('version: ${{ env.OSS_CAD_SUITE_VERSION }}', workflow)
+        self.assertNotIn('synth_oss_cad_suite_version:', workflow)
+        self.assertNotIn('route_oss_cad_suite_version:', workflow)
+        self.assertNotIn('SYNTH_SUITE', workflow)
+        self.assertNotIn('ROUTE_SUITE', workflow)
         self.assertNotIn('      seed_last:', workflow)
         self.assertNotIn('SWEEP_LAST', workflow)
         self.assertNotIn('v73-integrated', workflow)

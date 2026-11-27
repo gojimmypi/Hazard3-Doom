@@ -6,7 +6,7 @@ name: FPGA seed sweep
 #
 # The conditions below select the clock for each board:
 #   ULX3S-85F: selected clock, or 50 if the experimental checkbox is enabled.
-#   ULX3S-12F: fixed 40 MHz.
+#   ULX3S-12F/45F: fixed 40 MHz.
 #   ULX4M-LD: selected ULX4M system clock.
 #   ULX5M-GS: selected ULX5M system clock (last fallback).
 # The selected ECP5 part appears after the board name. When board-default
@@ -88,7 +88,7 @@ on:
         default: "1"
         type: string
       seed_last:
-        description: Last seed to route (maximum 512 consecutive seeds)
+        description: Last seed to route (range limited by seeds per job and GitHub matrix capacity)
         required: true
         default: "50"
         type: string
@@ -236,7 +236,7 @@ on:
           - "55.00"
           - "60.00"
       sweep_video_target_mhz:
-        description: Experimental video Fmax target (MHz; default 25 on 85F, 50 on 12F/ULX4M)
+        description: Experimental video Fmax target (MHz; default 25 on 85F, 50 on 12F/45F/ULX4M)
         required: true
         default: board-default
         type: choice
@@ -247,7 +247,7 @@ on:
           - "50.00"
           - "60.00"
       sweep_tmds_target_mhz:
-        description: Experimental TMDS Fmax target (MHz; default 125 on 85F, 250 on 12F/ULX4M)
+        description: Experimental TMDS Fmax target (MHz; default 125 on 85F, 250 on 12F/45F/ULX4M)
         required: true
         default: board-default
         type: choice
@@ -330,16 +330,9 @@ env:
   # is set in CI, so mismatched family and grade cannot be selected.
   ECP5_PNR_DEVICE: ${{ inputs.ecp5_fpga_part }}
   ECP5_PNR_PACKAGE: "CABGA381"
-  # Sweep scripts and their PASS/FAIL status always use the original board
-  # requirements. This protects the live collector, bitstreams, and the final
-  # hardware/baseline qualification from lowered diagnostic thresholds.
-  SWEEP_SYS_TARGET_MHZ: ${{ inputs.target == 'ulx3s-85f' && (inputs.ulx3s_85f_50mhz_best_config && '50.00' || format('{0}.00', inputs.ulx3s_85f_sys_clk_mhz)) || (inputs.target == 'ulx3s-12f' || inputs.target == 'ulx3s-45f') && '40.00' || inputs.target == 'ulx4m-ld-85f' && format('{0}.00', inputs.ulx4m_sys_clk_mhz) || format('{0}.00', inputs.ulx5m_sys_clk_mhz) }}
-  SWEEP_VIDEO_TARGET_MHZ: ${{ inputs.target == 'ulx3s-85f' && '25.00' || '50.00' }}
-  SWEEP_TMDS_TARGET_MHZ: ${{ inputs.target == 'ulx3s-85f' && '125.00' || '250.00' }}
-  SWEEP_LITEDRAM_TARGET_MHZ: "60.01"
-  SWEEP_INIT_TARGET_MHZ: "25.00"
-  # Diagnostic-only targets are evaluated from the routed Fmax values in the
-  # final summary. 'board-default' uses the corresponding SWEEP_* baseline.
+  # ECP5 baseline Fmax requirements are resolved by sweep-ecp5-clocks.py.
+  # Diagnostic-only targets are evaluated independently in the final summary.
+  # 'board-default' uses the effective requirements in frozen sweep metadata.
   EXPERIMENT_SYS_TARGET_MHZ: ${{ inputs.sweep_sys_target_mhz }}
   EXPERIMENT_VIDEO_TARGET_MHZ: ${{ inputs.sweep_video_target_mhz }}
   EXPERIMENT_TMDS_TARGET_MHZ: ${{ inputs.sweep_tmds_target_mhz }}
@@ -370,6 +363,8 @@ jobs:
     timeout-minutes: 90
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
+      preflight_matrix: ${{ steps.matrix.outputs.preflight_matrix }}
+      has_remaining: ${{ steps.matrix.outputs.has_remaining }}
     env:
       TOOLCHAIN_PREFIX: ${{ github.workspace }}/bin/riscv-gcc/bin/riscv-none-elf-
 
@@ -389,9 +384,9 @@ jobs:
           inputs = json.loads(os.environ["DISPATCH_INPUTS_JSON"])
           target = os.environ["SWEEP_TARGET"]
           actual_mhz = {
+              "ulx3s-12f": "board-default (fixed)",
+              "ulx3s-45f": "board-default (fixed)",
               "ulx3s-85f": os.environ["HAZARD3_ULX3S_85F_SYS_CLK_MHZ"],
-              "ulx3s-12f": "40",
-              "ulx3s-45f": "40",
               "ulx4m-ld-85f": os.environ["HAZARD3_ULX4M_SYS_CLK_MHZ"],
               "ulx5m-gs": os.environ["ULX5M_SYS_CLK_MHZ"],
           }[target]
@@ -429,9 +424,6 @@ jobs:
           ]
           if target != "ulx5m-gs":
               resolved += [
-                  ("Baseline system Fmax (MHz)", os.environ["SWEEP_SYS_TARGET_MHZ"]),
-                  ("Baseline video Fmax (MHz)", os.environ["SWEEP_VIDEO_TARGET_MHZ"]),
-                  ("Baseline HDMI TMDS Fmax (MHz)", os.environ["SWEEP_TMDS_TARGET_MHZ"]),
                   ("Experimental system Fmax target", os.environ["EXPERIMENT_SYS_TARGET_MHZ"]),
                   ("Experimental video Fmax target", os.environ["EXPERIMENT_VIDEO_TARGET_MHZ"]),
                   ("Experimental TMDS Fmax target", os.environ["EXPERIMENT_TMDS_TARGET_MHZ"]),
@@ -449,8 +441,6 @@ jobs:
           elif target == "ulx4m-ld-85f":
               resolved += [
                   ("LiteDRAM initialization CPU", os.environ["ULX4M_LITEDRAM_CPU"]),
-                  ("Baseline LiteDRAM Fmax (MHz)", os.environ["SWEEP_LITEDRAM_TARGET_MHZ"]),
-                  ("Baseline initialization Fmax (MHz)", os.environ["SWEEP_INIT_TARGET_MHZ"]),
                   ("Experimental LiteDRAM target", os.environ["EXPERIMENT_LITEDRAM_TARGET_MHZ"]),
                   ("Experimental initialization target", os.environ["EXPERIMENT_INIT_TARGET_MHZ"]),
               ]
@@ -485,6 +475,54 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Show board clock requirements
+        if: ${{ inputs.target != 'ulx5m-gs' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import runpy
+
+          # Resolve the same board profile used by the sweep scripts. Do not
+          # duplicate the nominal clock or minimum Fmax values in the workflow.
+          clocks = runpy.run_path("scripts/sweep-ecp5-clocks.py")
+          target = os.environ["SWEEP_TARGET"]
+          sys_mhz = clocks["DEFAULT_SYSTEM_MHZ"][target]
+          if target == "ulx3s-85f":
+              sys_mhz = int(os.environ["HAZARD3_ULX3S_85F_SYS_CLK_MHZ"])
+          elif target == "ulx4m-ld-85f":
+              sys_mhz = int(os.environ["HAZARD3_ULX4M_SYS_CLK_MHZ"])
+
+          physical = clocks["physical_constraints"](target, sys_mhz)
+          baseline = clocks["minimum_fmax"](target, sys_mhz)
+          labels = {
+              "sys": ("System", "EXPERIMENT_SYS_TARGET_MHZ"),
+              "video": ("Video pixel", "EXPERIMENT_VIDEO_TARGET_MHZ"),
+              "tmds": ("HDMI TMDS", "EXPERIMENT_TMDS_TARGET_MHZ"),
+              "litedram_user": ("LiteDRAM user", "EXPERIMENT_LITEDRAM_TARGET_MHZ"),
+              "init": ("Initialization", "EXPERIMENT_INIT_TARGET_MHZ"),
+          }
+
+          lines = [
+              "### ECP5 clock requirements (MHz)",
+              "",
+              "| Clock | Physical MHz | Baseline Fmax MHz | Experimental input | Experimental Fmax MHz |",
+              "| --- | ---: | ---: | --- | ---: |",
+          ]
+          for role, nominal in physical.items():
+              label, env_name = labels[role]
+              required = f"{baseline[role]:.2f}"
+              requested = os.environ[env_name]
+              experimental = required if requested == "board-default" else requested
+              lines.append(f"| {label} | {nominal} | {required} | {requested} | {experimental} |")
+          lines += ["", "Experimental targets are diagnostic only; they do not change baseline qualification or PLL frequencies.", ""]
+          output = "\n".join(lines) + "\n"
+          print(output, end="")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write(output)
+          PY
+
       - name: Validate sweep inputs
         shell: bash
         run: |
@@ -509,13 +547,22 @@ jobs:
                   "${ECP5_PNR_SPEED_GRADE}" "${ECP5_PNR_IDCODE}"
           fi
 
+          # Require canonical positive decimal integers before using the values
+          # in Bash arithmetic or expanding the first seed into the preflight matrix.
+          if [[ ! "${SWEEP_SEED_FIRST}" =~ ^[1-9][0-9]*$ ||
+                ! "${SWEEP_SEED_LAST}" =~ ^[1-9][0-9]*$ ]]; then
+              echo '::error::Seed first and last must be positive decimal integers without leading zeros.' >&2
+              exit 1
+          fi
+
           # Validate the seed range with the same generator used for the matrix.
-          # Accept any positive signed 32-bit starting seed, up to 512 seeds;
+          # Accept positive signed 32-bit seeds; the range depends on grouping.
           # GitHub Actions limits the generated matrix to 256 route jobs.
           ./scripts/generate-ecp5-seed-matrix.py \
               --first "${SWEEP_SEED_FIRST}" \
               --last "${SWEEP_SEED_LAST}" \
-              --per-job "${SWEEP_SEEDS_PER_JOB}" >/dev/null
+              --per-job "${SWEEP_SEEDS_PER_JOB}" \
+              --target "${SWEEP_TARGET}" >/dev/null
 
           # Only the existing, board-specific HDMI timings are implemented.
           # Reject cross-board combinations instead of changing display text alone.
@@ -855,6 +902,19 @@ jobs:
           } > reference/synthesis-tool-versions.txt
 
           {
+              printf 'git_sha=%s\n' "${GITHUB_SHA}"
+              printf 'yosys_version=%s\n' "$(yosys --version 2>&1 | tr '\r\n' ' ')"
+              if [[ "${SWEEP_TARGET}" == ulx5m-gs ]]; then
+                  router_tool=nextpnr-himbaechel
+                  packer_tool=gmpack
+              else
+                  router_tool=nextpnr-ecp5
+                  packer_tool=ecppack
+              fi
+              printf 'nextpnr_version=%s\n' "$("${router_tool}" --version 2>&1 | tr '\r\n' ' ')"
+              printf 'packer_name=%s\n' "${packer_tool}"
+              # Not every packer supports --version; fingerprint the installed launcher/binary.
+              printf 'packer_sha256=%s\n' "$(sha256sum "$(command -v "${packer_tool}")" | awk '{print $1}')"
               printf 'target=%s\n' "${SWEEP_TARGET}"
               printf 'seed_first=%s\n' "${SWEEP_SEED_FIRST}"
               printf 'seed_last=%s\n' "${SWEEP_SEED_LAST}"
@@ -864,6 +924,12 @@ jobs:
               printf 'synth_oss_cad_suite_version=%s\n' "${OSS_CAD_SUITE_VERSION}"
               printf 'route_oss_cad_suite_version=%s\n' "${OSS_CAD_SUITE_VERSION}"
               printf 'ulx3s_85f_extended_modes=%s\n' "${HAZARD3_HDMI_EXTENDED_MODES}"
+              printf 'ulx3s_85f_registered_read_hits=%s\n' "${HAZARD3_ULX3S_85F_REGISTERED_READ_HITS}"
+              printf 'ulx3s_85f_sram_write_buffer=%s\n' "${HAZARD3_ULX3S_85F_SRAM_WRITE_BUFFER}"
+              printf 'ulx3s_85f_sram_dual_port_rw=%s\n' "${HAZARD3_ULX3S_85F_SRAM_DUAL_PORT_RW}"
+              printf 'ulx3s_85f_cache_tag_pipeline=%s\n' "${HAZARD3_ULX3S_85F_CACHE_TAG_PIPELINE}"
+              printf 'ulx3s_85f_tag_ram_mode=%s\n' "${HAZARD3_ULX3S_85F_TAG_RAM_MODE}"
+              printf 'ulx3s_85f_cache_addr_pipeline=%s\n' "${HAZARD3_ULX3S_85F_CACHE_ADDR_PIPELINE}"
               printf 'hdmi_output_resolution=%s\n' "${SWEEP_HDMI_OUTPUT_RESOLUTION}"
               printf 'ulx3s_12f_memory_profile=%s\n' "${HAZARD3_MEMORY_PROFILE}"
               printf 'ulx4m_sys_clk_mhz=%s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
@@ -896,13 +962,39 @@ jobs:
         id: matrix
         shell: bash
         run: |
-          matrix="$(
-              ./scripts/generate-ecp5-seed-matrix.py \
-                  --first "${SWEEP_SEED_FIRST}" \
-                  --last "${SWEEP_SEED_LAST}" \
-                  --per-job "${SWEEP_SEEDS_PER_JOB}"
-          )"
-          printf 'matrix=%s\n' "${matrix}" >> "${GITHUB_OUTPUT}"
+          set -euo pipefail
+
+          # Generate the complete board-specific routing plan.
+          plan="$(python3 scripts/generate-ecp5-seed-matrix.py \
+              --first "${SWEEP_SEED_FIRST}" \
+              --last "${SWEEP_SEED_LAST}" \
+              --per-job "${SWEEP_SEEDS_PER_JOB}" \
+              --target "${SWEEP_TARGET}")"
+
+          matrix="$(jq -ce '.matrix' <<< "${plan}")"
+          preflight_matrix="$(jq -ce '.preflight_matrix' <<< "${plan}")"
+          # Keep JSON quoting so that strings cannot be mistaken for booleans.
+          # A false value is valid for a single-seed ECP5 sweep.
+          has_remaining="$(jq -c '.has_remaining' <<< "${plan}")"
+          case "${has_remaining}" in
+              true|false)
+                  ;;
+              *)
+                  echo "::error::Invalid has_remaining value: ${has_remaining}"
+                  exit 1
+                  ;;
+          esac
+
+          # Log the generated plan for troubleshooting.
+          printf 'Generated seed matrix plan:\n'
+          jq . <<< "${plan}"
+
+          # Publish the matrices and routing condition.
+          {
+              printf 'matrix=%s\n' "${matrix}"
+              printf 'preflight_matrix=%s\n' "${preflight_matrix}"
+              printf 'has_remaining=%s\n' "${has_remaining}"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Record route nextpnr version
         shell: bash
@@ -954,12 +1046,13 @@ jobs:
           name: ecp5-sweep-inputs-${{ github.run_id }}
           path: ${{ runner.temp }}/ecp5-sweep-inputs.tar.gz
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
           compression-level: 0
 
   watch:
     name: LIVE timing-pass collector (${{ inputs.target }})
-    needs: prepare
+    needs: [prepare, preflight]
+    if: ${{ always() && needs.prepare.result == 'success' && (needs.preflight.result == 'success' || inputs.target == 'ulx5m-gs') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 360
 
@@ -980,22 +1073,17 @@ jobs:
           printf '  SWEEP_SEED_FIRST:    %s\n' "${SWEEP_SEED_FIRST}"
           printf '  SWEEP_SEED_LAST:     %s\n' "${SWEEP_SEED_LAST}"
           printf '  SWEEP_SEEDS_PER_JOB: %s\n' "${SWEEP_SEEDS_PER_JOB}"
-          printf '  HDMI output resolution: %s\n' "${SWEEP_HDMI_OUTPUT_RESOLUTION}"
           case "${SWEEP_TARGET}" in
           ulx3s-85f)
-              printf '  System clock:            %s MHz (640x480 HDMI)\n' "${HAZARD3_ULX3S_85F_SYS_CLK_MHZ}"
               printf '  HAZARD3_HDMI_EXTENDED_MODES: %s\n' "${HAZARD3_HDMI_EXTENDED_MODES}"
               ;;
           ulx3s-12f|ulx3s-45f)
-              printf '  System clock:            40 MHz (fixed)\n'
               printf '  HAZARD3_MEMORY_PROFILE: %s\n' "${HAZARD3_MEMORY_PROFILE}"
               ;;
           ulx4m-ld-85f)
-              printf '  HAZARD3_ULX4M_SYS_CLK_MHZ: %s\n' "${HAZARD3_ULX4M_SYS_CLK_MHZ}"
               printf '  ULX4M_LITEDRAM_CPU:         %s\n' "${ULX4M_LITEDRAM_CPU}"
               ;;
           ulx5m-gs)
-              printf '  System clock:          %s MHz\n' "${ULX5M_SYS_CLK_MHZ}"
               printf '  SWEEP_ULX5M_HEAP_BETA: %s\n' "${SWEEP_ULX5M_HEAP_BETA}"
               ;;
           esac
@@ -1014,20 +1102,18 @@ jobs:
               "${SWEEP_SEED_LAST}" \
               "${SWEEP_SEEDS_PER_JOB}"
 
-  route:
-    name: ${{ inputs.target }} seeds ${{ matrix.seeds }}
+  preflight:
+    name: ${{ inputs.target }} seeds ${{ matrix.seeds }} (preflight)
     needs: prepare
+    if: ${{ inputs.target != 'ulx5m-gs' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 350
-    # Each matrix group may fail without failing the whole sweep. The summarize
-    # job independently rejects zero baseline PASS seeds and all tool failures.
-    continue-on-error: true
+    env:
+      SWEEP_IS_PREFLIGHT: '1'
     strategy:
-      fail-fast: false
-      max-parallel: ${{ fromJSON(inputs.max_parallel) }}
-      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.preflight_matrix) }}
 
-    steps:
+    steps: &route_steps
       - name: Check out sweep scripts
         uses: actions/checkout@v7
         with:
@@ -1147,9 +1233,16 @@ jobs:
               printf 'Routing %s seed %s\n' "${SWEEP_TARGET}" "${seed}"
               printf '============================================================\n'
 
+              result_timing_status=''
               start_seconds="$(date +%s)"
               set +e
-              SWEEP_JOBS=1 SWEEP_SKIP_SYNTH=1 \
+              pack_mode=1
+              if [[ "${SWEEP_IS_PREFLIGHT}" == 1 ]]; then
+                  pack_mode=2
+              elif [[ "${RETAIN_BITSTREAMS}" != true && "${RETAIN_BITSTREAMS}" != 1 ]]; then
+                  pack_mode=0
+              fi
+              SWEEP_PACK_BITSTREAMS="${pack_mode}" SWEEP_JOBS=1 SWEEP_SKIP_SYNTH=1 \
                   timeout \
                       --signal=TERM \
                       --kill-after="${SWEEP_SEED_KILL_AFTER_SECONDS}s" \
@@ -1199,6 +1292,46 @@ jobs:
                   fi
               fi
 
+              if [[ "${SWEEP_IS_PREFLIGHT}" == 1 ]]; then
+                  # A completed PASS or FAIL must still produce a real packed image.
+                  shopt -s nullglob
+                  packed=("${sweep_dir}"/*-"${seed}".bit)
+                  shopt -u nullglob
+                  if [[ "${route_status}" != 0 || "${#packed[@]}" != 1 || ! -s "${packed[0]:-}" ]]; then
+                      echo '::error::Preflight routing/packing did not complete.'
+                      overall_status=1
+                      if [[ "${route_status}" == 0 ]]; then
+                          route_status=1
+                          printf '%s\n' "${route_status}" > "${artifact_dir}/exit-${seed}.txt"
+                      fi
+                  fi
+              fi
+
+              # Validate completed reports against frozen metadata before publishing
+              # or retaining a bitstream. A legitimate timing FAIL remains valid.
+              if [[ "${route_status}" == 0 ]] && ! python3 scripts/summarize-ecp5-sweep.py \
+                  --target "${SWEEP_TARGET}" --seed-first "${seed}" --seed-last "${seed}" \
+                  --seed-dir "${artifact_dir}" --metadata reference/sweep-metadata.txt \
+                  --validate-completed-seed; then
+                  echo "::error::Invalid completed result for seed ${seed}."
+                  overall_status=1
+                  route_status=1
+                  printf '%s\n' "${route_status}" > "${artifact_dir}/exit-${seed}.txt"
+              fi
+
+              if ! actual_sha="$(sha256sum "${netlist}" | awk '{print $1}')"; then
+                  actual_sha=missing
+              fi
+              printf '%s\n' "${actual_sha}" \
+                  > "${artifact_dir}/netlist-sha256-${seed}.txt"
+
+              if [[ "${actual_sha}" != "${expected_sha}" ]]; then
+                  echo "Seed ${seed} changed the frozen synthesized netlist." >&2
+                  overall_status=1
+                  route_status=1
+                  printf '%s\n' "${route_status}" > "${artifact_dir}/exit-${seed}.txt"
+              fi
+
               shopt -s nullglob
               logs=(
                   "${sweep_dir}/pnr-${seed}.log"
@@ -1209,7 +1342,26 @@ jobs:
                   [[ -f "${file}" ]] && cp "${file}" "${artifact_dir}/"
               done
 
-              if [[ "${RETAIN_BITSTREAMS}" == "true" || "${RETAIN_BITSTREAMS}" == "1" ]]; then
+              retain_seed_bitstream=false
+              if [[ "${RETAIN_BITSTREAMS}" == "true" ||
+                    "${RETAIN_BITSTREAMS}" == "1" ]]; then
+                  retain_seed_bitstream=true
+              fi
+
+              # Never retain a bitstream from an unsuccessful route.
+              if [[ "${route_status}" != 0 ]]; then
+                  retain_seed_bitstream=false
+              fi
+
+              # Preflight may pack a timing-failing seed to verify ecppack.
+              # Such a bitstream must not be retained.
+              if [[ "${SWEEP_IS_PREFLIGHT}" == 1 ]]; then
+                  if [[ "${result_timing_status}" != PASS ]]; then
+                      retain_seed_bitstream=false
+                  fi
+              fi
+
+              if [[ "${retain_seed_bitstream}" == true ]]; then
                   bits=("${sweep_dir}"/*-"${seed}".bit)
                   for file in "${bits[@]}"; do
                       [[ -f "${file}" ]] && cp "${file}" "${artifact_dir}/"
@@ -1217,14 +1369,6 @@ jobs:
               fi
               shopt -u nullglob
 
-              actual_sha="$(sha256sum "${netlist}" | awk '{print $1}')"
-              printf '%s\n' "${actual_sha}" \
-                  > "${artifact_dir}/netlist-sha256-${seed}.txt"
-
-              if [[ "${actual_sha}" != "${expected_sha}" ]]; then
-                  echo "Seed ${seed} changed the frozen synthesized netlist." >&2
-                  overall_status=1
-              fi
               case "${route_status}" in
               0)
                   ;;
@@ -1243,6 +1387,10 @@ jobs:
           printf 'status=%s\n' "${overall_status}" >> "${GITHUB_OUTPUT}"
 
           if (( ${#timing_failed_seeds[@]} > 0 )); then
+              if [[ "${SWEEP_IS_PREFLIGHT}" == 1 ]]; then
+                  printf 'Preflight seed missed baseline timing; continuing after report/pack validation.\n'
+                  exit "${overall_status}"
+              fi
               printf '::error::Baseline timing FAIL for seed(s): %s\n' "${timing_failed_seeds[*]}"
               # The ROUTE STEP has outcome=failure. Its step-level
               # continue-on-error lets this group's final gates distinguish
@@ -1292,6 +1440,13 @@ jobs:
                   esac
               fi
 
+              # An invalid/tool-failed result must never appear as a live PASS.
+              if [[ "${route_exit}" != 0 ]]; then
+                  case "${route_exit}" in
+                      124|137) timing_status='TIMEOUT' ;;
+                      *) timing_status='ERROR' ;;
+                  esac
+              fi
               printf '%s,%s,%s,%s\n' \
                   "${seed}" "${timing_status}" "${seconds}" "${route_exit}" \
                   >> "${status_file}"
@@ -1422,7 +1577,7 @@ jobs:
           name: ecp5-sweep-seeds-${{ matrix.group }}-${{ github.run_id }}
           path: seed-artifact/
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
           compression-level: 0
 
       # Artifacts are uploaded before either failure gate. A route group with
@@ -1430,11 +1585,42 @@ jobs:
       # groups passed. Job-level continue-on-error allows the complete sweep to
       # succeed only after the final summary validates every result.
       - name: Fail route group if no seeds pass baseline timing
-        if: ${{ always() && steps.route.outputs.status == '0' && steps.publish.outputs.any_pass != 'true' }}
+        if: ${{ always() && env.SWEEP_IS_PREFLIGHT != '1' && steps.route.outputs.status == '0' && steps.publish.outputs.any_pass != 'true' }}
         shell: bash
         run: |
           echo '::error::No baseline timing PASS in this seed group.'
           exit 1
+
+      - name: Verify preflight timing report and pack
+        if: ${{ always() && env.SWEEP_IS_PREFLIGHT == '1' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          status_file="seed-artifact/group-status-${{ matrix.group }}.csv"
+          # No timing PASS required: only a validated report and successful pack.
+          test '${{ steps.route.outputs.status }}' = 0
+          python3 - "${status_file}" "${SWEEP_SEED_FIRST}" <<'PY'
+          import csv
+          import sys
+
+          with open(sys.argv[1], newline="", encoding="utf-8") as handle:
+              rows = list(csv.DictReader(handle))
+
+          if len(rows) != 1:
+              raise SystemExit("Expected exactly one preflight result")
+
+          row = rows[0]
+
+          if row.get("seed") != sys.argv[2]:
+              raise SystemExit("Preflight seed mismatch")
+
+          if row.get("timing_status") not in ("PASS", "FAIL"):
+              raise SystemExit("Invalid preflight timing status")
+
+          if row.get("route_exit_status") != "0":
+              raise SystemExit("Preflight routing failed")
+          PY
+          echo 'Preflight complete: clock constraints, routed report and ecppack verified.'
 
       - name: Fail route group on tool errors
         if: ${{ always() && steps.route.outputs.status != '0' }}
@@ -1443,10 +1629,29 @@ jobs:
           echo '::error::Route group had a tool failure or changed the frozen netlist.'
           exit 1
 
+  route:
+    name: ${{ inputs.target }} seeds ${{ matrix.seeds }}
+    needs: [prepare, preflight]
+    if: ${{ always() && needs.prepare.result == 'success' && needs.prepare.outputs.has_remaining == 'true' && (needs.preflight.result == 'success' || inputs.target == 'ulx5m-gs') }}
+    env:
+      SWEEP_IS_PREFLIGHT: '0'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    # Each matrix group may fail without failing the whole sweep. The summarize
+    # job independently rejects zero baseline PASS seeds and all tool failures.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(inputs.max_parallel) }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+
+    steps: *route_steps
+
   summarize:
     name: Summarize ${{ inputs.target }} sweep
     needs:
       - prepare
+      - preflight
       - route
     if: ${{ always() && needs.prepare.result == 'success' }}
     runs-on: ubuntu-24.04
@@ -1512,22 +1717,25 @@ jobs:
           # The sweep scripts, live watcher, and existing summary.csv use the
           # actual board/baseline clocks, not the experimental override.
           clocks = {
-              "clk_sys_mhz": ("SWEEP_SYS_TARGET_MHZ", "EXPERIMENT_SYS_TARGET_MHZ"),
-              "clk_video_mhz": ("SWEEP_VIDEO_TARGET_MHZ", "EXPERIMENT_VIDEO_TARGET_MHZ"),
-              "clk_tmds_mhz": ("SWEEP_TMDS_TARGET_MHZ", "EXPERIMENT_TMDS_TARGET_MHZ"),
+              "clk_sys_mhz": "EXPERIMENT_SYS_TARGET_MHZ",
+              "clk_video_mhz": "EXPERIMENT_VIDEO_TARGET_MHZ",
+              "clk_tmds_mhz": "EXPERIMENT_TMDS_TARGET_MHZ",
           }
           if os.environ["SWEEP_TARGET"] == "ulx4m-ld-85f":
-              clocks["litedram_user_mhz"] = (
-                  "SWEEP_LITEDRAM_TARGET_MHZ", "EXPERIMENT_LITEDRAM_TARGET_MHZ"
-              )
-              clocks["init_clk_mhz"] = (
-                  "SWEEP_INIT_TARGET_MHZ", "EXPERIMENT_INIT_TARGET_MHZ"
-              )
+              clocks["litedram_user_mhz"] = "EXPERIMENT_LITEDRAM_TARGET_MHZ"
+              clocks["init_clk_mhz"] = "EXPERIMENT_INIT_TARGET_MHZ"
+
+          metadata = {}
+          for line in Path("final/frozen/reference/sweep-metadata.txt").read_text(encoding="utf-8").splitlines():
+              key, separator, value = line.partition("=")
+              if separator:
+                  metadata[key] = value
 
           baseline = {}
           experimental = {}
-          for column, (baseline_name, requested_name) in clocks.items():
-              baseline[column] = Decimal(os.environ[baseline_name])
+          for column, requested_name in clocks.items():
+              key = column.removesuffix("_mhz") + "_required_mhz"
+              baseline[column] = Decimal(metadata[key])
               requested = os.environ[requested_name]
               experimental[column] = (
                   baseline[column] if requested == "board-default"
@@ -1540,13 +1748,16 @@ jobs:
           results = []
           for row in rows:
               # A missing/incomplete route is never an experimental PASS.
-              route_ok = row["route_exit"] == "0"
+              route_ok = row["route_exit"] == "0" and row["timing_status"] in ("PASS", "FAIL")
               measured = {}
               for column in clocks:
                   raw = row.get(column, "")
                   try:
                       measured[column] = Decimal(raw)
                   except (InvalidOperation, TypeError):
+                      route_ok = False
+                      break
+                  if not measured[column].is_finite() or measured[column] <= 0:
                       route_ok = False
                       break
               passed = route_ok and all(
@@ -1601,6 +1812,152 @@ jobs:
           print(f"Experimental-target passing seeds: {experimental_passes}")
           PY
 
+      - name: Roll forward toolchain performance history
+        if: ${{ always() && steps.summary.outputs.status != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          current_performance_file="final/toolchain-performance.csv"
+          combined_history_file="final/toolchain-history.csv"
+          test -s "${current_performance_file}"
+
+          history_name="toolchain-history-${SWEEP_TARGET}"
+          history_work_dir="$(mktemp -d "${RUNNER_TEMP}/sweep-history.XXXXXX")"
+          artifact_list_file="${history_work_dir}/artifacts.json"
+          previous_runs_file="${history_work_dir}/previous-runs.txt"
+          history_inputs=()
+
+          # Recover the current run's earlier attempt and up to five other recent
+          # histories. Same-board/branch concurrency serializes normal sweeps.
+          # Fetch every page as JSON before filtering, so the selection logic is
+          # separate from the network request and easy to inspect and test.
+          : > "${previous_runs_file}"
+          if gh api --method GET --paginate --slurp \
+              "repos/${GITHUB_REPOSITORY}/actions/artifacts" \
+              -f name="${history_name}" \
+              -f per_page=100 > "${artifact_list_file}"; then
+
+              if ! python3 - "${artifact_list_file}" > "${previous_runs_file}" <<'PY'
+          import json
+          import os
+          import sys
+
+          current_branch = os.environ["GITHUB_REF_NAME"]
+          current_repository_id = os.environ["GITHUB_REPOSITORY_ID"]
+          current_run_id = os.environ["GITHUB_RUN_ID"]
+          max_previous_runs = 5
+
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              pages = json.load(handle)
+
+          # Ignore expired artifacts and artifacts belonging to other branches
+          # or repositories. The API request already filters by board artifact name.
+          matching_artifacts = []
+          for page in pages:
+              for artifact in page["artifacts"]:
+                  if artifact.get("expired") is not False:
+                      continue
+
+                  workflow_run = artifact.get("workflow_run")
+                  if not workflow_run:
+                      continue
+                  if workflow_run.get("head_branch") != current_branch:
+                      continue
+                  if str(workflow_run.get("head_repository_id")) != current_repository_id:
+                      continue
+                  if workflow_run.get("id") is None:
+                      continue
+
+                  matching_artifacts.append(artifact)
+
+          # Consider the newest artifacts first, with run ID as a tie breaker.
+          def artifact_sort_key(artifact):
+              return artifact["created_at"], str(artifact["workflow_run"]["id"])
+
+          matching_artifacts.sort(key=artifact_sort_key, reverse=True)
+
+          selected_run_ids = []
+          seen_run_ids = set()
+          previous_run_count = 0
+
+          for artifact in matching_artifacts:
+              run_id = str(artifact["workflow_run"]["id"])
+              if run_id in seen_run_ids:
+                  continue
+              seen_run_ids.add(run_id)
+
+              # An earlier attempt of this run does not count against the limit.
+              if run_id != current_run_id:
+                  if previous_run_count >= max_previous_runs:
+                      continue
+                  previous_run_count += 1
+
+              selected_run_ids.append(run_id)
+
+          # Merge oldest first, allowing newer histories and this run to replace
+          # duplicate records for the same run ID, attempt and board.
+          for run_id in reversed(selected_run_ids):
+              print(run_id)
+          PY
+              then
+                  echo '::warning::Could not select previous histories; retaining this run only.'
+                  : > "${previous_runs_file}"
+              fi
+          else
+              echo '::warning::Previous history lookup failed; retaining this run only.'
+          fi
+
+          # Download the selected histories independently. A missing artifact must
+          # not prevent the current sweep results from being saved.
+          while IFS= read -r previous_run_id; do
+              if [[ -z "${previous_run_id}" ]]; then
+                  continue
+              fi
+
+              download_dir="${history_work_dir}/${previous_run_id}"
+              downloaded_history="${download_dir}/toolchain-history.csv"
+
+              printf 'Downloading toolchain history from run %s\n' "${previous_run_id}"
+              if ! gh run download "${previous_run_id}" \
+                  --repo "${GITHUB_REPOSITORY}" \
+                  --name "${history_name}" \
+                  --dir "${download_dir}"; then
+                  echo "::warning::History download failed for run ${previous_run_id}; continuing."
+                  continue
+              fi
+
+              if [[ ! -s "${downloaded_history}" ]]; then
+                  echo "::warning::History CSV missing or empty for run ${previous_run_id}; continuing."
+                  continue
+              fi
+
+              history_inputs+=("${downloaded_history}")
+          done < "${previous_runs_file}"
+
+          # The current results are always included and merged last.
+          printf 'Merging %s previous history file(s) with this run.\n' "${#history_inputs[@]}"
+          history_inputs+=("${current_performance_file}")
+
+          if ! python3 scripts/merge-sweep-history.py \
+              --output "${combined_history_file}" \
+              "${history_inputs[@]}"; then
+              echo '::warning::Could not merge previous history; retaining this run only.'
+              cp "${current_performance_file}" "${combined_history_file}"
+          fi
+
+      - name: Upload compact toolchain history
+        if: ${{ always() && steps.summary.outputs.status != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: toolchain-history-${{ inputs.target }}
+          path: final/toolchain-history.csv
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: true
+
       - name: Inventory final artifact
         shell: bash
         run: |
@@ -1625,6 +1982,11 @@ jobs:
         run: |
           if [[ "${{ steps.summary.outputs.status }}" != "0" ]]; then
               echo '::error::Sweep summary failed.'
+              exit 1
+          fi
+
+          if [[ "${SWEEP_TARGET}" != ulx5m-gs && "${{ needs.preflight.result }}" != success ]]; then
+              echo '::error::ECP5 preflight failed; sweep cannot qualify.'
               exit 1
           fi
 
